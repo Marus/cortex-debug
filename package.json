@@ -3,13 +3,17 @@
 	"displayName": "Debug",
 	"description": "Native debugging for VSCode - Currently in GDB only beta",
 	"version": "0.1.0",
-	"publisher": "WebFreak",
+	"publisher": "webfreak",
 	"engines": {
 		"vscode": "^0.10.1"
 	},
 	"categories": [
 		"Debuggers"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/WebFreak001/code-debug.git"
+	},
 	"contributes": {
 		"debuggers": [
 			{
