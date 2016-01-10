@@ -1,0 +1,73 @@
+{
+	"name": "debug",
+	"displayName": "Debug",
+	"description": "Native debugging for VSCode - Currently in GDB only beta",
+	"version": "0.1.0",
+	"publisher": "WebFreak",
+	"engines": {
+		"vscode": "^0.10.1"
+	},
+	"categories": [
+		"Debuggers"
+	],
+	"contributes": {
+		"debuggers": [
+			{
+				"type": "gdb",
+				"extensions": [],
+				"program": "./out/src/gdb.js",
+				"runtime": "node",
+				"label": "GDB",
+				"enableBreakpointsFor": {
+					"languageIds": [
+						"c",
+						"cpp",
+						"d",
+						"objective-c",
+						"fortan",
+						"pascal",
+						"ada"
+					]
+				},
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "Path of executable"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project"
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"name": "Debug",
+						"type": "gdb",
+						"request": "launch",
+						"target": "./output",
+						"cwd": "${workspaceRoot}"
+					}
+				]
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "node ./node_modules/vscode/bin/compile",
+		"compile": "node ./node_modules/vscode/bin/compile -watch -p ./"
+	},
+	"dependencies": {
+		"vscode-debugadapter": "^1.0.1",
+		"vscode-debugprotocol": "^1.0.1"
+	},
+	"devDependencies": {
+		"typescript": "^1.6.2",
+		"vscode": "0.10.x"
+	}
+}
