@@ -18,9 +18,11 @@ Now you need to change `target` to the application you want to debug relative
 to the cwd. (Which is the workspace root by default)
 
 Before debugging you need to compile your application first, then you can run it using
-the green start button in the debug sidebar. Multithreading and adding breakpoints
-while running does not work at the time of writing. However you can add/remove breakpoints
-as you wish while the program is paused.
+the green start button in the debug sidebar. For this you could use the `preLaunchTask`
+argument vscode allows you to do. Debugging multithreaded applications is currently not
+implemented. Adding breakpoints while the program runs will not interrupt it immediately.
+For that you need to pause & resume the program once first. However adding breakpoints
+while its paused works as expected.
 
 Extending variables is very limited as it does not support child values of variables.
 Watching expressions works partially but the result does not get properly parsed and

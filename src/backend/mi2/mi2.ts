@@ -15,6 +15,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
+				this.sendCommand("gdb-set target-async on"),
 				this.sendCommand("environment-directory \"" + cwd + "\"")
 			]).then(resolve, reject);
 		});
@@ -31,6 +32,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
+				this.sendCommand("gdb-set target-async on"),
 				this.sendCommand("environment-directory \"" + cwd + "\"")
 			]).then(resolve, reject);
 		});
@@ -48,6 +50,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
+				this.sendCommand("gdb-set target-async on"),
 				this.sendCommand("environment-directory \"" + cwd + "\""),
 				this.sendCommand("target-select remote " + target)
 			]).then(resolve, reject);
