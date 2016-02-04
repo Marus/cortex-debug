@@ -18,9 +18,9 @@ Now you need to change `target` to the application you want to debug relative
 to the cwd. (Which is the workspace root by default)
 
 Before debugging you need to compile your application first, then you can run it using
-the green start button in the debug sidebar. Multithreading and removing breakpoints
-while running does not work at the time of writing. Also stopping the program sometimes
-does not work properly.
+the green start button in the debug sidebar. Multithreading and adding breakpoints
+while running does not work at the time of writing. However you can add/remove breakpoints
+as you wish while the program is paused.
 
 Extending variables is very limited as it does not support child values of variables.
 Watching expressions works partially but the result does not get properly parsed and
@@ -33,5 +33,35 @@ in `stdout` for the application, `stderr` for errors and `log` for GDB log messa
 
 Some exceptions/signals like segmentation faults will be catched and displayed but
 it does not support for example most D exceptions.
+
+### Attaching to existing processes
+
+Attaching to existing processes currently only works by specifying the PID in the
+`launch.json` and setting `request` to `"attach"`. You also need to specify the executable
+path for GDB to find the debug symbols.
+
+```
+"request": "attach",
+"executable": "./bin/executable",
+"target": "4285"
+```
+
+This will attach to PID 4285 which should already run. GDB will pause the program on entering.
+
+### Using `gdbserver` for remote debugging
+
+You can also connect to a gdbserver instance and debug using that. For that modify the
+`launch.json` by setting `request` to `"attach"` and `remote` to `true` and specifing the
+port and optionally hostname in `target`.
+
+```
+"request": "attach",
+"executable": "./bin/executable",
+"target": ":2345",
+"remote": true
+```
+
+This will attach to the running process managed by gdbserver on localhost:2345. You might
+need to hit the start button in the debug bar at the top first to start the program.
 
 ## [Issues](https://github.com/WebFreak001/code-debug)

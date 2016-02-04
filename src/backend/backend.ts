@@ -14,8 +14,11 @@ export interface Stack {
 
 export interface IBackend {
 	load(cwd: string, target: string): Thenable<any>;
+	attach(cwd: string, executable: string, target: string): Thenable<any>;
+	connect(cwd: string, executable: string, target: string): Thenable<any>;
 	start(): Thenable<boolean>;
 	stop();
+	detach();
 	interrupt(): Thenable<boolean>;
 	continue(): Thenable<boolean>;
 	next(): Thenable<boolean>;

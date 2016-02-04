@@ -10,11 +10,19 @@ export interface LaunchRequestArguments {
 	target: string;
 }
 
+export interface AttachRequestArguments {
+	cwd: string;
+	target: string;
+	executable: string;
+	remote: boolean;
+}
+
 class MI2DebugSession extends DebugSession {
 	private static THREAD_ID = 1;
 	private gdbDebugger: MI2;
 	private variableHandles = new Handles<any>();
 	private quit: boolean;
+	private attached: boolean;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
@@ -43,9 +51,9 @@ class MI2DebugSession extends DebugSession {
 	private handleBreak(info: MINode) {
 		this.sendEvent(new StoppedEvent("step", MI2DebugSession.THREAD_ID));
 	}
-	
+
 	private stopEvent(info: MINode) {
-		if(!this.quit)
+		if (!this.quit)
 			this.sendEvent(new StoppedEvent("exception", MI2DebugSession.THREAD_ID));
 	}
 
@@ -55,6 +63,8 @@ class MI2DebugSession extends DebugSession {
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
+		this.quit = false;
+		this.attached = false;
 		this.gdbDebugger.load(args.cwd, args.target).then(() => {
 			this.gdbDebugger.start().then(() => {
 				this.sendResponse(response);
@@ -62,8 +72,26 @@ class MI2DebugSession extends DebugSession {
 		});
 	}
 
+	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
+		this.quit = false;
+		this.attached = !args.remote;
+		if (args.remote) {
+			this.gdbDebugger.connect(args.cwd, args.executable, args.target).then(() => {
+				this.sendResponse(response);
+			});
+		}
+		else {
+			this.gdbDebugger.attach(args.cwd, args.executable, args.target).then(() => {
+				this.sendResponse(response);
+			});
+		}
+	}
+
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-		this.gdbDebugger.stop();
+		if (this.attached)
+			this.gdbDebugger.detach();
+		else
+			this.gdbDebugger.stop();
 		this.sendResponse(response);
 	}
 

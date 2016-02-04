@@ -49,6 +49,30 @@
 								"description": "Path of project"
 							}
 						}
+					},
+					"attach": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "PID of running program or program name or connection arguments (eg :2345) if remote is true"
+							},
+							"remote": {
+								"type": "boolean",
+								"description": "If true this will connect to a gdbserver instead of attaching to a PID",
+								"default": false
+							},
+							"executable": {
+								"type": "string",
+								"description": "Path of executable for debugging symbols"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project"
+							}
+						}
 					}
 				},
 				"initialConfigurations": [

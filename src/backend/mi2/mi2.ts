@@ -12,9 +12,44 @@ export class MI2 extends EventEmitter implements IBackend {
 		return new Promise((resolve, reject) => {
 			this.process = ChildProcess.spawn(this.application, this.preargs.concat([target]), { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("environment-directory \"" + cwd + "\"")
+			]).then(resolve, reject);
+		});
+	}
+
+	attach(cwd: string, executable: string, target: string): Thenable<any> {
+		return new Promise((resolve, reject) => {
+			let args = [];
+			if (!executable)
+				executable = "-p";
+			args = args.concat([executable, target], this.preargs);
+			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd });
+			this.process.stdout.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stdout.bind(this));
+			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
+			Promise.all([
+				this.sendCommand("environment-directory \"" + cwd + "\"")
+			]).then(resolve, reject);
+		});
+	}
+
+	connect(cwd: string, executable: string, target: string): Thenable<any> {
+		return new Promise((resolve, reject) => {
+			let args = [];
+			if (executable)
+				args = args.concat([executable], this.preargs);
+			else
+				args = this.preargs;
+			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd });
+			this.process.stdout.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stdout.bind(this));
+			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
+			Promise.all([
+				this.sendCommand("environment-directory \"" + cwd + "\""),
+				this.sendCommand("target-select remote " + target)
 			]).then(resolve, reject);
 		});
 	}
@@ -88,12 +123,23 @@ export class MI2 extends EventEmitter implements IBackend {
 	stop() {
 		let proc = this.process;
 		let to = setTimeout(() => {
-			proc.kill();
-		}, 2222);
+			process.kill(-proc.pid);
+		}, 1000);
 		this.process.on("exit", function(code) {
 			clearTimeout(to);
 		});
 		this.sendRaw("-gdb-exit");
+	}
+	
+	detach() {
+		let proc = this.process;
+		let to = setTimeout(() => {
+			process.kill(-proc.pid);
+		}, 1000);
+		this.process.on("exit", function(code) {
+			clearTimeout(to);
+		});
+		this.sendRaw("-target-detach");
 	}
 
 	interrupt(): Thenable<boolean> {
