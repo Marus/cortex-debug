@@ -2,9 +2,9 @@
 	"name": "debug",
 	"displayName": "Debug",
 	"description": "Native debugging for VSCode - Currently in GDB only beta",
-	"version": "0.1.4",
+	"version": "0.2.0",
 	"publisher": "webfreak",
-	"iconUrl": "res/icon.png",
+	"icon": "images/icon-plain.svg",
 	"engines": {
 		"vscode": "^0.10.1"
 	},
