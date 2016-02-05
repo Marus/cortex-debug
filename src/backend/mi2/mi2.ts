@@ -16,7 +16,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + cwd + "\"")
+				this.sendCommand("environment-directory \"" + cwd.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\"")
 			]).then(resolve, reject);
 		});
 	}
@@ -33,7 +33,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + cwd + "\"")
+				this.sendCommand("environment-directory \"" + cwd.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\"")
 			]).then(resolve, reject);
 		});
 	}
@@ -51,7 +51,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + cwd + "\""),
+				this.sendCommand("environment-directory \"" + cwd.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""),
 				this.sendCommand("target-select remote " + target)
 			]).then(resolve, reject);
 		});
@@ -133,7 +133,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 		this.sendRaw("-gdb-exit");
 	}
-	
+
 	detach() {
 		let proc = this.process;
 		let to = setTimeout(() => {
