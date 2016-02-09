@@ -100,7 +100,7 @@ class MI2DebugSession extends DebugSession {
 			if (args.ssh.remotex11screen === undefined)
 				args.ssh.remotex11screen = 0;
 			this.isSSH = true;
-			this.trimCWD = args.cwd;
+			this.trimCWD = args.cwd.replace(/\\/g, "/");
 			this.switchCWD = args.ssh.cwd;
 			this.gdbDebugger.ssh(args.ssh, args.ssh.cwd, args.target).then(() => {
 				if (args.autorun)
