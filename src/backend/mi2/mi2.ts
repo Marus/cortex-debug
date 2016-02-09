@@ -318,6 +318,18 @@ export class MI2 extends EventEmitter implements IBackend {
 		this.emit("msg", type, msg[msg.length - 1] == '\n' ? msg : (msg + "\n"));
 	}
 
+	sendUserInput(command: string): Thenable<any> {
+		return new Promise((resolve, reject) => {
+			if (command.startsWith("-")) {
+				this.sendCommand(command.substr(1)).then(resolve, reject);
+			}
+			else {
+				this.sendRaw(command);
+				resolve(undefined);
+			}
+		});
+	}
+
 	sendRaw(raw: string) {
 		this.process.stdin.write(raw + "\n");
 	}

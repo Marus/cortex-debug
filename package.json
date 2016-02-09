@@ -47,6 +47,11 @@
 							"cwd": {
 								"type": "string",
 								"description": "Path of project"
+							},
+							"autorun": {
+								"type": "array",
+								"description": "GDB commands to run when starting to debug",
+								"default": []
 							}
 						}
 					},
@@ -71,6 +76,11 @@
 							"cwd": {
 								"type": "string",
 								"description": "Path of project"
+							},
+							"autorun": {
+								"type": "array",
+								"description": "GDB commands to run when starting to debug",
+								"default": []
 							}
 						}
 					}

@@ -8,6 +8,7 @@ import { MI2 } from './backend/mi2/mi2'
 export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
+	autorun: string[];
 }
 
 export interface AttachRequestArguments {
@@ -15,6 +16,7 @@ export interface AttachRequestArguments {
 	target: string;
 	executable: string;
 	remote: boolean;
+	autorun: string[];
 }
 
 class MI2DebugSession extends DebugSession {
@@ -81,6 +83,9 @@ class MI2DebugSession extends DebugSession {
 		this.attached = false;
 		this.needContinue = false;
 		this.gdbDebugger.load(args.cwd, args.target).then(() => {
+			args.autorun.forEach(command => {
+				this.gdbDebugger.sendUserInput(command);
+			});
 			this.gdbDebugger.start().then(() => {
 				this.sendResponse(response);
 			});
@@ -93,11 +98,17 @@ class MI2DebugSession extends DebugSession {
 		this.needContinue = true;
 		if (args.remote) {
 			this.gdbDebugger.connect(args.cwd, args.executable, args.target).then(() => {
+				args.autorun.forEach(command => {
+					this.gdbDebugger.sendUserInput(command);
+				});
 				this.sendResponse(response);
 			});
 		}
 		else {
 			this.gdbDebugger.attach(args.cwd, args.executable, args.target).then(() => {
+				args.autorun.forEach(command => {
+					this.gdbDebugger.sendUserInput(command);
+				});
 				this.sendResponse(response);
 			});
 		}
@@ -300,8 +311,11 @@ class MI2DebugSession extends DebugSession {
 				this.sendResponse(response);
 			});
 		else {
-			this.gdbDebugger.sendRaw(args.expression);
-			this.sendResponse(response);
+			this.gdbDebugger.sendUserInput(args.expression).then(output => {
+				if (output)
+					response.body.result = JSON.stringify(output);
+				this.sendResponse(response);
+			});
 		}
 	}
 }
