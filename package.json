@@ -2,11 +2,11 @@
 	"name": "debug",
 	"displayName": "Debug",
 	"description": "Native debugging for VSCode - Currently in GDB only beta",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {
-		"vscode": "^0.10.1"
+		"vscode": "^0.10.8"
 	},
 	"categories": [
 		"Debuggers"
@@ -92,11 +92,11 @@
 		"compile": "node ./node_modules/vscode/bin/compile -watch -p ./"
 	},
 	"dependencies": {
-		"vscode-debugadapter": "^1.0.1",
-		"vscode-debugprotocol": "^1.0.1"
+		"vscode-debugadapter": "^1.5.0",
+		"vscode-debugprotocol": "^1.5.0"
 	},
 	"devDependencies": {
-		"typescript": "^1.6.2",
-		"vscode": "0.10.x"
+		"typescript": "^1.7.5",
+		"vscode": "0.11.x"
 	}
 }

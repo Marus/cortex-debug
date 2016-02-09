@@ -23,12 +23,16 @@ class MI2DebugSession extends DebugSession {
 	private variableHandles = new Handles<any>();
 	private quit: boolean;
 	private attached: boolean;
+	private needContinue: boolean;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
 	}
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
+		response.body.supportsConfigurationDoneRequest = true;
+		response.body.supportsEvaluateForHovers = true; // Assume working in future releases
+		response.body.supportsFunctionBreakpoints = true; // TODO: Implement in future release
 		this.sendResponse(response);
 		this.gdbDebugger = new MI2("gdb", ["-q", "--interpreter=mi2"]);
 		this.gdbDebugger.on("quit", this.quitEvent.bind(this));
@@ -65,6 +69,7 @@ class MI2DebugSession extends DebugSession {
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 		this.quit = false;
 		this.attached = false;
+		this.needContinue = false;
 		this.gdbDebugger.load(args.cwd, args.target).then(() => {
 			this.gdbDebugger.start().then(() => {
 				this.sendResponse(response);
@@ -75,6 +80,7 @@ class MI2DebugSession extends DebugSession {
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 		this.quit = false;
 		this.attached = !args.remote;
+		this.needContinue = true;
 		if (args.remote) {
 			this.gdbDebugger.connect(args.cwd, args.executable, args.target).then(() => {
 				this.sendResponse(response);
@@ -98,10 +104,9 @@ class MI2DebugSession extends DebugSession {
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
 		this.gdbDebugger.clearBreakPoints().then(() => {
 			let path = args.source.path;
-			let lines = args.lines;
 			let all = [];
-			lines.forEach(line => {
-				all.push(this.gdbDebugger.addBreakPoint({ file: path, line: line }));
+			args.breakpoints.forEach(brk => {
+				all.push(this.gdbDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
 			});
 			Promise.all(all).then(brkpoints => {
 				response.body.breakpoints = brkpoints;
@@ -130,6 +135,20 @@ class MI2DebugSession extends DebugSession {
 			};
 			this.sendResponse(response);
 		});
+	}
+
+	protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse, args: DebugProtocol.ConfigurationDoneArguments): void {
+		// FIXME: Does not seem to get called in january release
+		if (this.needContinue) {
+			this.gdbDebugger.continue().then(done => {
+				this.sendResponse(response);
+			}, msg => {
+				this.sendResponse(response);
+				this.sendEvent(new OutputEvent(`Could not continue: ${msg}\n`, 'stderr'));
+			});
+		}
+		else
+			this.sendResponse(response);
 	}
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
@@ -261,7 +280,8 @@ class MI2DebugSession extends DebugSession {
 	}
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
-		if (args.context == "watch")
+		this.handleMsg("console", "Evaluate (" + args.context + "): " + args.expression + "\n")
+		if (args.context == "watch" || args.context == "hover")
 			this.gdbDebugger.evalExpression(args.expression).then((res) => {
 				response.body = {
 					variablesReference: 0,

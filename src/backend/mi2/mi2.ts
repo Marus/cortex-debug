@@ -199,12 +199,26 @@ export class MI2 extends EventEmitter implements IBackend {
 				return resolve(false);
 			this.sendCommand("break-insert " + breakpoint.file + ":" + breakpoint.line).then((result) => {
 				if (result.resultRecords.resultClass == "done") {
+					let bkptNum = parseInt(result.result("bkpt.number"));
 					let newBrk = {
 						file: result.result("bkpt.file"),
-						line: parseInt(result.result("bkpt.line"))
+						line: parseInt(result.result("bkpt.line")),
+						condition: breakpoint.condition
 					};
-					this.breakpoints.set(newBrk, parseInt(result.result("bkpt.number")));
-					resolve([true, newBrk]);
+					if (breakpoint.condition) {
+						this.sendCommand("break-condition " + bkptNum + " " + breakpoint.condition).then((result) => {
+							if (result.resultRecords.resultClass == "done") {
+								this.breakpoints.set(newBrk, bkptNum);
+								resolve([true, newBrk]);
+							} else {
+								resolve([false, null]);
+							}
+						});
+					}
+					else {
+						this.breakpoints.set(newBrk, bkptNum);
+						resolve([true, newBrk]);
+					}
 				}
 				else {
 					resolve([false, null]);
@@ -228,13 +242,15 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	clearBreakPoints(): Thenable<any> {
-		let promisses = [];
-		let it = this.breakpoints.keys();
-		let value;
-		while (!(value = it.next()).done) {
-			promisses.push(this.removeBreakPoint(value.value));
-		}
-		return Promise.all(promisses);
+		return new Promise((resolve, reject) => {
+			this.sendCommand("break-delete").then((result) => {
+				if (result.resultRecords.resultClass == "done") {
+					this.breakpoints.clear();
+					resolve(true);
+				}
+				else resolve(false);
+			});
+		});
 	}
 
 	getStack(maxLevels: number): Thenable<Stack[]> {
