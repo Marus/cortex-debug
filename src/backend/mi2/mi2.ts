@@ -1,7 +1,23 @@
-import { Breakpoint, IBackend, Stack } from "../backend.ts"
+import { Breakpoint, IBackend, Stack, SSHArguments } from "../backend.ts"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
+import * as net from "net"
+import * as fs from "fs"
+import * as path from "path"
+var Client = require("ssh2").Client;
+
+function escape(str: string) {
+	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+let nonOutput = /^[0-9]*[\*\+\=]|[\~\@\&\^]/;
+
+function couldBeOutput(line: string) {
+	if (nonOutput.exec(line))
+		return false;
+	return true;
+}
 
 export class MI2 extends EventEmitter implements IBackend {
 	constructor(public application: string, public preargs: string[]) {
@@ -9,15 +25,107 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	load(cwd: string, target: string): Thenable<any> {
+		if (!path.isAbsolute(target))
+			target = path.join(cwd, target);
 		return new Promise((resolve, reject) => {
+			this.isSSH = false;
 			this.process = ChildProcess.spawn(this.application, this.preargs.concat([target]), { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + cwd.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\"")
-			]).then(resolve, reject);
+				this.sendCommand("environment-directory \"" + escape(cwd) + "\"")
+			]).then(() => {
+				this.emit("debug-ready")
+				resolve();
+			}, reject);
+		});
+	}
+
+	ssh(args: SSHArguments, cwd: string, target: string): Thenable<any> {
+		return new Promise((resolve, reject) => {
+			if (!path.isAbsolute(target))
+				target = path.join(cwd, target);
+
+			this.isSSH = true;
+			this.sshReady = false;
+			this.sshConn = new Client();
+
+			if (args.forwardX11) {
+				this.sshConn.on("x11", (info, accept, reject) => {
+					var xserversock = new net.Socket();
+					xserversock.on("error", (err) => {
+						this.log("stderr", "Could not connect to local X11 server! Did you enable it in your display manager?\n" + err);
+					});
+					xserversock.on("connect", () => {
+						let xclientsock = accept();
+						xclientsock.pipe(xserversock).pipe(xclientsock);
+					});
+					xserversock.connect(args.x11port, args.x11host);
+				});
+			}
+
+			let connectionArgs: any = {
+				host: args.host,
+				port: args.port,
+				username: args.user
+			};
+
+			if (args.keyfile) {
+				if (require("fs").existsSync(args.keyfile))
+					connectionArgs.privateKey = require("fs").readFileSync(args.keyfile);
+				else {
+					this.log("stderr", "SSH key file does not exist!");
+					this.emit("quit");
+					reject();
+					return;
+				}
+			} else {
+				connectionArgs.password = args.password;
+			}
+
+			this.sshConn.on("ready", () => {
+				this.log("stdout", "Running " + this.application + " over ssh...");
+				let execArgs: any = {};
+				if (args.forwardX11) {
+					execArgs.x11 = {
+						single: false,
+						screen: args.remotex11screen
+					};
+				}
+				this.sshConn.exec(this.application + " " + this.preargs.join(" "), execArgs, (err, stream) => {
+					if (err) {
+						this.log("stderr", "Could not run " + this.application + " over ssh!");
+						this.log("stderr", err.toString());
+						this.emit("quit");
+						reject();
+						return;
+					}
+					this.sshReady = true;
+					this.stream = stream;
+					stream.on("data", this.stdout.bind(this));
+					stream.stderr.on("data", this.stdout.bind(this));
+					stream.on("exit", (() => {
+						this.emit("quit");
+						this.sshConn.end();
+					}).bind(this));
+					Promise.all([
+						this.sendCommand("gdb-set target-async on"),
+						this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
+						this.sendCommand("environment-cd \"" + escape(cwd) + "\""),
+						this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"")
+					]).then(() => {
+						this.emit("debug-ready")
+						resolve();
+					}, reject);
+				});
+			}).on("error", (err) => {
+				this.log("stderr", "Could not run " + this.application + " over ssh!");
+				this.log("stderr", err.toString());
+				this.emit("quit");
+				reject();
+			}).connect(connectionArgs);
 		});
 	}
 
@@ -33,8 +141,11 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + cwd.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\"")
-			]).then(resolve, reject);
+				this.sendCommand("environment-directory \"" + escape(cwd) + "\"")
+			]).then(() => {
+				this.emit("debug-ready")
+				resolve();
+			}, reject);
 		});
 	}
 
@@ -51,14 +162,20 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + cwd.replace(/\\/g, "\\\\").replace(/"/g, "\\\"") + "\""),
+				this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
 				this.sendCommand("target-select remote " + target)
-			]).then(resolve, reject);
+			]).then(() => {
+				this.emit("debug-ready")
+				resolve();
+			}, reject);
 		});
 	}
 
 	stdout(data) {
-		this.buffer += data.toString("utf8");
+		if (typeof data == "string")
+			this.buffer += data;
+		else
+			this.buffer += data.toString("utf8");
 		let end = this.buffer.lastIndexOf('\n');
 		if (end != -1) {
 			this.onOutput(this.buffer.substr(0, end));
@@ -69,55 +186,65 @@ export class MI2 extends EventEmitter implements IBackend {
 	onOutput(lines) {
 		lines = <string[]>lines.split('\n');
 		lines.forEach(line => {
-			let parsed = parseMI(line);
-			//this.log("log", JSON.stringify(parsed));
-			let handled = false;
-			if (parsed.token !== undefined) {
-				if (this.handlers[parsed.token]) {
-					this.handlers[parsed.token](parsed);
-					delete this.handlers[parsed.token];
+			if (couldBeOutput(line)) {
+				if (line.trim() != "(gdb)")
+					this.log("stdout", line);
+			}
+			else {
+				let parsed = parseMI(line);
+				//this.log("log", JSON.stringify(parsed));
+				let handled = false;
+				if (parsed.token !== undefined) {
+					if (this.handlers[parsed.token]) {
+						this.handlers[parsed.token](parsed);
+						delete this.handlers[parsed.token];
+						handled = true;
+					}
+				}
+				if (parsed.resultRecords && parsed.resultRecords.resultClass == "error") {
+					this.log("log", "An error occured: " + parsed.result("msg"));
+				}
+				if (parsed.outOfBandRecord) {
+					parsed.outOfBandRecord.forEach(record => {
+						if (record.isStream) {
+							this.log(record.type, record.content);
+						} else {
+							if (record.type == "exec") {
+								this.emit("exec-async-output", parsed);
+								if (record.asyncClass == "running")
+									this.emit("running", parsed);
+								else if (record.asyncClass == "stopped") {
+									let reason = parsed.record("reason");
+									if (reason == "breakpoint-hit")
+										this.emit("breakpoint", parsed);
+									else if (reason == "end-stepping-range")
+										this.emit("step-end", parsed);
+									else if (reason == "function-finished")
+										this.emit("step-out-end", parsed);
+									else if (reason == "signal-received")
+										this.emit("signal-stop", parsed);
+									else if (reason == "exited-normally")
+										this.emit("exited-normally", parsed);
+									else if (reason == "exited") { // exit with error code != 0
+										this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
+										this.emit("exited-normally", parsed);
+									}
+									else {
+										this.log("console", "Not implemented stop reason (assuming exception): " + reason);
+										this.emit("stopped", parsed);
+									}
+								} else
+									this.log("log", JSON.stringify(parsed));
+							}
+						}
+					});
 					handled = true;
 				}
+				if (parsed.token == undefined && parsed.resultRecords == undefined && parsed.outOfBandRecord.length == 0)
+					handled = true;
+				if (!handled)
+					this.log("log", "Unhandled: " + JSON.stringify(parsed));
 			}
-			if (parsed.resultRecords && parsed.resultRecords.resultClass == "error") {
-				this.log("log", "An error occured: " + parsed.result("msg"));
-			}
-			if (parsed.outOfBandRecord) {
-				parsed.outOfBandRecord.forEach(record => {
-					if (record.isStream) {
-						this.log(record.type, record.content);
-					} else {
-						if (record.type == "exec") {
-							this.emit("exec-async-output", parsed);
-							if (record.asyncClass == "running")
-								this.emit("running", parsed);
-							else if (record.asyncClass == "stopped") {
-								let reason = parsed.record("reason");
-								if (reason == "breakpoint-hit")
-									this.emit("breakpoint", parsed);
-								else if (reason == "end-stepping-range")
-									this.emit("step-end", parsed);
-								else if (reason == "function-finished")
-									this.emit("step-out-end", parsed);
-								else if (reason == "signal-received")
-									this.emit("signal-stop", parsed);
-								else if (reason == "exited-normally")
-									this.emit("exited-normally", parsed);
-								else {
-									this.log("console", "Not implemented stop reason (assuming exception): " + reason);
-									this.emit("stopped", parsed);
-								}
-							} else
-								this.log("log", JSON.stringify(parsed));
-						}
-					}
-				});
-				handled = true;
-			}
-			if (parsed.token == undefined && parsed.resultRecords == undefined && parsed.outOfBandRecord.length == 0)
-				handled = true;
-			if (!handled)
-				this.log("log", "Unhandled: " + JSON.stringify(parsed));
 		});
 	}
 
@@ -125,20 +252,35 @@ export class MI2 extends EventEmitter implements IBackend {
 		return new Promise((resolve, reject) => {
 			this.log("console", "Running executable");
 			this.sendCommand("exec-run").then((info) => {
-				resolve(info.resultRecords.resultClass == "running");
+				if (info.resultRecords.resultClass == "running")
+					resolve();
+				else
+					reject();
 			}, reject);
 		});
 	}
 
 	stop() {
-		let proc = this.process;
-		let to = setTimeout(() => {
-			process.kill(-proc.pid);
-		}, 1000);
-		this.process.on("exit", function(code) {
-			clearTimeout(to);
-		});
-		this.sendRaw("-gdb-exit");
+		if (this.isSSH) {
+			let proc = this.stream;
+			let to = setTimeout(() => {
+				proc.signal("KILL");
+			}, 1000);
+			this.stream.on("exit", function(code) {
+				clearTimeout(to);
+			})
+			this.sendRaw("-gdb-exit");
+		}
+		else {
+			let proc = this.process;
+			let to = setTimeout(() => {
+				process.kill(-proc.pid);
+			}, 1000);
+			this.process.on("exit", function(code) {
+				clearTimeout(to);
+			});
+			this.sendRaw("-gdb-exit");
+		}
 	}
 
 	detach() {
@@ -331,7 +473,10 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	sendRaw(raw: string) {
-		this.process.stdin.write(raw + "\n");
+		if (this.isSSH)
+			this.stream.write(raw + "\n");
+		else
+			this.process.stdin.write(raw + "\n");
 	}
 
 	sendCommand(command: string): Thenable<MINode> {
@@ -345,18 +490,22 @@ export class MI2 extends EventEmitter implements IBackend {
 				else
 					resolve(node);
 			};
-			this.process.stdin.write(this.currentToken + "-" + command + "\n");
+			this.sendRaw(this.currentToken + "-" + command);
 			this.currentToken++;
 		});
 	}
 
 	isReady(): boolean {
-		return !!this.process;
+		return this.isSSH ? this.sshReady : !!this.process;
 	}
 
+	private isSSH: boolean;
+	private sshReady: boolean;
 	private currentToken: number = 1;
 	private handlers: { [index: number]: (info: MINode) => any } = {};
 	private breakpoints: Map<Breakpoint, Number> = new Map();
 	private buffer: string;
 	private process: ChildProcess.ChildProcess;
+	private stream;
+	private sshConn;
 }

@@ -52,6 +52,62 @@
 								"type": "array",
 								"description": "GDB commands to run when starting to debug",
 								"default": []
+							},
+							"ssh": {
+								"required": [
+									"host",
+									"cwd",
+									"user"
+								],
+								"type": "object",
+								"description": "If this is set then the extension will connect to an ssh host and run GDB there",
+								"properties": {
+									"host": {
+										"type": "string",
+										"description": "Remote host name/ip to connect to"
+									},
+									"cwd": {
+										"type": "string",
+										"description": "Path of project on the remote"
+									},
+									"port": {
+										"type": "number",
+										"description": "Remote port number",
+										"default": 22
+									},
+									"user": {
+										"type": "string",
+										"description": "Username to connect as"
+									},
+									"password": {
+										"type": "string",
+										"description": "Plain text password (unsafe; if possible use keyfile instead)"
+									},
+									"keyfile": {
+										"type": "string",
+										"description": "Absolute path to private key"
+									},
+									"forwardX11": {
+										"type": "boolean",
+										"description": "If true, the server will redirect x11 to the local host",
+										"default": true
+									},
+									"x11port": {
+										"type": "number",
+										"description": "Port to redirect X11 data to (by default port = display + 6000)",
+										"default": 6000
+									},
+									"x11host": {
+										"type": "string",
+										"description": "Hostname/ip to redirect X11 data to",
+										"default": "localhost"
+									},
+									"remotex11screen": {
+										"type": "number",
+										"description": "Screen to start the application on the remote side",
+										"default": 0
+									}
+								}
 							}
 						}
 					},
@@ -75,7 +131,8 @@
 							},
 							"cwd": {
 								"type": "string",
-								"description": "Path of project"
+								"description": "Path of project",
+								"default": "${workspaceRoot}"
 							},
 							"autorun": {
 								"type": "array",
@@ -103,7 +160,8 @@
 	},
 	"dependencies": {
 		"vscode-debugadapter": "^1.5.0",
-		"vscode-debugprotocol": "^1.5.0"
+		"vscode-debugprotocol": "^1.5.0",
+		"ssh2": "^0.4.13"
 	},
 	"devDependencies": {
 		"typescript": "^1.7.5",

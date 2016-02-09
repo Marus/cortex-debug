@@ -1,14 +1,16 @@
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { Breakpoint, IBackend } from './backend/backend'
+import { Breakpoint, IBackend, SSHArguments } from './backend/backend'
 import { MINode } from './backend/mi_parse'
 import { expandValue, isExpandable } from './backend/gdb_expansion'
 import { MI2 } from './backend/mi2/mi2'
+import { relative, resolve } from "path"
 
 export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
 	autorun: string[];
+	ssh: SSHArguments;
 }
 
 export interface AttachRequestArguments {
@@ -26,6 +28,9 @@ class MI2DebugSession extends DebugSession {
 	private quit: boolean;
 	private attached: boolean;
 	private needContinue: boolean;
+	private isSSH: boolean;
+	private trimCWD: string;
+	private switchCWD: string;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
@@ -82,21 +87,49 @@ class MI2DebugSession extends DebugSession {
 		this.quit = false;
 		this.attached = false;
 		this.needContinue = false;
-		this.gdbDebugger.load(args.cwd, args.target).then(() => {
-			if (args.autorun)
-				args.autorun.forEach(command => {
-					this.gdbDebugger.sendUserInput(command);
+		this.isSSH = false;
+		if (args.ssh !== undefined) {
+			if (args.ssh.forwardX11 === undefined)
+				args.ssh.forwardX11 = true;
+			if (args.ssh.port === undefined)
+				args.ssh.port = 22;
+			if (args.ssh.x11port === undefined)
+				args.ssh.x11port = 6000;
+			if (args.ssh.x11host === undefined)
+				args.ssh.x11host = "localhost";
+			if (args.ssh.remotex11screen === undefined)
+				args.ssh.remotex11screen = 0;
+			this.isSSH = true;
+			this.trimCWD = args.cwd;
+			this.switchCWD = args.ssh.cwd;
+			this.gdbDebugger.ssh(args.ssh, args.ssh.cwd, args.target).then(() => {
+				if (args.autorun)
+					args.autorun.forEach(command => {
+						this.gdbDebugger.sendUserInput(command);
+					});
+				this.gdbDebugger.start().then(() => {
+					this.sendResponse(response);
 				});
-			this.gdbDebugger.start().then(() => {
-				this.sendResponse(response);
 			});
-		});
+		}
+		else {
+			this.gdbDebugger.load(args.cwd, args.target).then(() => {
+				if (args.autorun)
+					args.autorun.forEach(command => {
+						this.gdbDebugger.sendUserInput(command);
+					});
+				this.gdbDebugger.start().then(() => {
+					this.sendResponse(response);
+				});
+			});
+		}
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 		this.quit = false;
 		this.attached = !args.remote;
 		this.needContinue = true;
+		this.isSSH = false;
 		if (args.remote) {
 			this.gdbDebugger.connect(args.cwd, args.executable, args.target).then(() => {
 				if (args.autorun)
@@ -126,17 +159,24 @@ class MI2DebugSession extends DebugSession {
 	}
 
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
-		this.gdbDebugger.clearBreakPoints().then(() => {
-			let path = args.source.path;
-			let all = [];
-			args.breakpoints.forEach(brk => {
-				all.push(this.gdbDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
+		this.gdbDebugger.once("debug-ready", (() => {
+			this.gdbDebugger.clearBreakPoints().then(() => {
+				let path = args.source.path;
+				if (this.isSSH) {
+					path = relative(this.trimCWD, path);
+					path = resolve(this.switchCWD, path);
+				}
+				this.handleMsg("console", "Breakpoints for file " + path + "\n");
+				let all = [];
+				args.breakpoints.forEach(brk => {
+					all.push(this.gdbDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
+				});
+				Promise.all(all).then(brkpoints => {
+					response.body.breakpoints = brkpoints;
+					this.sendResponse(response);
+				});
 			});
-			Promise.all(all).then(brkpoints => {
-				response.body.breakpoints = brkpoints;
-				this.sendResponse(response);
-			});
-		});
+		}).bind(this));
 	}
 
 	protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
@@ -152,7 +192,12 @@ class MI2DebugSession extends DebugSession {
 		this.gdbDebugger.getStack(args.levels).then(stack => {
 			let ret: StackFrame[] = [];
 			stack.forEach(element => {
-				ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, element.file), element.line, 0));
+				let file = element.file;
+				if (this.isSSH) {
+					file = relative(this.switchCWD, file);
+					file = resolve(this.trimCWD, file);
+				}
+				ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 			});
 			response.body = {
 				stackFrames: ret
