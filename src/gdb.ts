@@ -83,9 +83,10 @@ class MI2DebugSession extends DebugSession {
 		this.attached = false;
 		this.needContinue = false;
 		this.gdbDebugger.load(args.cwd, args.target).then(() => {
-			args.autorun.forEach(command => {
-				this.gdbDebugger.sendUserInput(command);
-			});
+			if (args.autorun)
+				args.autorun.forEach(command => {
+					this.gdbDebugger.sendUserInput(command);
+				});
 			this.gdbDebugger.start().then(() => {
 				this.sendResponse(response);
 			});
@@ -98,17 +99,19 @@ class MI2DebugSession extends DebugSession {
 		this.needContinue = true;
 		if (args.remote) {
 			this.gdbDebugger.connect(args.cwd, args.executable, args.target).then(() => {
-				args.autorun.forEach(command => {
-					this.gdbDebugger.sendUserInput(command);
-				});
+				if (args.autorun)
+					args.autorun.forEach(command => {
+						this.gdbDebugger.sendUserInput(command);
+					});
 				this.sendResponse(response);
 			});
 		}
 		else {
 			this.gdbDebugger.attach(args.cwd, args.executable, args.target).then(() => {
-				args.autorun.forEach(command => {
-					this.gdbDebugger.sendUserInput(command);
-				});
+				if (args.autorun)
+					args.autorun.forEach(command => {
+						this.gdbDebugger.sendUserInput(command);
+					});
 				this.sendResponse(response);
 			});
 		}
