@@ -36,6 +36,7 @@ class MI2DebugSession extends DebugSession {
 		this.sendResponse(response);
 		this.gdbDebugger = new MI2("gdb", ["-q", "--interpreter=mi2"]);
 		this.gdbDebugger.on("quit", this.quitEvent.bind(this));
+		this.gdbDebugger.on("exited-normally", this.quitEvent.bind(this));
 		this.gdbDebugger.on("stopped", this.stopEvent.bind(this));
 		this.gdbDebugger.on("msg", this.handleMsg.bind(this));
 		this.gdbDebugger.on("breakpoint", this.handleBreakpoint.bind(this));

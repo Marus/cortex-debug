@@ -101,6 +101,8 @@ export class MI2 extends EventEmitter implements IBackend {
 									this.emit("step-out-end", parsed);
 								else if (reason == "signal-received")
 									this.emit("signal-stop", parsed);
+								else if (reason == "exited-normally")
+									this.emit("exited-normally", parsed);
 								else {
 									this.log("console", "Not implemented stop reason (assuming exception): " + reason);
 									this.emit("stopped", parsed);
