@@ -92,14 +92,19 @@ export class MI2 extends EventEmitter implements IBackend {
 							if (record.asyncClass == "running")
 								this.emit("running", parsed);
 							else if (record.asyncClass == "stopped") {
-								if (parsed.record("reason") == "breakpoint-hit")
+								let reason = parsed.record("reason");
+								if (reason == "breakpoint-hit")
 									this.emit("breakpoint", parsed);
-								else if (parsed.record("reason") == "end-stepping-range")
+								else if (reason == "end-stepping-range")
 									this.emit("step-end", parsed);
-								else if (parsed.record("reason") == "function-finished")
+								else if (reason == "function-finished")
 									this.emit("step-out-end", parsed);
-								else
+								else if (reason == "signal-received")
+									this.emit("signal-stop", parsed);
+								else {
+									this.log("console", "Not implemented stop reason (assuming exception): " + reason);
 									this.emit("stopped", parsed);
+								}
 							} else
 								this.log("log", JSON.stringify(parsed));
 						}

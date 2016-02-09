@@ -38,9 +38,10 @@ class MI2DebugSession extends DebugSession {
 		this.gdbDebugger.on("quit", this.quitEvent.bind(this));
 		this.gdbDebugger.on("stopped", this.stopEvent.bind(this));
 		this.gdbDebugger.on("msg", this.handleMsg.bind(this));
-		this.gdbDebugger.on("breakpoint", this.handleBreak.bind(this));
+		this.gdbDebugger.on("breakpoint", this.handleBreakpoint.bind(this));
 		this.gdbDebugger.on("step-end", this.handleBreak.bind(this));
 		this.gdbDebugger.on("step-out-end", this.handleBreak.bind(this));
+		this.gdbDebugger.on("signal-stop", this.handlePause.bind(this));
 		this.sendEvent(new InitializedEvent());
 	}
 
@@ -52,8 +53,16 @@ class MI2DebugSession extends DebugSession {
 		this.sendEvent(new OutputEvent(msg, type));
 	}
 
+	private handleBreakpoint(info: MINode) {
+		this.sendEvent(new StoppedEvent("breakpoint", MI2DebugSession.THREAD_ID));
+	}
+
 	private handleBreak(info: MINode) {
 		this.sendEvent(new StoppedEvent("step", MI2DebugSession.THREAD_ID));
+	}
+
+	private handlePause(info: MINode) {
+		this.sendEvent(new StoppedEvent("user request", MI2DebugSession.THREAD_ID));
 	}
 
 	private stopEvent(info: MINode) {
