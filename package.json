@@ -29,7 +29,8 @@
 						"cpp",
 						"d",
 						"objective-c",
-						"fortan",
+						"fortran",
+						"fortran-modern",
 						"pascal",
 						"ada"
 					]
