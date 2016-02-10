@@ -2,17 +2,17 @@
 
 Native VSCode debugger. Currently only using GDB.
 
-![https://i.imgur.com/ANEvaZg.png](https://i.imgur.com/ANEvaZg.png)
+![Preview](images/preview.png)
 
 ## Usage
 
-![http://i.webfreak.org/540244.png](http://i.webfreak.org/540244.png)
+![Image with red circle around a cog and an orange arrow pointing at GDB](images/tutorial1.png)
 
 Open your project and click the debug button in your sidebar. At the top right press
 the little gear icon and select GDB. It will automatically generate the configuration
 you need.
 
-![http://i.webfreak.org/1A53C4.png](http://i.webfreak.org/1A53C4.png)
+![Default config with a red circle around the target](images/tutorial1.png)
 
 Now you need to change `target` to the application you want to debug relative
 to the cwd. (Which is the workspace root by default)
