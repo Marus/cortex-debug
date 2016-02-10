@@ -93,7 +93,9 @@ export class MI2 extends EventEmitter implements IBackend {
 						screen: args.remotex11screen
 					};
 				}
-				this.sshConn.exec(this.application + " " + this.preargs.join(" "), execArgs, (err, stream) => {
+				let sshCMD = this.application + " " + this.preargs.join(" ");
+				if (args.bootstrap) sshCMD = args.bootstrap + " && " + sshCMD;
+				this.sshConn.exec(sshCMD, execArgs, (err, stream) => {
 					if (err) {
 						this.log("stderr", "Could not run " + this.application + " over ssh!");
 						this.log("stderr", err.toString());
