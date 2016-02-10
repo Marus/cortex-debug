@@ -4,7 +4,8 @@ import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
 import * as net from "net"
 import * as fs from "fs"
-import * as path from "path"
+import { posix } from "path"
+let path = posix;
 var Client = require("ssh2").Client;
 
 function escape(str: string) {
@@ -25,8 +26,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	load(cwd: string, target: string): Thenable<any> {
-		if (!path.isAbsolute(target))
-			target = path.join(cwd, target);
+		if (!path.isAbsolute(target.replace(/\\/g, "/")))
+			target = path.join(cwd.replace(/\\/g, "/"), target.replace(/\\/g, "/"));
 		return new Promise((resolve, reject) => {
 			this.isSSH = false;
 			this.process = ChildProcess.spawn(this.application, this.preargs.concat([target]), { cwd: cwd });
@@ -45,9 +46,6 @@ export class MI2 extends EventEmitter implements IBackend {
 
 	ssh(args: SSHArguments, cwd: string, target: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
-			if (!path.isAbsolute(target))
-				target = path.join(cwd, target);
-
 			this.isSSH = true;
 			this.sshReady = false;
 			this.sshConn = new Client();

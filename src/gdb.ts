@@ -4,7 +4,10 @@ import { Breakpoint, IBackend, SSHArguments } from './backend/backend'
 import { MINode } from './backend/mi_parse'
 import { expandValue, isExpandable } from './backend/gdb_expansion'
 import { MI2 } from './backend/mi2/mi2'
-import { relative, resolve } from "path"
+import { posix } from "path"
+
+let resolve = posix.resolve;
+let relative = posix.relative;
 
 export interface LaunchRequestArguments {
 	cwd: string;
@@ -163,10 +166,9 @@ class MI2DebugSession extends DebugSession {
 			this.gdbDebugger.clearBreakPoints().then(() => {
 				let path = args.source.path;
 				if (this.isSSH) {
-					path = relative(this.trimCWD, path);
-					path = resolve(this.switchCWD, path);
+					path = relative(this.trimCWD.replace(/\\/g, "/"), path.replace(/\\/g, "/"));
+					path = resolve(this.switchCWD.replace(/\\/g, "/"), path.replace(/\\/g, "/"));
 				}
-				this.handleMsg("console", "Breakpoints for file " + path + "\n");
 				let all = [];
 				args.breakpoints.forEach(brk => {
 					all.push(this.gdbDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
@@ -194,8 +196,8 @@ class MI2DebugSession extends DebugSession {
 			stack.forEach(element => {
 				let file = element.file;
 				if (this.isSSH) {
-					file = relative(this.switchCWD, file);
-					file = resolve(this.trimCWD, file);
+					file = relative(this.switchCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
+					file = resolve(this.trimCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
 				}
 				ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 			});
