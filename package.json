@@ -48,6 +48,11 @@
 								"type": "string",
 								"description": "Path of project"
 							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all GDB calls to console",
+								"default": false
+							},
 							"autorun": {
 								"type": "array",
 								"description": "GDB commands to run when starting to debug",
@@ -123,6 +128,11 @@
 							"remote": {
 								"type": "boolean",
 								"description": "If true this will connect to a gdbserver instead of attaching to a PID",
+								"default": false
+							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all GDB calls to console",
 								"default": false
 							},
 							"executable": {

@@ -476,6 +476,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	sendRaw(raw: string) {
+		if (this.printCalls)
+			this.log("log", raw);
 		if (this.isSSH)
 			this.stream.write(raw + "\n");
 		else
@@ -502,6 +504,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		return this.isSSH ? this.sshReady : !!this.process;
 	}
 
+	printCalls: boolean;
 	private isSSH: boolean;
 	private sshReady: boolean;
 	private currentToken: number = 1;
