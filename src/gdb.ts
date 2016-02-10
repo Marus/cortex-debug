@@ -5,6 +5,7 @@ import { MINode } from './backend/mi_parse'
 import { expandValue, isExpandable } from './backend/gdb_expansion'
 import { MI2 } from './backend/mi2/mi2'
 import { posix } from "path"
+import * as systemPath from "path"
 
 let resolve = posix.resolve;
 let relative = posix.relative;
@@ -197,7 +198,7 @@ class MI2DebugSession extends DebugSession {
 				let file = element.file;
 				if (this.isSSH) {
 					file = relative(this.switchCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
-					file = resolve(this.trimCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
+					file = systemPath.resolve(this.trimCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
 				}
 				ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 			});
