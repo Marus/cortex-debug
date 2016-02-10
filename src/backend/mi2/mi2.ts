@@ -131,6 +131,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	attach(cwd: string, executable: string, target: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			let args = [];
+			if (executable && !nativePath.isAbsolute(executable))
+				executable = nativePath.join(cwd, executable);
 			if (!executable)
 				executable = "-p";
 			args = args.concat([executable, target], this.preargs);
@@ -151,6 +153,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	connect(cwd: string, executable: string, target: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			let args = [];
+			if (executable && !nativePath.isAbsolute(executable))
+				executable = nativePath.join(cwd, executable);
 			if (executable)
 				args = args.concat([executable], this.preargs);
 			else
