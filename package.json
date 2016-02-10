@@ -111,6 +111,10 @@
 										"type": "number",
 										"description": "Screen to start the application on the remote side",
 										"default": 0
+									},
+									"bootstrap": {
+										"type": "string",
+										"description": "Content will be executed on the SSH host before the debugger call."
 									}
 								}
 							}

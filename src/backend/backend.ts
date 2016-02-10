@@ -24,6 +24,7 @@ export interface SSHArguments {
 	remotex11screen: number;
 	x11port: number;
 	x11host: string;
+	bootstrap: string;
 }
 
 export interface IBackend {

@@ -84,7 +84,9 @@ request.
 	"password": "password123",
 	"user": "remoteUser",
 	"x11host": "localhost",
-	"x11port": 6000
+	"x11port": 6000,
+	// Optional, content will be executed on the SSH host before the debugger call.
+	"bootstrap": "source /home/remoteUser/some-env"
 }
 ```
 
@@ -94,5 +96,9 @@ required for basically everything except watched variables or user commands to w
 For X11 forwarding to work you first need to enable it in your Display Manager and allow the
 connections. To allow connections you can either add an entry for applications or run `xhost +`
 in the console while you are debugging and turn it off again when you are done using `xhost -`.
+
+Because some builds requires one or more environment files to be sourced before running any
+command, you can use the `ssh.bootstrap` option to add some extra commands which will be prepended
+to the debugger call (using `&&` to join both).
 
 ## [Issues](https://github.com/WebFreak001/code-debug)
