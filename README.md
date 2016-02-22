@@ -4,7 +4,7 @@ Native VSCode debugger. Currently only using GDB.
 
 ## Installation
 
-Run `ext install debug` (Ctrl-Shift-P -> install extension) in visual studio code and install GDB and add the executable to your PATH variable. If you have changed your PATH, don't forget to restart vscode. Then follow the usage tutorial below.
+Run `ext install debug` (Ctrl-Shift-P -> install extension + make sure its just called `Debug` and at the right it should say `webfreak`) in visual studio code and install GDB and add the executable to your PATH variable. If you have changed your PATH, don't forget to restart vscode. Then follow the usage tutorial below.
 
 ![Preview](images/preview.png)
 
