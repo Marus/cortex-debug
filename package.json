@@ -45,6 +45,10 @@
 								"type": "string",
 								"description": "Path of executable"
 							},
+							"arguments": {
+								"type": "string",
+								"description": "Arguments to append after the executable. You can also use pipes."
+							},
 							"cwd": {
 								"type": "string",
 								"description": "Path of project"

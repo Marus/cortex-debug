@@ -26,7 +26,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		super();
 	}
 
-	load(cwd: string, target: string): Thenable<any> {
+	load(cwd: string, target: string, procArgs: string): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		return new Promise((resolve, reject) => {
@@ -35,17 +35,20 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
-			Promise.all([
+			let promises = [
 				this.sendCommand("gdb-set target-async on"),
 				this.sendCommand("environment-directory \"" + escape(cwd) + "\"")
-			]).then(() => {
+			];
+			if (procArgs && procArgs.length)
+				promises.push(this.sendCommand("exec-arguments " + procArgs));
+			Promise.all(promises).then(() => {
 				this.emit("debug-ready")
 				resolve();
 			}, reject);
 		});
 	}
 
-	ssh(args: SSHArguments, cwd: string, target: string): Thenable<any> {
+	ssh(args: SSHArguments, cwd: string, target: string, procArgs: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			this.isSSH = true;
 			this.sshReady = false;
@@ -111,12 +114,15 @@ export class MI2 extends EventEmitter implements IBackend {
 						this.emit("quit");
 						this.sshConn.end();
 					}).bind(this));
-					Promise.all([
+					let promises = [
 						this.sendCommand("gdb-set target-async on"),
 						this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
 						this.sendCommand("environment-cd \"" + escape(cwd) + "\""),
 						this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"")
-					]).then(() => {
+					];
+					if (procArgs && procArgs.length)
+						promises.push(this.sendCommand("exec-arguments " + procArgs));
+					Promise.all(promises).then(() => {
 						this.emit("debug-ready")
 						resolve();
 					}, reject);
