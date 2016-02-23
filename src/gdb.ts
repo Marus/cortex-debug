@@ -14,6 +14,7 @@ export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
 	arguments: string;
+	terminal: string;
 	autorun: string[];
 	ssh: SSHArguments;
 	printCalls: boolean;
@@ -110,7 +111,7 @@ class MI2DebugSession extends DebugSession {
 			this.isSSH = true;
 			this.trimCWD = args.cwd.replace(/\\/g, "/");
 			this.switchCWD = args.ssh.cwd;
-			this.gdbDebugger.ssh(args.ssh, args.ssh.cwd, args.target, args.arguments).then(() => {
+			this.gdbDebugger.ssh(args.ssh, args.ssh.cwd, args.target, args.arguments, args.terminal).then(() => {
 				if (args.autorun)
 					args.autorun.forEach(command => {
 						this.gdbDebugger.sendUserInput(command);
@@ -121,7 +122,7 @@ class MI2DebugSession extends DebugSession {
 			});
 		}
 		else {
-			this.gdbDebugger.load(args.cwd, args.target, args.arguments).then(() => {
+			this.gdbDebugger.load(args.cwd, args.target, args.arguments, args.terminal).then(() => {
 				if (args.autorun)
 					args.autorun.forEach(command => {
 						this.gdbDebugger.sendUserInput(command);
@@ -357,7 +358,6 @@ class MI2DebugSession extends DebugSession {
 	}
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
-		this.handleMsg("console", "Evaluate (" + args.context + "): " + args.expression + "\n")
 		if (args.context == "watch" || args.context == "hover")
 			this.gdbDebugger.evalExpression(args.expression).then((res) => {
 				response.body = {

@@ -49,6 +49,10 @@
 								"type": "string",
 								"description": "Arguments to append after the executable. You can also use pipes."
 							},
+							"terminal": {
+								"type": "string",
+								"description": "Leave this field undefined to keep program output in the vscode console at the bottom. If this is set to empty string the program will spawn in a new console using x-terminal-emulator on linux, otherwise with the specified terminal. On windows setting this to an empty string spawns the program in a console, but no other console is supported."
+							},
 							"cwd": {
 								"type": "string",
 								"description": "Path of project"
