@@ -75,6 +75,9 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.isSSH = true;
 			this.sshReady = false;
 			this.sshConn = new Client();
+			
+			if(separateConsole !== undefined)
+				this.log("stderr", "WARNING: Output to terminal emulators are not supported over SSH");
 
 			if (args.forwardX11) {
 				this.sshConn.on("x11", (info, accept, reject) => {
