@@ -21,6 +21,11 @@ you need.
 Now you need to change `target` to the application you want to debug relative
 to the cwd. (Which is the workspace root by default)
 
+Additionally you can set `terminal` if you want to run the program in a separate terminal with
+support for input. On Windows set it to an empty string (`""`) to enable this feature. On linux
+set it to an empty string (`""`) to use the default terminal emulator specified with `x-terminal-emulator`
+or specify a custom one. Note that it must support the `-e` argument.
+
 Before debugging you need to compile your application first, then you can run it using
 the green start button in the debug sidebar. For this you could use the `preLaunchTask`
 argument vscode allows you to do. Debugging multithreaded applications is currently not
@@ -53,11 +58,6 @@ path for GDB to find the debug symbols.
 ```
 
 This will attach to PID 4285 which should already run. GDB will pause the program on entering.
-
-Additionally you can set `terminal` if you want to run the program in a separate terminal with
-support for input. On Windows set it to an empty string (`""`) to enable this feature. On linux
-set it to an empty string (`""`) to use the default terminal emulator specified with `x-terminal-emulator`
-or specify a custom one. Note that it must support the `-e` argument.
 
 ### Using `gdbserver` for remote debugging
 
