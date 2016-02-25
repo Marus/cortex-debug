@@ -31,6 +31,7 @@
 						"objective-c",
 						"fortran",
 						"fortran-modern",
+						"rust",
 						"pascal",
 						"ada"
 					]
