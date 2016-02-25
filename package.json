@@ -33,7 +33,8 @@
 						"fortran-modern",
 						"rust",
 						"pascal",
-						"ada"
+						"ada",
+						"nim"
 					]
 				},
 				"configurationAttributes": {
