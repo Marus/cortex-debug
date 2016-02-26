@@ -23,7 +23,8 @@
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outDir": "${workspaceRoot}/out/src",
-			"cwd": "${workspaceRoot}"
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "npm"
 		},
 		{
 			"name": "Launch Tests",
