@@ -14,6 +14,19 @@
 			"preLaunchTask": "npm"
 		},
 		{
+			"name": "code-debug server",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [ "--nolazy" ],
+			"program": "${workspaceRoot}/src/gdb.ts",
+			"stopOnEntry": false,
+			"args": [ "--server=4711" ],
+			"sourceMaps": true,
+			"outDir": "${workspaceRoot}/out/src",
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "npm"
+		},
+		{
 			"name": "Launch Tests",
 			"type": "extensionHost",
 			"request": "launch",
