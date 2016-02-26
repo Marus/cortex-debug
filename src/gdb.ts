@@ -181,7 +181,9 @@ class MI2DebugSession extends DebugSession {
 					all.push(this.gdbDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
 				});
 				Promise.all(all).then(brkpoints => {
-					response.body.breakpoints = brkpoints;
+					response.body = {
+						breakpoints: brkpoints
+					};
 					this.sendResponse(response);
 				});
 			});
