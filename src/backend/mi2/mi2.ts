@@ -46,7 +46,7 @@ export class MI2 extends EventEmitter implements IBackend {
 				if (separateConsole !== undefined)
 					promises.push(this.sendCommand("gdb-set new-console on"))
 				Promise.all(promises).then(() => {
-					this.emit("debug-ready")
+					this.emit("debug-ready");
 					resolve();
 				}, reject);
 			}
@@ -55,14 +55,14 @@ export class MI2 extends EventEmitter implements IBackend {
 					linuxTerm.spawnTerminalEmulator(separateConsole).then(tty => {
 						promises.push(this.sendCommand("inferior-tty-set " + tty));
 						Promise.all(promises).then(() => {
-							this.emit("debug-ready")
+							this.emit("debug-ready");
 							resolve();
 						}, reject);
 					});
 				}
 				else {
 					Promise.all(promises).then(() => {
-						this.emit("debug-ready")
+						this.emit("debug-ready");
 						resolve();
 					}, reject);
 				}
@@ -75,8 +75,8 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.isSSH = true;
 			this.sshReady = false;
 			this.sshConn = new Client();
-			
-			if(separateConsole !== undefined)
+
+			if (separateConsole !== undefined)
 				this.log("stderr", "WARNING: Output to terminal emulators are not supported over SSH");
 
 			if (args.forwardX11) {
@@ -286,13 +286,15 @@ export class MI2 extends EventEmitter implements IBackend {
 
 	start(): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
-			this.log("console", "Running executable");
-			this.sendCommand("exec-run").then((info) => {
-				if (info.resultRecords.resultClass == "running")
-					resolve();
-				else
-					reject();
-			}, reject);
+			this.once("ui-break-done", () => {
+				this.log("console", "Running executable");
+				this.sendCommand("exec-run").then((info) => {
+					if (info.resultRecords.resultClass == "running")
+						resolve();
+					else
+						reject();
+				}, reject);
+			});
 		});
 	}
 

@@ -181,9 +181,17 @@ class MI2DebugSession extends DebugSession {
 					all.push(this.gdbDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
 				});
 				Promise.all(all).then(brkpoints => {
+					let finalBrks = [];
+					brkpoints.forEach(brkp => {
+						if (brkp[0])
+							finalBrks.push({ line: brkp[1].line });
+					});
 					response.body = {
-						breakpoints: brkpoints
+						breakpoints: finalBrks
 					};
+					setTimeout(() => {
+						this.gdbDebugger.emit("ui-break-done");
+					}, 50);
 					this.sendResponse(response);
 				});
 			});
@@ -277,6 +285,12 @@ class MI2DebugSession extends DebugSession {
 						variables: variables
 					};
 					this.sendResponse(response);
+				}, err => {
+					this.handleMsg("stderr", "Could not expand variable\n");
+					response.body = {
+						variables: []
+					};
+					this.sendResponse(response);
 				});
 			}
 			else {
@@ -295,6 +309,12 @@ class MI2DebugSession extends DebugSession {
 						];
 					response.body = {
 						variables: expanded
+					};
+					this.sendResponse(response);
+				}, err => {
+					this.handleMsg("stderr", "Could not expand variable\n");
+					response.body = {
+						variables: []
 					};
 					this.sendResponse(response);
 				});
