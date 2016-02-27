@@ -27,15 +27,38 @@ suite("GDB Value Expansion", () => {
 			}]);
 		assert.strictEqual(isExpandable(`{{a = b}}`), 1);
 		assert.deepEqual(expandValue(variableCreate, `{{a = b}}`), [
-			[
-				{
-					name: "a",
-					value: "b",
-					variablesReference: 0
+			{
+				name: "[0]",
+				value: "Object",
+				variablesReference: {
+					expanded: [
+						{
+							name: "a",
+							value: "b",
+							variablesReference: 0
+						}
+					]
 				}
-			]
+			}
 		]);
-		assert.deepEqual(expandValue(variableCreate, `{1, 2, 3, 4}`), [1, 2, 3, 4]);
+		assert.deepEqual(expandValue(variableCreate, `{1, 2, 3, 4}`), [
+			{
+				name: "[0]",
+				value: "1",
+				variablesReference: 0
+			}, {
+				name: "[1]",
+				value: "2",
+				variablesReference: 0
+			}, {
+				name: "[2]",
+				value: "3",
+				variablesReference: 0
+			}, {
+				name: "[3]",
+				value: "4",
+				variablesReference: 0
+			}]);
 	});
 	test("Error values", () => {
 		assert.strictEqual(isExpandable(`<No data fields>`), 0);
@@ -90,23 +113,29 @@ suite("GDB Value Expansion", () => {
 				value: "Object",
 				variablesReference: {
 					expanded: [
-						[
-							{
-								name: "view",
-								value: "Object@*0x7ffff7ece1e8",
-								variablesReference: { expanded: "*view" }
-							},
-							{
-								name: "renderer",
-								value: "Object@*0x7ffff7eccc50",
-								variablesReference: { expanded: "*renderer" }
-							},
-							{
-								name: "world",
-								value: "Object@*0x7ffff7ece480",
-								variablesReference: { expanded: "*world" }
+						{
+							name: "[0]",
+							value: "Object",
+							variablesReference: {
+								expanded: [
+									{
+										name: "view",
+										value: "Object@*0x7ffff7ece1e8",
+										variablesReference: { expanded: "*view" }
+									},
+									{
+										name: "renderer",
+										value: "Object@*0x7ffff7eccc50",
+										variablesReference: { expanded: "*renderer" }
+									},
+									{
+										name: "world",
+										value: "Object@*0x7ffff7ece480",
+										variablesReference: { expanded: "*world" }
+									}
+								]
 							}
-						]
+						}
 					]
 				}
 			},

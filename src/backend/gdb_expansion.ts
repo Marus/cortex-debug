@@ -65,7 +65,7 @@ export function expandValue(variableCreate: Function, value: string): any {
 		return str;
 	};
 
-	let parseValue, parseCommaResult, parseCommaValue, parseResult;
+	let parseValue, parseCommaResult, parseCommaValue, parseResult, createValue;
 
 	let parseTupleOrList = () => {
 		value = value.trim();
@@ -84,10 +84,11 @@ export function expandValue(variableCreate: Function, value: string): any {
 		if (newValPos != -1 && eqPos > newValPos || eqPos == -1) { // is value list
 			let values = [];
 			let val = parseValue();
-			values.push(val);
+			values.push(createValue("[0]", val));
 			let remaining = value;
+			let i = 0;
 			while (val = parseCommaValue())
-				values.push(val);
+				values.push(createValue("[" + (++i) + "]", val));
 			value = value.substr(1).trim(); // }
 			return values;
 		}
@@ -163,17 +164,21 @@ export function expandValue(variableCreate: Function, value: string): any {
 		value = value.substr(variableMatch[0].length).trim();
 		let variable = variableMatch[1];
 		let val = parseValue();
+		return createValue(variable, val);
+	};
+
+	createValue = (name, val) => {
 		let ref = 0;
 		if (typeof val == "object") {
 			ref = variableCreate(val);
 			val = "Object";
 		}
 		if (typeof val == "string" && val.startsWith("*0x")) {
-			ref = variableCreate("*" + variable);
+			ref = variableCreate("*" + name);
 			val = "Object@" + val;
 		}
 		return {
-			name: variable,
+			name: name,
 			value: val,
 			variablesReference: ref
 		};
