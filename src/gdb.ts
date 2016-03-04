@@ -39,6 +39,8 @@ class MI2DebugSession extends DebugSession {
 	private isSSH: boolean;
 	private trimCWD: string;
 	private switchCWD: string;
+	private started: boolean;
+	private crashed: boolean;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
@@ -82,6 +84,8 @@ class MI2DebugSession extends DebugSession {
 	}
 
 	private stopEvent(info: MINode) {
+		if (!this.started)
+			this.crashed = true;
 		if (!this.quit)
 			this.sendEvent(new StoppedEvent("exception", MI2DebugSession.THREAD_ID));
 	}
@@ -96,6 +100,8 @@ class MI2DebugSession extends DebugSession {
 		this.attached = false;
 		this.needContinue = false;
 		this.isSSH = false;
+		this.started = false;
+		this.crashed = false;
 		this.gdbDebugger.printCalls = !!args.printCalls;
 		if (args.ssh !== undefined) {
 			if (args.ssh.forwardX11 === undefined)
@@ -117,7 +123,10 @@ class MI2DebugSession extends DebugSession {
 						this.gdbDebugger.sendUserInput(command);
 					});
 				this.gdbDebugger.start().then(() => {
+					this.started = true;
 					this.sendResponse(response);
+					if (this.crashed)
+						this.handlePause(undefined);
 				});
 			});
 		}
@@ -128,7 +137,10 @@ class MI2DebugSession extends DebugSession {
 						this.gdbDebugger.sendUserInput(command);
 					});
 				this.gdbDebugger.start().then(() => {
+					this.started = true;
 					this.sendResponse(response);
+					if (this.crashed)
+						this.handlePause(undefined);
 				});
 			});
 		}
@@ -296,7 +308,7 @@ class MI2DebugSession extends DebugSession {
 			else {
 				// Variable members
 				this.gdbDebugger.evalExpression(JSON.stringify(id)).then(variable => {
-					let expanded = expandValue(createVariable, variable.result("value"));
+					let expanded = expandValue(createVariable, variable.result("value"), id);
 					if (!expanded)
 						this.sendEvent(new OutputEvent("Could not expand " + variable.result("value") + "\n", "stderr"));
 					else if (typeof expanded[0] == "string")
