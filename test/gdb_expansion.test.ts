@@ -121,17 +121,17 @@ suite("GDB Value Expansion", () => {
 									{
 										name: "view",
 										value: "Object@*0x7ffff7ece1e8",
-										variablesReference: { expanded: "*view" }
+										variablesReference: { expanded: "*_views[0].view" }
 									},
 									{
 										name: "renderer",
 										value: "Object@*0x7ffff7eccc50",
-										variablesReference: { expanded: "*renderer" }
+										variablesReference: { expanded: "*_views[0].renderer" }
 									},
 									{
 										name: "world",
 										value: "Object@*0x7ffff7ece480",
-										variablesReference: { expanded: "*world" }
+										variablesReference: { expanded: "*_views[0].world" }
 									}
 								]
 							}

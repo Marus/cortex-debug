@@ -1,28 +1,9 @@
-/*
-	{
-		quit = false,
-		_views = {
-			{
-				view = 0x7ffff7ece1e8,
-				renderer = 0x7ffff7eccc50,
-				world = 0x7ffff7ece480
-			}
-		},
-		deltaTimer = {
-			_flagStarted = false,
-			_timeStart = {length = 0},
-			_timeMeasured = {length = 0}
-		},
-		_start = {callbacks = 0x0},
-		_stop = {callbacks = 0x0}
-	}
-*/
-
 const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)\s*=\s*/;
 const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
 const errorRegex = /^\<.+?\>/;
 const referenceRegex = /^0x[0-9a-fA-F]+/;
 const numberRegex = /^[0-9]+/;
+const pointerCombineChar = ".";
 
 export function isExpandable(value: string): number {
 	let primitive: any;
@@ -40,7 +21,7 @@ export function isExpandable(value: string): number {
 	else return 0;
 }
 
-export function expandValue(variableCreate: Function, value: string): any {
+export function expandValue(variableCreate: Function, value: string, root: string = ""): any {
 	let parseCString = () => {
 		value = value.trim();
 		if (value[0] != '"')
@@ -65,7 +46,35 @@ export function expandValue(variableCreate: Function, value: string): any {
 		return str;
 	};
 
+	let stack = [root];
 	let parseValue, parseCommaResult, parseCommaValue, parseResult, createValue;
+	let variable = "";
+
+	let getNamespace = (variable) => {
+		let namespace = "";
+		let prefix = "";
+		stack.push(variable);
+		stack.forEach(name => {
+			prefix = "";
+			if (name != "") {
+				if (name.startsWith("["))
+					namespace = namespace + name;
+				else {
+					if (namespace) {
+						while (name.startsWith("*")) {
+							prefix += "*";
+							name = name.substr(1);
+						}
+						namespace = namespace + pointerCombineChar + name;
+					}
+					else
+						namespace = name;
+				}
+			}
+		});
+		stack.pop();
+		return prefix + namespace;
+	};
 
 	let parseTupleOrList = () => {
 		value = value.trim();
@@ -83,21 +92,30 @@ export function expandValue(variableCreate: Function, value: string): any {
 			newValPos = newValPos2;
 		if (newValPos != -1 && eqPos > newValPos || eqPos == -1) { // is value list
 			let values = [];
+			stack.push("[0]");
 			let val = parseValue();
+			stack.pop();
 			values.push(createValue("[0]", val));
 			let remaining = value;
 			let i = 0;
-			while (val = parseCommaValue())
-				values.push(createValue("[" + (++i) + "]", val));
+			while (true) {
+				stack.push("[" + (++i) + "]");
+				if (!(val = parseCommaValue())) {
+					stack.pop();
+					break;
+				}
+				stack.pop();
+				values.push(createValue("[" + i + "]", val));
+			}
 			value = value.substr(1).trim(); // }
 			return values;
 		}
 
-		let result = parseResult();
+		let result = parseResult(true);
 		if (result) {
 			let results = [];
 			results.push(result);
-			while (result = parseCommaResult())
+			while (result = parseCommaResult(true))
 				results.push(result);
 			value = value.substr(1).trim(); // }
 			return results;
@@ -156,15 +174,19 @@ export function expandValue(variableCreate: Function, value: string): any {
 			return parsePrimitive();
 	};
 
-	parseResult = () => {
+	parseResult = (pushToStack: boolean = false) => {
 		value = value.trim();
 		let variableMatch = resultRegex.exec(value);
 		if (!variableMatch)
 			return undefined;
 		value = value.substr(variableMatch[0].length).trim();
-		let variable = variableMatch[1];
+		let name = variable = variableMatch[1];
+		if (pushToStack)
+			stack.push(variable);
 		let val = parseValue();
-		return createValue(variable, val);
+		if (pushToStack)
+			stack.pop();
+		return createValue(name, val);
 	};
 
 	createValue = (name, val) => {
@@ -174,7 +196,7 @@ export function expandValue(variableCreate: Function, value: string): any {
 			val = "Object";
 		}
 		if (typeof val == "string" && val.startsWith("*0x")) {
-			ref = variableCreate("*" + name);
+			ref = variableCreate(getNamespace("*" + name));
 			val = "Object@" + val;
 		}
 		return {
@@ -192,12 +214,12 @@ export function expandValue(variableCreate: Function, value: string): any {
 		return parseValue();
 	};
 
-	parseCommaResult = () => {
+	parseCommaResult = (pushToStack: boolean = false) => {
 		value = value.trim();
 		if (value[0] != ',')
 			return undefined;
 		value = value.substr(1).trim();
-		return parseResult();
+		return parseResult(pushToStack);
 	};
 
 
