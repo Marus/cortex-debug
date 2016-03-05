@@ -16,7 +16,7 @@ Open your project and click the debug button in your sidebar. At the top right p
 the little gear icon and select GDB. It will automatically generate the configuration
 you need.
 
-![Default config with a red circle around the target](images/tutorial1.png)
+![Default config with a red circle around the target](images/tutorial2.png)
 
 Now you need to change `target` to the application you want to debug relative
 to the cwd. (Which is the workspace root by default)
