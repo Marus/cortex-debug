@@ -17,7 +17,7 @@ export class MI2_LLDB extends MI2 {
 		return new Promise((resolve, reject) => {
 			this.process = ChildProcess.spawn(this.application, this.preargs, { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),

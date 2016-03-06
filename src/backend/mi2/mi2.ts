@@ -14,7 +14,8 @@ export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
-let nonOutput = /^[0-9]*[\*\+\=]|[\~\@\&\^]/;
+const nonOutput = /^[0-9]*[\*\+\=]|[\~\@\&\^]/;
+const gdbMatch = /(undefined|\d*)\(gdb\)/;
 
 function couldBeOutput(line: string) {
 	if (nonOutput.exec(line))
@@ -34,7 +35,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.isSSH = false;
 			this.process = ChildProcess.spawn(this.application, this.preargs, { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			let promises = this.initCommands(target, cwd);
 			if (procArgs && procArgs.length)
@@ -131,7 +132,7 @@ export class MI2 extends EventEmitter implements IBackend {
 					this.sshReady = true;
 					this.stream = stream;
 					stream.on("data", this.stdout.bind(this));
-					stream.stderr.on("data", this.stdout.bind(this));
+					stream.stderr.on("data", this.stderr.bind(this));
 					stream.on("exit", (() => {
 						this.emit("quit");
 						this.sshConn.end();
@@ -172,7 +173,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			args = args.concat([executable, target], this.preargs);
 			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
@@ -195,7 +196,7 @@ export class MI2 extends EventEmitter implements IBackend {
 				args = this.preargs;
 			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stdout.bind(this));
+			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
@@ -220,11 +221,30 @@ export class MI2 extends EventEmitter implements IBackend {
 		}
 	}
 
+	stderr(data) {
+		if (typeof data == "string")
+			this.errbuf += data;
+		else
+			this.errbuf += data.toString("utf8");
+		let end = this.errbuf.lastIndexOf('\n');
+		if (end != -1) {
+			this.onOutputStderr(this.errbuf.substr(0, end));
+			this.errbuf = this.errbuf.substr(end + 1);
+		}
+	}
+
+	onOutputStderr(lines) {
+		lines = <string[]>lines.split('\n');
+		lines.forEach(line => {
+			this.log("stderr", line);
+		});
+	}
+
 	onOutput(lines) {
 		lines = <string[]>lines.split('\n');
 		lines.forEach(line => {
 			if (couldBeOutput(line)) {
-				if (line.trim() != "(gdb)")
+				if (!gdbMatch.exec(line))
 					this.log("stdout", line);
 			}
 			else {
@@ -548,6 +568,7 @@ export class MI2 extends EventEmitter implements IBackend {
 	protected handlers: { [index: number]: (info: MINode) => any } = {};
 	protected breakpoints: Map<Breakpoint, Number> = new Map();
 	protected buffer: string;
+	protected errbuf: string;
 	protected process: ChildProcess.ChildProcess;
 	protected stream;
 	protected sshConn;
