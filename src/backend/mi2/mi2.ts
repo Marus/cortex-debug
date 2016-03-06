@@ -239,7 +239,7 @@ export class MI2 extends EventEmitter implements IBackend {
 					}
 				}
 				if (parsed.resultRecords && parsed.resultRecords.resultClass == "error") {
-					this.log("log", "An error occured: " + parsed.result("msg"));
+					this.log("stderr", parsed.result("msg") || line);
 				}
 				if (parsed.outOfBandRecord) {
 					parsed.outOfBandRecord.forEach(record => {

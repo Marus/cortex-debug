@@ -26,7 +26,7 @@ export class MI2DebugSession extends DebugSession {
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
 	}
-	
+
 	protected initDebugger() {
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
 		this.miDebugger.on("exited-normally", this.quitEvent.bind(this));
@@ -142,8 +142,7 @@ export class MI2DebugSession extends DebugSession {
 			this.miDebugger.continue().then(done => {
 				this.sendResponse(response);
 			}, msg => {
-				this.sendResponse(response);
-				this.sendEvent(new OutputEvent(`Could not continue: ${msg}\n`, 'stderr'));
+				this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
 			});
 		}
 		else
@@ -197,37 +196,32 @@ export class MI2DebugSession extends DebugSession {
 					};
 					this.sendResponse(response);
 				}, err => {
-					this.handleMsg("stderr", "Could not expand variable\n");
-					response.body = {
-						variables: []
-					};
-					this.sendResponse(response);
+					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
 				});
 			}
 			else {
 				// Variable members
 				this.miDebugger.evalExpression(JSON.stringify(id)).then(variable => {
 					let expanded = expandValue(createVariable, variable.result("value"), id);
-					if (!expanded)
-						this.sendEvent(new OutputEvent("Could not expand " + variable.result("value") + "\n", "stderr"));
-					else if (typeof expanded[0] == "string")
-						expanded = [
-							{
-								name: "<value>",
-								value: prettyStringArray(expanded),
-								variablesReference: 0
-							}
-						];
-					response.body = {
-						variables: expanded
-					};
-					this.sendResponse(response);
+					if (!expanded) {
+						this.sendErrorResponse(response, 2, `Could not expand variable`);
+					}
+					else {
+						if (typeof expanded[0] == "string")
+							expanded = [
+								{
+									name: "<value>",
+									value: prettyStringArray(expanded),
+									variablesReference: 0
+								}
+							];
+						response.body = {
+							variables: expanded
+						};
+						this.sendResponse(response);
+					}
 				}, err => {
-					this.handleMsg("stderr", "Could not expand variable\n");
-					response.body = {
-						variables: []
-					};
-					this.sendResponse(response);
+					this.sendErrorResponse(response, 1, `Could not expand variable`);
 				});
 			}
 		}
@@ -249,8 +243,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.interrupt().then(done => {
 			this.sendResponse(response);
 		}, msg => {
-			this.sendResponse(response);
-			this.sendEvent(new OutputEvent(`Could not pause: ${msg}\n`, 'stderr'));
+			this.sendErrorResponse(response, 3, `Could not pause: ${msg}`);
 		});
 	}
 
@@ -258,8 +251,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.continue().then(done => {
 			this.sendResponse(response);
 		}, msg => {
-			this.sendResponse(response);
-			this.sendEvent(new OutputEvent(`Could not continue: ${msg}\n`, 'stderr'));
+			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
 		});
 	}
 
@@ -267,8 +259,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.step().then(done => {
 			this.sendResponse(response);
 		}, msg => {
-			this.sendResponse(response);
-			this.sendEvent(new OutputEvent(`Could not step in: ${msg}\n`, 'stderr'));
+			this.sendErrorResponse(response, 4, `Could not step in: ${msg}`);
 		});
 	}
 
@@ -276,8 +267,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.stepOut().then(done => {
 			this.sendResponse(response);
 		}, msg => {
-			this.sendResponse(response);
-			this.sendEvent(new OutputEvent(`Could not step out: ${msg}\n`, 'stderr'));
+			this.sendErrorResponse(response, 5, `Could not step out: ${msg}`);
 		});
 	}
 
@@ -285,8 +275,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.next().then(done => {
 			this.sendResponse(response);
 		}, msg => {
-			this.sendResponse(response);
-			this.sendEvent(new OutputEvent(`Could not step over: ${msg}\n`, 'stderr'));
+			this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);
 		});
 	}
 
