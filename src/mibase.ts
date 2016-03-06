@@ -151,7 +151,7 @@ export class MI2DebugSession extends DebugSession {
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
 		const scopes = new Array<Scope>();
-		scopes.push(new Scope("Local", this.variableHandles.create("@frame:" + args.frameId), false));
+		scopes.push(new Scope("Local", this.variableHandles.create("@frame:" + (args.frameId || 0)), false));
 
 		response.body = {
 			scopes: scopes
@@ -169,7 +169,7 @@ export class MI2DebugSession extends DebugSession {
 
 		if (typeof id == "string") {
 			if (id.startsWith("@frame:")) {
-				this.miDebugger.getStackVariables(1, 0).then(stack => {
+				this.miDebugger.getStackVariables(1, parseInt(id.substr("@frame:".length))).then(stack => {
 					stack.forEach(variable => {
 						if (variable[1] !== undefined) {
 							let expanded = expandValue(createVariable, `{${variable[0]} = ${variable[1]}}`);
