@@ -1,7 +1,7 @@
 {
 	"name": "debug",
 	"displayName": "Debug",
-	"description": "Native debugging for VSCode - Currently in GDB only beta",
+	"description": "GDB & LLDB support for VSCode",
 	"version": "0.5.0",
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
@@ -172,7 +172,170 @@
 						"name": "Debug",
 						"type": "gdb",
 						"request": "launch",
-						"target": "./output",
+						"target": "./bin/executable",
+						"cwd": "${workspaceRoot}"
+					}
+				]
+			},
+			{
+				"type": "lldb-mi",
+				"extensions": [],
+				"program": "./out/src/lldb.js",
+				"runtime": "node",
+				"label": "LLDB",
+				"enableBreakpointsFor": {
+					"languageIds": [
+						"c",
+						"ada",
+						"cpp",
+						"cobol",
+						"fortran",
+						"pascal",
+						"modula",
+						"java",
+						"pli",
+						"objective-c",
+						"objective-cpp",
+						"d",
+						"python",
+						"opencl",
+						"modula3",
+						"haskell",
+						"ocaml",
+						"swift",
+						"julia",
+						"dylan",
+						"mips",
+						"renderscript"
+					]
+				},
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "Path of executable"
+							},
+							"arguments": {
+								"type": "string",
+								"description": "Arguments to append after the executable"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project"
+							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all lldb calls to console",
+								"default": false
+							},
+							"autorun": {
+								"type": "array",
+								"description": "lldb commands to run when starting to debug",
+								"default": []
+							},
+							"ssh": {
+								"required": [
+									"host",
+									"cwd",
+									"user"
+								],
+								"type": "object",
+								"description": "If this is set then the extension will connect to an ssh host and run lldb there",
+								"properties": {
+									"host": {
+										"type": "string",
+										"description": "Remote host name/ip to connect to"
+									},
+									"cwd": {
+										"type": "string",
+										"description": "Path of project on the remote"
+									},
+									"port": {
+										"type": "number",
+										"description": "Remote port number",
+										"default": 22
+									},
+									"user": {
+										"type": "string",
+										"description": "Username to connect as"
+									},
+									"password": {
+										"type": "string",
+										"description": "Plain text password (unsafe; if possible use keyfile instead)"
+									},
+									"keyfile": {
+										"type": "string",
+										"description": "Absolute path to private key"
+									},
+									"forwardX11": {
+										"type": "boolean",
+										"description": "If true, the server will redirect x11 to the local host",
+										"default": true
+									},
+									"x11port": {
+										"type": "number",
+										"description": "Port to redirect X11 data to (by default port = display + 6000)",
+										"default": 6000
+									},
+									"x11host": {
+										"type": "string",
+										"description": "Hostname/ip to redirect X11 data to",
+										"default": "localhost"
+									},
+									"remotex11screen": {
+										"type": "number",
+										"description": "Screen to start the application on the remote side",
+										"default": 0
+									},
+									"bootstrap": {
+										"type": "string",
+										"description": "Content will be executed on the SSH host before the debugger call."
+									}
+								}
+							}
+						}
+					},
+					"attach": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "PID of running program or program name"
+							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all LLDB calls to console",
+								"default": false
+							},
+							"executable": {
+								"type": "string",
+								"description": "Path of executable for debugging symbols"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project",
+								"default": "${workspaceRoot}"
+							},
+							"autorun": {
+								"type": "array",
+								"description": "LLDB commands to run when starting to debug",
+								"default": []
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"name": "Debug",
+						"type": "lldb-mi",
+						"request": "launch",
+						"target": "./bin/executable",
 						"cwd": "${workspaceRoot}"
 					}
 				]

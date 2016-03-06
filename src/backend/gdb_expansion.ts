@@ -2,6 +2,8 @@ const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)\s*=\s*/;
 const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
 const errorRegex = /^\<.+?\>/;
 const referenceRegex = /^0x[0-9a-fA-F]+/;
+const nullpointerRegex = /^0x0+\b/;
+const charRegex = /^([0-9]+) ['"]/;
 const numberRegex = /^[0-9]+/;
 const pointerCombineChar = ".";
 
@@ -10,11 +12,13 @@ export function isExpandable(value: string): number {
 	let match;
 	value = value.trim();
 	if (value.length == 0) return 0;
+	else if (value.startsWith("{...}")) return 2; // lldb string/array
 	else if (value[0] == '{') return 1; // object
 	else if (value.startsWith("true")) return 0;
 	else if (value.startsWith("false")) return 0;
-	else if (value.startsWith("0x0")) return 0;
+	else if (match = nullpointerRegex.exec(value)) return 0;
 	else if (match = referenceRegex.exec(value)) return 2; // reference
+	else if (match = charRegex.exec(value)) return 0;
 	else if (match = numberRegex.exec(value)) return 0;
 	else if (match = variableRegex.exec(value)) return 0;
 	else if (match = errorRegex.exec(value)) return 0;
@@ -24,10 +28,11 @@ export function isExpandable(value: string): number {
 export function expandValue(variableCreate: Function, value: string, root: string = ""): any {
 	let parseCString = () => {
 		value = value.trim();
-		if (value[0] != '"')
+		if (value[0] != '"' && value[0] != '\'')
 			return "";
 		let stringEnd = 1;
 		let inString = true;
+		let charStr = value[0];
 		let remaining = value.substr(1);
 		let escaped = false;
 		while (inString) {
@@ -35,7 +40,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 				escaped = false;
 			else if (remaining[0] == '\\')
 				escaped = true;
-			else if (remaining[0] == '"')
+			else if (remaining[0] == charStr)
 				inString = false;
 
 			remaining = remaining.substr(1);
@@ -82,8 +87,17 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 			return undefined;
 		let oldContent = value;
 		value = value.substr(1).trim();
-		if (value[0] == '}')
+		if (value[0] == '}') {
+			value = value.substr(1).trim();
 			return [];
+		}
+		if (value.startsWith("...")) {
+			value = value.substr(3).trim();
+			if (value[0] == '}') {
+				value = value.substr(1).trim();
+				return <any>"<...>";
+			}
+		}
 		let eqPos = value.indexOf("=");
 		let newValPos1 = value.indexOf("{");
 		let newValPos2 = value.indexOf(",");
@@ -138,13 +152,18 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 			primitive = "false";
 			value = value.substr(5).trim();
 		}
-		else if (value.startsWith("0x0")) {
+		else if (match = nullpointerRegex.exec(value)) {
 			primitive = "<nullptr>";
 			value = value.substr(3).trim();
 		}
 		else if (match = referenceRegex.exec(value)) {
 			primitive = "*" + match[0];
 			value = value.substr(match[0].length).trim();
+		}
+		else if (match = charRegex.exec(value)) {
+			primitive = match[1];
+			value = value.substr(match[0].length - 1);
+			primitive += " " + parseCString();
 		}
 		else if (match = numberRegex.exec(value)) {
 			primitive = match[0];
@@ -198,6 +217,10 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 		if (typeof val == "string" && val.startsWith("*0x")) {
 			ref = variableCreate(getNamespace("*" + name));
 			val = "Object@" + val;
+		}
+		if (typeof val == "string" && val.startsWith("<...>")) {
+			ref = variableCreate(getNamespace(name));
+			val = "...";
 		}
 		return {
 			name: name,

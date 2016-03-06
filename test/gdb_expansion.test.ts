@@ -12,8 +12,12 @@ suite("GDB Value Expansion", () => {
 		assert.equal(expandValue(variableCreate, `"hello world!"`), `"hello world!"`);
 		assert.strictEqual(isExpandable(`0x0`), 0);
 		assert.equal(expandValue(variableCreate, `0x0`), "<nullptr>");
-		assert.strictEqual(isExpandable(`0xabc`), 2);
-		assert.equal(expandValue(variableCreate, `0x7ffff7ecb480`), "*0x7ffff7ecb480");
+		assert.strictEqual(isExpandable(`0x000000`), 0);
+		assert.equal(expandValue(variableCreate, `0x000000`), "<nullptr>");
+		assert.strictEqual(isExpandable(`{...}`), 2);
+		assert.equal(expandValue(variableCreate, `{...}`), "<...>");
+		assert.strictEqual(isExpandable(`0x00abc`), 2);
+		assert.equal(expandValue(variableCreate, `0x007ffff7ecb480`), "*0x007ffff7ecb480");
 		assert.strictEqual(isExpandable(`{a = b, c = d}`), 1);
 		assert.deepEqual(expandValue(variableCreate, `{a = b, c = d}`), [
 			{
@@ -262,5 +266,17 @@ suite("GDB Value Expansion", () => {
 				variablesReference: 0
 			}
 		]);
-	})
+	});
+	test("lldb strings", () => {
+		let node = `{ name = {...} }`;
+		assert.strictEqual(isExpandable(node), 1);
+		let variables = expandValue(variableCreate, node);
+		assert.deepEqual(variables, [
+			{
+				name: "name",
+				value: "...",
+				variablesReference: { expanded: "name" }
+			}
+		]);
+	});
 });

@@ -4,17 +4,19 @@ Native VSCode debugger. Currently only using GDB.
 
 ## Installation
 
-Run `ext install debug` (Ctrl-Shift-P -> install extension + make sure its just called `Debug` and at the right it should say `webfreak`) in visual studio code and install GDB and add the executable to your PATH variable. If you have changed your PATH, don't forget to restart vscode. Then follow the usage tutorial below.
+Run `ext install debug` (Ctrl-Shift-P -> install extension + make sure its just called `Debug` and at the right it should say `webfreak`) in visual studio code and install GDB/LLDB and add the executable to your PATH variable. If you have changed your PATH, don't forget to restart vscode. Then follow the usage tutorial below.
 
 ![Preview](images/preview.png)
 
 ## Usage
 
-![Image with red circle around a cog and an orange arrow pointing at GDB](images/tutorial1.png)
+![Image with red circle around a gear and a red arrow pointing at GDB and LLDB](images/tutorial1.png)
 
 Open your project and click the debug button in your sidebar. At the top right press
-the little gear icon and select GDB. It will automatically generate the configuration
+the little gear icon and select GDB or LLDB. It will automatically generate the configuration
 you need.
+
+*Note: for LLDB you need to have lldb-mi in your PATH*
 
 ![Default config with a red circle around the target](images/tutorial2.png)
 
@@ -35,12 +37,12 @@ while its paused works as expected.
 
 Extending variables is very limited as it does not support child values of variables.
 Watching expressions works partially but the result does not get properly parsed and
-it shows the raw GDB output of the command. It will run `data-evaluate-expression`
+it shows the raw output of the command. It will run `data-evaluate-expression`
 to check for variables.
 
-While running you will get a console where you can manually type GDB commands or GDB/MI
-commands prepended with a hyphen `-`. The console shows all output GDB gives separated
-in `stdout` for the application, `stderr` for errors and `log` for GDB log messages.
+While running you will get a console where you can manually type GDB/LLDB commands or MI
+commands prepended with a hyphen `-`. The console shows all output separated
+in `stdout` for the application, `stderr` for errors and `log` for log messages.
 
 Some exceptions/signals like segmentation faults will be catched and displayed but
 it does not support for example most D exceptions.
@@ -49,7 +51,7 @@ it does not support for example most D exceptions.
 
 Attaching to existing processes currently only works by specifying the PID in the
 `launch.json` and setting `request` to `"attach"`. You also need to specify the executable
-path for GDB to find the debug symbols.
+path for the debugger to find the debug symbols.
 
 ```
 "request": "attach",
@@ -57,9 +59,9 @@ path for GDB to find the debug symbols.
 "target": "4285"
 ```
 
-This will attach to PID 4285 which should already run. GDB will pause the program on entering.
+This will attach to PID 4285 which should already run. GDB will pause the program on entering and LLDB will keep it running.
 
-### Using `gdbserver` for remote debugging
+### Using `gdbserver` for remote debugging (GDB only)
 
 You can also connect to a gdbserver instance and debug using that. For that modify the
 `launch.json` by setting `request` to `"attach"` and `remote` to `true` and specifing the

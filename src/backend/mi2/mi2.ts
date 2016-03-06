@@ -10,7 +10,7 @@ import * as nativePath from "path"
 let path = posix;
 var Client = require("ssh2").Client;
 
-function escape(str: string) {
+export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
@@ -32,14 +32,11 @@ export class MI2 extends EventEmitter implements IBackend {
 			target = nativePath.join(cwd, target);
 		return new Promise((resolve, reject) => {
 			this.isSSH = false;
-			this.process = ChildProcess.spawn(this.application, this.preargs.concat([target]), { cwd: cwd });
+			this.process = ChildProcess.spawn(this.application, this.preargs, { cwd: cwd });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stdout.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
-			let promises = [
-				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + escape(cwd) + "\"")
-			];
+			let promises = this.initCommands(target, cwd);
 			if (procArgs && procArgs.length)
 				promises.push(this.sendCommand("exec-arguments " + procArgs));
 			if (process.platform == "win32") {
@@ -139,12 +136,8 @@ export class MI2 extends EventEmitter implements IBackend {
 						this.emit("quit");
 						this.sshConn.end();
 					}).bind(this));
-					let promises = [
-						this.sendCommand("gdb-set target-async on"),
-						this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
-						this.sendCommand("environment-cd \"" + escape(cwd) + "\""),
-						this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"")
-					];
+					let promises = this.initCommands(target, cwd);
+					promises.push(this.sendCommand("environment-cd \"" + escape(cwd) + "\""));
 					if (procArgs && procArgs.length)
 						promises.push(this.sendCommand("exec-arguments " + procArgs));
 					Promise.all(promises).then(() => {
@@ -159,6 +152,14 @@ export class MI2 extends EventEmitter implements IBackend {
 				reject();
 			}).connect(connectionArgs);
 		});
+	}
+
+	protected initCommands(target: string, cwd: string) {
+		return [
+			this.sendCommand("gdb-set target-async on"),
+			this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
+			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"")
+		];
 	}
 
 	attach(cwd: string, executable: string, target: string): Thenable<any> {
@@ -380,6 +381,10 @@ export class MI2 extends EventEmitter implements IBackend {
 		return Promise.all(promisses);
 	}
 
+	setBreakPointCondition(bkptNum, condition): Thenable<any> {
+		return this.sendCommand("break-condition " + bkptNum + " " + condition);
+	}
+
 	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]> {
 		return new Promise((resolve, reject) => {
 			if (this.breakpoints.has(breakpoint))
@@ -393,7 +398,7 @@ export class MI2 extends EventEmitter implements IBackend {
 						condition: breakpoint.condition
 					};
 					if (breakpoint.condition) {
-						this.sendCommand("break-condition " + bkptNum + " " + breakpoint.condition).then((result) => {
+						this.setBreakPointCondition(bkptNum, breakpoint.condition).then((result) => {
 							if (result.resultRecords.resultClass == "done") {
 								this.breakpoints.set(newBrk, bkptNum);
 								resolve([true, newBrk]);
@@ -467,7 +472,7 @@ export class MI2 extends EventEmitter implements IBackend {
 					});
 				});
 				resolve(ret);
-			});
+			}, reject);
 		});
 	}
 
@@ -520,18 +525,15 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	sendCommand(command: string): Thenable<MINode> {
+		let sel = this.currentToken++;
 		return new Promise((resolve, reject) => {
-			this.handlers[this.currentToken] = (node: MINode) => {
-				if (node.resultRecords && node.resultRecords.resultClass == "error") {
-					let msg = node.result("msg") || "Internal error";
-					this.log("stderr", "Failed to run command `" + command + "`: " + msg);
-					reject(msg);
-				}
+			this.handlers[sel] = (node: MINode) => {
+				if (node && node.resultRecords && node.resultRecords.resultClass === "error")
+					reject(node.result("msg") || "Internal error");
 				else
 					resolve(node);
 			};
-			this.sendRaw(this.currentToken + "-" + command);
-			this.currentToken++;
+			this.sendRaw(sel + "-" + command);
 		});
 	}
 
@@ -540,13 +542,13 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	printCalls: boolean;
-	private isSSH: boolean;
-	private sshReady: boolean;
-	private currentToken: number = 1;
-	private handlers: { [index: number]: (info: MINode) => any } = {};
-	private breakpoints: Map<Breakpoint, Number> = new Map();
-	private buffer: string;
-	private process: ChildProcess.ChildProcess;
-	private stream;
-	private sshConn;
+	protected isSSH: boolean;
+	protected sshReady: boolean;
+	protected currentToken: number = 1;
+	protected handlers: { [index: number]: (info: MINode) => any } = {};
+	protected breakpoints: Map<Breakpoint, Number> = new Map();
+	protected buffer: string;
+	protected process: ChildProcess.ChildProcess;
+	protected stream;
+	protected sshConn;
 }
