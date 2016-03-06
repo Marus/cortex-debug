@@ -1,6 +1,6 @@
 # Debug
 
-Native VSCode debugger. Currently only using GDB.
+Native VSCode debugger. Supports both GDB and LLDB.
 
 ## Installation
 
