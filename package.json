@@ -33,6 +33,7 @@
 						"fortran-modern",
 						"rust",
 						"pascal",
+						"objectpascal",
 						"ada",
 						"nim"
 					]
