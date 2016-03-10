@@ -26,8 +26,9 @@ export interface AttachRequestArguments {
 class GDBDebugSession extends MI2DebugSession {
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 		response.body.supportsConfigurationDoneRequest = true;
-		response.body.supportsEvaluateForHovers = true; // Assume working in future releases
-		response.body.supportsFunctionBreakpoints = true; // TODO: Implement in future release
+		response.body.supportsConditionalBreakpoints = true;
+		response.body.supportsFunctionBreakpoints = true;
+		response.body.supportsEvaluateForHovers = true;
 		this.sendResponse(response);
 		this.miDebugger = new MI2("gdb", ["-q", "--interpreter=mi2"]);
 		this.initDebugger();
@@ -40,6 +41,7 @@ class GDBDebugSession extends MI2DebugSession {
 		this.isSSH = false;
 		this.started = false;
 		this.crashed = false;
+		this.debugReady = false;
 		this.miDebugger.printCalls = !!args.printCalls;
 		if (args.ssh !== undefined) {
 			if (args.ssh.forwardX11 === undefined)
@@ -95,6 +97,7 @@ class GDBDebugSession extends MI2DebugSession {
 		this.attached = !args.remote;
 		this.needContinue = true;
 		this.isSSH = false;
+		this.debugReady = false;
 		this.miDebugger.printCalls = !!args.printCalls;
 		if (args.remote) {
 			this.miDebugger.connect(args.cwd, args.executable, args.target).then(() => {

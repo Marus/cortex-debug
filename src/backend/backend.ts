@@ -1,6 +1,7 @@
 export interface Breakpoint {
-	file: string;
-	line: number;
+	file?: string;
+	line?: number;
+	raw?: string;
 	condition: string;
 }
 

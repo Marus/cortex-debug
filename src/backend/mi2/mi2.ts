@@ -14,8 +14,8 @@ export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
-const nonOutput = /^[0-9]*[\*\+\=]|[\~\@\&\^]/;
-const gdbMatch = /(undefined|\d*)\(gdb\)/;
+const nonOutput = /^(?:\d*|undefined)[\*\+\=]|[\~\@\&\^]/;
+const gdbMatch = /(?:\d*|undefined)\(gdb\)/;
 
 function couldBeOutput(line: string) {
 	if (nonOutput.exec(line))
@@ -409,7 +409,12 @@ export class MI2 extends EventEmitter implements IBackend {
 		return new Promise((resolve, reject) => {
 			if (this.breakpoints.has(breakpoint))
 				return resolve(false);
-			this.sendCommand("break-insert -f " + breakpoint.file + ":" + breakpoint.line).then((result) => {
+			let location = "";
+			if (breakpoint.raw)
+				location = '"' + escape(breakpoint.raw) + '"';
+			else
+				location = breakpoint.file + ":" + breakpoint.line;
+			this.sendCommand("break-insert -f " + location).then((result) => {
 				if (result.resultRecords.resultClass == "done") {
 					let bkptNum = parseInt(result.result("bkpt.number"));
 					let newBrk = {
@@ -425,7 +430,7 @@ export class MI2 extends EventEmitter implements IBackend {
 							} else {
 								resolve([false, null]);
 							}
-						});
+						}, reject);
 					}
 					else {
 						this.breakpoints.set(newBrk, bkptNum);
@@ -433,9 +438,9 @@ export class MI2 extends EventEmitter implements IBackend {
 					}
 				}
 				else {
-					resolve([false, null]);
+					reject(result);
 				}
-			});
+			}, reject);
 		});
 	}
 
@@ -461,6 +466,8 @@ export class MI2 extends EventEmitter implements IBackend {
 					resolve(true);
 				}
 				else resolve(false);
+			}, () => {
+				resolve(false);
 			});
 		});
 	}

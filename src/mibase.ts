@@ -21,6 +21,7 @@ export class MI2DebugSession extends DebugSession {
 	protected switchCWD: string;
 	protected started: boolean;
 	protected crashed: boolean;
+	protected debugReady: boolean;
 	protected miDebugger: MI2;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
@@ -79,8 +80,36 @@ export class MI2DebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
+	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments): void {
+		let cb = (() => {
+			this.debugReady = true;
+			let all = [];
+			args.breakpoints.forEach(brk => {
+				all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition }));
+			});
+			Promise.all(all).then(brkpoints => {
+				let finalBrks = [];
+				brkpoints.forEach(brkp => {
+					if (brkp[0])
+						finalBrks.push({ line: brkp[1].line });
+				});
+				response.body = {
+					breakpoints: finalBrks
+				};
+				this.sendResponse(response);
+			}, msg => {
+				this.sendErrorResponse(response, 10, msg.toString());
+			});
+		}).bind(this);
+		if (this.debugReady)
+			cb();
+		else
+			this.miDebugger.once("debug-ready", cb);
+	}
+
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
-		this.miDebugger.once("debug-ready", (() => {
+		let cb = (() => {
+			this.debugReady = true;
 			this.miDebugger.clearBreakPoints().then(() => {
 				let path = args.source.path;
 				if (this.isSSH) {
@@ -100,13 +129,18 @@ export class MI2DebugSession extends DebugSession {
 					response.body = {
 						breakpoints: finalBrks
 					};
-					setTimeout(() => {
-						this.miDebugger.emit("ui-break-done");
-					}, 50);
 					this.sendResponse(response);
+				}, msg => {
+					this.sendErrorResponse(response, 9, msg.toString());
 				});
+			}, msg => {
+				this.sendErrorResponse(response, 9, msg.toString());
 			});
-		}).bind(this));
+		}).bind(this);
+		if (this.debugReady)
+			cb();
+		else
+			this.miDebugger.once("debug-ready", cb);
 	}
 
 	protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {

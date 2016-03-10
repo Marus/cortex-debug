@@ -77,9 +77,9 @@ export class MINode implements MIInfo {
 	}
 }
 
-const tokenRegex = /^[0-9]+/;
-const outOfBandRecordRegex = /^(?:([0-9]*)([\*\+\=])|([\~\@\&]))/;
-const resultRecordRegex = /^([0-9]*)\^(done|running|connected|error|exit)/;
+const tokenRegex = /^\d+/;
+const outOfBandRecordRegex = /^(?:(\d*|undefined)([\*\+\=])|([\~\@\&]))/;
+const resultRecordRegex = /^(\d*)\^(done|running|connected|error|exit)/;
 const newlineRegex = /^\r\n?/;
 const endRegex = /^\(gdb\)\r\n?/;
 const variableRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)/;
@@ -212,7 +212,7 @@ export function parseMI(output: string): MINode {
 
 	while (match = outOfBandRecordRegex.exec(output)) {
 		output = output.substr(match[0].length);
-		if (match[1] && token === undefined) {
+		if (match[1] && token === undefined && match[1] !== "undefined") {
 			token = parseInt(match[1]);
 		}
 
