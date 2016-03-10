@@ -3,8 +3,8 @@ const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
 const errorRegex = /^\<.+?\>/;
 const referenceRegex = /^0x[0-9a-fA-F]+/;
 const nullpointerRegex = /^0x0+\b/;
-const charRegex = /^([0-9]+) ['"]/;
-const numberRegex = /^[0-9]+/;
+const charRegex = /^(\d+) ['"]/;
+const numberRegex = /^\d+/;
 const pointerCombineChar = ".";
 
 export function isExpandable(value: string): number {
