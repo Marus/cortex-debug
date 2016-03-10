@@ -172,7 +172,7 @@ export class MI2DebugSession extends DebugSession {
 				this.miDebugger.getStackVariables(1, parseInt(id.substr("@frame:".length))).then(stack => {
 					stack.forEach(variable => {
 						if (variable[1] !== undefined) {
-							let expanded = expandValue(createVariable, `{${variable[0]} = ${variable[1]}}`);
+							let expanded = expandValue(createVariable, "{" + variable[0] + "=" + variable[1] + ")");
 							if (!expanded)
 								new OutputEvent("Could not expand " + variable[1] + "\n", "stderr");
 							else if (typeof expanded[0] == "string")
@@ -196,7 +196,7 @@ export class MI2DebugSession extends DebugSession {
 					};
 					this.sendResponse(response);
 				}, err => {
-					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+					this.sendErrorResponse(response, 1, "Could not expand variable: " + err);
 				});
 			}
 			else {
@@ -287,12 +287,16 @@ export class MI2DebugSession extends DebugSession {
 					result: res.result("value")
 				}
 				this.sendResponse(response);
+			}, msg => {
+				this.sendErrorResponse(response, 7, msg.toString());
 			});
 		else {
 			this.miDebugger.sendUserInput(args.expression).then(output => {
 				if (output)
 					response.body.result = JSON.stringify(output);
 				this.sendResponse(response);
+			}, msg => {
+				this.sendErrorResponse(response, 8, msg.toString());
 			});
 		}
 	}
