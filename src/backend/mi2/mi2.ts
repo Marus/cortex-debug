@@ -137,7 +137,7 @@ export class MI2 extends EventEmitter implements IBackend {
 						this.emit("quit");
 						this.sshConn.end();
 					}).bind(this));
-					let promises = this.initCommands(target, cwd);
+					let promises = this.initCommands(target, cwd, true);
 					promises.push(this.sendCommand("environment-cd \"" + escape(cwd) + "\""));
 					if (procArgs && procArgs.length)
 						promises.push(this.sendCommand("exec-arguments " + procArgs));
@@ -155,7 +155,15 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	protected initCommands(target: string, cwd: string) {
+	protected initCommands(target: string, cwd: string, ssh: boolean = false) {
+		if (ssh) {
+			if (!path.isAbsolute(target))
+				target = path.join(cwd, target);
+		}
+		else {
+			if (!nativePath.isAbsolute(target))
+				target = nativePath.join(cwd, target);
+		}
 		return [
 			this.sendCommand("gdb-set target-async on"),
 			this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
