@@ -2,7 +2,7 @@
 	"name": "debug",
 	"displayName": "Debug",
 	"description": "GDB & LLDB support for VSCode",
-	"version": "0.7.0",
+	"version": "0.7.1",
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {
