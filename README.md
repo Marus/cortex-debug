@@ -16,7 +16,10 @@ Open your project and click the debug button in your sidebar. At the top right p
 the little gear icon and select GDB or LLDB. It will automatically generate the configuration
 you need.
 
-*Note: for LLDB you need to have lldb-mi in your PATH*
+*Note: for LLDB you need to have `lldb-mi` in your PATH*
+
+If you are on OS X you can add `lldb-mi` to your path using
+`ln -s /Applications/Xcode.app/Contents/Developer/usr/bin/lldb-mi /usr/local/bin/lldb-mi` if you have Xcode.
 
 ![Default config with a red circle around the target](images/tutorial2.png)
 
