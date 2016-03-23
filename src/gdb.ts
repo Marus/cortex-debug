@@ -7,6 +7,7 @@ import { SSHArguments } from './backend/backend';
 export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
+	gdbpath: string;
 	arguments: string;
 	terminal: string;
 	autorun: string[];
@@ -17,6 +18,7 @@ export interface LaunchRequestArguments {
 export interface AttachRequestArguments {
 	cwd: string;
 	target: string;
+	gdbpath: string;
 	executable: string;
 	remote: boolean;
 	autorun: string[];
@@ -30,11 +32,11 @@ class GDBDebugSession extends MI2DebugSession {
 		response.body.supportsFunctionBreakpoints = true;
 		response.body.supportsEvaluateForHovers = true;
 		this.sendResponse(response);
-		this.miDebugger = new MI2("gdb", ["-q", "--interpreter=mi2"]);
-		this.initDebugger();
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
+		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"]);
+		this.initDebugger();
 		this.quit = false;
 		this.attached = false;
 		this.needContinue = false;
@@ -93,6 +95,8 @@ class GDBDebugSession extends MI2DebugSession {
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
+		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"]);
+		this.initDebugger();
 		this.quit = false;
 		this.attached = !args.remote;
 		this.needContinue = true;

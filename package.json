@@ -60,6 +60,11 @@
 								"type": "string",
 								"description": "Path of project"
 							},
+							"gdbpath": {
+								"type": "string",
+								"description": "Path to the gdb executable or the command if in PATH",
+								"default": "gdb"
+							},
 							"printCalls": {
 								"type": "boolean",
 								"description": "Prints all GDB calls to console",
@@ -155,6 +160,11 @@
 								"type": "string",
 								"description": "Path of executable for debugging symbols"
 							},
+							"gdbpath": {
+								"type": "string",
+								"description": "Path to the gdb executable or the command if in PATH",
+								"default": "gdb"
+							},
 							"cwd": {
 								"type": "string",
 								"description": "Path of project",
@@ -227,6 +237,11 @@
 							"cwd": {
 								"type": "string",
 								"description": "Path of project"
+							},
+							"lldbmipath": {
+								"type": "string",
+								"description": "Path to the lldb-mi executable or the command if in PATH",
+								"default": "lldb-mi"
 							},
 							"printCalls": {
 								"type": "boolean",
@@ -317,6 +332,11 @@
 							"executable": {
 								"type": "string",
 								"description": "Path of executable for debugging symbols"
+							},
+							"lldbmipath": {
+								"type": "string",
+								"description": "Path to the lldb-mi executable or the command if in PATH",
+								"default": "lldb-mi"
 							},
 							"cwd": {
 								"type": "string",
