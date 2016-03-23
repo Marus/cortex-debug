@@ -227,6 +227,12 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.onOutput(this.buffer.substr(0, end));
 			this.buffer = this.buffer.substr(end + 1);
 		}
+		if (this.buffer.length) {
+			if (this.onOutputPartial(this.buffer))
+			{
+				this.buffer = "";
+			}
+		}
 	}
 
 	stderr(data) {
@@ -239,6 +245,10 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.onOutputStderr(this.errbuf.substr(0, end));
 			this.errbuf = this.errbuf.substr(end + 1);
 		}
+		if (this.errbuf.length) {
+			this.logNoNewLine("stderr", this.errbuf);
+			this.errbuf = "";
+		}
 	}
 
 	onOutputStderr(lines) {
@@ -246,6 +256,14 @@ export class MI2 extends EventEmitter implements IBackend {
 		lines.forEach(line => {
 			this.log("stderr", line);
 		});
+	}
+
+	onOutputPartial(line) {
+		if (couldBeOutput(line)) {
+			this.logNoNewLine("stdout", line);
+			return true;
+		}
+		return false;
 	}
 
 	onOutput(lines) {
@@ -535,6 +553,10 @@ export class MI2 extends EventEmitter implements IBackend {
 				resolve(result);
 			}, reject);
 		});
+	}
+
+	logNoNewLine(type: string, msg: string) {
+		this.emit("msg", type, msg);
 	}
 
 	log(type: string, msg: string) {
