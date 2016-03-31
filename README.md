@@ -4,7 +4,7 @@ Native VSCode debugger. Supports both GDB and LLDB.
 
 ## Installation
 
-Run `ext install debug` (Ctrl-Shift-P -> install extension + make sure its just called `Debug` and at the right it should say `webfreak`) in visual studio code and install GDB/LLDB and add the executable to your PATH variable. If you have changed your PATH, don't forget to restart vscode. Then follow the usage tutorial below.
+Press ctrl-p (cmd+p on OS X) and run `ext install webfreak.debug` in visual studio code and install GDB/LLDB. See `Usage` for details on how to set it up.
 
 ![Preview](images/preview.png)
 
