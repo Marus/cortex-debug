@@ -35,7 +35,9 @@
 						"pascal",
 						"objectpascal",
 						"ada",
-						"nim"
+						"nim",
+						"arm",
+						"asm"
 					]
 				},
 				"configurationAttributes": {
