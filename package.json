@@ -1,7 +1,7 @@
 {
 	"name": "debug",
-	"displayName": "Debug",
-	"description": "GDB & LLDB support for VSCode",
+	"displayName": "Native Debug",
+	"description": "GDB, LLDB & Mago-MI Debugger support for VSCode",
 	"version": "0.8.1",
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
@@ -357,6 +357,98 @@
 					{
 						"name": "Debug",
 						"type": "lldb-mi",
+						"request": "launch",
+						"target": "./bin/executable",
+						"cwd": "${workspaceRoot}"
+					}
+				]
+			},
+			{
+				"type": "mago-mi",
+				"extensions": [],
+				"program": "./out/src/mago.js",
+				"runtime": "node",
+				"label": "Mago-MI",
+				"enableBreakpointsFor": {
+					"languageIds": [
+						"d"
+					]
+				},
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "Path of executable"
+							},
+							"arguments": {
+								"type": "string",
+								"description": "Arguments to append after the executable"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project"
+							},
+							"magomipath": {
+								"type": "string",
+								"description": "Path to the mago-mi executable or the command if in PATH",
+								"default": "mago-mi"
+							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all mago calls to console",
+								"default": false
+							},
+							"autorun": {
+								"type": "array",
+								"description": "mago commands to run when starting to debug",
+								"default": []
+							}
+						}
+					},
+					"attach": {
+						"required": [
+							"target"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "PID of running program or program name"
+							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all mago calls to console",
+								"default": false
+							},
+							"executable": {
+								"type": "string",
+								"description": "Path of executable for debugging symbols"
+							},
+							"magomipath": {
+								"type": "string",
+								"description": "Path to the mago-mi executable or the command if in PATH",
+								"default": "mago-mi"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project",
+								"default": "${workspaceRoot}"
+							},
+							"autorun": {
+								"type": "array",
+								"description": "Mago commands to run when starting to debug",
+								"default": []
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"name": "Debug",
+						"type": "mago-mi",
 						"request": "launch",
 						"target": "./bin/executable",
 						"cwd": "${workspaceRoot}"

@@ -11,7 +11,6 @@ let resolve = posix.resolve;
 let relative = posix.relative;
 
 export class MI2DebugSession extends DebugSession {
-	protected static THREAD_ID = 1;
 	protected variableHandles = new Handles<any>();
 	protected quit: boolean;
 	protected attached: boolean;
@@ -23,9 +22,11 @@ export class MI2DebugSession extends DebugSession {
 	protected crashed: boolean;
 	protected debugReady: boolean;
 	protected miDebugger: MI2;
+	protected threadID: number = 1;
 
-	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
+	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
 		super(debuggerLinesStartAt1, isServer);
+		this.threadID = threadID;
 	}
 
 	protected initDebugger() {
@@ -49,22 +50,22 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected handleBreakpoint(info: MINode) {
-		this.sendEvent(new StoppedEvent("breakpoint", MI2DebugSession.THREAD_ID));
+		this.sendEvent(new StoppedEvent("breakpoint", this.threadID));
 	}
 
 	protected handleBreak(info: MINode) {
-		this.sendEvent(new StoppedEvent("step", MI2DebugSession.THREAD_ID));
+		this.sendEvent(new StoppedEvent("step", this.threadID));
 	}
 
 	protected handlePause(info: MINode) {
-		this.sendEvent(new StoppedEvent("user request", MI2DebugSession.THREAD_ID));
+		this.sendEvent(new StoppedEvent("user request", this.threadID));
 	}
 
 	protected stopEvent(info: MINode) {
 		if (!this.started)
 			this.crashed = true;
 		if (!this.quit)
-			this.sendEvent(new StoppedEvent("exception", MI2DebugSession.THREAD_ID));
+			this.sendEvent(new StoppedEvent("exception", this.threadID));
 	}
 
 	protected quitEvent() {
@@ -146,7 +147,7 @@ export class MI2DebugSession extends DebugSession {
 	protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
 		response.body = {
 			threads: [
-				new Thread(MI2DebugSession.THREAD_ID, "Thread 1")
+				new Thread(this.threadID, "Thread 1")
 			]
 		};
 		this.sendResponse(response);
@@ -203,7 +204,7 @@ export class MI2DebugSession extends DebugSession {
 
 		if (typeof id == "string") {
 			if (id.startsWith("@frame:")) {
-				this.miDebugger.getStackVariables(1, parseInt(id.substr("@frame:".length))).then(stack => {
+				this.miDebugger.getStackVariables(this.threadID, parseInt(id.substr("@frame:".length))).then(stack => {
 					stack.forEach(variable => {
 						if (variable[1] !== undefined) {
 							let expanded = expandValue(createVariable, "{" + variable[0] + "=" + variable[1] + ")");
