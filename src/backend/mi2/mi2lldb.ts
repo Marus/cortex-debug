@@ -41,12 +41,12 @@ export class MI2_LLDB extends MI2 {
 	clearBreakPoints(): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			let promises = [];
-			for (let k in this.breakpoints.values) {
+			this.breakpoints.forEach((k, index) => {
 				promises.push(this.sendCommand("break-delete " + k).then((result) => {
 					if (result.resultRecords.resultClass == "done") resolve(true);
 					else resolve(false);
 				}));
-			}
+			});
 			this.breakpoints.clear();
 			Promise.all(promises).then(resolve, reject);
 		});
