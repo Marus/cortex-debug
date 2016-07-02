@@ -40,7 +40,7 @@ class MagoDebugSession extends MI2DebugSession {
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		this.miDebugger = new MI2_Mago(args.magomipath || "mago-mi", []);
+		this.miDebugger = new MI2_Mago(args.magomipath || "mago-mi", ["-q"]);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = false;

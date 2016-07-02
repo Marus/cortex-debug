@@ -2,7 +2,7 @@
 	"name": "debug",
 	"displayName": "Native Debug",
 	"description": "GDB, LLDB & Mago-MI Debugger support for VSCode",
-	"version": "0.8.1",
+	"version": "0.9.0",
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {

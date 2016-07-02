@@ -8,11 +8,9 @@ export class MI2_Mago extends MI2_LLDB {
 			let command = "stack-list-frames";
 			this.sendCommand(command).then((result) => {
 				let stack = result.resultRecords.results;
-				this.log("stdout", JSON.stringify(result.resultRecords.results.length));
 				let ret: Stack[] = [];
 				let remaining = [];
 				let addToStack = (element) => {
-					this.log("stdout", JSON.stringify(element));
 					let level = MINode.valueOf(element, "frame.level");
 					let addr = MINode.valueOf(element, "frame.addr");
 					let func = MINode.valueOf(element, "frame.func");
