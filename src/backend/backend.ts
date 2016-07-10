@@ -49,4 +49,5 @@ export interface IBackend {
 	getStackVariables(thread: number, frame: number): Thenable<[string, string][]>;
 	evalExpression(name: string): Thenable<any>;
 	isReady(): boolean;
+	changeVariable(name: string, rawValue: string): Thenable<any>;
 }

@@ -387,36 +387,40 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	continue(): Thenable<boolean> {
+	continue(reverse: boolean = false): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-continue").then((info) => {
+			this.sendCommand("exec-continue" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	next(): Thenable<boolean> {
+	next(reverse: boolean = false): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-next").then((info) => {
+			this.sendCommand("exec-next" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	step(): Thenable<boolean> {
+	step(reverse: boolean = false): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-step").then((info) => {
+			this.sendCommand("exec-step" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	stepOut(): Thenable<boolean> {
+	stepOut(reverse: boolean = false): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-finish").then((info) => {
+			this.sendCommand("exec-finish" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
+	}
+
+	changeVariable(name: string, rawValue: string): Thenable<any> {
+		return this.sendCommand("gdb-set var " + name + "=" + rawValue);
 	}
 
 	loadBreakPoints(breakpoints: Breakpoint[]): Thenable<[boolean, Breakpoint][]> {

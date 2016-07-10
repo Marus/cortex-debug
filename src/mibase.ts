@@ -81,6 +81,17 @@ export class MI2DebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
+	protected setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): void {
+		this.miDebugger.changeVariable(args.name, args.value).then(() => {
+			response.body = {
+				value: args.value
+			};
+			this.sendResponse(response);
+		}, err => {
+				this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
+		});
+	}
+
 	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments): void {
 		let cb = (() => {
 			this.debugReady = true;
@@ -287,6 +298,14 @@ export class MI2DebugSession extends DebugSession {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
+		});
+	}
+
+	protected stepBackRequest(response: DebugProtocol.StepBackResponse, args: DebugProtocol.StepBackArguments): void {
+		this.miDebugger.step(true).then(done => {
+			this.sendResponse(response);
+		}, msg => {
+			this.sendErrorResponse(response, 4, `Could not step back: ${msg} - Try running 'target record-full' before stepping back`);
 		});
 	}
 
