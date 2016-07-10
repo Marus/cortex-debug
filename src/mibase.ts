@@ -348,8 +348,16 @@ export class MI2DebugSession extends DebugSession {
 			});
 		else {
 			this.miDebugger.sendUserInput(args.expression).then(output => {
-				if (output)
-					response.body.result = JSON.stringify(output);
+				if (typeof output == "undefined")
+					response.body = {
+						result: "",
+						variablesReference: 0
+					};
+				else
+					response.body = {
+						result: JSON.stringify(output),
+						variablesReference: 0
+					};
 				this.sendResponse(response);
 			}, msg => {
 				this.sendErrorResponse(response, 8, msg.toString());

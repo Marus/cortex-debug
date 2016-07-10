@@ -573,15 +573,13 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	sendUserInput(command: string): Thenable<any> {
-		return new Promise((resolve, reject) => {
-			if (command.startsWith("-")) {
-				this.sendCommand(command.substr(1)).then(resolve, reject);
-			}
-			else {
-				this.sendRaw(command);
-				resolve(undefined);
-			}
-		});
+		if (command.startsWith("-")) {
+			return this.sendCommand(command.substr(1));
+		}
+		else {
+			this.sendRaw(command);
+			return Promise.resolve(undefined);
+		}
 	}
 
 	sendRaw(raw: string) {
