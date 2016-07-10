@@ -14,6 +14,12 @@ export interface Stack {
 	line: number;
 }
 
+export interface Variable {
+	name: string;
+	valueStr: string;
+	type: string;
+}
+
 export interface SSHArguments {
 	forwardX11: boolean;
 	host: string;
@@ -46,7 +52,7 @@ export interface IBackend {
 	removeBreakPoint(breakpoint: Breakpoint): Thenable<boolean>;
 	clearBreakPoints(): Thenable<any>;
 	getStack(maxLevels: number): Thenable<Stack[]>;
-	getStackVariables(thread: number, frame: number): Thenable<[string, string][]>;
+	getStackVariables(thread: number, frame: number): Thenable<Variable[]>;
 	evalExpression(name: string): Thenable<any>;
 	isReady(): boolean;
 	changeVariable(name: string, rawValue: string): Thenable<any>;

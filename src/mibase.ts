@@ -206,7 +206,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): void {
-		const variables = [];
+		const variables: DebugProtocol.Variable[] = [];
 		const id = this.variableHandles.get(args.variablesReference);
 
 		let createVariable = (arg) => {
@@ -217,24 +217,26 @@ export class MI2DebugSession extends DebugSession {
 			if (id.startsWith("@frame:")) {
 				this.miDebugger.getStackVariables(this.threadID, parseInt(id.substr("@frame:".length))).then(stack => {
 					stack.forEach(variable => {
-						if (variable[1] !== undefined) {
-							let expanded = expandValue(createVariable, "{" + variable[0] + "=" + variable[1] + ")");
-							if (!expanded)
-								new OutputEvent("Could not expand " + variable[1] + "\n", "stderr");
-							else if (typeof expanded[0] == "string")
-								expanded = [
-									{
-										name: "<value>",
-										value: prettyStringArray(expanded),
-										variablesReference: 0
-									}
-								];
-							variables.push(expanded[0]);
+						if (variable.valueStr !== undefined) {
+							let expanded = expandValue(createVariable, "{" + variable.name + "=" + variable.valueStr + ")");
+							if (expanded)
+							{
+								if (typeof expanded[0] == "string")
+									expanded = [
+										{
+											name: "<value>",
+											value: prettyStringArray(expanded),
+											variablesReference: 0
+										}
+									];
+								variables.push(expanded[0]);
+							}
 						} else
 							variables.push({
-								name: variable[0],
+								name: variable.name,
+								type: variable.type,
 								value: "<unknown>",
-								variablesReference: createVariable(variable[0])
+								variablesReference: createVariable(variable.name)
 							});
 					});
 					response.body = {

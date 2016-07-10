@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, SSHArguments } from "../backend.ts"
+import { Breakpoint, IBackend, Stack, SSHArguments, Variable } from "../backend.ts"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
@@ -536,15 +536,20 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	getStackVariables(thread: number, frame: number): Thenable<[string, string][]> {
+	getStackVariables(thread: number, frame: number): Thenable<Variable[]> {
 		return new Promise((resolve, reject) => {
 			this.sendCommand("stack-list-variables --thread " + thread + " --frame " + frame + " --simple-values").then((result) => {
 				let variables = result.result("variables");
-				let ret: [string, string][] = [];
+				let ret: Variable[] = [];
 				variables.forEach(element => {
 					const key = MINode.valueOf(element, "name");
 					const value = MINode.valueOf(element, "value");
-					ret.push([key, value]);
+					const type = MINode.valueOf(element, "type");
+					ret.push({
+						name: key,
+						valueStr: value,
+						type: type
+					});
 				});
 				resolve(ret);
 			}, reject);
