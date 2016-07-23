@@ -6,8 +6,12 @@
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {
-		"vscode": "^1.3.0"
+		"vscode": "^0.10.10"
 	},
+	"main": "./out/src/frontend/extension",
+	"activationEvents": [
+		"onCommand:code-debug.examineMemoryLocation"
+	],
 	"categories": [
 		"Debuggers"
 	],
@@ -16,6 +20,12 @@
 		"url": "https://github.com/WebFreak001/code-debug.git"
 	},
 	"contributes": {
+		"commands": [
+			{
+				"command": "code-debug.examineMemoryLocation",
+				"title": "Code-Debug: Examine memory location"
+			}
+		],
 		"debuggers": [
 			{
 				"type": "gdb",
@@ -347,7 +357,7 @@
 							},
 							"autorun": {
 								"type": "array",
-								"description": "LLDB commands to run when starting to debug",
+								"description": "lldb commands to run when starting to debug",
 								"default": []
 							}
 						}
@@ -439,7 +449,7 @@
 							},
 							"autorun": {
 								"type": "array",
-								"description": "Mago commands to run when starting to debug",
+								"description": "mago commands to run when starting to debug",
 								"default": []
 							}
 						}
@@ -460,7 +470,8 @@
 	"scripts": {
 		"vscode:prepublish": "node ./node_modules/vscode/bin/compile",
 		"compile": "node ./node_modules/vscode/bin/compile -watch -p ./",
-		"test": "node ./node_modules/vscode/bin/test"
+		"test": "node ./node_modules/vscode/bin/test",
+		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"dependencies": {
 		"vscode-debugadapter": "^1.10.0",

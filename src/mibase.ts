@@ -6,6 +6,9 @@ import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
 import { posix } from "path";
 import * as systemPath from "path";
+import * as net from "net";
+import * as os from "os";
+import * as fs from "fs";
 
 let resolve = posix.resolve;
 let relative = posix.relative;
@@ -23,6 +26,7 @@ export class MI2DebugSession extends DebugSession {
 	protected debugReady: boolean;
 	protected miDebugger: MI2;
 	protected threadID: number = 1;
+	protected commandServer: net.Server;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
 		super(debuggerLinesStartAt1, isServer);
@@ -39,6 +43,31 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.on("step-out-end", this.handleBreak.bind(this));
 		this.miDebugger.on("signal-stop", this.handlePause.bind(this));
 		this.sendEvent(new InitializedEvent());
+		try {
+			this.commandServer = net.createServer(c => {
+				c.on("data", data => {
+					var rawCmd = data.toString();
+					var spaceIndex = rawCmd.indexOf(" ");
+					var func = rawCmd;
+					var args = [];
+					if (spaceIndex != -1) {
+						func = rawCmd.substr(0, spaceIndex);
+						args = JSON.parse(rawCmd.substr(spaceIndex + 1));
+					}
+					Promise.resolve(this.miDebugger[func].apply(this.miDebugger, args)).then(data => {
+						c.write(data.toString());
+					});
+				});
+			});
+			this.commandServer.on("error", err => {
+				this.handleMsg("stderr", "Code-Debug Utility Command Server: Error in command socket " + err.toString());
+			});
+			if (!fs.existsSync(systemPath.join(os.tmpdir(), "code-debug-sockets")))
+				fs.mkdirSync(systemPath.join(os.tmpdir(), "code-debug-sockets"));
+			this.commandServer.listen(systemPath.join(os.tmpdir(), "code-debug-sockets", "Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)));
+		} catch (e) {
+			this.handleMsg("stderr", "Code-Debug Utility Command Server: Failed to start " + e.toString());
+		}
 	}
 
 	protected handleMsg(type: string, msg: string) {
@@ -78,6 +107,8 @@ export class MI2DebugSession extends DebugSession {
 			this.miDebugger.detach();
 		else
 			this.miDebugger.stop();
+		this.commandServer.close();
+		this.commandServer = undefined;
 		this.sendResponse(response);
 	}
 
@@ -88,7 +119,7 @@ export class MI2DebugSession extends DebugSession {
 			};
 			this.sendResponse(response);
 		}, err => {
-				this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
+			this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
 		});
 	}
 
@@ -179,6 +210,8 @@ export class MI2DebugSession extends DebugSession {
 				stackFrames: ret
 			};
 			this.sendResponse(response);
+		}, err => {
+			this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`)
 		});
 	}
 
@@ -219,8 +252,7 @@ export class MI2DebugSession extends DebugSession {
 					stack.forEach(variable => {
 						if (variable.valueStr !== undefined) {
 							let expanded = expandValue(createVariable, "{" + variable.name + "=" + variable.valueStr + ")");
-							if (expanded)
-							{
+							if (expanded) {
 								if (typeof expanded[0] == "string")
 									expanded = [
 										{

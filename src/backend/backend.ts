@@ -56,4 +56,5 @@ export interface IBackend {
 	evalExpression(name: string): Thenable<any>;
 	isReady(): boolean;
 	changeVariable(name: string, rawValue: string): Thenable<any>;
+	examineMemory(from: number, to: number): Thenable<any>;
 }

@@ -556,6 +556,14 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
+	examineMemory(from: number, length: number): Thenable<any> {
+		return new Promise((resolve, reject) => {
+			this.sendCommand("data-read-memory-bytes 0x" + from.toString(16) + " " + length).then((result) => {
+				resolve(result.result("memory[0].contents"));
+			}, reject);
+		});
+	}
+
 	evalExpression(name: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			this.sendCommand("data-evaluate-expression " + name).then((result) => {
