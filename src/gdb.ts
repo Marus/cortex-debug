@@ -74,7 +74,11 @@ class GDBDebugSession extends MI2DebugSession {
 					this.started = true;
 					if (this.crashed)
 						this.handlePause(undefined);
+				}, err => {
+					this.sendErrorResponse(response, 100, `Failed to start MI Debugger: ${err.toString()}`)
 				});
+			}, err => {
+				this.sendErrorResponse(response, 102, `Failed to SSH: ${err.toString()}`)
 			});
 		}
 		else {
@@ -91,7 +95,11 @@ class GDBDebugSession extends MI2DebugSession {
 					this.started = true;
 					if (this.crashed)
 						this.handlePause(undefined);
+				}, err => {
+					this.sendErrorResponse(response, 100, `Failed to Start MI Debugger: ${err.toString()}`)
 				});
+			}, err => {
+				this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`)
 			});
 		}
 	}
@@ -112,6 +120,8 @@ class GDBDebugSession extends MI2DebugSession {
 						this.miDebugger.sendUserInput(command);
 					});
 				this.sendResponse(response);
+			}, err => {
+				this.sendErrorResponse(response, 102, `Failed to attach: ${err.toString()}`)
 			});
 		}
 		else {
@@ -121,6 +131,8 @@ class GDBDebugSession extends MI2DebugSession {
 						this.miDebugger.sendUserInput(command);
 					});
 				this.sendResponse(response);
+			}, err => {
+				this.sendErrorResponse(response, 101, `Failed to attach: ${err.toString()}`)
 			});
 		}
 	}
