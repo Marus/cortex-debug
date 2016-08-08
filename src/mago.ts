@@ -11,6 +11,7 @@ export interface LaunchRequestArguments {
 	arguments: string;
 	autorun: string[];
 	printCalls: boolean;
+	showDevDebugOutput: boolean;
 }
 
 export interface AttachRequestArguments {
@@ -20,6 +21,7 @@ export interface AttachRequestArguments {
 	executable: string;
 	autorun: string[];
 	printCalls: boolean;
+	showDevDebugOutput: boolean;
 }
 
 class MagoDebugSession extends MI2DebugSession {
@@ -50,6 +52,7 @@ class MagoDebugSession extends MI2DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.miDebugger.printCalls = !!args.printCalls;
+		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		this.miDebugger.load(args.cwd, args.target, args.arguments, undefined).then(() => {
 			if (args.autorun)
 				args.autorun.forEach(command => {
@@ -76,6 +79,7 @@ class MagoDebugSession extends MI2DebugSession {
 		this.isSSH = false;
 		this.debugReady = false;
 		this.miDebugger.printCalls = !!args.printCalls;
+		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		this.miDebugger.attach(args.cwd, args.executable, args.target).then(() => {
 			if (args.autorun)
 				args.autorun.forEach(command => {

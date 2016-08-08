@@ -13,6 +13,7 @@ export interface LaunchRequestArguments {
 	autorun: string[];
 	ssh: SSHArguments;
 	printCalls: boolean;
+	showDevDebugOutput: boolean;
 }
 
 export interface AttachRequestArguments {
@@ -23,6 +24,7 @@ export interface AttachRequestArguments {
 	remote: boolean;
 	autorun: string[];
 	printCalls: boolean;
+	showDevDebugOutput: boolean;
 }
 
 class GDBDebugSession extends MI2DebugSession {
@@ -47,6 +49,7 @@ class GDBDebugSession extends MI2DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.miDebugger.printCalls = !!args.printCalls;
+		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		if (args.ssh !== undefined) {
 			if (args.ssh.forwardX11 === undefined)
 				args.ssh.forwardX11 = true;
@@ -113,6 +116,7 @@ class GDBDebugSession extends MI2DebugSession {
 		this.isSSH = false;
 		this.debugReady = false;
 		this.miDebugger.printCalls = !!args.printCalls;
+		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		if (args.remote) {
 			this.miDebugger.connect(args.cwd, args.executable, args.target).then(() => {
 				if (args.autorun)

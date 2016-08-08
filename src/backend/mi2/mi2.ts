@@ -275,7 +275,8 @@ export class MI2 extends EventEmitter implements IBackend {
 			}
 			else {
 				let parsed = parseMI(line);
-				//this.log("log", JSON.stringify(parsed));
+				if (this.debugOutput)
+					this.log("log", "GDB -> App: " + JSON.stringify(parsed));
 				let handled = false;
 				if (parsed.token !== undefined) {
 					if (this.handlers[parsed.token]) {
@@ -617,6 +618,7 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	printCalls: boolean;
+	debugOutput: boolean;
 	protected isSSH: boolean;
 	protected sshReady: boolean;
 	protected currentToken: number = 1;

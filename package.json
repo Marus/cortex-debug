@@ -79,7 +79,12 @@
 							},
 							"printCalls": {
 								"type": "boolean",
-								"description": "Prints all GDB calls to console",
+								"description": "Prints all GDB calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all GDB responses to the console",
 								"default": false
 							},
 							"autorun": {
@@ -165,7 +170,12 @@
 							},
 							"printCalls": {
 								"type": "boolean",
-								"description": "Prints all GDB calls to console",
+								"description": "Prints all GDB calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all GDB responses to the console",
 								"default": false
 							},
 							"executable": {
@@ -257,7 +267,12 @@
 							},
 							"printCalls": {
 								"type": "boolean",
-								"description": "Prints all lldb calls to console",
+								"description": "Prints all lldb calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all lldb responses to the console",
 								"default": false
 							},
 							"autorun": {
@@ -338,7 +353,12 @@
 							},
 							"printCalls": {
 								"type": "boolean",
-								"description": "Prints all LLDB calls to console",
+								"description": "Prints all LLDB calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all LLDB responses to the console",
 								"default": false
 							},
 							"executable": {
@@ -409,7 +429,12 @@
 							},
 							"printCalls": {
 								"type": "boolean",
-								"description": "Prints all mago calls to console",
+								"description": "Prints all mago calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all mago responses to the console",
 								"default": false
 							},
 							"autorun": {
@@ -430,7 +455,12 @@
 							},
 							"printCalls": {
 								"type": "boolean",
-								"description": "Prints all mago calls to console",
+								"description": "Prints all mago calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all mago responses to the console",
 								"default": false
 							},
 							"executable": {
