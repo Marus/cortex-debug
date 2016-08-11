@@ -1,6 +1,7 @@
 const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)\s*=\s*/;
 const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
 const errorRegex = /^\<.+?\>/;
+const referenceStringRegex = /^(0x[0-9a-fA-F]+\s*)"/;
 const referenceRegex = /^0x[0-9a-fA-F]+/;
 const nullpointerRegex = /^0x0+\b/;
 const charRegex = /^(\d+) ['"]/;
@@ -155,6 +156,10 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 		else if (match = nullpointerRegex.exec(value)) {
 			primitive = "<nullptr>";
 			value = value.substr(3).trim();
+		}
+		else if (match = referenceStringRegex.exec(value)) {
+			value = value.substr(match[1].length);
+			primitive = parseCString();
 		}
 		else if (match = referenceRegex.exec(value)) {
 			primitive = "*" + match[0];
