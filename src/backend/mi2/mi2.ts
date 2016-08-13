@@ -549,7 +549,8 @@ export class MI2 extends EventEmitter implements IBackend {
 					ret.push({
 						name: key,
 						valueStr: value,
-						type: type
+						type: type,
+						raw: element
 					});
 				});
 				resolve(ret);

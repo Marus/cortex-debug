@@ -10,6 +10,8 @@ suite("GDB Value Expansion", () => {
 		assert.equal(expandValue(variableCreate, `5`), "5");
 		assert.strictEqual(isExpandable(`"hello world!"`), 0);
 		assert.equal(expandValue(variableCreate, `"hello world!"`), `"hello world!"`);
+		assert.strictEqual(isExpandable(`0x7fffffffe956 "foobar"`), 0);
+		assert.equal(expandValue(variableCreate, `0x7fffffffe956 "foobar"`), `"foobar"`);
 		assert.strictEqual(isExpandable(`0x0`), 0);
 		assert.equal(expandValue(variableCreate, `0x0`), "<nullptr>");
 		assert.strictEqual(isExpandable(`0x000000`), 0);
@@ -27,6 +29,17 @@ suite("GDB Value Expansion", () => {
 			}, {
 				name: "c",
 				value: "d",
+				variablesReference: 0
+			}]);
+		assert.strictEqual(isExpandable(`{[0] = 0x400730 "foo", [1] = 0x400735 "bar"}`), 1);
+		assert.deepEqual(expandValue(variableCreate, `{[0] = 0x400730 "foo", [1] = 0x400735 "bar"}`), [
+			{
+				name: "[0]",
+				value: "\"foo\"",
+				variablesReference: 0
+			}, {
+				name: "[1]",
+				value: "\"bar\"",
 				variablesReference: 0
 			}]);
 		assert.strictEqual(isExpandable(`{{a = b}}`), 1);

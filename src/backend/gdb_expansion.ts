@@ -1,4 +1,6 @@
-const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)\s*=\s*/;
+import { MINode } from "./mi_parse"
+
+const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*|\[\d+\])\s*=\s*/;
 const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
 const errorRegex = /^\<.+?\>/;
 const referenceStringRegex = /^(0x[0-9a-fA-F]+\s*)"/;
@@ -18,6 +20,7 @@ export function isExpandable(value: string): number {
 	else if (value.startsWith("true")) return 0;
 	else if (value.startsWith("false")) return 0;
 	else if (match = nullpointerRegex.exec(value)) return 0;
+	else if (match = referenceStringRegex.exec(value)) return 0;
 	else if (match = referenceRegex.exec(value)) return 2; // reference
 	else if (match = charRegex.exec(value)) return 0;
 	else if (match = numberRegex.exec(value)) return 0;
@@ -26,7 +29,7 @@ export function isExpandable(value: string): number {
 	else return 0;
 }
 
-export function expandValue(variableCreate: Function, value: string, root: string = ""): any {
+export function expandValue(variableCreate: Function, value: string, root: string = "", extra: any = undefined): any {
 	let parseCString = () => {
 		value = value.trim();
 		if (value[0] != '"' && value[0] != '\'')
@@ -155,10 +158,10 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 		}
 		else if (match = nullpointerRegex.exec(value)) {
 			primitive = "<nullptr>";
-			value = value.substr(3).trim();
+			value = value.substr(match[0].length).trim();
 		}
 		else if (match = referenceStringRegex.exec(value)) {
-			value = value.substr(match[1].length);
+			value = value.substr(match[1].length).trim();
 			primitive = parseCString();
 		}
 		else if (match = referenceRegex.exec(value)) {
@@ -183,7 +186,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 			value = value.substr(match[0].length).trim();
 		}
 		else {
-			primitive = "<???>";
+			primitive = value;
 		}
 		return primitive;
 	};
@@ -220,8 +223,16 @@ export function expandValue(variableCreate: Function, value: string, root: strin
 			val = "Object";
 		}
 		if (typeof val == "string" && val.startsWith("*0x")) {
-			ref = variableCreate(getNamespace("*" + name));
-			val = "Object@" + val;
+			if (extra && MINode.valueOf(extra, "arg") == "1")
+			{
+				ref = variableCreate(getNamespace("*(" + name), { arg: true });
+				val = "<args>";
+			}
+			else
+			{
+				ref = variableCreate(getNamespace("*" + name));
+				val = "Object@" + val;
+			}
 		}
 		if (typeof val == "string" && val.startsWith("<...>")) {
 			ref = variableCreate(getNamespace(name));

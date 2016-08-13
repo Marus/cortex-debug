@@ -18,6 +18,7 @@ export interface Variable {
 	name: string;
 	valueStr: string;
 	type: string;
+	raw?: any;
 }
 
 export interface SSHArguments {
