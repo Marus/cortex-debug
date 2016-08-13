@@ -65,13 +65,13 @@ export class MI2DebugSession extends DebugSession {
 				});
 			});
 			this.commandServer.on("error", err => {
-				this.handleMsg("stderr", "Code-Debug Utility Command Server: Error in command socket " + err.toString());
+				this.handleMsg("stderr", "Code-Debug WARNING: Utility Command Server: Error in command socket " + err.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
 			});
 			if (!fs.existsSync(systemPath.join(os.tmpdir(), "code-debug-sockets")))
 				fs.mkdirSync(systemPath.join(os.tmpdir(), "code-debug-sockets"));
 			this.commandServer.listen(systemPath.join(os.tmpdir(), "code-debug-sockets", "Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)));
 		} catch (e) {
-			this.handleMsg("stderr", "Code-Debug Utility Command Server: Failed to start " + e.toString());
+			this.handleMsg("stderr", "Code-Debug WARNING: Utility Command Server: Failed to start " + e.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
 		}
 	}
 
