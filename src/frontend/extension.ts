@@ -7,6 +7,26 @@ import * as os from "os";
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider("debugmemory", new MemoryContentProvider()));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.examineMemoryLocation", examineMemory));
+	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
+		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName)
+		{
+			vscode.window.showErrorMessage("No editor with valid file name active");
+			return;
+		}
+		var fileName = vscode.window.activeTextEditor.document.fileName;
+		var ext = path.extname(fileName);
+		return fileName.substr(0, fileName.length - ext.length);
+	}));
+	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileBasenameNoExt", () => {
+		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName)
+		{
+			vscode.window.showErrorMessage("No editor with valid file name active");
+			return;
+		}
+		var fileName = path.basename(vscode.window.activeTextEditor.document.fileName);
+		var ext = path.extname(fileName);
+		return fileName.substr(0, fileName.length - ext.length);
+	}));
 }
 
 var memoryLocationRegex = /^0x[0-9a-f]+$/;

@@ -10,7 +10,9 @@
 	},
 	"main": "./out/src/frontend/extension",
 	"activationEvents": [
-		"onCommand:code-debug.examineMemoryLocation"
+		"onCommand:code-debug.examineMemoryLocation",
+		"onCommand:code-debug.getFileNameNoExt",
+		"onCommand:code-debug.getFileBasenameNoExt"
 	],
 	"categories": [
 		"Debuggers"
@@ -49,6 +51,10 @@
 						"arm",
 						"asm"
 					]
+				},
+				"variables": {
+					"FileBasenameNoExt": "code-debug.getFileBasenameNoExt",
+					"FileNameNoExt": "code-debug.getFileNameNoExt"
 				},
 				"configurationAttributes": {
 					"launch": {
@@ -216,6 +222,10 @@
 				"program": "./out/src/lldb.js",
 				"runtime": "node",
 				"label": "LLDB",
+				"variables": {
+					"FileBasenameNoExt": "code-debug.getFileBasenameNoExt",
+					"FileNameNoExt": "code-debug.getFileNameNoExt"
+				},
 				"enableBreakpointsFor": {
 					"languageIds": [
 						"c",
@@ -399,6 +409,10 @@
 				"program": "./out/src/mago.js",
 				"runtime": "node",
 				"label": "Mago-MI",
+				"variables": {
+					"FileBasenameNoExt": "code-debug.getFileBasenameNoExt",
+					"FileNameNoExt": "code-debug.getFileNameNoExt"
+				},
 				"enableBreakpointsFor": {
 					"languageIds": [
 						"d"
