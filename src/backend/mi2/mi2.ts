@@ -525,9 +525,9 @@ export class MI2 extends EventEmitter implements IBackend {
 					let from = parseInt(MINode.valueOf(element, "@frame.from"));
 					ret.push({
 						address: addr,
-						fileName: filename || "",
-						file: file || "<unknown>",
-						function: func || from || "<unknown>",
+						fileName: filename,
+						file: file,
+						function: func || from,
 						level: level,
 						line: line
 					});

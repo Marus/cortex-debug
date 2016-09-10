@@ -205,13 +205,15 @@ export class MI2DebugSession extends DebugSession {
 			let ret: StackFrame[] = [];
 			stack.forEach(element => {
 				let file = element.file;
-				if (this.isSSH) {
-					file = relative(this.switchCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
-					file = systemPath.resolve(this.trimCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
-				}
-				else if (process.platform === "win32") {
-					if (file.startsWith("\\cygdrive\\") || file.startsWith("/cygdrive/")) {
-						file = file[10] + ":" + file.substr(11); // replaces /cygdrive/c/foo/bar.txt with c:/foo/bar.txt
+				if (file) {
+					if (this.isSSH) {
+						file = relative(this.switchCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
+						file = systemPath.resolve(this.trimCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
+					}
+					else if (process.platform === "win32") {
+						if (file.startsWith("\\cygdrive\\") || file.startsWith("/cygdrive/")) {
+							file = file[10] + ":" + file.substr(11); // replaces /cygdrive/c/foo/bar.txt with c:/foo/bar.txt
+						}
 					}
 				}
 				ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
