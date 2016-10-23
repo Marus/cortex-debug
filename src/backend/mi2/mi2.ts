@@ -23,6 +23,8 @@ function couldBeOutput(line: string) {
 	return true;
 }
 
+const trace = false;
+
 export class MI2 extends EventEmitter implements IBackend {
 	constructor(public application: string, public preargs: string[]) {
 		super();
@@ -218,6 +220,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	stdout(data) {
+		if (trace)
+			this.log("stderr", "stdout: " + data);
 		if (typeof data == "string")
 			this.buffer += data;
 		else
@@ -299,6 +303,8 @@ export class MI2 extends EventEmitter implements IBackend {
 									this.emit("running", parsed);
 								else if (record.asyncClass == "stopped") {
 									let reason = parsed.record("reason");
+									if (trace)
+										this.log("stderr", "stop: " + reason);
 									if (reason == "breakpoint-hit")
 										this.emit("breakpoint", parsed);
 									else if (reason == "end-stepping-range")
@@ -381,6 +387,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	interrupt(): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "interrupt");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("exec-interrupt").then((info) => {
 				resolve(info.resultRecords.resultClass == "done");
@@ -389,6 +397,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	continue(reverse: boolean = false): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "continue");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("exec-continue" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
@@ -397,6 +407,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	next(reverse: boolean = false): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "next");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("exec-next" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
@@ -405,6 +417,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	step(reverse: boolean = false): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "step");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("exec-step" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
@@ -413,6 +427,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	stepOut(reverse: boolean = false): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "stepOut");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("exec-finish" + (reverse ? " --reverse" : "")).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
@@ -421,10 +437,14 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	changeVariable(name: string, rawValue: string): Thenable<any> {
+		if (trace)
+			this.log("stderr", "changeVariable");
 		return this.sendCommand("gdb-set var " + name + "=" + rawValue);
 	}
 
 	loadBreakPoints(breakpoints: Breakpoint[]): Thenable<[boolean, Breakpoint][]> {
+		if (trace)
+			this.log("stderr", "loadBreakPoints");
 		let promisses = [];
 		breakpoints.forEach(breakpoint => {
 			promisses.push(this.addBreakPoint(breakpoint));
@@ -433,10 +453,14 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	setBreakPointCondition(bkptNum, condition): Thenable<any> {
+		if (trace)
+			this.log("stderr", "setBreakPointCondition");
 		return this.sendCommand("break-condition " + bkptNum + " " + condition);
 	}
 
 	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]> {
+		if (trace)
+			this.log("stderr", "addBreakPoint");
 		return new Promise((resolve, reject) => {
 			if (this.breakpoints.has(breakpoint))
 				return resolve(false);
@@ -476,6 +500,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	removeBreakPoint(breakpoint: Breakpoint): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "removeBreakPoint");
 		return new Promise((resolve, reject) => {
 			if (!this.breakpoints.has(breakpoint))
 				return resolve(false);
@@ -490,6 +516,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	clearBreakPoints(): Thenable<any> {
+		if (trace)
+			this.log("stderr", "clearBreakPoints");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("break-delete").then((result) => {
 				if (result.resultRecords.resultClass == "done") {
@@ -504,6 +532,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	getStack(maxLevels: number): Thenable<Stack[]> {
+		if (trace)
+			this.log("stderr", "getStack");
 		return new Promise((resolve, reject) => {
 			let command = "stack-list-frames";
 			if (maxLevels) {
@@ -538,6 +568,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	getStackVariables(thread: number, frame: number): Thenable<Variable[]> {
+		if (trace)
+			this.log("stderr", "getStackVariables");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("stack-list-variables --thread " + thread + " --frame " + frame + " --simple-values").then((result) => {
 				let variables = result.result("variables");
@@ -559,6 +591,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
+		if (trace)
+			this.log("stderr", "examineMemory");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("data-read-memory-bytes 0x" + from.toString(16) + " " + length).then((result) => {
 				resolve(result.result("memory[0].contents"));
@@ -567,6 +601,8 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	evalExpression(name: string): Thenable<any> {
+		if (trace)
+			this.log("stderr", "evalExpression");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("data-evaluate-expression " + name).then((result) => {
 				resolve(result);
