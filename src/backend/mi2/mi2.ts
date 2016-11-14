@@ -468,7 +468,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			if (breakpoint.raw)
 				location = '"' + escape(breakpoint.raw) + '"';
 			else
-				location = '"' + breakpoint.file + ":" + breakpoint.line + '"';
+				location = '"' + escape(breakpoint.file) + ":" + breakpoint.line + '"';
 			this.sendCommand("break-insert -f " + location).then((result) => {
 				if (result.resultRecords.resultClass == "done") {
 					let bkptNum = parseInt(result.result("bkpt.number"));
