@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, SSHArguments, Variable } from "../backend.ts"
+import { Breakpoint, IBackend, Stack, SSHArguments, Variable } from "../backend"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';

@@ -343,7 +343,7 @@ export class MI2DebugSession extends DebugSession {
 					let addOne = () => {
 						this.miDebugger.evalExpression(JSON.stringify(varReq.name + "+" + arrIndex + ")")).then(variable => {
 							try {
-								let expanded = expandValue(createVariable, variable.result("value"), id, variable);
+								let expanded = expandValue(createVariable, variable.result("value"), varReq.name, variable);
 								if (!expanded) {
 									this.sendErrorResponse(response, 15, `Could not expand variable`);
 								}
