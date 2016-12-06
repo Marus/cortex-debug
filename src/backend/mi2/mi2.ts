@@ -16,6 +16,7 @@ export function escape(str: string) {
 
 const nonOutput = /^(?:\d*|undefined)[\*\+\=]|[\~\@\&\^]/;
 const gdbMatch = /(?:\d*|undefined)\(gdb\)/;
+const numRegex = /\d+/;
 
 function couldBeOutput(line: string) {
 	if (nonOutput.exec(line))
@@ -232,8 +233,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.buffer = this.buffer.substr(end + 1);
 		}
 		if (this.buffer.length) {
-			if (this.onOutputPartial(this.buffer))
-			{
+			if (this.onOutputPartial(this.buffer)) {
 				this.buffer = "";
 			}
 		}
@@ -358,7 +358,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			let to = setTimeout(() => {
 				proc.signal("KILL");
 			}, 1000);
-			this.stream.on("exit", function(code) {
+			this.stream.on("exit", function (code) {
 				clearTimeout(to);
 			})
 			this.sendRaw("-gdb-exit");
@@ -368,7 +368,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			let to = setTimeout(() => {
 				process.kill(-proc.pid);
 			}, 1000);
-			this.process.on("exit", function(code) {
+			this.process.on("exit", function (code) {
 				clearTimeout(to);
 			});
 			this.sendRaw("-gdb-exit");
@@ -380,7 +380,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		let to = setTimeout(() => {
 			process.kill(-proc.pid);
 		}, 1000);
-		this.process.on("exit", function(code) {
+		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
 		this.sendRaw("-target-detach");
@@ -465,10 +465,23 @@ export class MI2 extends EventEmitter implements IBackend {
 			if (this.breakpoints.has(breakpoint))
 				return resolve(false);
 			let location = "";
+			if (breakpoint.countCondition) {
+				if (breakpoint.countCondition[0] == ">")
+					location += "-i " + numRegex.exec(breakpoint.countCondition.substr(1))[0] + " ";
+				else {
+					let match = numRegex.exec(breakpoint.countCondition)[0];
+					if (match.length != breakpoint.countCondition.length) {
+						this.log("stderr", "Unsupported break count expression: '" + breakpoint.countCondition + "'. Only supports 'X' for breaking once after X times or '>X' for ignoring the first X breaks");
+						location += "-t ";
+					}
+					else if (parseInt(match) != 0)
+						location += "-t -i " + parseInt(match) + " ";
+				}
+			}
 			if (breakpoint.raw)
-				location = '"' + escape(breakpoint.raw) + '"';
+				location += '"' + escape(breakpoint.raw) + '"';
 			else
-				location = '"' + escape(breakpoint.file) + ":" + breakpoint.line + '"';
+				location += '"' + escape(breakpoint.file) + ":" + breakpoint.line + '"';
 			this.sendCommand("break-insert -f " + location).then((result) => {
 				if (result.resultRecords.resultClass == "done") {
 					let bkptNum = parseInt(result.result("bkpt.number"));

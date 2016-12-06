@@ -30,6 +30,7 @@ class MagoDebugSession extends MI2DebugSession {
 	}
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
+		response.body.supportsHitConditionalBreakpoints = true;
 		response.body.supportsConfigurationDoneRequest = true;
 		response.body.supportsConditionalBreakpoints = true;
 		response.body.supportsFunctionBreakpoints = true;

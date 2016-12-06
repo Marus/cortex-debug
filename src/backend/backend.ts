@@ -3,6 +3,7 @@ export interface Breakpoint {
 	line?: number;
 	raw?: string;
 	condition: string;
+	countCondition?: string;
 }
 
 export interface Stack {

@@ -13,7 +13,7 @@
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {
-		"vscode": "^0.10.10"
+		"vscode": "^1.7.2"
 	},
 	"main": "./out/src/frontend/extension",
 	"activationEvents": [

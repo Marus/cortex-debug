@@ -135,7 +135,7 @@ export class MI2DebugSession extends DebugSession {
 			this.debugReady = true;
 			let all = [];
 			args.breakpoints.forEach(brk => {
-				all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition }));
+				all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
 			});
 			Promise.all(all).then(brkpoints => {
 				let finalBrks = [];
@@ -168,7 +168,7 @@ export class MI2DebugSession extends DebugSession {
 				}
 				let all = [];
 				args.breakpoints.forEach(brk => {
-					all.push(this.miDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition }));
+					all.push(this.miDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition, countCondition: brk.hitCondition }));
 				});
 				Promise.all(all).then(brkpoints => {
 					let finalBrks = [];
