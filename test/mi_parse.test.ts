@@ -29,10 +29,14 @@ suite("MI Parse", () => {
 		assert.equal(parsed.token, undefined);
 		assert.equal(parsed.outOfBandRecord.length, 1);
 		assert.equal(parsed.outOfBandRecord[0].isStream, true);
-		// Hack
-		assert.equal(parsed.outOfBandRecord[0].content, `"[Depuraci\\303\\263n de hilo usando libthread_db enabled]\\n"`);
-		// Better Goal:
-		//assert.equal(parsed.outOfBandRecord[0].content, "[Depuración de hilo usando libthread_db enabled]\n");
+		assert.equal(parsed.outOfBandRecord[0].content, "[Depuración de hilo usando libthread_db enabled]\n");
+		assert.equal(parsed.resultRecords, undefined);
+		parsed = parseMI(`~"4\\t  std::cout << \\"\\345\\245\\275\\345\\245\\275\\345\\255\\246\\344\\271\\240\\357\\274\\214\\345\\244\\251\\345\\244\\251\\345\\220\\221\\344\\270\\212\\" << std::endl;\\n"`);
+		assert.ok(parsed);
+		assert.equal(parsed.token, undefined);
+		assert.equal(parsed.outOfBandRecord.length, 1);
+		assert.equal(parsed.outOfBandRecord[0].isStream, true);
+		assert.equal(parsed.outOfBandRecord[0].content, `4\t  std::cout << "好好学习，天天向上" << std::endl;\n`);
 		assert.equal(parsed.resultRecords, undefined);
 	});
 	test("Empty line", () => {

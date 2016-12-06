@@ -4,6 +4,57 @@ export interface MIInfo {
 	resultRecords: { resultClass: string, results: [string, any][] };
 }
 
+var octalMatch = /^[0-7]{3}/;
+function parseString(str: string): string {
+	var ret = new Buffer(str.length * 4);
+	var bufIndex = 0;
+
+	if (str[0] != '"' || str[str.length - 1] != '"')
+		throw new Error("Not a valid string");
+	str = str.slice(1, -1);
+	var escaped = false;
+	for (var i = 0; i < str.length; i++) {
+		if (escaped) {
+			var m;
+			if (str[i] == '\\')
+				bufIndex += ret.write('\\', bufIndex);
+			else if (str[i] == '"')
+				bufIndex += ret.write('"', bufIndex);
+			else if (str[i] == '\'')
+				bufIndex += ret.write('\'', bufIndex);
+			else if (str[i] == 'n')
+				bufIndex += ret.write('\n', bufIndex);
+			else if (str[i] == 'r')
+				bufIndex += ret.write('\r', bufIndex);
+			else if (str[i] == 't')
+				bufIndex += ret.write('\t', bufIndex);
+			else if (str[i] == 'b')
+				bufIndex += ret.write('\b', bufIndex);
+			else if (str[i] == 'f')
+				bufIndex += ret.write('\f', bufIndex);
+			else if (str[i] == 'v')
+				bufIndex += ret.write('\v', bufIndex);
+			else if (str[i] == '0')
+				bufIndex += ret.write('\0', bufIndex);
+			else if (m = octalMatch.exec(str.substr(i))) {
+				ret.writeUInt8(parseInt(m[0], 8), bufIndex++);
+				i += 2;
+			}
+			else
+				bufIndex += ret.write(str[i], bufIndex);
+			escaped = false;
+		} else {
+			if (str[i] == '\\')
+				escaped = true;
+			else if (str[i] == '"')
+				throw new Error("Not a valid string");
+			else
+				bufIndex += ret.write(str[i], bufIndex);
+		}
+	}
+	return ret.slice(0, bufIndex).toString("utf8");
+}
+
 export class MINode implements MIInfo {
 	token: number;
 	outOfBandRecord: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[];
@@ -135,10 +186,9 @@ export function parseMI(output: string): MINode {
 			remaining = remaining.substr(1);
 			stringEnd++;
 		}
-		// hax
 		let str;
 		try {
-			str = JSON.parse(output.substr(0, stringEnd));
+			str = parseString(output.substr(0, stringEnd));
 		}
 		catch (e) {
 			str = output.substr(0, stringEnd);
