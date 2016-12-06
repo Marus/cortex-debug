@@ -8,8 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider("debugmemory", new MemoryContentProvider()));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.examineMemoryLocation", examineMemory));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
-		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName)
-		{
+		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
 		}
@@ -18,8 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 		return fileName.substr(0, fileName.length - ext.length);
 	}));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileBasenameNoExt", () => {
-		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName)
-		{
+		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
 		}
@@ -61,11 +59,19 @@ function getMemoryRange(range: string) {
 
 function examineMemory() {
 	let socketlists = path.join(os.tmpdir(), "code-debug-sockets");
-	if (!fs.existsSync(socketlists))
-		return vscode.window.showErrorMessage("No debugging sessions available");
-	fs.readdir(socketlists, (err, files) => {
-		if (err)
+	if (!fs.existsSync(socketlists)) {
+		if (process.platform == "win32")
+			return vscode.window.showErrorMessage("This command is not available on windows");
+		else
 			return vscode.window.showErrorMessage("No debugging sessions available");
+	}
+	fs.readdir(socketlists, (err, files) => {
+		if (err) {
+			if (process.platform == "win32")
+				return vscode.window.showErrorMessage("This command is not available on windows");
+			else
+				return vscode.window.showErrorMessage("No debugging sessions available");
+		}
 		var pickedFile = (file) => {
 			vscode.window.showInputBox({ placeHolder: "Memory Location or Range", validateInput: range => getMemoryRange(range) === undefined ? "Range must either be in format 0xF00-0xF01, 0xF100+32 or 0xABC154" : "" }).then(range => {
 				vscode.commands.executeCommand("vscode.previewHtml", vscode.Uri.parse("debugmemory://" + file + "#" + getMemoryRange(range)));
@@ -75,6 +81,8 @@ function examineMemory() {
 			pickedFile(files[0]);
 		else if (files.length > 0)
 			vscode.window.showQuickPick(files, { placeHolder: "Running debugging instance" }).then(file => pickedFile(file));
+		else if (process.platform == "win32")
+			return vscode.window.showErrorMessage("This command is not available on windows");
 		else
 			vscode.window.showErrorMessage("No debugging sessions available");
 	});
