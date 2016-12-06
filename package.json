@@ -56,7 +56,8 @@
 						"ada",
 						"nim",
 						"arm",
-						"asm"
+						"asm",
+						"vala"
 					]
 				},
 				"variables": {
@@ -256,7 +257,8 @@
 						"julia",
 						"dylan",
 						"mips",
-						"renderscript"
+						"renderscript",
+						"vala"
 					]
 				},
 				"configurationAttributes": {
