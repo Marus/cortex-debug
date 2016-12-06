@@ -136,7 +136,13 @@ export function parseMI(output: string): MINode {
 			stringEnd++;
 		}
 		// hax
-		let str = JSON.parse(output.substr(0, stringEnd));
+		let str;
+		try {
+			str = JSON.parse(output.substr(0, stringEnd));
+		}
+		catch (e) {
+			str = output.substr(0, stringEnd);
+		}
 		output = output.substr(stringEnd);
 		return str;
 	};

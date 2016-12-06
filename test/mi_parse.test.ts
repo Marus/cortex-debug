@@ -23,6 +23,18 @@ suite("MI Parse", () => {
 		assert.equal(parsed.outOfBandRecord[0].content, "[Thread 0x7fffe993a700 (LWP 11002) exited]\n");
 		assert.equal(parsed.resultRecords, undefined);
 	});
+	test("Unicode", () => {
+		let parsed = parseMI(`~"[Depuraci\\303\\263n de hilo usando libthread_db enabled]\\n"`);
+		assert.ok(parsed);
+		assert.equal(parsed.token, undefined);
+		assert.equal(parsed.outOfBandRecord.length, 1);
+		assert.equal(parsed.outOfBandRecord[0].isStream, true);
+		// Hack
+		assert.equal(parsed.outOfBandRecord[0].content, `"[Depuraci\\303\\263n de hilo usando libthread_db enabled]\\n"`);
+		// Better Goal:
+		//assert.equal(parsed.outOfBandRecord[0].content, "[Depuración de hilo usando libthread_db enabled]\n");
+		assert.equal(parsed.resultRecords, undefined);
+	});
 	test("Empty line", () => {
 		let parsed = parseMI(``);
 		assert.ok(parsed);
