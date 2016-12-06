@@ -314,5 +314,5 @@ export function parseMI(output: string): MINode {
 		output = output.replace(newlineRegex, "");
 	}
 
-	return new MINode(token, outOfBandRecord || [], resultRecords);
+	return new MINode(token, <any>outOfBandRecord || [], resultRecords);
 }
