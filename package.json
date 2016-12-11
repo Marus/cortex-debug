@@ -91,6 +91,11 @@
 								"description": "Path to the gdb executable or the command if in PATH",
 								"default": "gdb"
 							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to GDB",
+								"default": []
+							},
 							"printCalls": {
 								"type": "boolean",
 								"description": "Prints all GDB calls to the console",
@@ -201,6 +206,11 @@
 								"description": "Path to the gdb executable or the command if in PATH",
 								"default": "gdb"
 							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to GDB",
+								"default": []
+							},
 							"cwd": {
 								"type": "string",
 								"description": "Path of project",
@@ -283,6 +293,11 @@
 								"type": "string",
 								"description": "Path to the lldb-mi executable or the command if in PATH",
 								"default": "lldb-mi"
+							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to LLDB",
+								"default": []
 							},
 							"printCalls": {
 								"type": "boolean",
@@ -389,6 +404,11 @@
 								"description": "Path to the lldb-mi executable or the command if in PATH",
 								"default": "lldb-mi"
 							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to LLDB",
+								"default": []
+							},
 							"cwd": {
 								"type": "string",
 								"description": "Path of project",
@@ -450,6 +470,11 @@
 								"description": "Path to the mago-mi executable or the command if in PATH",
 								"default": "mago-mi"
 							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to mago",
+								"default": []
+							},
 							"printCalls": {
 								"type": "boolean",
 								"description": "Prints all mago calls to the console",
@@ -494,6 +519,11 @@
 								"type": "string",
 								"description": "Path to the mago-mi executable or the command if in PATH",
 								"default": "mago-mi"
+							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to mago",
+								"default": []
 							},
 							"cwd": {
 								"type": "string",
