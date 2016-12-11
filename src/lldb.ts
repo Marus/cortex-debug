@@ -8,6 +8,7 @@ export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
 	lldbmipath: string;
+	debugger_args: string[];
 	arguments: string;
 	autorun: string[];
 	ssh: SSHArguments;
@@ -19,6 +20,7 @@ export interface AttachRequestArguments {
 	cwd: string;
 	target: string;
 	lldbmipath: string;
+	debugger_args: string[];
 	executable: string;
 	autorun: string[];
 	printCalls: boolean;
@@ -36,7 +38,7 @@ class LLDBDebugSession extends MI2DebugSession {
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		this.miDebugger = new MI2_LLDB(args.lldbmipath || "lldb-mi", []);
+		this.miDebugger = new MI2_LLDB(args.lldbmipath || "lldb-mi", [], args.debugger_args);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = false;
@@ -97,7 +99,7 @@ class LLDBDebugSession extends MI2DebugSession {
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		this.miDebugger = new MI2_LLDB(args.lldbmipath || "lldb-mi", []);
+		this.miDebugger = new MI2_LLDB(args.lldbmipath || "lldb-mi", [], args.debugger_args);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = true;

@@ -8,6 +8,7 @@ export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
 	magomipath: string;
+	debugger_args: string[];
 	arguments: string;
 	autorun: string[];
 	printCalls: boolean;
@@ -18,6 +19,7 @@ export interface AttachRequestArguments {
 	cwd: string;
 	target: string;
 	magomipath: string;
+	debugger_args: string[];
 	executable: string;
 	autorun: string[];
 	printCalls: boolean;
@@ -43,7 +45,7 @@ class MagoDebugSession extends MI2DebugSession {
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		this.miDebugger = new MI2_Mago(args.magomipath || "mago-mi", ["-q"]);
+		this.miDebugger = new MI2_Mago(args.magomipath || "mago-mi", ["-q"], args.debugger_args);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = false;
@@ -72,7 +74,7 @@ class MagoDebugSession extends MI2DebugSession {
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		this.miDebugger = new MI2_Mago(args.magomipath || "mago-mi", []);
+		this.miDebugger = new MI2_Mago(args.magomipath || "mago-mi", [], args.debugger_args);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = true;
