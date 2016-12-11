@@ -8,6 +8,7 @@ export interface LaunchRequestArguments {
 	cwd: string;
 	target: string;
 	gdbpath: string;
+	debugger_args: string[];
 	arguments: string;
 	terminal: string;
 	autorun: string[];
@@ -20,6 +21,7 @@ export interface AttachRequestArguments {
 	cwd: string;
 	target: string;
 	gdbpath: string;
+	debugger_args: string[];
 	executable: string;
 	remote: boolean;
 	autorun: string[];
@@ -40,7 +42,7 @@ class GDBDebugSession extends MI2DebugSession {
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"]);
+		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"], args.debugger_args);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = false;
@@ -109,7 +111,7 @@ class GDBDebugSession extends MI2DebugSession {
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"]);
+		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"], args.debugger_args);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = !args.remote;
