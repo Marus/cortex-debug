@@ -232,6 +232,80 @@
 						"target": "./bin/executable",
 						"cwd": "${workspaceRoot}"
 					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "GDB: Launch Program",
+						"description": "Starts the program using gdb",
+						"body": {
+							"type": "gdb",
+							"request": "launch",
+							"name": "${2:Launch Program}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "GDB: Attach to PID",
+						"description": "Attaches to a running program pid using gdb",
+						"body": {
+							"type": "gdb",
+							"request": "launch",
+							"name": "${2:Attach to PID}",
+							"target": "${1:[PID]}",
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "GDB: Connect to gdbserver",
+						"description": "Connects to a gdbserver for debugging",
+						"body": {
+							"type": "gdb",
+							"request": "attach",
+							"name": "${3:Attach to gdbserver}",
+							"executable": "${1:./bin/executable}",
+							"target": ":${2:2345}",
+							"remote": true,
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "GDB: Launch over SSH",
+						"description": "Remotely starts the program using gdb",
+						"body": {
+							"type": "gdb",
+							"request": "launch",
+							"name": "${6:Launch Program (SSH)}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"ssh": {
+								"host": "${2:127.0.0.1}",
+								"cwd": "${3:/home/remote_user/project/}",
+								"keyfile": "${4:/home/my_user/.ssh/id_rsa}",
+								"user": "${5:remote_user}"
+							}
+						}
+					},
+					{
+						"label": "GDB: Launch GUI over SSH with X11 forwarding",
+						"description": "Remotely starts the program using gdb with X11 forwarding",
+						"body": {
+							"type": "gdb",
+							"request": "launch",
+							"name": "${6:Launch Program (SSH + X11)}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"ssh": {
+								"host": "${2:127.0.0.1}",
+								"cwd": "${3:/home/remote_user/project/}",
+								"keyfile": "${4:/home/my_user/.ssh/id_rsa}",
+								"user": "${5:remote_user}",
+								"forwardX11": true,
+								"x11host": "localhost",
+								"x11port": 6000
+							}
+						}
+					}
 				]
 			},
 			{
@@ -430,6 +504,67 @@
 						"target": "./bin/executable",
 						"cwd": "${workspaceRoot}"
 					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "LLDB: Launch Program",
+						"description": "Starts the program using lldb-mi",
+						"body": {
+							"type": "lldb-mi",
+							"request": "launch",
+							"name": "${2:Launch Program}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "LLDB: Attach to PID",
+						"description": "Attaches to a running program pid using lldb-mi",
+						"body": {
+							"type": "lldb-mi",
+							"request": "launch",
+							"name": "${2:Attach to PID}",
+							"target": "${1:[PID]}",
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "LLDB: Launch over SSH",
+						"description": "Remotely starts the program using lldb-mi",
+						"body": {
+							"type": "lldb-mi",
+							"request": "launch",
+							"name": "${6:Launch Program (SSH)}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"ssh": {
+								"host": "${2:127.0.0.1}",
+								"cwd": "${3:/home/remote_user/project/}",
+								"keyfile": "${4:/home/my_user/.ssh/id_rsa}",
+								"user": "${5:remote_user}"
+							}
+						}
+					},
+					{
+						"label": "LLDB: Launch GUI over SSH with X11 forwarding",
+						"description": "Remotely starts the program using lldb-mi with X11 forwarding",
+						"body": {
+							"type": "lldb-mi",
+							"request": "launch",
+							"name": "${6:Launch Program (SSH + X11)}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"ssh": {
+								"host": "${2:127.0.0.1}",
+								"cwd": "${3:/home/remote_user/project/}",
+								"keyfile": "${4:/home/my_user/.ssh/id_rsa}",
+								"user": "${5:remote_user}",
+								"forwardX11": true,
+								"x11host": "localhost",
+								"x11port": 6000
+							}
+						}
+					}
 				]
 			},
 			{
@@ -545,6 +680,30 @@
 						"request": "launch",
 						"target": "./bin/executable",
 						"cwd": "${workspaceRoot}"
+					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "Mago: Launch Program",
+						"description": "Starts the program using mago-mi",
+						"body": {
+							"type": "mago-mi",
+							"request": "launch",
+							"name": "${2:Launch Program}",
+							"target": "${1:./bin/executable}",
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "Mago: Attach to PID",
+						"description": "Attaches to a running program pid using mago-mi",
+						"body": {
+							"type": "mago-mi",
+							"request": "launch",
+							"name": "${2:Attach to PID}",
+							"target": "${1:[PID]}",
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
 					}
 				]
 			}
