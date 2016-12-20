@@ -413,6 +413,14 @@ export class MI2DebugSession extends DebugSession {
 		});
 	}
 
+	protected reverseContinueRequest(response: DebugProtocol.ReverseContinueResponse, args: DebugProtocol.ReverseContinueArguments): void {
+		this.miDebugger.continue(true).then(done => {
+			this.sendResponse(response);
+		}, msg => {
+			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
+		});
+	}
+
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
 		this.miDebugger.continue().then(done => {
 			this.sendResponse(response);

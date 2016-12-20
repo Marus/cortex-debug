@@ -13,7 +13,7 @@
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {
-		"vscode": "^1.7.2"
+		"vscode": "^1.8.0"
 	},
 	"main": "./out/src/frontend/extension",
 	"activationEvents": [
@@ -715,8 +715,8 @@
 		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"dependencies": {
-		"vscode-debugadapter": "^1.14.0",
-		"vscode-debugprotocol": "^1.14.0",
+		"vscode-debugadapter": "^1.15.0",
+		"vscode-debugprotocol": "^1.15.0",
 		"ssh2": "^0.5.4"
 	},
 	"devDependencies": {
