@@ -38,7 +38,7 @@ export interface SSHArguments {
 
 export interface IBackend {
 	load(cwd: string, target: string, procArgs: string, separateConsole: string): Thenable<any>;
-	ssh(args: SSHArguments, cwd: string, target: string, procArgs: string, separateConsole: string): Thenable<any>;
+	ssh(args: SSHArguments, cwd: string, target: string, procArgs: string, separateConsole: string, attach: boolean): Thenable<any>;
 	attach(cwd: string, executable: string, target: string): Thenable<any>;
 	connect(cwd: string, executable: string, target: string): Thenable<any>;
 	start(): Thenable<boolean>;

@@ -72,7 +72,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	ssh(args: SSHArguments, cwd: string, target: string, procArgs: string, separateConsole: string): Thenable<any> {
+	ssh(args: SSHArguments, cwd: string, target: string, procArgs: string, separateConsole: string, attach: boolean): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			this.isSSH = true;
 			this.sshReady = false;
@@ -125,6 +125,8 @@ export class MI2 extends EventEmitter implements IBackend {
 				}
 				let sshCMD = this.application + " " + this.preargs.join(" ");
 				if (args.bootstrap) sshCMD = args.bootstrap + " && " + sshCMD;
+				if (attach)
+					sshCMD += " -p " + target;
 				this.sshConn.exec(sshCMD, execArgs, (err, stream) => {
 					if (err) {
 						this.log("stderr", "Could not run " + this.application + " over ssh!");
@@ -141,9 +143,9 @@ export class MI2 extends EventEmitter implements IBackend {
 						this.emit("quit");
 						this.sshConn.end();
 					}).bind(this));
-					let promises = this.initCommands(target, cwd, true);
+					let promises = this.initCommands(target, cwd, true, attach);
 					promises.push(this.sendCommand("environment-cd \"" + escape(cwd) + "\""));
-					if (procArgs && procArgs.length)
+					if (procArgs && procArgs.length && !attach)
 						promises.push(this.sendCommand("exec-arguments " + procArgs));
 					Promise.all(promises).then(() => {
 						this.emit("debug-ready")
@@ -159,7 +161,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	protected initCommands(target: string, cwd: string, ssh: boolean = false) {
+	protected initCommands(target: string, cwd: string, ssh: boolean = false, attach: boolean = false) {
 		if (ssh) {
 			if (!path.isAbsolute(target))
 				target = path.join(cwd, target);
@@ -168,11 +170,13 @@ export class MI2 extends EventEmitter implements IBackend {
 			if (!nativePath.isAbsolute(target))
 				target = nativePath.join(cwd, target);
 		}
-		return [
-			this.sendCommand("gdb-set target-async on"),
-			this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
-			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"")
+		var cmds = [
+			this.sendCommand("gdb-set target-async on", true),
+			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", true)
 		];
+		if (!attach)
+			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
+		return cmds;
 	}
 
 	attach(cwd: string, executable: string, target: string): Thenable<any> {
@@ -651,12 +655,18 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stdin.write(raw + "\n");
 	}
 
-	sendCommand(command: string): Thenable<MINode> {
+	sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
 		let sel = this.currentToken++;
 		return new Promise((resolve, reject) => {
 			this.handlers[sel] = (node: MINode) => {
-				if (node && node.resultRecords && node.resultRecords.resultClass === "error")
-					reject(node.result("msg") || "Internal error");
+				if (node && node.resultRecords && node.resultRecords.resultClass === "error") {
+					if (suppressFailure) {
+						this.log("stderr", "WARNING: Error executing command '" + command + "'");
+						resolve(node);
+					}
+					else
+						reject((node.result("msg") || "Internal error") + " (from " + command + ")");
+				}
 				else
 					resolve(node);
 			};

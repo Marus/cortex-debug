@@ -6,7 +6,7 @@ import * as nativePath from "path"
 let path = posix;
 
 export class MI2_LLDB extends MI2 {
-	protected initCommands(target: string, cwd: string, ssh: boolean = false) {
+	protected initCommands(target: string, cwd: string, ssh: boolean = false, attach: boolean = false) {
 		if (ssh) {
 			if (!path.isAbsolute(target))
 				target = path.join(cwd, target);
@@ -15,10 +15,12 @@ export class MI2_LLDB extends MI2 {
 			if (!nativePath.isAbsolute(target))
 				target = nativePath.join(cwd, target);
 		}
-		return [
-			this.sendCommand("gdb-set target-async on"),
-			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"")
+		var cmds = [
+			this.sendCommand("gdb-set target-async on")
 		];
+		if (!attach)
+			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
+		return cmds;
 	}
 
 	attach(cwd: string, executable: string, target: string): Thenable<any> {
