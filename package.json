@@ -365,6 +365,24 @@
 								"x11port": 6000
 							}
 						}
+					},
+					{
+						"label": "GDB: Debug external embedded device",
+						"description": "Debugs an embedded microcontroller supported by GDB by attaching over extended-remote",
+						"body": {
+							"type": "gdb",
+							"request": "launch",
+							"name": "${6:Debug Microcontroller}",
+							"target": "extended-remote ${2:/dev/cu.usbmodem00000000}",
+							"executable": "${1:./bin/executable.elf}",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"autorun": [
+								"monitor tpwr enable",
+								"monitor swdp_scan",
+								"attach 1",
+								"load ${1:./bin/executable.elf}"
+							]
+						}
 					}
 				]
 			},
