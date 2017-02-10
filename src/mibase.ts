@@ -219,6 +219,8 @@ export class MI2DebugSession extends DebugSession {
 					}
 					ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 				}
+				else
+					ret.push(new StackFrame(element.level, element.function + "@" + element.address, null, element.line, 0));
 			});
 			response.body = {
 				stackFrames: ret
