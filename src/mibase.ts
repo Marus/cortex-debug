@@ -217,8 +217,8 @@ export class MI2DebugSession extends DebugSession {
 							file = file[10] + ":" + file.substr(11); // replaces /cygdrive/c/foo/bar.txt with c:/foo/bar.txt
 						}
 					}
+					ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 				}
-				ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 			});
 			response.body = {
 				stackFrames: ret
