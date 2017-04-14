@@ -25,7 +25,7 @@ export class MI2_LLDB extends MI2 {
 
 	attach(cwd: string, executable: string, target: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
-			this.process = ChildProcess.spawn(this.application, this.preargs, { cwd: cwd });
+			this.process = ChildProcess.spawn(this.application, this.preargs, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));

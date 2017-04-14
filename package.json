@@ -91,6 +91,11 @@
 								"description": "Path to the gdb executable or the command if in PATH",
 								"default": "gdb"
 							},
+							"env": {
+								"type": "object",
+								"description": "Environment overriding the gdb (and in turn also the process) environment",
+								"default": null
+							},
 							"debugger_args": {
 								"type": "array",
 								"description": "Additional arguments to pass to GDB",
@@ -205,6 +210,11 @@
 								"type": "string",
 								"description": "Path to the gdb executable or the command if in PATH",
 								"default": "gdb"
+							},
+							"env": {
+								"type": "object",
+								"description": "Environment overriding the gdb (and in turn also the process) environment",
+								"default": null
 							},
 							"debugger_args": {
 								"type": "array",
@@ -446,6 +456,11 @@
 								"description": "Path to the lldb-mi executable or the command if in PATH",
 								"default": "lldb-mi"
 							},
+							"env": {
+								"type": "object",
+								"description": "Environment overriding the lldb-mi (and in turn also the process) environment",
+								"default": null
+							},
 							"debugger_args": {
 								"type": "array",
 								"description": "Additional arguments to pass to LLDB",
@@ -555,6 +570,11 @@
 								"type": "string",
 								"description": "Path to the lldb-mi executable or the command if in PATH",
 								"default": "lldb-mi"
+							},
+							"env": {
+								"type": "object",
+								"description": "Environment overriding the lldb-mi (and in turn also the process) environment",
+								"default": null
 							},
 							"debugger_args": {
 								"type": "array",
@@ -683,6 +703,11 @@
 								"description": "Path to the mago-mi executable or the command if in PATH",
 								"default": "mago-mi"
 							},
+							"env": {
+								"type": "object",
+								"description": "Environment overriding the mago-mi (and in turn also the process) environment",
+								"default": null
+							},
 							"debugger_args": {
 								"type": "array",
 								"description": "Additional arguments to pass to mago",
@@ -732,6 +757,11 @@
 								"type": "string",
 								"description": "Path to the mago-mi executable or the command if in PATH",
 								"default": "mago-mi"
+							},
+							"env": {
+								"type": "object",
+								"description": "Environment overriding the mago-mi (and in turn also the process) environment",
+								"default": null
 							},
 							"debugger_args": {
 								"type": "array",
