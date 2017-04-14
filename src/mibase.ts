@@ -39,6 +39,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected initDebugger() {
+		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
 		this.miDebugger.on("exited-normally", this.quitEvent.bind(this));
 		this.miDebugger.on("stopped", this.stopEvent.bind(this));
@@ -107,6 +108,12 @@ export class MI2DebugSession extends DebugSession {
 	protected quitEvent() {
 		this.quit = true;
 		this.sendEvent(new TerminatedEvent());
+	}
+
+	protected launchError(err: any) {
+		this.handleMsg("stderr", "Could not start debugger process, does the program exist in filesystem?\n");
+		this.handleMsg("stderr", err.toString() + "\n");
+		this.quitEvent();
 	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {

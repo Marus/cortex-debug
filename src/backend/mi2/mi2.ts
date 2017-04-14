@@ -41,6 +41,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
+			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
 			let promises = this.initCommands(target, cwd);
 			if (procArgs && procArgs.length)
 				promises.push(this.sendCommand("exec-arguments " + procArgs));
@@ -196,6 +197,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
+			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
 			var commands = [
 				this.sendCommand("gdb-set target-async on"),
 				this.sendCommand("environment-directory \"" + escape(cwd) + "\"")
@@ -224,6 +226,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
+			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
 			Promise.all([
 				this.sendCommand("gdb-set target-async on"),
 				this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
