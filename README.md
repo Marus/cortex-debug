@@ -12,7 +12,7 @@ Press ctrl-p (cmd+p on OS X) and run `ext install webfreak.debug` in visual stud
 
 ![Image with red circle around a gear and a red arrow pointing at GDB and LLDB](images/tutorial1.png)
 
-Or if you already have an existing debugger in your project setup:
+Or if you already have an existing debugger in your project setup you can click "Create Configuration" or use the auto completion instead:
 
 ![Visual studio code debugger launch.json auto completion showing alternative way to create debuggers](images/tutorial1-alt.png)
 
