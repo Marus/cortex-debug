@@ -27,8 +27,27 @@ function couldBeOutput(line: string) {
 const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
-	constructor(public application: string, public preargs: string[], public extraargs: string[], public procEnv: any) {
+	constructor(public application: string, public preargs: string[], public extraargs: string[], procEnv: any) {
 		super();
+
+		if (procEnv) {
+			var env = {};
+			// Duplicate process.env so we don't override it
+			for (var key in process.env)
+				if (process.env.hasOwnProperty(key))
+					env[key] = process.env[key];
+
+			// Overwrite with user specified variables
+			for (var key in procEnv) {
+				if (procEnv.hasOwnProperty(key)) {
+					if (procEnv === null)
+						delete env[key];
+					else
+						env[key] = procEnv[key];
+				}
+			}
+			this.procEnv = env;
+		}
 	}
 
 	load(cwd: string, target: string, procArgs: string, separateConsole: string): Thenable<any> {
@@ -693,6 +712,7 @@ export class MI2 extends EventEmitter implements IBackend {
 
 	printCalls: boolean;
 	debugOutput: boolean;
+	public procEnv: any;
 	protected isSSH: boolean;
 	protected sshReady: boolean;
 	protected currentToken: number = 1;
