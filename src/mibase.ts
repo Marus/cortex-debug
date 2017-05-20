@@ -1,6 +1,6 @@
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { Breakpoint, IBackend } from './backend/backend';
+import { Breakpoint, IBackend, Variable } from './backend/backend';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
@@ -261,7 +261,7 @@ export class MI2DebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
-	protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): void {
+	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
 		const variables: DebugProtocol.Variable[] = [];
 		const id = this.variableHandles.get(args.variablesReference);
 
@@ -274,10 +274,12 @@ export class MI2DebugSession extends DebugSession {
 
 		if (typeof id == "string") {
 			if (id.startsWith("@frame:")) {
-				this.miDebugger.getStackVariables(this.threadID, parseInt(id.substr("@frame:".length))).then(stack => {
-					stack.forEach(variable => {
+				let stack: Variable[];
+				try {
+					stack = await this.miDebugger.getStackVariables(this.threadID, parseInt(id.substr("@frame:".length)));
+					for (const variable of stack) {
 						if (variable.valueStr !== undefined) {
-							let expanded = expandValue(createVariable, "{" + variable.name + "=" + variable.valueStr + ")", "", variable.raw);
+							let expanded = expandValue(createVariable, `{${variable.name}=${variable.valueStr})`, "", variable.raw);
 							if (expanded) {
 								if (typeof expanded[0] == "string")
 									expanded = [
@@ -296,18 +298,21 @@ export class MI2DebugSession extends DebugSession {
 								value: "<unknown>",
 								variablesReference: createVariable(variable.name)
 							});
-					});
+					}
 					response.body = {
 						variables: variables
 					};
 					this.sendResponse(response);
-				}, err => {
-					this.sendErrorResponse(response, 1, "Could not expand variable: " + err);
-				});
+				}
+				catch (err) {
+					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+				}
 			}
 			else {
 				// Variable members
-				this.miDebugger.evalExpression(JSON.stringify(id)).then(variable => {
+				let variable;
+				try {
+					variable = await this.miDebugger.evalExpression(JSON.stringify(id));
 					try {
 						let expanded = expandValue(createVariable, variable.result("value"), id, variable);
 						if (!expanded) {
@@ -329,11 +334,12 @@ export class MI2DebugSession extends DebugSession {
 						}
 					}
 					catch (e) {
-						this.sendErrorResponse(response, 2, `Could not expand variable: ` + e);
+						this.sendErrorResponse(response, 2, `Could not expand variable: ${e}`);
 					}
-				}, err => {
-					this.sendErrorResponse(response, 1, `Could not expand variable`);
-				});
+				}
+				catch (err) {
+					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+				}
 			}
 		}
 		else if (typeof id == "object") {
@@ -349,55 +355,54 @@ export class MI2DebugSession extends DebugSession {
 						};
 						this.sendResponse(response);
 					};
-					let addOne = () => {
-						this.miDebugger.evalExpression(JSON.stringify(varReq.name + "+" + arrIndex + ")")).then(variable => {
-							try {
-								let expanded = expandValue(createVariable, variable.result("value"), varReq.name, variable);
-								if (!expanded) {
-									this.sendErrorResponse(response, 15, `Could not expand variable`);
-								}
-								else {
-									if (typeof expanded == "string") {
-										if (expanded == "<nullptr>") {
-											if (argsPart)
-												argsPart = false;
-											else
-												return submit();
-										}
-										else if (expanded[0] != '"') {
-											strArr.push({
-												name: "[err]",
-												value: expanded,
-												variablesReference: 0
-											});
+					let addOne = async () => {
+						const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`));
+						try {
+							let expanded = expandValue(createVariable, variable.result("value"), varReq.name, variable);
+							if (!expanded) {
+								this.sendErrorResponse(response, 15, `Could not expand variable`);
+							}
+							else {
+								if (typeof expanded == "string") {
+									if (expanded == "<nullptr>") {
+										if (argsPart)
+											argsPart = false;
+										else
 											return submit();
-										}
-										strArr.push({
-											name: "[" + (arrIndex++) + "]",
-											value: expanded,
-											variablesReference: 0
-										});
-										addOne();
 									}
-									else {
+									else if (expanded[0] != '"') {
 										strArr.push({
 											name: "[err]",
 											value: expanded,
 											variablesReference: 0
 										});
-										submit();
+										return submit();
 									}
+									strArr.push({
+										name: `[${(arrIndex++)}]`,
+										value: expanded,
+										variablesReference: 0
+									});
+									addOne();
+								}
+								else {
+									strArr.push({
+										name: "[err]",
+										value: expanded,
+										variablesReference: 0
+									});
+									submit();
 								}
 							}
-							catch (e) {
-								this.sendErrorResponse(response, 14, `Could not expand variable: ` + e);
-							}
-						});
+						}
+						catch (e) {
+							this.sendErrorResponse(response, 14, `Could not expand variable: ${e}`);
+						}
 					};
 					addOne();
 				}
 				else
-					this.sendErrorResponse(response, 13, `Unimplemented variable request options: ` + JSON.stringify(varReq.options));
+					this.sendErrorResponse(response, 13, `Unimplemented variable request options: ${JSON.stringify(varReq.options)}`);
 			}
 			else {
 				response.body = {
