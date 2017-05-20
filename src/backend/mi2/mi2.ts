@@ -617,27 +617,25 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	getStackVariables(thread: number, frame: number): Thenable<Variable[]> {
+	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
 		if (trace)
 			this.log("stderr", "getStackVariables");
-		return new Promise((resolve, reject) => {
-			this.sendCommand("stack-list-variables --thread " + thread + " --frame " + frame + " --simple-values").then((result) => {
-				let variables = result.result("variables");
-				let ret: Variable[] = [];
-				variables.forEach(element => {
-					const key = MINode.valueOf(element, "name");
-					const value = MINode.valueOf(element, "value");
-					const type = MINode.valueOf(element, "type");
-					ret.push({
-						name: key,
-						valueStr: value,
-						type: type,
-						raw: element
-					});
-				});
-				resolve(ret);
-			}, reject);
-		});
+
+		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const variables = result.result("variables");
+		let ret: Variable[] = [];
+		for (const element of variables) {
+			const key = MINode.valueOf(element, "name");
+			const value = MINode.valueOf(element, "value");
+			const type = MINode.valueOf(element, "type");
+			ret.push({
+				name: key,
+				valueStr: value,
+				type: type,
+				raw: element
+			});
+		}
+		return ret;
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
