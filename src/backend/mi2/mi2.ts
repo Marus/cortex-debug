@@ -196,6 +196,9 @@ export class MI2 extends EventEmitter implements IBackend {
 		];
 		if (!attach)
 			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
+
+		// TODO: add extension parameter for enabling/disabling pretty printers
+		cmds.push(this.sendCommand("enable-pretty-printing"));
 		return cmds;
 	}
 
@@ -656,6 +659,19 @@ export class MI2 extends EventEmitter implements IBackend {
 				resolve(result);
 			}, reject);
 		});
+	}
+
+	async varCreate(expression: string): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varCreate");
+		return this.sendCommand(`var-create - * "${expression}"`);
+	}
+
+	async varListChildren(name: string): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varListChildren");
+		//TODO: add `from` and `to` arguments
+		return this.sendCommand(`var-list-children --simple-values ${name}`);
 	}
 
 	logNoNewLine(type: string, msg: string) {

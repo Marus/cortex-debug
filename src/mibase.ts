@@ -272,32 +272,49 @@ export class MI2DebugSession extends DebugSession {
 				return this.variableHandles.create(arg);
 		};
 
+		let miVarObjToVariable = (varObj: any): DebugProtocol.Variable => {
+			const evaluateName = MINode.valueOf(varObj, "name");
+			const value = MINode.valueOf(varObj, "value");
+			const numChild = parseInt(MINode.valueOf(varObj, "numchild"));
+			const dynamic = MINode.valueOf(varObj, "dynamic") || 0;
+			let displayHint, hasMore;
+			if (dynamic) {
+				displayHint = MINode.valueOf(varObj, "displayhint");
+				hasMore = parseInt(MINode.valueOf(varObj, "has_more"));
+			}
+			const isCompound = numChild > 0 ||
+				value === "{...}" ||
+				(dynamic > 0 && (displayHint === "array" || displayHint === "map"));
+
+			let res = {
+				name: MINode.valueOf(varObj, "exp"),
+				evaluateName,
+				type: MINode.valueOf(varObj, "type"),
+				value: value || "<value>",
+				variablesReference: isCompound ? createVariable(evaluateName) : 0
+			} as DebugProtocol.Variable;
+			return res;
+		};
+
 		if (typeof id == "string") {
 			if (id.startsWith("@frame:")) {
 				let stack: Variable[];
 				try {
 					stack = await this.miDebugger.getStackVariables(this.threadID, parseInt(id.substr("@frame:".length)));
 					for (const variable of stack) {
-						if (variable.valueStr !== undefined) {
-							let expanded = expandValue(createVariable, `{${variable.name}=${variable.valueStr})`, "", variable.raw);
-							if (expanded) {
-								if (typeof expanded[0] == "string")
-									expanded = [
-										{
-											name: "<value>",
-											value: prettyStringArray(expanded),
-											variablesReference: 0
-										}
-									];
-								variables.push(expanded[0]);
-							}
-						} else
+						try {
+							const varObj = await this.miDebugger.varCreate(variable.name);
+							let v = miVarObjToVariable(varObj.resultRecords.results);
+							v.name = variable.name;
+							variables.push(v);
+						}
+						catch (err) {
 							variables.push({
 								name: variable.name,
-								type: variable.type,
-								value: "<unknown>",
-								variablesReference: createVariable(variable.name)
+								value: err,
+								variablesReference: 0
 							});
+						}
 					}
 					response.body = {
 						variables: variables
@@ -310,32 +327,18 @@ export class MI2DebugSession extends DebugSession {
 			}
 			else {
 				// Variable members
-				let variable;
+				let listChildren;
 				try {
-					variable = await this.miDebugger.evalExpression(JSON.stringify(id));
-					try {
-						let expanded = expandValue(createVariable, variable.result("value"), id, variable);
-						if (!expanded) {
-							this.sendErrorResponse(response, 2, `Could not expand variable`);
-						}
-						else {
-							if (typeof expanded[0] == "string")
-								expanded = [
-									{
-										name: "<value>",
-										value: prettyStringArray(expanded),
-										variablesReference: 0
-									}
-								];
-							response.body = {
-								variables: expanded
-							};
-							this.sendResponse(response);
-						}
+					listChildren = await this.miDebugger.varListChildren(id);
+					const children: any[] = listChildren.result("children");
+					// TODO: use hasMore when it's > 0
+					// const hasMore = parseInt(listChildren.result("has_more"));
+					const vars = children.map(child => miVarObjToVariable(child[1]));
+
+					response.body = {
+						variables: vars
 					}
-					catch (e) {
-						this.sendErrorResponse(response, 2, `Could not expand variable: ${e}`);
-					}
+					this.sendResponse(response);
 				}
 				catch (err) {
 					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
