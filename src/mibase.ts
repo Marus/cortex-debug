@@ -18,8 +18,11 @@ class ExtendedVariable {
 	}
 }
 
+const STACK_HANDLES_START = 1000;
+const VAR_HANDLES_START = 2000;
+
 export class MI2DebugSession extends DebugSession {
-	protected variableHandles = new Handles<any>();
+	protected variableHandles = new Handles<string | ExtendedVariable>(VAR_HANDLES_START);
 	protected quit: boolean;
 	protected attached: boolean;
 	protected needContinue: boolean;
@@ -253,7 +256,7 @@ export class MI2DebugSession extends DebugSession {
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
 		const scopes = new Array<Scope>();
-		scopes.push(new Scope("Local", this.variableHandles.create("@frame:" + (args.frameId || 0)), false));
+		scopes.push(new Scope("Local", STACK_HANDLES_START + (parseInt(args.frameId as any) || 0), false));
 
 		response.body = {
 			scopes: scopes
@@ -263,7 +266,13 @@ export class MI2DebugSession extends DebugSession {
 
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
 		const variables: DebugProtocol.Variable[] = [];
-		const id = this.variableHandles.get(args.variablesReference);
+		let id: number | string | ExtendedVariable;
+		if (args.variablesReference < VAR_HANDLES_START) {
+			id = args.variablesReference - STACK_HANDLES_START;
+		}
+		else {
+			id = this.variableHandles.get(args.variablesReference);
+		}
 
 		let createVariable = (arg, options?) => {
 			if (options)
@@ -296,58 +305,56 @@ export class MI2DebugSession extends DebugSession {
 			return res;
 		};
 
-		if (typeof id == "string") {
-			if (id.startsWith("@frame:")) {
-				let stack: Variable[];
-				try {
-					stack = await this.miDebugger.getStackVariables(this.threadID, parseInt(id.substr("@frame:".length)));
-					for (const variable of stack) {
-						try {
-							const varObj = await this.miDebugger.varCreate(variable.name);
-							let v = miVarObjToVariable(varObj.resultRecords.results);
-							v.name = variable.name;
-							variables.push(v);
-						}
-						catch (err) {
-							variables.push({
-								name: variable.name,
-								value: err,
-								variablesReference: 0
-							});
-						}
+		if (typeof id == "number") {
+			let stack: Variable[];
+			try {
+				stack = await this.miDebugger.getStackVariables(this.threadID, id);
+				for (const variable of stack) {
+					try {
+						const varObj = await this.miDebugger.varCreate(variable.name);
+						let v = miVarObjToVariable(varObj.resultRecords.results);
+						v.name = variable.name;
+						variables.push(v);
 					}
-					response.body = {
-						variables: variables
-					};
-					this.sendResponse(response);
+					catch (err) {
+						variables.push({
+							name: variable.name,
+							value: `<${err}>`,
+							variablesReference: 0
+						});
+					}
 				}
-				catch (err) {
-					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
-				}
+				response.body = {
+					variables: variables
+				};
+				this.sendResponse(response);
 			}
-			else {
-				// Variable members
-				let listChildren;
-				try {
-					listChildren = await this.miDebugger.varListChildren(id);
-					const children: any[] = listChildren.result("children");
-					// TODO: use hasMore when it's > 0
-					// const hasMore = parseInt(listChildren.result("has_more"));
-					const vars = children.map(child => miVarObjToVariable(child[1]));
+			catch (err) {
+				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+			}
+		}
+		else if (typeof id == "string") {
+			// Variable members
+			let listChildren;
+			try {
+				listChildren = await this.miDebugger.varListChildren(id);
+				const children: any[] = listChildren.result("children");
+				// TODO: use hasMore when it's > 0
+				// const hasMore = parseInt(listChildren.result("has_more"));
+				const vars = children.map(child => miVarObjToVariable(child[1]));
 
-					response.body = {
-						variables: vars
-					}
-					this.sendResponse(response);
+				response.body = {
+					variables: vars
 				}
-				catch (err) {
-					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
-				}
+				this.sendResponse(response);
+			}
+			catch (err) {
+				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
 			}
 		}
 		else if (typeof id == "object") {
 			if (id instanceof ExtendedVariable) {
-				let varReq = <ExtendedVariable>id;
+				let varReq = id;
 				if (varReq.options.arg) {
 					let strArr = [];
 					let argsPart = true;
