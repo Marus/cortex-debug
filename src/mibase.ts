@@ -1,6 +1,6 @@
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { Breakpoint, IBackend, Variable } from './backend/backend';
+import { Breakpoint, IBackend, Variable, VariableObject } from './backend/backend';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
@@ -22,7 +22,8 @@ const STACK_HANDLES_START = 1000;
 const VAR_HANDLES_START = 2000;
 
 export class MI2DebugSession extends DebugSession {
-	protected variableHandles = new Handles<string | ExtendedVariable>(VAR_HANDLES_START);
+	protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
+	protected variableHandlesReverse: { [id: string]: number } = {};
 	protected quit: boolean;
 	protected attached: boolean;
 	protected needContinue: boolean;
@@ -266,7 +267,7 @@ export class MI2DebugSession extends DebugSession {
 
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
 		const variables: DebugProtocol.Variable[] = [];
-		let id: number | string | ExtendedVariable;
+		let id: number | string | VariableObject | ExtendedVariable;
 		if (args.variablesReference < VAR_HANDLES_START) {
 			id = args.variablesReference - STACK_HANDLES_START;
 		}
@@ -281,28 +282,16 @@ export class MI2DebugSession extends DebugSession {
 				return this.variableHandles.create(arg);
 		};
 
-		let miVarObjToVariable = (varObj: any): DebugProtocol.Variable => {
-			const evaluateName = MINode.valueOf(varObj, "name");
-			const value = MINode.valueOf(varObj, "value");
-			const numChild = parseInt(MINode.valueOf(varObj, "numchild"));
-			const dynamic = MINode.valueOf(varObj, "dynamic") || 0;
-			let displayHint, hasMore;
-			if (dynamic) {
-				displayHint = MINode.valueOf(varObj, "displayhint");
-				hasMore = parseInt(MINode.valueOf(varObj, "has_more"));
+		let findOrCreateVariable = (varObj: VariableObject): number => {
+			let id: number;
+			if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
+				id = this.variableHandlesReverse[varObj.name];
 			}
-			const isCompound = numChild > 0 ||
-				value === "{...}" ||
-				(dynamic > 0 && (displayHint === "array" || displayHint === "map"));
-
-			let res = {
-				name: MINode.valueOf(varObj, "exp"),
-				evaluateName,
-				type: MINode.valueOf(varObj, "type"),
-				value: value || "<value>",
-				variablesReference: isCompound ? createVariable(evaluateName) : 0
-			} as DebugProtocol.Variable;
-			return res;
+			else {
+				id = createVariable(varObj);
+				this.variableHandlesReverse[varObj.name] = id;
+			}
+			return varObj.isCompound() ? id : 0;
 		};
 
 		if (typeof id == "number") {
@@ -311,10 +300,26 @@ export class MI2DebugSession extends DebugSession {
 				stack = await this.miDebugger.getStackVariables(this.threadID, id);
 				for (const variable of stack) {
 					try {
-						const varObj = await this.miDebugger.varCreate(variable.name);
-						let v = miVarObjToVariable(varObj.resultRecords.results);
-						v.name = variable.name;
-						variables.push(v);
+						let varObj: VariableObject;
+						try {
+							const changes = await this.miDebugger.varUpdate(variable.name);
+							const changelist = changes.result("changelist");
+							changelist.forEach((change) => {
+								const name = MINode.valueOf(change, "name");
+								const vId = this.variableHandlesReverse[variable.name];
+								const v = this.variableHandles.get(vId) as any;
+								v.applyChanges(change);
+							});
+							const varId = this.variableHandlesReverse[variable.name];
+							varObj = this.variableHandles.get(varId) as any;
+						}
+						catch (err) {
+							varObj = await this.miDebugger.varCreate(variable.name, variable.name);
+							const varId = findOrCreateVariable(varObj);
+							varObj.exp = variable.name;
+							varObj.id = varId;
+						}
+						variables.push(varObj.toProtocolVariable());
 					}
 					catch (err) {
 						variables.push({
@@ -333,27 +338,28 @@ export class MI2DebugSession extends DebugSession {
 				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
 			}
 		}
-		else if (typeof id == "string") {
-			// Variable members
-			let listChildren;
-			try {
-				listChildren = await this.miDebugger.varListChildren(id);
-				const children: any[] = listChildren.result("children");
-				// TODO: use hasMore when it's > 0
-				// const hasMore = parseInt(listChildren.result("has_more"));
-				const vars = children.map(child => miVarObjToVariable(child[1]));
-
-				response.body = {
-					variables: vars
-				}
-				this.sendResponse(response);
-			}
-			catch (err) {
-				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
-			}
-		}
 		else if (typeof id == "object") {
-			if (id instanceof ExtendedVariable) {
+			if (id instanceof VariableObject) {
+				// Variable members
+				let children: VariableObject[];
+				try {
+					children = await this.miDebugger.varListChildren(id.name);
+					const vars = children.map(child => {
+						const varId = findOrCreateVariable(child);
+						child.id = varId;
+						return child.toProtocolVariable();
+					});
+
+					response.body = {
+						variables: vars
+					}
+					this.sendResponse(response);
+				}
+				catch (err) {
+					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+				}
+			}
+			else if (id instanceof ExtendedVariable) {
 				let varReq = id;
 				if (varReq.options.arg) {
 					let strArr = [];

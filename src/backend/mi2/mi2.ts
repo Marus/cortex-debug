@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, SSHArguments, Variable } from "../backend"
+import { Breakpoint, IBackend, Stack, SSHArguments, Variable, VariableObject } from "../backend"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
@@ -661,17 +661,33 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	async varCreate(expression: string): Promise<MINode> {
+	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {
 		if (trace)
 			this.log("stderr", "varCreate");
-		return this.sendCommand(`var-create - * "${expression}"`);
+		const res = await this.sendCommand(`var-create ${name} @ "${expression}"`);
+		return new VariableObject(res.result(""));
 	}
 
-	async varListChildren(name: string): Promise<MINode> {
+	async varEvalExpression(name: string): Promise < MINode > {
+		if (trace)
+			this.log("stderr", "varEvalExpression");
+		return this.sendCommand(`var-evaluate-expression ${name}`);
+	}
+
+	async varListChildren(name: string): Promise<VariableObject[]> {
 		if (trace)
 			this.log("stderr", "varListChildren");
 		//TODO: add `from` and `to` arguments
-		return this.sendCommand(`var-list-children --simple-values ${name}`);
+		const res = await this.sendCommand(`var-list-children --all-values ${name}`);
+		const children = res.result("children");
+		let omg: VariableObject[] = children.map(child => new VariableObject(child[1]));
+		return omg;
+	}
+
+	async varUpdate(name: string = "*"): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varUpdate");
+		return this.sendCommand(`var-update --all-values ${name}`)
 	}
 
 	logNoNewLine(type: string, msg: string) {
