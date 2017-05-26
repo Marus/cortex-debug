@@ -101,6 +101,16 @@
 								"description": "Additional arguments to pass to GDB",
 								"default": []
 							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
+							},
 							"printCalls": {
 								"type": "boolean",
 								"description": "Prints all GDB calls to the console",
@@ -191,6 +201,16 @@
 								"type": "boolean",
 								"description": "If true this will connect to a gdbserver instead of attaching to a PID",
 								"default": false
+							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
 							},
 							"printCalls": {
 								"type": "boolean",
@@ -466,6 +486,16 @@
 								"description": "Additional arguments to pass to LLDB",
 								"default": []
 							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
+							},
 							"printCalls": {
 								"type": "boolean",
 								"description": "Prints all lldb calls to the console",
@@ -551,6 +581,16 @@
 							"target": {
 								"type": "string",
 								"description": "PID of running program or program name"
+							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
 							},
 							"printCalls": {
 								"type": "boolean",
@@ -713,6 +753,16 @@
 								"description": "Additional arguments to pass to mago",
 								"default": []
 							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
+							},
 							"printCalls": {
 								"type": "boolean",
 								"description": "Prints all mago calls to the console",
@@ -738,6 +788,16 @@
 							"target": {
 								"type": "string",
 								"description": "PID of running program or program name"
+							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
 							},
 							"printCalls": {
 								"type": "boolean",
