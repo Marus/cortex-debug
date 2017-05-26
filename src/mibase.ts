@@ -130,15 +130,23 @@ export class MI2DebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
-	protected setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): void {
-		this.miDebugger.changeVariable(args.name, args.value).then(() => {
+	protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
+		try {
+			let name = args.name;
+			if (args.variablesReference >= VAR_HANDLES_START) {
+				const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
+				name = `${parent.name}.${name}`;
+			}
+
+			let res = await this.miDebugger.varAssign(name, args.value);
 			response.body = {
-				value: args.value
+				value: res.result("value")
 			};
 			this.sendResponse(response);
-		}, err => {
+		}
+		catch (err) {
 			this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
-		});
+		};
 	}
 
 	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments): void {

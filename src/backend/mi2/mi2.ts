@@ -690,6 +690,12 @@ export class MI2 extends EventEmitter implements IBackend {
 		return this.sendCommand(`var-update --all-values ${name}`)
 	}
 
+	async varAssign(name: string, rawValue: string): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varAssign");
+		return this.sendCommand(`var-assign ${name} ${rawValue}`);
+	}
+
 	logNoNewLine(type: string, msg: string) {
 		this.emit("msg", type, msg);
 	}
