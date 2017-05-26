@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, SSHArguments, Variable } from "../backend"
+import { Breakpoint, IBackend, Stack, SSHArguments, Variable, VariableObject } from "../backend"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
@@ -196,6 +196,9 @@ export class MI2 extends EventEmitter implements IBackend {
 		];
 		if (!attach)
 			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
+		if (this.prettyPrint)
+			cmds.push(this.sendCommand("enable-pretty-printing"));
+
 		return cmds;
 	}
 
@@ -617,27 +620,25 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	getStackVariables(thread: number, frame: number): Thenable<Variable[]> {
+	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
 		if (trace)
 			this.log("stderr", "getStackVariables");
-		return new Promise((resolve, reject) => {
-			this.sendCommand("stack-list-variables --thread " + thread + " --frame " + frame + " --simple-values").then((result) => {
-				let variables = result.result("variables");
-				let ret: Variable[] = [];
-				variables.forEach(element => {
-					const key = MINode.valueOf(element, "name");
-					const value = MINode.valueOf(element, "value");
-					const type = MINode.valueOf(element, "type");
-					ret.push({
-						name: key,
-						valueStr: value,
-						type: type,
-						raw: element
-					});
-				});
-				resolve(ret);
-			}, reject);
-		});
+
+		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const variables = result.result("variables");
+		let ret: Variable[] = [];
+		for (const element of variables) {
+			const key = MINode.valueOf(element, "name");
+			const value = MINode.valueOf(element, "value");
+			const type = MINode.valueOf(element, "type");
+			ret.push({
+				name: key,
+				valueStr: value,
+				type: type,
+				raw: element
+			});
+		}
+		return ret;
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
@@ -658,6 +659,41 @@ export class MI2 extends EventEmitter implements IBackend {
 				resolve(result);
 			}, reject);
 		});
+	}
+
+	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {
+		if (trace)
+			this.log("stderr", "varCreate");
+		const res = await this.sendCommand(`var-create ${name} @ "${expression}"`);
+		return new VariableObject(res.result(""));
+	}
+
+	async varEvalExpression(name: string): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varEvalExpression");
+		return this.sendCommand(`var-evaluate-expression ${name}`);
+	}
+
+	async varListChildren(name: string): Promise<VariableObject[]> {
+		if (trace)
+			this.log("stderr", "varListChildren");
+		//TODO: add `from` and `to` arguments
+		const res = await this.sendCommand(`var-list-children --all-values ${name}`);
+		const children = res.result("children");
+		let omg: VariableObject[] = children.map(child => new VariableObject(child[1]));
+		return omg;
+	}
+
+	async varUpdate(name: string = "*"): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varUpdate");
+		return this.sendCommand(`var-update --all-values ${name}`)
+	}
+
+	async varAssign(name: string, rawValue: string): Promise<MINode> {
+		if (trace)
+			this.log("stderr", "varAssign");
+		return this.sendCommand(`var-assign ${name} ${rawValue}`);
 	}
 
 	logNoNewLine(type: string, msg: string) {
@@ -710,6 +746,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		return this.isSSH ? this.sshReady : !!this.process;
 	}
 
+	prettyPrint: boolean = true;
 	printCalls: boolean;
 	debugOutput: boolean;
 	public procEnv: any;

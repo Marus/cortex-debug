@@ -2,7 +2,7 @@ import { MI2DebugSession } from './mibase';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2_LLDB } from "./backend/mi2/mi2lldb";
-import { SSHArguments } from './backend/backend';
+import { SSHArguments, ValuesFormattingMode } from './backend/backend';
 
 export interface LaunchRequestArguments {
 	cwd: string;
@@ -13,6 +13,7 @@ export interface LaunchRequestArguments {
 	arguments: string;
 	autorun: string[];
 	ssh: SSHArguments;
+	valuesFormatting: ValuesFormattingMode;
 	printCalls: boolean;
 	showDevDebugOutput: boolean;
 }
@@ -25,6 +26,7 @@ export interface AttachRequestArguments {
 	debugger_args: string[];
 	executable: string;
 	autorun: string[];
+	valuesFormatting: ValuesFormattingMode;
 	printCalls: boolean;
 	showDevDebugOutput: boolean;
 }
@@ -49,6 +51,7 @@ class LLDBDebugSession extends MI2DebugSession {
 		this.started = false;
 		this.crashed = false;
 		this.debugReady = false;
+		this.setValuesFormattingMode(args.valuesFormatting);
 		this.miDebugger.printCalls = !!args.printCalls;
 		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		if (args.ssh !== undefined) {
@@ -108,6 +111,7 @@ class LLDBDebugSession extends MI2DebugSession {
 		this.needContinue = true;
 		this.isSSH = false;
 		this.debugReady = false;
+		this.setValuesFormattingMode(args.valuesFormatting);
 		this.miDebugger.printCalls = !!args.printCalls;
 		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		this.miDebugger.attach(args.cwd, args.executable, args.target).then(() => {

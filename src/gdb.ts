@@ -2,7 +2,7 @@ import { MI2DebugSession } from './mibase';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from "./backend/mi2/mi2";
-import { SSHArguments } from './backend/backend';
+import { SSHArguments, ValuesFormattingMode } from './backend/backend';
 
 export interface LaunchRequestArguments {
 	cwd: string;
@@ -14,6 +14,7 @@ export interface LaunchRequestArguments {
 	terminal: string;
 	autorun: string[];
 	ssh: SSHArguments;
+	valuesFormatting: ValuesFormattingMode;
 	printCalls: boolean;
 	showDevDebugOutput: boolean;
 }
@@ -28,6 +29,7 @@ export interface AttachRequestArguments {
 	remote: boolean;
 	autorun: string[];
 	ssh: SSHArguments;
+	valuesFormatting: ValuesFormattingMode;
 	printCalls: boolean;
 	showDevDebugOutput: boolean;
 }
@@ -54,6 +56,7 @@ class GDBDebugSession extends MI2DebugSession {
 		this.started = false;
 		this.crashed = false;
 		this.debugReady = false;
+		this.setValuesFormattingMode(args.valuesFormatting);
 		this.miDebugger.printCalls = !!args.printCalls;
 		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		if (args.ssh !== undefined) {
@@ -121,6 +124,7 @@ class GDBDebugSession extends MI2DebugSession {
 		this.needContinue = true;
 		this.isSSH = false;
 		this.debugReady = false;
+		this.setValuesFormattingMode(args.valuesFormatting);
 		this.miDebugger.printCalls = !!args.printCalls;
 		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
 		if (args.ssh !== undefined) {
