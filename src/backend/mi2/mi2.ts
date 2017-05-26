@@ -196,9 +196,9 @@ export class MI2 extends EventEmitter implements IBackend {
 		];
 		if (!attach)
 			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
+		if (this.prettyPrint)
+			cmds.push(this.sendCommand("enable-pretty-printing"));
 
-		// TODO: add extension parameter for enabling/disabling pretty printers
-		cmds.push(this.sendCommand("enable-pretty-printing"));
 		return cmds;
 	}
 
@@ -668,7 +668,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		return new VariableObject(res.result(""));
 	}
 
-	async varEvalExpression(name: string): Promise < MINode > {
+	async varEvalExpression(name: string): Promise<MINode> {
 		if (trace)
 			this.log("stderr", "varEvalExpression");
 		return this.sendCommand(`var-evaluate-expression ${name}`);
@@ -746,6 +746,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		return this.isSSH ? this.sshReady : !!this.process;
 	}
 
+	prettyPrint: boolean = true;
 	printCalls: boolean;
 	debugOutput: boolean;
 	public procEnv: any;
