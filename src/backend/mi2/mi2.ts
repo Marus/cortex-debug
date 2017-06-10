@@ -679,7 +679,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.log("stderr", "varListChildren");
 		//TODO: add `from` and `to` arguments
 		const res = await this.sendCommand(`var-list-children --all-values ${name}`);
-		const children = res.result("children");
+		const children = res.result("children") || [];
 		let omg: VariableObject[] = children.map(child => new VariableObject(child[1]));
 		return omg;
 	}
