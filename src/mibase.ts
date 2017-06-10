@@ -335,22 +335,23 @@ export class MI2DebugSession extends DebugSession {
 				for (const variable of stack) {
 					if (this.useVarObjects) {
 						try {
+							let varObjName = `var_${variable.name}`;
 							let varObj: VariableObject;
 							try {
-								const changes = await this.miDebugger.varUpdate(variable.name);
+								const changes = await this.miDebugger.varUpdate(varObjName);
 								const changelist = changes.result("changelist");
 								changelist.forEach((change) => {
 									const name = MINode.valueOf(change, "name");
-									const vId = this.variableHandlesReverse[variable.name];
+									const vId = this.variableHandlesReverse[varObjName];
 									const v = this.variableHandles.get(vId) as any;
 									v.applyChanges(change);
 								});
-								const varId = this.variableHandlesReverse[variable.name];
+								const varId = this.variableHandlesReverse[varObjName];
 								varObj = this.variableHandles.get(varId) as any;
 							}
 							catch (err) {
 								if (err instanceof MIError && err.message == "Variable object not found") {
-									varObj = await this.miDebugger.varCreate(variable.name, variable.name);
+									varObj = await this.miDebugger.varCreate(variable.name, varObjName);
 									const varId = findOrCreateVariable(varObj);
 									varObj.exp = variable.name;
 									varObj.id = varId;
