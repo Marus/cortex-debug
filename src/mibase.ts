@@ -1,6 +1,6 @@
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode } from './backend/backend';
+import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode, MIError } from './backend/backend';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
@@ -349,10 +349,15 @@ export class MI2DebugSession extends DebugSession {
 								varObj = this.variableHandles.get(varId) as any;
 							}
 							catch (err) {
-								varObj = await this.miDebugger.varCreate(variable.name, variable.name);
-								const varId = findOrCreateVariable(varObj);
-								varObj.exp = variable.name;
-								varObj.id = varId;
+								if (err instanceof MIError && err.message == "Variable object not found") {
+									varObj = await this.miDebugger.varCreate(variable.name, variable.name);
+									const varId = findOrCreateVariable(varObj);
+									varObj.exp = variable.name;
+									varObj.id = varId;
+								}
+								else {
+									throw err;
+								}
 							}
 							variables.push(varObj.toProtocolVariable());
 						}
