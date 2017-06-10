@@ -1,6 +1,6 @@
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode } from './backend/backend';
+import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode, MIError } from './backend/backend';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
@@ -335,24 +335,30 @@ export class MI2DebugSession extends DebugSession {
 				for (const variable of stack) {
 					if (this.useVarObjects) {
 						try {
+							let varObjName = `var_${variable.name}`;
 							let varObj: VariableObject;
 							try {
-								const changes = await this.miDebugger.varUpdate(variable.name);
+								const changes = await this.miDebugger.varUpdate(varObjName);
 								const changelist = changes.result("changelist");
 								changelist.forEach((change) => {
 									const name = MINode.valueOf(change, "name");
-									const vId = this.variableHandlesReverse[variable.name];
+									const vId = this.variableHandlesReverse[varObjName];
 									const v = this.variableHandles.get(vId) as any;
 									v.applyChanges(change);
 								});
-								const varId = this.variableHandlesReverse[variable.name];
+								const varId = this.variableHandlesReverse[varObjName];
 								varObj = this.variableHandles.get(varId) as any;
 							}
 							catch (err) {
-								varObj = await this.miDebugger.varCreate(variable.name, variable.name);
-								const varId = findOrCreateVariable(varObj);
-								varObj.exp = variable.name;
-								varObj.id = varId;
+								if (err instanceof MIError && err.message == "Variable object not found") {
+									varObj = await this.miDebugger.varCreate(variable.name, varObjName);
+									const varId = findOrCreateVariable(varObj);
+									varObj.exp = variable.name;
+									varObj.id = varId;
+								}
+								else {
+									throw err;
+								}
 							}
 							variables.push(varObj.toProtocolVariable());
 						}

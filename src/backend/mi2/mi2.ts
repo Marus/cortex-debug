@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, SSHArguments, Variable, VariableObject } from "../backend"
+import { Breakpoint, IBackend, Stack, SSHArguments, Variable, VariableObject, MIError } from "../backend"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
@@ -679,7 +679,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.log("stderr", "varListChildren");
 		//TODO: add `from` and `to` arguments
 		const res = await this.sendCommand(`var-list-children --all-values ${name}`);
-		const children = res.result("children");
+		const children = res.result("children") || [];
 		let omg: VariableObject[] = children.map(child => new VariableObject(child[1]));
 		return omg;
 	}
@@ -729,11 +729,11 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.handlers[sel] = (node: MINode) => {
 				if (node && node.resultRecords && node.resultRecords.resultClass === "error") {
 					if (suppressFailure) {
-						this.log("stderr", "WARNING: Error executing command '" + command + "'");
+						this.log("stderr", `WARNING: Error executing command '${command}'`);
 						resolve(node);
 					}
 					else
-						reject((node.result("msg") || "Internal error") + " (from " + command + ")");
+						reject(new MIError(node.result("msg") || "Internal error", command));
 				}
 				else
 					resolve(node);

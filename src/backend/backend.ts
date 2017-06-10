@@ -123,3 +123,38 @@ export class VariableObject {
 		return res;
 	}
 }
+
+// from https://gist.github.com/justmoon/15511f92e5216fa2624b#gistcomment-1928632
+export interface MIError extends Error {
+	readonly name: string;
+	readonly message: string;
+	readonly source: string;
+};
+export interface MIErrorConstructor {
+	new (message: string, source: string): MIError;
+	readonly prototype: MIError;
+}
+
+export const MIError: MIErrorConstructor = <any>class MIError {
+	readonly name: string;
+	readonly message: string;
+	readonly source: string;
+	public constructor(message: string, source: string) {
+		Object.defineProperty(this, 'name', {
+			get: () => (this.constructor as any).name,
+		});
+		Object.defineProperty(this, 'message', {
+			get: () => message,
+		});
+		Object.defineProperty(this, 'source', {
+			get: () => source,
+		});
+		Error.captureStackTrace(this, this.constructor);
+	}
+
+	public toString() {
+		return `${this.message} (from ${this.source})`;
+	}
+};
+Object.setPrototypeOf(MIError as any, Object.create(Error.prototype));
+MIError.prototype.constructor = MIError;
