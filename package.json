@@ -57,7 +57,8 @@
 						"nim",
 						"arm",
 						"asm",
-						"vala"
+						"vala",
+						"crystal"
 					]
 				},
 				"variables": {
