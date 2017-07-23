@@ -9,9 +9,9 @@
 		"native",
 		"debug"
 	],
-	"version": "0.21.1",
+	"version": "0.21.2",
 	"publisher": "webfreak",
-	"icon": "images/icon-plain.svg",
+	"icon": "images/icon.png",
 	"engines": {
 		"vscode": "^1.8.0"
 	},
