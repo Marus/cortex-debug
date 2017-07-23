@@ -9,7 +9,7 @@
 		"native",
 		"debug"
 	],
-	"version": "0.21.0",
+	"version": "0.21.1",
 	"publisher": "webfreak",
 	"icon": "images/icon-plain.svg",
 	"engines": {
