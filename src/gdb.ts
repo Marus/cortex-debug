@@ -4,7 +4,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from "./backend/mi2/mi2";
 import { SSHArguments, ValuesFormattingMode } from './backend/backend';
 
-export interface LaunchRequestArguments {
+export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	target: string;
 	gdbpath: string;
@@ -19,7 +19,7 @@ export interface LaunchRequestArguments {
 	showDevDebugOutput: boolean;
 }
 
-export interface AttachRequestArguments {
+export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	cwd: string;
 	target: string;
 	gdbpath: string;

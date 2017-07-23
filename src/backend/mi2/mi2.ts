@@ -503,7 +503,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.log("stderr", "addBreakPoint");
 		return new Promise((resolve, reject) => {
 			if (this.breakpoints.has(breakpoint))
-				return resolve(false);
+				return resolve([false, undefined]);
 			let location = "";
 			if (breakpoint.countCondition) {
 				if (breakpoint.countCondition[0] == ">")
