@@ -28,9 +28,7 @@ export interface Variable {
 }
 
 export interface IBackend {
-	load(cwd: string, target: string, procArgs: string, separateConsole: string): Thenable<any>;
-	attach(cwd: string, executable: string, target: string): Thenable<any>;
-	connect(cwd: string, executable: string, target: string): Thenable<any>;
+	connect(cwd: string, executable: string, target: string[]): Thenable<any>;
 	start(): Thenable<boolean>;
 	stop();
 	detach();
@@ -103,7 +101,7 @@ export class VariableObject {
 			variablesReference: this.id
 		};
 		if (this.displayhint) {
-			res.kind = this.displayhint;
+			// res.kind = this.displayhint;
 		}
 		return res;
 	}

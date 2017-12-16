@@ -26,234 +26,30 @@ function couldBeOutput(line: string) {
 const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
-	constructor(public application: string, public preargs: string[], public extraargs: string[], procEnv: any) {
+	constructor(public application: string, public preargs: string[], public extraargs: string[]) {
 		super();
-
-		if (procEnv) {
-			var env = {};
-			// Duplicate process.env so we don't override it
-			for (var key in process.env)
-				if (process.env.hasOwnProperty(key))
-					env[key] = process.env[key];
-
-			// Overwrite with user specified variables
-			for (var key in procEnv) {
-				if (procEnv.hasOwnProperty(key)) {
-					if (procEnv === null)
-						delete env[key];
-					else
-						env[key] = procEnv[key];
-				}
-			}
-			this.procEnv = env;
-		}
 	}
 
-	load(cwd: string, target: string, procArgs: string, separateConsole: string): Thenable<any> {
-		if (!nativePath.isAbsolute(target))
-			target = nativePath.join(cwd, target);
+	connect(cwd: string, executable: string, commands: string[]): Thenable<any> {
+		if (!nativePath.isAbsolute(executable))
+			executable = nativePath.join(cwd, executable);
+			
 		return new Promise((resolve, reject) => {
-			this.isSSH = false;
 			let args = this.preargs.concat(this.extraargs || []);
+			args.push(executable);
+
 			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-			let promises = this.initCommands(target, cwd);
-			if (procArgs && procArgs.length)
-				promises.push(this.sendCommand("exec-arguments " + procArgs));
-			if (process.platform == "win32") {
-				if (separateConsole !== undefined)
-					promises.push(this.sendCommand("gdb-set new-console on"))
-				Promise.all(promises).then(() => {
-					this.emit("debug-ready");
-					resolve();
-				}, reject);
-			}
-			else {
-				if (separateConsole !== undefined) {
-					linuxTerm.spawnTerminalEmulator(separateConsole).then(tty => {
-						promises.push(this.sendCommand("inferior-tty-set " + tty));
-						Promise.all(promises).then(() => {
-							this.emit("debug-ready");
-							resolve();
-						}, reject);
-					});
-				}
-				else {
-					Promise.all(promises).then(() => {
-						this.emit("debug-ready");
-						resolve();
-					}, reject);
-				}
-			}
-		});
-	}
 
-	ssh(args: SSHArguments, cwd: string, target: string, procArgs: string, separateConsole: string, attach: boolean): Thenable<any> {
-		return new Promise((resolve, reject) => {
-			this.isSSH = true;
-			this.sshReady = false;
-			this.sshConn = new Client();
-
-			if (separateConsole !== undefined)
-				this.log("stderr", "WARNING: Output to terminal emulators are not supported over SSH");
-
-			if (args.forwardX11) {
-				this.sshConn.on("x11", (info, accept, reject) => {
-					var xserversock = new net.Socket();
-					xserversock.on("error", (err) => {
-						this.log("stderr", "Could not connect to local X11 server! Did you enable it in your display manager?\n" + err);
-					});
-					xserversock.on("connect", () => {
-						let xclientsock = accept();
-						xclientsock.pipe(xserversock).pipe(xclientsock);
-					});
-					xserversock.connect(args.x11port, args.x11host);
-				});
-			}
-
-			let connectionArgs: any = {
-				host: args.host,
-				port: args.port,
-				username: args.user
-			};
-
-			if (args.keyfile) {
-				if (require("fs").existsSync(args.keyfile))
-					connectionArgs.privateKey = require("fs").readFileSync(args.keyfile);
-				else {
-					this.log("stderr", "SSH key file does not exist!");
-					this.emit("quit");
-					reject();
-					return;
-				}
-			} else {
-				connectionArgs.password = args.password;
-			}
-
-			this.sshConn.on("ready", () => {
-				this.log("stdout", "Running " + this.application + " over ssh...");
-				let execArgs: any = {};
-				if (args.forwardX11) {
-					execArgs.x11 = {
-						single: false,
-						screen: args.remotex11screen
-					};
-				}
-				let sshCMD = this.application + " " + this.preargs.join(" ");
-				if (args.bootstrap) sshCMD = args.bootstrap + " && " + sshCMD;
-				if (attach)
-					sshCMD += " -p " + target;
-				this.sshConn.exec(sshCMD, execArgs, (err, stream) => {
-					if (err) {
-						this.log("stderr", "Could not run " + this.application + " over ssh!");
-						this.log("stderr", err.toString());
-						this.emit("quit");
-						reject();
-						return;
-					}
-					this.sshReady = true;
-					this.stream = stream;
-					stream.on("data", this.stdout.bind(this));
-					stream.stderr.on("data", this.stderr.bind(this));
-					stream.on("exit", (() => {
-						this.emit("quit");
-						this.sshConn.end();
-					}).bind(this));
-					let promises = this.initCommands(target, cwd, true, attach);
-					promises.push(this.sendCommand("environment-cd \"" + escape(cwd) + "\""));
-					if (procArgs && procArgs.length && !attach)
-						promises.push(this.sendCommand("exec-arguments " + procArgs));
-					Promise.all(promises).then(() => {
-						this.emit("debug-ready")
-						resolve();
-					}, reject);
-				});
-			}).on("error", (err) => {
-				this.log("stderr", "Could not run " + this.application + " over ssh!");
-				this.log("stderr", err.toString());
-				this.emit("quit");
-				reject();
-			}).connect(connectionArgs);
-		});
-	}
-
-	protected initCommands(target: string, cwd: string, ssh: boolean = false, attach: boolean = false) {
-		if (ssh) {
-			if (!path.isAbsolute(target))
-				target = path.join(cwd, target);
-		}
-		else {
-			if (!nativePath.isAbsolute(target))
-				target = nativePath.join(cwd, target);
-		}
-		var cmds = [
-			this.sendCommand("gdb-set target-async on", true),
-			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", true)
-		];
-		if (!attach)
-			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
-		if (this.prettyPrint)
-			cmds.push(this.sendCommand("enable-pretty-printing"));
-
-		return cmds;
-	}
-
-	attach(cwd: string, executable: string, target: string): Thenable<any> {
-		return new Promise((resolve, reject) => {
-			let args = [];
-			if (executable && !nativePath.isAbsolute(executable))
-				executable = nativePath.join(cwd, executable);
-			if (!executable)
-				executable = "-p";
-			var isExtendedRemote = false;
-			if (target.startsWith("extended-remote")) {
-				isExtendedRemote = true;
-				args = this.preargs;
-			} else
-				args = args.concat([executable, target], this.preargs);
-			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
-			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stderr.bind(this));
-			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
-			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-			var commands = [
-				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + escape(cwd) + "\"")
-			];
-			if (isExtendedRemote) {
-				commands.push(this.sendCommand("target-select " + target));
-				commands.push(this.sendCommand("file-symbol-file \"" + escape(executable) + "\""));
-			}
-			Promise.all(commands).then(() => {
-				this.emit("debug-ready")
-				resolve();
-			}, reject);
-		});
-	}
-
-	connect(cwd: string, executable: string, target: string): Thenable<any> {
-		return new Promise((resolve, reject) => {
-			let args = [];
-			if (executable && !nativePath.isAbsolute(executable))
-				executable = nativePath.join(cwd, executable);
-			if (executable)
-				args = args.concat([executable], this.preargs);
-			else
-				args = this.preargs;
-			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
-			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stderr.bind(this));
-			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
-			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-			Promise.all([
-				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
-				this.sendCommand("target-select remote " + target)
-			]).then(() => {
-				this.emit("debug-ready")
+			var asyncPromise = this.sendCommand("gdb-set target-async on", true);
+			let promises = commands.map(c => this.sendCommand(c));
+			promises.push(asyncPromise);
+			
+			Promise.all(promises).then(() => {
+				this.emit("debug-ready");
 				resolve();
 			}, reject);
 		});
@@ -459,6 +255,18 @@ export class MI2 extends EventEmitter implements IBackend {
 		return new Promise((resolve, reject) => {
 			this.sendCommand("exec-finish").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
+			}, reject);
+		});
+	}
+
+	restart(): Thenable<boolean> {
+		if(trace)
+			this.log("stderr", "restart");
+		return new Promise((resolve, reject) => {
+			this.sendCommand("interpreter-exec console \"monitor reset\"").then((info) => {
+				this.sendCommand('exec-continue').then((info) => {
+					resolve(true);
+				}, reject);				
 			}, reject);
 		});
 	}
@@ -696,8 +504,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			return this.sendCommand(command.substr(1));
 		}
 		else {
-			this.sendRaw(command);
-			return Promise.resolve(undefined);
+			return this.sendCommand(`interpreter-exec console "${command}"`);
 		}
 	}
 
