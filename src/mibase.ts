@@ -1,4 +1,4 @@
-import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
+import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode, MIError } from './backend/backend';
 import { MINode } from './backend/mi_parse';
@@ -20,6 +20,18 @@ class ExtendedVariable {
 
 const STACK_HANDLES_START = 1000;
 const VAR_HANDLES_START = 2000;
+
+class CustomStoppedEvent extends Event implements DebugProtocol.Event {
+	body: {
+		reason: string,
+		threadID: number
+	};
+	event: string;
+
+	constructor(reason: string, threadID: number) {
+		super('custom-stop', { reason: reason, threadID: threadID });
+	}
+}
 
 export class MI2DebugSession extends DebugSession {
 	protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
@@ -82,21 +94,26 @@ export class MI2DebugSession extends DebugSession {
 
 	protected handleBreakpoint(info: MINode) {
 		this.sendEvent(new StoppedEvent("breakpoint", this.threadID));
+		this.sendEvent(new CustomStoppedEvent("breakpoint", this.threadID));
 	}
 
 	protected handleBreak(info: MINode) {
 		this.sendEvent(new StoppedEvent("step", this.threadID));
+		this.sendEvent(new CustomStoppedEvent("step", this.threadID));
 	}
 
 	protected handlePause(info: MINode) {
 		this.sendEvent(new StoppedEvent("user request", this.threadID));
+		this.sendEvent(new CustomStoppedEvent("user request", this.threadID));
 	}
 
 	protected stopEvent(info: MINode) {
 		if (!this.started)
 			this.crashed = true;
-		if (!this.quit)
+		if (!this.quit) {
 			this.sendEvent(new StoppedEvent("exception", this.threadID));
+			this.sendEvent(new CustomStoppedEvent("exception", this.threadID));
+		}
 	}
 
 	protected quitEvent() {
