@@ -28,7 +28,6 @@ export class MI2DebugSession extends DebugSession {
 	protected quit: boolean;
 	protected attached: boolean;
 	protected needContinue: boolean;
-	protected isSSH: boolean;
 	protected trimCWD: string;
 	protected switchCWD: string;
 	protected started: boolean;
@@ -54,33 +53,6 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.on("step-out-end", this.handleBreak.bind(this));
 		this.miDebugger.on("signal-stop", this.handlePause.bind(this));
 		this.sendEvent(new InitializedEvent());
-		try {
-			this.commandServer = net.createServer(c => {
-				c.on("data", data => {
-					var rawCmd = data.toString();
-					var spaceIndex = rawCmd.indexOf(" ");
-					var func = rawCmd;
-					var args = [];
-					if (spaceIndex != -1) {
-						func = rawCmd.substr(0, spaceIndex);
-						args = JSON.parse(rawCmd.substr(spaceIndex + 1));
-					}
-					Promise.resolve(this.miDebugger[func].apply(this.miDebugger, args)).then(data => {
-						c.write(data.toString());
-					});
-				});
-			});
-			this.commandServer.on("error", err => {
-				if (process.platform != "win32")
-					this.handleMsg("stderr", "Code-Debug WARNING: Utility Command Server: Error in command socket " + err.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
-			});
-			if (!fs.existsSync(systemPath.join(os.tmpdir(), "code-debug-sockets")))
-				fs.mkdirSync(systemPath.join(os.tmpdir(), "code-debug-sockets"));
-			this.commandServer.listen(systemPath.join(os.tmpdir(), "code-debug-sockets", "Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)));
-		} catch (e) {
-			if (process.platform != "win32")
-				this.handleMsg("stderr", "Code-Debug WARNING: Utility Command Server: Failed to start " + e.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
-		}
 	}
 
 	protected setValuesFormattingMode(mode: ValuesFormattingMode) {
@@ -136,16 +108,6 @@ export class MI2DebugSession extends DebugSession {
 		this.handleMsg("stderr", "Could not start debugger process, does the program exist in filesystem?\n");
 		this.handleMsg("stderr", err.toString() + "\n");
 		this.quitEvent();
-	}
-
-	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-		if (this.attached)
-			this.miDebugger.detach();
-		else
-			this.miDebugger.stop();
-		this.commandServer.close();
-		this.commandServer = undefined;
-		this.sendResponse(response);
 	}
 
 	protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
@@ -207,10 +169,6 @@ export class MI2DebugSession extends DebugSession {
 			this.debugReady = true;
 			this.miDebugger.clearBreakPoints().then(() => {
 				let path = args.source.path;
-				if (this.isSSH) {
-					path = relative(this.trimCWD.replace(/\\/g, "/"), path.replace(/\\/g, "/"));
-					path = resolve(this.switchCWD.replace(/\\/g, "/"), path.replace(/\\/g, "/"));
-				}
 				let all = [];
 				args.breakpoints.forEach(brk => {
 					all.push(this.miDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition, countCondition: brk.hitCondition }));
@@ -253,15 +211,6 @@ export class MI2DebugSession extends DebugSession {
 			stack.forEach(element => {
 				let file = element.file;
 				if (file) {
-					if (this.isSSH) {
-						file = relative(this.switchCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
-						file = systemPath.resolve(this.trimCWD.replace(/\\/g, "/"), file.replace(/\\/g, "/"));
-					}
-					else if (process.platform === "win32") {
-						if (file.startsWith("\\cygdrive\\") || file.startsWith("/cygdrive/")) {
-							file = file[10] + ":" + file.substr(11); // replaces /cygdrive/c/foo/bar.txt with c:/foo/bar.txt
-						}
-					}
 					ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 				}
 				else
@@ -540,27 +489,12 @@ export class MI2DebugSession extends DebugSession {
 		});
 	}
 
-	protected reverseContinueRequest(response: DebugProtocol.ReverseContinueResponse, args: DebugProtocol.ReverseContinueArguments): void {
-		this.miDebugger.continue(true).then(done => {
-			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
-		});
-	}
 
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
 		this.miDebugger.continue().then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
-		});
-	}
-
-	protected stepBackRequest(response: DebugProtocol.StepBackResponse, args: DebugProtocol.StepBackArguments): void {
-		this.miDebugger.step(true).then(done => {
-			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 4, `Could not step back: ${msg} - Try running 'target record-full' before stepping back`);
 		});
 	}
 

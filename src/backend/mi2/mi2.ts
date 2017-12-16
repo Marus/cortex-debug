@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, SSHArguments, Variable, VariableObject, MIError } from "../backend"
+import { Breakpoint, IBackend, Stack, Variable, VariableObject, MIError } from "../backend"
 import * as ChildProcess from "child_process"
 import { EventEmitter } from "events"
 import { parseMI, MINode } from '../mi_parse';
@@ -8,7 +8,6 @@ import * as fs from "fs"
 import { posix } from "path"
 import * as nativePath from "path"
 let path = posix;
-var Client = require("ssh2").Client;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -382,7 +381,7 @@ export class MI2 extends EventEmitter implements IBackend {
 		return new Promise((resolve, reject) => {
 			this.once("ui-break-done", () => {
 				this.log("console", "Running executable");
-				this.sendCommand("exec-run").then((info) => {
+				this.sendCommand("exec-continue").then((info) => {
 					if (info.resultRecords.resultClass == "running")
 						resolve();
 					else
@@ -393,26 +392,14 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	stop() {
-		if (this.isSSH) {
-			let proc = this.stream;
-			let to = setTimeout(() => {
-				proc.signal("KILL");
-			}, 1000);
-			this.stream.on("exit", function (code) {
-				clearTimeout(to);
-			})
-			this.sendRaw("-gdb-exit");
-		}
-		else {
-			let proc = this.process;
-			let to = setTimeout(() => {
-				process.kill(-proc.pid);
-			}, 1000);
-			this.process.on("exit", function (code) {
-				clearTimeout(to);
-			});
-			this.sendRaw("-gdb-exit");
-		}
+		let proc = this.process;
+		let to = setTimeout(() => {
+			process.kill(-proc.pid);
+		}, 1000);
+		this.process.on("exit", function (code) {
+			clearTimeout(to);
+		});
+		this.sendRaw("-gdb-exit");
 	}
 
 	detach() {
@@ -436,41 +423,41 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	continue(reverse: boolean = false): Thenable<boolean> {
+	continue(): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "continue");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-continue" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-continue").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	next(reverse: boolean = false): Thenable<boolean> {
+	next(): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "next");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-next" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-next").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	step(reverse: boolean = false): Thenable<boolean> {
+	step(): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "step");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-step" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-step").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	stepOut(reverse: boolean = false): Thenable<boolean> {
+	stepOut(): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "stepOut");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-finish" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-finish").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
@@ -717,10 +704,7 @@ export class MI2 extends EventEmitter implements IBackend {
 	sendRaw(raw: string) {
 		if (this.printCalls)
 			this.log("log", raw);
-		if (this.isSSH)
-			this.stream.write(raw + "\n");
-		else
-			this.process.stdin.write(raw + "\n");
+		this.process.stdin.write(raw + "\n");
 	}
 
 	sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
@@ -743,15 +727,13 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	isReady(): boolean {
-		return this.isSSH ? this.sshReady : !!this.process;
+		return !!this.process;
 	}
 
 	prettyPrint: boolean = true;
 	printCalls: boolean;
 	debugOutput: boolean;
 	public procEnv: any;
-	protected isSSH: boolean;
-	protected sshReady: boolean;
 	protected currentToken: number = 1;
 	protected handlers: { [index: number]: (info: MINode) => any } = {};
 	protected breakpoints: Map<Breakpoint, Number> = new Map();
@@ -759,5 +741,4 @@ export class MI2 extends EventEmitter implements IBackend {
 	protected errbuf: string;
 	protected process: ChildProcess.ChildProcess;
 	protected stream;
-	protected sshConn;
 }
