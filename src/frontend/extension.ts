@@ -7,12 +7,36 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 var adapterOutputChannel: vscode.OutputChannel = null;
+interface SVDInfo {
+	expression: RegExp;
+	path: string;
+}
+
+var SVDDirectory: SVDInfo[] = [];
+
+function getSVDFile(device: string): string {
+	let entry = SVDDirectory.find(de => de.expression.test(device));
+	return entry.path;
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
 	let ext = vscode.extensions.getExtension('marus.cortex-debug');
 	
 	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
 	const registerProvider = new RegisterTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
+
+	let dirPath = path.join(ext.extensionPath, "data", "SVDMap.json");
+
+	let tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
+	SVDDirectory = tmp.map(de => {
+		let exp = null;
+		if(de.id) { exp = new RegExp('^' + de.id + '$', ''); }
+		else { exp = new RegExp(de.expression, de.flags); }
+
+		return { 'expression': exp, 'path': de.path };
+	});
+
 	vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh'));
 	vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node));
 	vscode.commands.registerCommand('cortexPerhiperals.updateNode', (node: TreeNode) => {
@@ -55,17 +79,44 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
 		switch(e.event) {
+			case 'custom-stop':
+				peripheralProvider.debugStopped();
+				registerProvider.debugStopped();
+				break;
 			case 'jlink-output':
 				if(e.body.type == 'err') { handleJLinkErrorOutput(e.body.content); }
 				else { handleJLinkOutput(e.body.content); }
 				break;
 		}
 	}));
+
+	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
+		session.customRequest('get-arguments').then(args => {
+			let svdfile = args.SVDFile;
+			if(!svdfile) {
+				svdfile = path.join(ext.extensionPath, getSVDFile(args.device));
+			}
+
+			registerProvider.debugSessionStarted();
+			if(svdfile) {
+				peripheralProvider.debugSessionStarted({
+					SVDFile: svdfile
+				});
+			}
+			else {
+				peripheralProvider.debugSessionStarted({ disable: true });
+			}
+
+		});
+	}));
+
 	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
 		if(adapterOutputChannel) {
 			adapterOutputChannel.dispose();
 			adapterOutputChannel = null;
 		}
+		registerProvider.debugSessionTerminated();
+		peripheralProvider.debugSessionTerminated();
 	}));
 }
 

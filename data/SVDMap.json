@@ -1,0 +1,11 @@
+[
+	{ "expression": "STM32F100[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F100xx.svd" },
+	{ "expression": "STM32F101[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F101xx.svd" },
+	{ "expression": "STM32F102[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F102xx.svd" },
+	{ "expression": "STM32F103[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F103xx.svd" },
+	{ "expression": "STM32F105[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F105xx.svd" },
+	{ "expression": "STM32F107[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F107xx.svd" },
+	{ "expression": "STM32F103[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F103xx.svd" },
+	{ "expression": "STM32F103[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F103xx.svd" },
+	{ "expression": "STM32F103[a-z0-9]{2}", "flags": "i", "path": "data/STMicro/STM32F103xx.svd" }
+]
