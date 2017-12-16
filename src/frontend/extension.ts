@@ -5,11 +5,13 @@ import * as path from "path";
 import * as os from "os";
 
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
+import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider("debugmemory", new MemoryContentProvider()));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.examineMemoryLocation", examineMemory));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
 	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
+	const registerProvider = new RegisterTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
 	vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh'));
 	vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node));
 	vscode.commands.registerCommand('cortexPerhiperals.updateNode', (node: TreeNode) => {
@@ -31,6 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPerhiperals', peripheralProvider));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters', registerProvider));
 		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
