@@ -6,7 +6,14 @@ import * as os from "os";
 
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
+import { setTimeout } from "timers";
+import { SWOCore } from './swo';
+
 var adapterOutputChannel: vscode.OutputChannel = null;
+var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
+
+var swo: SWOCore = null;
+
 interface SVDInfo {
 	expression: RegExp;
 	path: string;
@@ -20,7 +27,6 @@ function getSVDFile(device: string): string {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
 	let ext = vscode.extensions.getExtension('marus.cortex-debug');
 	
 	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
@@ -59,6 +65,8 @@ export function activate(context: vscode.ExtensionContext) {
 	
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPerhiperals', peripheralProvider));
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters', registerProvider));
+
+	context.subscriptions.push(vscode.commands.registerCommand("cortex-debug.getFileNameNoExt", () => {
 		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
@@ -67,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
 		var ext = path.extname(fileName);
 		return fileName.substr(0, fileName.length - ext.length);
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileBasenameNoExt", () => {
+	context.subscriptions.push(vscode.commands.registerCommand("cortex-debug.getFileBasenameNoExt", () => {
 		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
@@ -107,6 +115,11 @@ export function activate(context: vscode.ExtensionContext) {
 				peripheralProvider.debugSessionStarted({ disable: true });
 			}
 
+			if(args.SWOConfig.enabled) {
+				console.log('SWO Enabled - Arguments: ', args);
+				swo = new SWOCore(args.SWOPort, args.SWOConfig.cpuFrequency, args.SWOConfig.swoFrequency, args.SWOConfig.ports, ext.extensionPath);
+				
+			}
 		});
 	}));
 
@@ -115,8 +128,17 @@ export function activate(context: vscode.ExtensionContext) {
 			adapterOutputChannel.dispose();
 			adapterOutputChannel = null;
 		}
+		for(var key in swoOutputChannels) {
+			swoOutputChannels[key].dispose();
+		}
+		swoOutputChannels = {};
+
 		registerProvider.debugSessionTerminated();
 		peripheralProvider.debugSessionTerminated();
+
+		if(swo) {
+			swo.dispose();
+		}
 	}));
 }
 
