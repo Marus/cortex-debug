@@ -213,7 +213,7 @@ export function parseMI(output: string): MINode {
 				let values = [];
 				values.push(value);
 				let remaining = output;
-				while (value = parseCommaValue())
+				while ((value = parseCommaValue()) !== undefined)
 					values.push(value);
 				output = output.substr(1); // ]
 				return values;
