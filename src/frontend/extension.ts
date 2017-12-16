@@ -4,10 +4,33 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
+import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider("debugmemory", new MemoryContentProvider()));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.examineMemoryLocation", examineMemory));
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
+	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
+	vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh'));
+	vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node));
+	vscode.commands.registerCommand('cortexPerhiperals.updateNode', (node: TreeNode) => {
+		if(node.node.recordType == RecordType.Field) {
+			let fn : FieldNode = node.node as FieldNode;
+			fn.performUpdate().then(newval => {
+				peripheralProvider._onDidChangeTreeData.fire();
+				
+			}, reason => {
+			});
+		}
+	});
+	vscode.commands.registerCommand('cortexPerhiperals.selectedNode', (node: BaseNode) => {
+		if(node.recordType != RecordType.Field) {
+			node.expanded = !node.expanded;
+		}
+
+		node.selected().then(updated => { if(updated) { peripheralProvider._onDidChangeTreeData.fire(); } }, error => { console.log('Error: ', error); });
+	});
+	
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPerhiperals', peripheralProvider));
 		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
