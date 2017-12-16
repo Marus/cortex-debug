@@ -539,6 +539,14 @@ export class MI2DebugSession extends DebugSession {
 		});
 	}
 
+	protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
+		this.miDebugger.restart().then(done => {
+			this.sendResponse(response);
+		}, msg => {
+			this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
+		})
+	}
+
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
 		if (args.context == "watch" || args.context == "hover")
 			this.miDebugger.evalExpression(args.expression).then((res) => {
