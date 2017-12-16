@@ -16,11 +16,11 @@
 			"preLaunchTask": "npm"
 		},
 		{
-			"name": "code-debug server",
+			"name": "cortex-debug server",
 			"type": "node",
 			"request": "launch",
 			"runtimeArgs": [ "--nolazy" ],
-			"program": "${workspaceRoot}/src/gdb.ts",
+			"program": "${workspaceRoot}/src/jlink.ts",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
