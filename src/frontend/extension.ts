@@ -8,6 +8,8 @@ import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } fro
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
+	let ext = vscode.extensions.getExtension('marus.cortex-debug');
+	
 	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
 	const registerProvider = new RegisterTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
 	vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh'));
