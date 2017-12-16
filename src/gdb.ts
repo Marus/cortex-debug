@@ -2,39 +2,9 @@ import { MI2DebugSession } from './mibase';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from "./backend/mi2/mi2";
-import { SSHArguments, ValuesFormattingMode } from './backend/backend';
+import { hexFormat } from './frontend/utils';
 
-export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
-	cwd: string;
-	target: string;
-	gdbpath: string;
-	env: any;
-	debugger_args: string[];
-	arguments: string;
-	terminal: string;
-	autorun: string[];
-	ssh: SSHArguments;
-	valuesFormatting: ValuesFormattingMode;
-	printCalls: boolean;
-	showDevDebugOutput: boolean;
-}
-
-export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
-	cwd: string;
-	target: string;
-	gdbpath: string;
-	env: any;
-	debugger_args: string[];
-	executable: string;
-	remote: boolean;
-	autorun: string[];
-	ssh: SSHArguments;
-	valuesFormatting: ValuesFormattingMode;
-	printCalls: boolean;
-	showDevDebugOutput: boolean;
-}
-
-class GDBDebugSession extends MI2DebugSession {
+export class GDBDebugSession extends MI2DebugSession {
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 		response.body.supportsHitConditionalBreakpoints = true;
 		response.body.supportsConfigurationDoneRequest = true;
@@ -42,143 +12,101 @@ class GDBDebugSession extends MI2DebugSession {
 		response.body.supportsFunctionBreakpoints = true;
 		response.body.supportsEvaluateForHovers = true;
 		response.body.supportsSetVariable = true;
-		response.body.supportsStepBack = true;
+		response.body.supportsRestartRequest = true;
 		this.sendResponse(response);
 	}
 
-	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"], args.debugger_args, args.env);
-		this.initDebugger();
-		this.quit = false;
-		this.attached = false;
-		this.needContinue = false;
-		this.isSSH = false;
-		this.started = false;
-		this.crashed = false;
-		this.debugReady = false;
-		this.setValuesFormattingMode(args.valuesFormatting);
-		this.miDebugger.printCalls = !!args.printCalls;
-		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
-		if (args.ssh !== undefined) {
-			if (args.ssh.forwardX11 === undefined)
-				args.ssh.forwardX11 = true;
-			if (args.ssh.port === undefined)
-				args.ssh.port = 22;
-			if (args.ssh.x11port === undefined)
-				args.ssh.x11port = 6000;
-			if (args.ssh.x11host === undefined)
-				args.ssh.x11host = "localhost";
-			if (args.ssh.remotex11screen === undefined)
-				args.ssh.remotex11screen = 0;
-			this.isSSH = true;
-			this.trimCWD = args.cwd.replace(/\\/g, "/");
-			this.switchCWD = args.ssh.cwd;
-			this.miDebugger.ssh(args.ssh, args.ssh.cwd, args.target, args.arguments, args.terminal, false).then(() => {
-				if (args.autorun)
-					args.autorun.forEach(command => {
-						this.miDebugger.sendUserInput(command);
-					});
-				setTimeout(() => {
-					this.miDebugger.emit("ui-break-done");
-				}, 50);
-				this.sendResponse(response);
-				this.miDebugger.start().then(() => {
-					this.started = true;
-					if (this.crashed)
-						this.handlePause(undefined);
-				}, err => {
-					this.sendErrorResponse(response, 100, `Failed to start MI Debugger: ${err.toString()}`)
+	protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
+		switch(command) {
+			case 'read-memory':
+				this.readMemoryRequest(response, args['address'], args['length']);	
+				break;
+			case 'read-registers':
+				this.readRegistersRequest(response);
+				break;
+			case 'read-register-list':
+				this.readRegisterListRequest(response);
+				break;
+			case 'execute-command':
+				let cmd = args['command'] as string;
+				if(cmd.startsWith('-')) { cmd = cmd.substring(1); }
+				else { cmd = `interpreter-exec console "${cmd}"`; }
+				this.miDebugger.sendCommand(cmd).then(node => {
+					response.body = node.resultRecords;
+					this.sendResponse(response);
+				}, error => {
+					response.body = error;
+					this.sendErrorResponse(response, 110, "Unable to execute command");
 				});
-			}, err => {
-				this.sendErrorResponse(response, 102, `Failed to SSH: ${err.toString()}`)
-			});
-		}
-		else {
-			this.miDebugger.load(args.cwd, args.target, args.arguments, args.terminal).then(() => {
-				if (args.autorun)
-					args.autorun.forEach(command => {
-						this.miDebugger.sendUserInput(command);
-					});
-				setTimeout(() => {
-					this.miDebugger.emit("ui-break-done");
-				}, 50);
+				break;
+			default:
+				response.body = { 'error': 'Invalid command.' };
 				this.sendResponse(response);
-				this.miDebugger.start().then(() => {
-					this.started = true;
-					if (this.crashed)
-						this.handlePause(undefined);
-				}, err => {
-					this.sendErrorResponse(response, 100, `Failed to Start MI Debugger: ${err.toString()}`)
-				});
-			}, err => {
-				this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`)
-			});
+				break;
 		}
 	}
 
-	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		this.miDebugger = new MI2(args.gdbpath || "gdb", ["-q", "--interpreter=mi2"], args.debugger_args, args.env);
-		this.initDebugger();
-		this.quit = false;
-		this.attached = !args.remote;
-		this.needContinue = true;
-		this.isSSH = false;
-		this.debugReady = false;
-		this.setValuesFormattingMode(args.valuesFormatting);
-		this.miDebugger.printCalls = !!args.printCalls;
-		this.miDebugger.debugOutput = !!args.showDevDebugOutput;
-		if (args.ssh !== undefined) {
-			if (args.ssh.forwardX11 === undefined)
-				args.ssh.forwardX11 = true;
-			if (args.ssh.port === undefined)
-				args.ssh.port = 22;
-			if (args.ssh.x11port === undefined)
-				args.ssh.x11port = 6000;
-			if (args.ssh.x11host === undefined)
-				args.ssh.x11host = "localhost";
-			if (args.ssh.remotex11screen === undefined)
-				args.ssh.remotex11screen = 0;
-			this.isSSH = true;
-			this.trimCWD = args.cwd.replace(/\\/g, "/");
-			this.switchCWD = args.ssh.cwd;
-			this.miDebugger.ssh(args.ssh, args.ssh.cwd, args.target, "", undefined, true).then(() => {
-				if (args.autorun)
-					args.autorun.forEach(command => {
-						this.miDebugger.sendUserInput(command);
+	protected readMemoryRequest(response: DebugProtocol.Response, startAddress: number, length: number) {
+		let address = hexFormat(startAddress, 8);
+		this.miDebugger.sendCommand(`data-read-memory-bytes ${address} ${length}`).then(node => {
+			let startAddress = node.resultRecords.results[0][1][0][0][1];
+			let endAddress = node.resultRecords.results[0][1][0][2][1];
+			let data = node.resultRecords.results[0][1][0][3][1];
+			let bytes = data.match(/[0-9a-f]{2}/g).map(b => parseInt(b, 16));
+			response.body = {
+				startAddress: startAddress,
+				endAddress: endAddress,
+				bytes: bytes
+			};
+			this.sendResponse(response);
+		}, error => {
+			response.body = { 'error': error };
+			this.sendResponse(response);
+		})
+	}
+
+	protected readRegistersRequest(response: DebugProtocol.Response) {
+		this.miDebugger.sendCommand('data-list-register-values x').then(node => {
+			if(node.resultRecords.resultClass == 'done') {
+				let rv = node.resultRecords.results[0][1];
+				response.body = rv.map(n => {
+					let val = {};
+					n.forEach(x => {
+						val[x[0]] = x[1];
 					});
-				setTimeout(() => {
-					this.miDebugger.emit("ui-break-done");
-				}, 50);
-				this.sendResponse(response);
-			}, err => {
-				this.sendErrorResponse(response, 102, `Failed to SSH: ${err.toString()}`)
-			});
-		}
-		else {
-			if (args.remote) {
-				this.miDebugger.connect(args.cwd, args.executable, args.target).then(() => {
-					if (args.autorun)
-						args.autorun.forEach(command => {
-							this.miDebugger.sendUserInput(command);
-						});
-					this.sendResponse(response);
-				}, err => {
-					this.sendErrorResponse(response, 102, `Failed to attach: ${err.toString()}`)
+					return val;
 				});
 			}
 			else {
-				this.miDebugger.attach(args.cwd, args.executable, args.target).then(() => {
-					if (args.autorun)
-						args.autorun.forEach(command => {
-							this.miDebugger.sendUserInput(command);
-						});
-					this.sendResponse(response);
-				}, err => {
-					this.sendErrorResponse(response, 101, `Failed to attach: ${err.toString()}`)
-				});
+				response.body = {
+					'error': 'Unable to parse response'
+				}
 			}
-		}
+			this.sendResponse(response);	
+		}, error => {
+			response.body = { 'error': error };
+			this.sendResponse(response);
+		});		
+	}
+
+	protected readRegisterListRequest(response: DebugProtocol.Response) {
+		this.miDebugger.sendCommand('data-list-register-names').then(node => {
+			if(node.resultRecords.resultClass == 'done') {
+				let registerNames;
+				node.resultRecords.results.forEach(rr => {
+					if(rr[0] == 'register-names') {
+						registerNames = rr[1];
+					}
+				});
+				response.body = registerNames;
+			}
+			else {
+				response.body = { 'error': node.resultRecords.results };
+			}
+			this.sendResponse(response);
+		}, error => {
+			response.body = { 'error': error };
+			this.sendResponse(response);
+		});
 	}
 }
-
-DebugSession.run(GDBDebugSession);
