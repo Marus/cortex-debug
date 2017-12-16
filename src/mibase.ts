@@ -194,12 +194,13 @@ export class MI2DebugSession extends DebugSession {
 					let finalBrks = [];
 					brkpoints.forEach(brkp => {
 						if (brkp[0])
-							finalBrks.push({ line: brkp[1].line });
+							finalBrks.push({ line: brkp[1].line, verified: true });
 					});
 					response.body = {
 						breakpoints: finalBrks
 					};
 					this.sendResponse(response);
+					
 				}, msg => {
 					this.sendErrorResponse(response, 9, msg.toString());
 				});
@@ -207,6 +208,7 @@ export class MI2DebugSession extends DebugSession {
 				this.sendErrorResponse(response, 9, msg.toString());
 			});
 		}).bind(this);
+
 		if (this.debugReady)
 			cb();
 		else
