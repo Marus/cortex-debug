@@ -22,15 +22,41 @@ interface SWOWebsocketProcessor extends SWOProcessor {
 }
 
 interface WebsocketMessage {
-	timestamp: Date;
+	timestamp: number;
 	data: number;
 	port: number;
+	raw: number;
 }
 
 interface SWOPortConfig {
 	number: number;
 	format: string;
+	encoding: string;
 };
+
+interface GraphConfiguration {
+	type: string;
+	label: string;
+};
+
+interface RealtimeGraphConfiguration extends GraphConfiguration {
+	minimum: number;
+	maximum: number;
+	ports: {
+		number: number,
+		label: string,
+		color: string
+	}[];
+};
+
+interface XYGraphConfiguration extends GraphConfiguration {
+	xPort: number;
+	yPort: number;
+	xMinimum: number;
+	xMaximum: number;
+	yMinimum: number;
+	yMaximum: number;
+}
 
 class SWOBinaryProcessor implements SWOProcessor {
 	output: vscode.OutputChannel;
@@ -112,7 +138,7 @@ class SWOGraphProcessor implements SWOWebsocketProcessor {
 	}
 
 	processMessage(data: number) {
-		let message = { timestamp: new Date(), data: data, port: this.port };
+		let message = { timestamp: new Date().getTime(), data: data, port: this.port, raw: data };
 		// if(this.buffer.size() == this.buffer.capcity()) { this.buffer.deq(); }
 		// this.buffer.enq(message);
 		this.core.socketServer.broadcastMessage(message);
@@ -137,7 +163,7 @@ class SWOSocketServer {
 	processors: SWOWebsocketProcessor[];
 	socket: any;
 
-	constructor(serverPort: number) {
+	constructor(serverPort: number, public graphs: GraphConfiguration[]) {
 		this.processors = [];
 		this.socket = new WebSocket.Server({ port: serverPort });
 		this.socket.on('connection', this.connected.bind(this));
@@ -145,8 +171,8 @@ class SWOSocketServer {
 
 	connected(client) {
 		client.on('message', (message) => this.message(client, message));
-		let activePorts = this.processors.map(p => { return { 'port': p.port, 'format': p.format }; });
-		client.send(JSON.stringify({ 'activePorts': activePorts }));
+		let activePorts = this.processors.map(p => { return { 'port': p.port }; });
+		client.send(JSON.stringify({ 'activePorts': activePorts, 'graphs': this.graphs }));
 	}
 
 	message(client, message) {
@@ -183,7 +209,7 @@ export class SWOCore {
 	SPECIAL_MASK = 0x0F;
 	PORT_MASK = 0xF8;
 
-	constructor(SWOPort: number, cpuFreq: number, swoFreq: number, configuration: SWOPortConfig[], extensionPath: string) {
+	constructor(SWOPort: number, cpuFreq: number, swoFreq: number, configuration: SWOPortConfig[], graphs: GraphConfiguration[], extensionPath: string) {
 		this.buffer = new CircularBuffer({ size: 250, encoding: null });
 
 		this.client = net.createConnection({ port: SWOPort, host: 'localhost' }, () => { this.connected = true; });
@@ -194,11 +220,13 @@ export class SWOCore {
 
 		portastic.find({ min: 53333, max: 54333, retrieve: 1 }).then(ports => {
 			let port = ports[0];
-			this.socketServer = new SWOSocketServer(port);
-			var hasGraph = configuration.filter(c => c.format == 'graph').length > 0;
+			this.socketServer = new SWOSocketServer(port, graphs);
+			var hasGraph = configuration.filter(c => c.format == 'graph').length > 0 && graphs.length > 1;
+
+			console.log('WebSocket Server Opened on Port: ', port);
 
 			if(hasGraph) {
-				var grapherURL = `file://${extensionPath}/grapher/index.html?port=${port}`;
+				var grapherURL = `file://${extensionPath}/grapher/dist/index.html?port=${port}`;
 				let grapherURI = vscode.Uri.parse(grapherURL);
 
 				vscode.commands.executeCommand('vscode.previewHtml', grapherURI, vscode.ViewColumn.Two, 'SWO Graphs').then(e => {
@@ -280,6 +308,7 @@ export class SWOCore {
 		this.client = null;
 		this.socketServer.dispose();
 		this.socketServer = null;
+		this.processors.forEach(p => p.dispose());
 		this.processors = null;
 		this.connected = false;
 	}

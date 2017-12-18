@@ -269,7 +269,8 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					ConsolePort: this.consolePort,
 					device: this.args.device,
 					SVDPath: this.args.svdPath,
-					SWOConfig: this.args.swoConfig
+					SWOConfig: this.args.swoConfig,
+					GraphConfig: this.args.graphConfig
 				};
 				this.sendResponse(response);
 				break;

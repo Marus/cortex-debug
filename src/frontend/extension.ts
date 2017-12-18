@@ -117,7 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if(args.SWOConfig.enabled) {
 				console.log('SWO Enabled - Arguments: ', args);
-				swo = new SWOCore(args.SWOPort, args.SWOConfig.cpuFrequency, args.SWOConfig.swoFrequency, args.SWOConfig.ports, ext.extensionPath);
+				swo = new SWOCore(args.SWOPort, args.SWOConfig.cpuFrequency, args.SWOConfig.swoFrequency, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
 				
 			}
 		});
