@@ -193,6 +193,252 @@
 														"realtime"
 													]
 												},
+												"timespan": {
+													"type": "number",
+													"default": 30,
+													"description": "Length of time (seconds) to be plotted on screen."
+												},
+												"minimum": {
+													"type": "number",
+													"default": 0,
+													"description": "Minimum value for the Y-Axis"
+												},
+												"maximum": {
+													"type": "number",
+													"default": 65535,
+													"description": "Maximum value for the X-Axis"
+												},
+												"ports": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"number": {
+																"type": "number",
+																"minimum": 0,
+																"maximum": 31,
+																"description": "The SWO port number",
+																"default": 0
+															},
+															"label": {
+																"type": "string",
+																"description": "A label for this data set"
+															},
+															"color": {
+																"type": "string",
+																"pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$"
+															}
+														},
+														"required": [
+															"number",
+															"label"
+														]
+													},
+													"description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section"
+												},
+												"label": {
+													"type": "string",
+													"description": "Label for Graph"
+												}
+											},
+											"required": [ "label", "ports", "minimum", "maximum" ]
+										},
+										{
+											"type": "object",
+											"properties": {
+												"type": {
+													"type": "string",
+													"enum": [
+														"x-y-plot"
+													]
+												},
+												"xPort": {
+													"type": "number",
+													"description": "SWO Port for the X axis"
+												},
+												"yPort": {
+													"type": "number",
+													"description": "SWO Port for the Y axis"
+												},
+												"label": {
+													"type": "string",
+													"description": "Label for graph"
+												},
+												"xMinimum": {
+													"type": "number",
+													"description": "Minimum value on the X-Axis",
+													"default": 0
+												},
+												"xMaximum": {
+													"type": "number",
+													"description": "Maximum value on the X-Axis",
+													"default": 65535
+												},
+												"yMinimum": {
+													"type": "number",
+													"description": "Minimum value on the Y-Axis",
+													"default": 0
+												},
+												"yMaximum": {
+													"type": "number",
+													"description": "Maximum value on the Y-Axis",
+													"default": 65535
+												},
+												"timespan": {
+													"type": "number",
+													"description": "The amount of time (seconds) that the XY Plot will show the trace for.",
+													"default": 10
+												}
+											},
+											"required": [
+												"xPort",
+												"yPort",
+												"label"
+											]
+										}
+									]
+								}
+							},
+							"swoConfig": {
+								"type": "object",
+								"properties": {
+									"enabled": {
+										"type": "boolean",
+										"default": false,
+										"description": "Enable SWO decoding."
+									},
+									"swoFrequency": {
+										"type": "number",
+										"default": 0,
+										"description": "SWO frequency in Hz; 0 will attempt to automatically calculate"
+									},
+									"cpuFrequency": {
+										"type": "number",
+										"default": 0,
+										"description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate"
+									},
+									"ports": {
+										"type": "array",
+										"description": "SWO Port Configuration",
+										"items": {
+											"type": "object",
+											"properties": {
+												"number": {
+													"type": "number",
+													"description": "SWO Port Number",
+													"minimum": 0,
+													"maximum": 31
+												},
+												"format": {
+													"type": "string",
+													"description": "Output format for this port.",
+													"enum": [
+														"console",
+														"binary",
+														"graph"
+													]
+												},
+												"encoding": {
+													"type": "string",
+													"description": "This property is only used for binary and graph output formats.",
+													"default": "unsigned",
+													"enum": [
+														"unsigned",
+														"signed",
+														"q16.16",
+														"q24.8",
+														"float"
+													]
+												}
+											},
+											"required": [
+												"number",
+												"format"
+											]
+										}
+									}
+								},
+								"required": []
+							}
+						}
+					},
+					"attach": {
+						"required": [
+							"executable",
+							"device"
+						],
+						"properties": {
+							"gdbpath": {
+								"type": "string",
+								"description": "Path to the gdb executable or the command if in PATH",
+								"default": "arm-none-eabi-gdb"
+							},
+							"executable": {
+								"type": "string",
+								"description": "Path of executable"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path of project"
+							},
+							"jlinkpath": {
+								"type": "string",
+								"description": "Path to the JLink",
+								"default": "JLinkGDBServer"
+							},
+							"device": {
+								"type": "string",
+								"description": "JLink Device Identifier",
+								"default": "STM32F103RB"
+							},
+							"debugger_args": {
+								"type": "array",
+								"description": "Additional arguments to pass to GDB",
+								"default": []
+							},
+							"valuesFormatting": {
+								"type": "string",
+								"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
+								"default": "parseText",
+								"enum": [
+									"disabled",
+									"parseText",
+									"prettyPrinters"
+								]
+							},
+							"printCalls": {
+								"type": "boolean",
+								"description": "Prints all GDB calls to the console",
+								"default": false
+							},
+							"showDevDebugOutput": {
+								"type": "boolean",
+								"description": "Prints all GDB responses to the console",
+								"default": false
+							},
+							"autorun": {
+								"type": "array",
+								"description": "GDB commands to run when starting to debug",
+								"default": []
+							},
+							"svdFile": {
+								"type": "string",
+								"description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+								"default": null
+							},
+							"graphConfig": {
+								"type": "array",
+								"items": {
+									"oneOf": [
+										{
+											"type": "object",
+											"properties": {
+												"type": {
+													"type": "string",
+													"enum": [
+														"realtime"
+													]
+												},
 												"minimum": {
 													"type": "number",
 													"default": 0,
@@ -359,10 +605,10 @@
 		"xml2js": "^0.4.19"
 	},
 	"devDependencies": {
-		"typescript": "^2.1.6",
-		"vscode": "^1.0.0",
-		"mocha": "^3.2.0",
+		"@types/mocha": "^2.2.39",
 		"@types/node": "^7.0.5",
-		"@types/mocha": "^2.2.39"
+		"mocha": "^3.2.0",
+		"typescript": "^2.1.6",
+		"vscode": "^1.0.0"
 	}
 }
