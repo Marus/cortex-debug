@@ -1,4 +1,4 @@
-import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
+import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, ContinuedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode, MIError } from './backend/backend';
 import { MINode } from './backend/mi_parse';
@@ -33,6 +33,18 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 	}
 }
 
+class CustomContinuedEvent extends Event implements DebugProtocol.Event {
+	body: {
+		threadID: number;
+		allThreads: boolean;
+	}
+	event: string;
+
+	constructor(threadID: number, allThreads: boolean = true) {
+		super('custom-continued', { threadID: threadID, allThreads: allThreads });
+	}
+}
+
 export class MI2DebugSession extends DebugSession {
 	protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
 	protected variableHandlesReverse: { [id: string]: number } = {};
@@ -64,6 +76,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.on("step-end", this.handleBreak.bind(this));
 		this.miDebugger.on("step-out-end", this.handleBreak.bind(this));
 		this.miDebugger.on("signal-stop", this.handlePause.bind(this));
+		this.miDebugger.on("running", this.handleRunning.bind(this));
 		this.sendEvent(new InitializedEvent());
 	}
 
@@ -90,6 +103,12 @@ export class MI2DebugSession extends DebugSession {
 		if (type == "log")
 			type = "stderr";
 		this.sendEvent(new OutputEvent(msg, type));
+	}
+
+	protected handleRunning(info: MINode) {
+		console.log('Running: ', info);
+		this.sendEvent(new ContinuedEvent(this.threadID, true));
+		this.sendEvent(new CustomContinuedEvent(this.threadID, true));
 	}
 
 	protected handleBreakpoint(info: MINode) {
