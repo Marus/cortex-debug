@@ -174,17 +174,19 @@ export class MI2 extends EventEmitter implements IBackend {
 	}
 
 	start(): Thenable<boolean> {
-		return new Promise((resolve, reject) => {
-			this.once("ui-break-done", () => {
-				this.log("console", "Running executable");
-				this.sendCommand("exec-continue").then((info) => {
-					if (info.resultRecords.resultClass == "running")
-						resolve();
-					else
-						reject();
-				}, reject);
-			});
-		});
+		return Promise.resolve(true);
+
+		// return new Promise((resolve, reject) => {
+		// 	this.once("ui-break-done", () => {
+		// 		this.log("console", "Running executable");
+		// 		this.sendCommand("exec-continue").then((info) => {
+		// 			if (info.resultRecords.resultClass == "running")
+		// 				resolve();
+		// 			else
+		// 				reject();
+		// 		}, reject);
+		// 	});
+		// });
 	}
 
 	stop() {
@@ -264,7 +266,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.log("stderr", "restart");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("interpreter-exec console \"monitor reset\"").then((info) => {
-				this.sendCommand('exec-continue').then((info) => {
+				this.sendCommand('exec-step').then((info) => {
 					resolve(true);
 				}, reject);				
 			}, reject);
