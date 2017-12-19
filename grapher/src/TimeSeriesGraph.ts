@@ -51,7 +51,14 @@ export class TimeseriesGraph implements Graph {
         this.xAxis = this.g.append('g').attr('transform', 'translate(0,' + this.height + ')').call(d3.axisBottom(this.x));
         this.yAxis = this.g.append('g').call(d3.axisLeft(this.y));
 
-        this.configuration.ports.forEach(port => {
+        let legend = this.svg.append('g')
+            .attr('class', 'legend')
+            .attr('transform', `translate(${this.margins.left + 10}, ${this.margins.top + this.height + 30})`)
+            .attr('stroke-width', 1)
+            .attr('stroke', 'black')
+            .attr('fill', 'none');
+
+        this.configuration.ports.forEach((port, idx) => {
             let path = this.g.append('path')
                 .attr('fill', 'none')
                 .attr('stroke', port.color)
@@ -60,6 +67,18 @@ export class TimeseriesGraph implements Graph {
                 .attr('stroke-width', 1.5);
 
             this.paths.push({ port: port.number, path: path });
+            let le = legend.append('g')
+                .attr('class', 'legend-entry')
+                .attr('transform', `translate(${idx * 150}, 0)`);
+            
+            le.append('rect')
+                .attr('width', 20)
+                .attr('height', 10)
+                .attr('x', 5)
+                .attr('y', 10)
+                .attr('fill', port.color);       
+                
+            le.append('text').text(`${port.label} (${port.number})`).attr('x', 35).style('font-size', '13px').style('verticle-align', 'middle').attr('y', 20);
         });
 
         window.requestAnimationFrame(this.updateGraph.bind(this));
