@@ -91,9 +91,8 @@ export function activate(context: vscode.ExtensionContext) {
 				peripheralProvider.debugStopped();
 				registerProvider.debugStopped();
 				break;
-			case 'jlink-output':
-				if(e.body.type == 'err') { handleJLinkErrorOutput(e.body.content); }
-				else { handleJLinkOutput(e.body.content); }
+			case 'adapter-output':
+				handleAdapterOutput(e.body.content);
 				break;
 		}
 	}));
@@ -142,16 +141,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 }
 
-function handleJLinkOutput(output: string) {
-	if(adapterOutputChannel === null) {
-		adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
-	}
-
-	if(!output.endsWith('\n')) { output += '\n'; }
-	adapterOutputChannel.append(output);
-}
-
-function handleJLinkErrorOutput(output) {
+function handleAdapterOutput(output) {
 	if(adapterOutputChannel === null) {
 		adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
 	}

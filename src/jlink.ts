@@ -4,20 +4,9 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { ValuesFormattingMode } from './backend/backend';
 import { JLink } from './backend/jlink';
 import { MI2 } from "./backend/mi2/mi2";
+import { AdapterOutputEvent } from './common';
 import * as portastic from 'portastic';
 
-
-class JLinkOutputEvent extends Event implements DebugProtocol.Event {
-	body: {
-		type: string,
-		content: string
-	};
-	event: string;
-
-	constructor(content: string, type: string) {
-		super('jlink-output', { content: content, type: type });
-	}
-}
 
 interface ConfigurationArguments {
 	executable: string;
@@ -253,11 +242,11 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 	}
 
 	protected handleJLinkOutput(output) {
-		this.sendEvent(new JLinkOutputEvent(output, 'out'));
+		this.sendEvent(new AdapterOutputEvent(output, 'out'));
 	}
 
 	protected handleJLinkErrorOutput(output) {
-		this.sendEvent(new JLinkOutputEvent(output, 'err'));
+		this.sendEvent(new AdapterOutputEvent(output, 'err'));
 	}
 
 	protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
