@@ -5,8 +5,8 @@ import * as vscode from "vscode";
 import { hexFormat } from './utils';
 import { clearTimeout, setTimeout } from 'timers';
 import * as portastic from 'portastic';
-
 import { Parser } from 'binary-parser';
+import { EventEmitter } from 'events';
 
 var WebSocket = require('ws');
 var CircularBuffer = require('cbarrick-circular-buffer');
@@ -291,10 +291,33 @@ class SWOSocketServer {
 	}
 }
 
+interface SWOSource extends EventEmitter {
+	init();
+	dispose();
+
+}
+
+export class JLinkSWOSource extends EventEmitter implements SWOSource {
+	client: net.Socket = null;
+
+	constructor(private SWOPort: number) {
+		super();
+	}
+
+	init() {
+		this.client = net.createConnection({ port: this.SWOPort, host: 'localhost' }, () => { this.emit('connected'); });
+		this.client.on('data', (buffer) => { this.emit('data', buffer); });
+		this.client.on('end', () => { this.emit('disconnected'); });
+	}
+
+	dispose() {
+		this.client.destroy();
+	}
+}
+
 export class SWOCore {
 	processors: SWOProcessor[] = [];;
 	socketServer: SWOSocketServer;
-	client: net.Socket;
 	connected: boolean = false;
 
 	buffer = null;
@@ -303,15 +326,14 @@ export class SWOCore {
 	SPECIAL_MASK = 0x0F;
 	PORT_MASK = 0xF8;
 
-	constructor(SWOPort: number, cpuFreq: number, swoFreq: number, configuration: SWOPortConfig[], graphs: GraphConfiguration[], extensionPath: string) {
+	constructor(private source: SWOSource, configuration: SWOPortConfig[], graphs: GraphConfiguration[], extensionPath: string) {
 		this.buffer = new CircularBuffer({ size: 250, encoding: null });
 
-		this.client = net.createConnection({ port: SWOPort, host: 'localhost' }, () => { this.connected = true; });
-		this.client.on('data', this.handleData.bind(this));
-		this.client.on('end', () => {
-			this.connected = false;
-		});
-
+		this.source.on('connected', () => { this.connected = true; });
+		this.source.on('data', this.handleData.bind(this));
+		this.source.on('disconnected', () => { this.connected = false; });
+		this.source.init();
+		
 		portastic.find({ min: 53333, max: 54333, retrieve: 1 }).then(ports => {
 			let port = ports[0];
 			this.socketServer = new SWOSocketServer(port, graphs);
@@ -392,13 +414,11 @@ export class SWOCore {
 	}
 	
 	dispose() {
-		this.client.destroy();
-		this.client = null;
 		this.socketServer.dispose();
 		this.socketServer = null;
 		this.processors.forEach(p => p.dispose());
 		this.processors = null;
+		this.source.dispose();
 		this.connected = false;
 	}
-
 }

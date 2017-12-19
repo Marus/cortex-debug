@@ -7,7 +7,7 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
-import { SWOCore } from './swo';
+import { SWOCore, JLinkSWOSource } from './swo';
 
 var adapterOutputChannel: vscode.OutputChannel = null;
 var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
@@ -116,7 +116,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if(args.SWOConfig.enabled) {
 				console.log('SWO Enabled - Arguments: ', args);
-				swo = new SWOCore(args.SWOPort, args.SWOConfig.cpuFrequency, args.SWOConfig.swoFrequency, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
+				let source = null;
+
+				if(args.type == 'jlink') {
+					source = new JLinkSWOSource(args.SWOPort);
+				}
+				else {
+					//TODO: Display Error
+					return;
+				}
+				
+				swo = new SWOCore(source, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
 				
 			}
 		});

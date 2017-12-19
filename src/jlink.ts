@@ -253,6 +253,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		switch(command) {
 			case 'get-arguments':
 				response.body = {
+					type: 'jlink',
 					GDBPort: this.gdbPort,
 					SWOPort: this.swoPort,
 					ConsolePort: this.consolePort,
