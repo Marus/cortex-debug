@@ -345,10 +345,14 @@
 													"enum": [
 														"unsigned",
 														"signed",
-														"q16.16",
-														"q24.8",
+														"Q16.16",
 														"float"
 													]
+												},
+												"scale": {
+													"type": "number",
+													"description": "This setting will scale the raw value from the SWO port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+													"default": 1
 												}
 											},
 											"required": [
