@@ -25,11 +25,11 @@ export class XYGraph implements Graph {
     xAxis: any;
     path: any;
 
-    height: number = 500;
-    width: number = 500;
+    height: number = 350;
+    width: number = 350;
     margins = {
         top: 30,
-        right: 0,
+        right: 30,
         left: 40,
         bottom: 60
     };

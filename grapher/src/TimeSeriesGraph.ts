@@ -25,7 +25,7 @@ export class TimeseriesGraph implements Graph {
     xAxis: any;
     paths: Path[] = [];
 
-    height: number =  400;
+    height: number =  275;
     width: number = 700;
     margins = {
         top: 30,
