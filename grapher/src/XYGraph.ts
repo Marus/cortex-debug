@@ -49,6 +49,8 @@ export class XYGraph implements Graph {
         this.line = d3.line<XYGraphPoint>().x(d => this.x(d.x)).y(d => this.y(d.y));
 
         let wrapper = d3.select('.graph-container').append('div').attr('class', 'graph-wrapper');
+        wrapper.append('h3').text(configuration.label);
+        
         this.svg = wrapper.append('svg').attr('width', this.width + this.margins.left + this.margins.right).attr('height', this.height + this.margins.top + this.margins.bottom);
         this.g = this.svg.append('g').attr('transform', `translate(${this.margins.left},${this.margins.top})`);
 
