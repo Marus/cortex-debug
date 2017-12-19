@@ -6,14 +6,87 @@ import { hexFormat } from './utils';
 import { clearTimeout, setTimeout } from 'timers';
 import * as portastic from 'portastic';
 
+import { Parser } from 'binary-parser';
+
 var WebSocket = require('ws');
 var CircularBuffer = require('cbarrick-circular-buffer');
+
+let SignedParser = new Parser().endianess('little').int32('value');
+let UnsignedParser = new Parser().endianess('little').uint32('value');
+let FloatParser = new Parser().endianess('little').floatle('value');
+
+function parseFloat(buffer: Buffer) {
+	if(buffer.length < 4) {
+		let tmp = new Buffer(4);
+		buffer.copy(tmp);
+		buffer = tmp;
+	}
+
+	let result = FloatParser.parse(buffer);
+	return result.value;
+}
+
+function parseSigned(buffer: Buffer) {
+	if(buffer.length < 4) {
+		let tmp = new Buffer(4);
+		buffer.copy(tmp);
+		buffer = tmp;
+	}
+
+	let result = SignedParser.parse(buffer);
+	return result.value;
+}
+
+function parseUnsigned(buffer: Buffer) {
+	if(buffer.length < 4) {
+		let tmp = new Buffer(4);
+		buffer.copy(tmp);
+		buffer = tmp;
+	}
+
+	let result = UnsignedParser.parse(buffer);
+	return result.value;
+}
+
+function parseQ(buffer: Buffer, mask: number, shift: number) {
+	let value = parseSigned(buffer);
+
+	var fractional = value & mask;
+	var integer = value >> shift;
+
+	return integer + (fractional / mask);
+}
+
+function parseUQ(buffer: Buffer, mask: number, shift: number) {
+	let value = parseUnsigned(buffer);
+
+	var fractional = value & mask;
+	var integer = value >>> shift;
+
+	return integer + (fractional / mask);
+}
+
+let DECODER_MAP = {
+	'signed': parseSigned,
+	'float': parseFloat,
+	'Q8.24': (buffer) => parseQ(buffer, 0xFFFFFF, 24),
+	'Q16.16': (buffer) => parseQ(buffer, 0xFFFF, 16),
+	'Q24.8': (buffer) => parseQ(buffer, 0xFF, 8),
+	'UQ8.24': (buffer) => parseUQ(buffer, 0xFFFFFF, 24),
+	'UQ16.16': (buffer) => parseUQ(buffer, 0xFFFF, 16),
+	'UQ24.8': (buffer) => parseUQ(buffer, 0xFF, 8),
+	'unsigned': parseUnsigned
+};
+
+function parseEncoded(buffer: Buffer, encoding: string) {
+	return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : parseUnsigned(buffer);
+}
 
 interface SWOProcessor {
 	port: number;
 	format: string;
 
-	processMessage(data: number);
+	processMessage(buffer: Buffer);
 	dispose();
 }
 
@@ -25,13 +98,15 @@ interface WebsocketMessage {
 	timestamp: number;
 	data: number;
 	port: number;
-	raw: number;
+	raw: string;
 }
 
 interface SWOPortConfig {
 	number: number;
 	format: string;
 	encoding: string;
+	scale: number;
+	label: string;
 };
 
 interface GraphConfiguration {
@@ -61,17 +136,26 @@ interface XYGraphConfiguration extends GraphConfiguration {
 class SWOBinaryProcessor implements SWOProcessor {
 	output: vscode.OutputChannel;
 	format: string = 'binary';
+	port: number;
+	scale: number;
+	encoding: string;
 
-	constructor(public port: number, private core: SWOCore) {
-		this.port = port;
-		this.output = vscode.window.createOutputChannel(`SWO Output [port: ${this.port}, format: Binary]`);
+	constructor(config: SWOPortConfig, private core: SWOCore) {
+		this.port = config.number;
+		this.scale = config.scale || 1;
+		this.encoding = config.encoding || 'unsigned';
+
+		this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, encoding: ${this.encoding}]`);
 	}
 
-	processMessage(data: number) {
+	processMessage(buffer: Buffer) {
 		let date = new Date();
-		let value = hexFormat(data, 8);
-
-		this.output.appendLine(`[${date.toISOString()}]   ${value}`);
+		
+		let hexvalue = buffer.toString('hex');
+		let decodedValue = parseEncoded(buffer, this.encoding);
+		let scaledValue = decodedValue * this.scale;
+		
+		this.output.appendLine(`[${date.toISOString()}]   ${hexvalue} - ${decodedValue} - ${scaledValue}`);
 	}
 
 	dispose() {
@@ -85,14 +169,17 @@ class SWOConsoleProcessor implements SWOProcessor {
 	position: number = 0;
 	timeout: any = null;
 	format: string = 'console';
+	port: number;
 	
-	constructor(public port: number, private core: SWOCore) {
-		this.port = port;
-		this.output = vscode.window.createOutputChannel(`SWO Output [port: ${this.port}, format: Console]`);
+	constructor(config: SWOPortConfig, private core: SWOCore) {
+		this.port = config.number;
+		this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, format: console]`);
 	}
 
-	processMessage(data: number) {
+	processMessage(buffer: Buffer) {
 		if(this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
+
+		var data = parseUnsigned(buffer);
 
 		let letter = String.fromCharCode(data);
 		if(letter == '\n') {
@@ -131,16 +218,23 @@ class SWOConsoleProcessor implements SWOProcessor {
 class SWOGraphProcessor implements SWOWebsocketProcessor {
 	// buffer: CircularBuffer;
 	format: string = 'graph';
+	port: number;
+	scale: number;
+	encoding: string;
 
-	constructor(public port: number, private core: SWOCore) {
-		// this.buffer = new CircularBuffer(5000);
+	constructor(config: SWOPortConfig, private core: SWOCore) {
 		core.socketServer.registerProcessor(this);
+		this.port = config.number;
+		this.encoding = config.encoding || 'unsigned';
+		this.scale = config.scale || 1;
 	}
 
-	processMessage(data: number) {
-		let message = { timestamp: new Date().getTime(), data: data, port: this.port, raw: data };
-		// if(this.buffer.size() == this.buffer.capcity()) { this.buffer.deq(); }
-		// this.buffer.enq(message);
+	processMessage(buffer: Buffer) {
+		let raw = buffer.toString('hex');
+		let decodedValue = parseEncoded(buffer, this.encoding);
+		let scaledValue = decodedValue * this.scale;
+
+		let message = { timestamp: new Date().getTime(), data: scaledValue, port: this.port, raw: raw };
 		this.core.socketServer.broadcastMessage(message);
 	}
 
@@ -240,7 +334,7 @@ export class SWOCore {
 			configuration.forEach(conf => {
 				let pc = PROCESSOR_MAP[conf.format];
 				if(pc) {
-					let processor = new pc(conf.number, this);
+					let processor = new pc(conf, this);
 					this.processors.push(processor);
 				}
 			});
@@ -274,20 +368,14 @@ export class SWOCore {
 
 			if(this.buffer.length < length + 1) { break; } // Not enough bytes to process yet
 			
-			let buf = this.buffer.read(length + 1, null);
-			let value = 0;
-
-			for(var i = 0; i < length; i++) {
-				value = value << 8;
-				let tmp = buf[length - i];
-				value = (value | tmp) >>> 0;
-			}
-
-			this._processSWIT(port, value);
+			this.buffer.read(1, null);
+			
+			let buf = this.buffer.read(length, null);
+			this._processSWIT(port, buf);
 		}
 	}
 
-	_processSWIT(port: number, data: number) {
+	_processSWIT(port: number, data: Buffer) {
 		this.processors.forEach(p => { if(p.port == port) { p.processMessage(data); } });
 	}
 
