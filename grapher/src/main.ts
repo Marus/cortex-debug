@@ -45,8 +45,11 @@ function init() {
     let datasource: GraphDataSource = null;
     let graphs: Graph[] = [];
 
-    let url = d3.select('base').attr('href');
-    let port = getParameterByName('port', url);
+    let base = d3.select('base');
+    let port = '53333';
+    if(base && base.size() > 0) {
+        port = getParameterByName('port', base.attr('href'));
+    }
     if (!port) { port = '53333'; }
 
     let ws = new WebSocket(`ws://localhost:${port}`);
