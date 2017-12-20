@@ -286,26 +286,22 @@ class SWOSocketServer {
 	}
 
 	dispose() {
-		console.log('Disposing WebSocket Server')
 		this.socket.close();
 	}
 }
 
-interface SWOSource extends EventEmitter {
-	init();
+export interface SWOSource extends EventEmitter {
+	connected: boolean;
 	dispose();
-
 }
 
 export class JLinkSWOSource extends EventEmitter implements SWOSource {
 	client: net.Socket = null;
+	connected: boolean = false;
 
 	constructor(private SWOPort: number) {
 		super();
-	}
-
-	init() {
-		this.client = net.createConnection({ port: this.SWOPort, host: 'localhost' }, () => { this.emit('connected'); });
+		this.client = net.createConnection({ port: this.SWOPort, host: 'localhost' }, () => { this.connected = true; this.emit('connected'); });
 		this.client.on('data', (buffer) => { this.emit('data', buffer); });
 		this.client.on('end', () => { this.emit('disconnected'); });
 	}
@@ -329,10 +325,10 @@ export class SWOCore {
 	constructor(private source: SWOSource, configuration: SWOPortConfig[], graphs: GraphConfiguration[], extensionPath: string) {
 		this.buffer = new CircularBuffer({ size: 250, encoding: null });
 
-		this.source.on('connected', () => { this.connected = true; });
+		if(this.source.connected) { this.connected = true; }
+		else { this.source.on('connected', () => { this.connected = true; }); }
 		this.source.on('data', this.handleData.bind(this));
 		this.source.on('disconnected', () => { this.connected = false; });
-		this.source.init();
 		
 		portastic.find({ min: 53333, max: 54333, retrieve: 1 }).then(ports => {
 			let port = ports[0];
@@ -418,7 +414,6 @@ export class SWOCore {
 		this.socketServer = null;
 		this.processors.forEach(p => p.dispose());
 		this.processors = null;
-		this.source.dispose();
 		this.connected = false;
 	}
 }

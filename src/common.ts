@@ -12,3 +12,17 @@ export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
 		super('adapter-output', { content: content, type: type });
 	}
 }
+
+export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
+	body: {
+		type: string,
+		port: number,
+		path: string
+	};
+	event: string;
+
+	constructor(type: string, params: any) {
+		let body = { type: type, ...params };
+		super('swo-configure', body);
+	}
+}

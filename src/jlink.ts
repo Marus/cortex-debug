@@ -4,7 +4,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { ValuesFormattingMode } from './backend/backend';
 import { JLink } from './backend/jlink';
 import { MI2 } from "./backend/mi2/mi2";
-import { AdapterOutputEvent } from './common';
+import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
 
 
@@ -144,6 +144,10 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					// 	args.autorun.forEach(command => {
 					// 		this.miDebugger.sendUserInput(command);
 					// 	});
+
+					if(args.swoConfig.enabled) {
+						this.sendEvent(new SWOConfigureEvent('jlink', { path: this.swoPort }));
+					}
 					
 					setTimeout(() => {
 						this.miDebugger.emit("ui-break-done");

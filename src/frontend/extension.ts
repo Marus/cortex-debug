@@ -7,7 +7,7 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
-import { SWOCore, JLinkSWOSource } from './swo';
+import { SWOCore, JLinkSWOSource, SWOSource } from './swo';
 
 var adapterOutputChannel: vscode.OutputChannel = null;
 var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
@@ -35,6 +35,9 @@ export function activate(context: vscode.ExtensionContext) {
 	let dirPath = path.join(ext.extensionPath, "data", "SVDMap.json");
 
 	let tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
+
+	let swosource: SWOSource = null;
+
 	SVDDirectory = tmp.map(de => {
 		let exp = null;
 		if(de.id) { exp = new RegExp('^' + de.id + '$', ''); }
@@ -91,6 +94,12 @@ export function activate(context: vscode.ExtensionContext) {
 				peripheralProvider.debugStopped();
 				registerProvider.debugStopped();
 				break;
+			case 'swo-configure':
+				console.log('Creating SWO Source');
+				if(e.body.type == 'jlink') {
+					swosource = new JLinkSWOSource(e.body.port);
+				}
+				break;
 			case 'adapter-output':
 				handleAdapterOutput(e.body.content);
 				break;
@@ -114,20 +123,12 @@ export function activate(context: vscode.ExtensionContext) {
 				peripheralProvider.debugSessionStarted({ disable: true });
 			}
 
-			if(args.SWOConfig.enabled) {
+			if (args.SWOConfig.enabled && swosource) {
 				console.log('SWO Enabled - Arguments: ', args);
-				let source = null;
-
-				if(args.type == 'jlink') {
-					source = new JLinkSWOSource(args.SWOPort);
-				}
-				else {
-					//TODO: Display Error
-					return;
-				}
-				
-				swo = new SWOCore(source, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
-				
+				swo = new SWOCore(swosource, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
+			}
+			else if (args.SWOConfig.enabled && !swosource) {
+				vscode.window.showErrorMessage('SWO is Enabled - but extension did not get an SWO Source Configuration Event');
 			}
 		});
 	}));
@@ -147,6 +148,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 		if(swo) {
 			swo.dispose();
+			swo = null;
+		}
+		if(swosource) {
+			swosource.dispose();
+			swo = null;
 		}
 	}));
 }
