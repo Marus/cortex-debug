@@ -23,7 +23,7 @@ var SVDDirectory: SVDInfo[] = [];
 
 function getSVDFile(device: string): string {
 	let entry = SVDDirectory.find(de => de.expression.test(device));
-	return entry.path;
+	return entry ? entry.path : null;	
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -110,11 +110,14 @@ export function activate(context: vscode.ExtensionContext) {
 		session.customRequest('get-arguments').then(args => {
 			let svdfile = args.SVDFile;
 			if(!svdfile) {
-				svdfile = path.join(ext.extensionPath, getSVDFile(args.device));
+				let basepath = getSVDFile(args.device);
+				if(basepath) {
+					svdfile = path.join(ext.extensionPath, basepath);
+				}
 			}
 
 			registerProvider.debugSessionStarted();
-			if(svdfile) {
+			if (svdfile) {
 				peripheralProvider.debugSessionStarted({
 					SVDFile: svdfile
 				});
