@@ -261,15 +261,22 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	restart(): Thenable<boolean> {
+	restart(commands: string[]): Thenable<boolean> {
 		if(trace)
 			this.log("stderr", "restart");
+		return this._sendCommandSequence(commands);
+	}
+
+	_sendCommandSequence(commands: string[]) : Thenable<boolean> {
 		return new Promise((resolve, reject) => {
-			this.sendCommand("interpreter-exec console \"monitor reset\"").then((info) => {
-				this.sendCommand('exec-step').then((info) => {
-					resolve(true);
-				}, reject);				
-			}, reject);
+			let nextCommand = ((commands: string[]) => {
+				if(commands.length == 0) { resolve(true); }
+				let command = commands[0];
+
+				this.sendCommand(command).then(r => { nextCommand(commands.slice(1)); }, reject);
+			}).bind(this);
+
+			nextCommand(commands);
 		});
 	}
 

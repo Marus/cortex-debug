@@ -222,6 +222,8 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 
 	protected restartCommands(): string[] {
 		return [
+			'exec-interrupt',
+			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
 			'exec-continue'
 		];
@@ -243,6 +245,16 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		catch(e) {}
 
 		this.sendResponse(response);
+	}
+
+	protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
+		let commands = this.restartCommands();
+
+		this.miDebugger.restart(commands).then(done => {
+			this.sendResponse(response);
+		}, msg => {
+			this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
+		})
 	}
 
 	protected handleJLinkOutput(output) {

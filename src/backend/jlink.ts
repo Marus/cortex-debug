@@ -23,11 +23,7 @@ export class JLink extends EventEmitter {
 			this.process.stderr.on('data', this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-			
-			setTimeout(_ => {
-				console.log('Started JLink');
-				resolve();
-			}, 1000);
+			setTimeout(resolve, 50);
 		});
 	}
 
