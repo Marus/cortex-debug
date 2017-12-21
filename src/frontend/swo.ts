@@ -311,6 +311,23 @@ export class JLinkSWOSource extends EventEmitter implements SWOSource {
 	}
 }
 
+export class OpenOCDSWOSource extends EventEmitter implements SWOSource  {
+	stream: fs.ReadStream;
+	connected: boolean = false;
+
+	constructor(private SWOPath: string) {
+		super();
+		this.stream = fs.createReadStream(this.SWOPath, { highWaterMark: 128, encoding: null, autoClose: false })
+		this.stream.on('data', (buffer) => { this.emit('data', buffer); });
+		this.stream.on('close', (buffer) => { this.emit('disconnected'); });
+		this.connected = true;
+	}
+
+	dispose() {
+		this.stream.close();
+	}
+}
+
 export class SWOCore {
 	processors: SWOProcessor[] = [];;
 	socketServer: SWOSocketServer;

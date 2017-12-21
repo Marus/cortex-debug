@@ -7,7 +7,7 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
-import { SWOCore, JLinkSWOSource, SWOSource } from './swo';
+import { SWOCore, JLinkSWOSource, OpenOCDSWOSource, SWOSource } from './swo';
 
 var adapterOutputChannel: vscode.OutputChannel = null;
 var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
@@ -98,6 +98,9 @@ export function activate(context: vscode.ExtensionContext) {
 				console.log('Creating SWO Source');
 				if(e.body.type == 'jlink') {
 					swosource = new JLinkSWOSource(e.body.port);
+				}
+				else if(e.body.type == 'openocd') {
+					swosource = new OpenOCDSWOSource(e.body.path);
 				}
 				break;
 			case 'adapter-output':
