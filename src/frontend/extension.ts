@@ -97,7 +97,6 @@ export function activate(context: vscode.ExtensionContext) {
 				registerProvider.debugStopped();
 				break;
 			case 'swo-configure':
-				console.log('Creating SWO Source');
 				if(e.body.type == 'jlink') {
 					swosource = new JLinkSWOSource(e.body.port);
 				}
@@ -132,7 +131,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			if (args.SWOConfig.enabled && swosource) {
-				console.log('SWO Enabled - Arguments: ', args);
 				swo = new SWOCore(swosource, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
 			}
 			else if (args.SWOConfig.enabled && !swosource) {
