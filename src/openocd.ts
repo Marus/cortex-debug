@@ -36,6 +36,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 	private args: ConfigurationArguments;
 	private gdbPort: number;
 	private swoPath: string;
+	private device: string;
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
@@ -66,9 +67,10 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 			
 			let timeout = null;
 
-			this.openocd.on('openocd-init', (cpu) => {
+			this.openocd.on('openocd-init', (cpu: string) => {
 				console.log('Open OCD Initialized with CPU: ', cpu);
-				
+				this.device = cpu.trim();
+
 				if(timeout) {
 					clearTimeout(timeout);
 					timeout = null;
@@ -202,7 +204,8 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 					configFiles: this.args.configFiles,
 					SVDPath: this.args.svdPath,
 					SWOConfig: this.args.swoConfig,
-					GraphConfig: this.args.graphConfig
+					GraphConfig: this.args.graphConfig,
+					device: this.device
 				};
 				this.sendResponse(response);
 				break;
