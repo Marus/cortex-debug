@@ -71,25 +71,6 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPerhiperals', peripheralProvider));
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters', registerProvider));
 
-	context.subscriptions.push(vscode.commands.registerCommand("cortex-debug.getFileNameNoExt", () => {
-		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
-			vscode.window.showErrorMessage("No editor with valid file name active");
-			return;
-		}
-		var fileName = vscode.window.activeTextEditor.document.fileName;
-		var ext = path.extname(fileName);
-		return fileName.substr(0, fileName.length - ext.length);
-	}));
-	context.subscriptions.push(vscode.commands.registerCommand("cortex-debug.getFileBasenameNoExt", () => {
-		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
-			vscode.window.showErrorMessage("No editor with valid file name active");
-			return;
-		}
-		var fileName = path.basename(vscode.window.activeTextEditor.document.fileName);
-		var ext = path.extname(fileName);
-		return fileName.substr(0, fileName.length - ext.length);
-	}));
-
 	context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
 		switch(e.event) {
 			case 'custom-stop':

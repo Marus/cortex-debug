@@ -1,7 +1,5 @@
 {
     "activationEvents": [
-        "onCommand:cortex-debug.getFileNameNoExt", 
-        "onCommand:cortex-debug.getFileBasenameNoExt", 
         "*"
     ], 
     "categories": [
@@ -559,10 +557,7 @@
                 "program": "./out/src/openocd.js", 
                 "runtime": "node", 
                 "type": "openocd-gdb", 
-                "variables": {
-                    "FileBasenameNoExt": "cortex-debug.getFileBasenameNoExt", 
-                    "FileNameNoExt": "cortex-debug.getFileNameNoExt"
-                }
+                "variables": {}
             }, 
             {
                 "configurationAttributes": {
@@ -1092,10 +1087,7 @@
                 "program": "./out/src/jlink.js", 
                 "runtime": "node", 
                 "type": "jlink-gdb", 
-                "variables": {
-                    "FileBasenameNoExt": "cortex-debug.getFileBasenameNoExt", 
-                    "FileNameNoExt": "cortex-debug.getFileNameNoExt"
-                }
+                "variables": {}
             }
         ], 
         "menus": {
