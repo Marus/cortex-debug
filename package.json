@@ -579,14 +579,24 @@
 				"configurationSnippets": [
 					{
 						"label": "Cortex Debug: JLink",
-						"description": "Debugs an embedded ARM Cortex-M microcontroller using GDB",
+						"description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink",
 						"body": {
 							"type": "jlink-gdb",
 							"request": "launch",
 							"name": "${6:Debug Microcontroller}",
 							"executable": "${1:./bin/executable.elf}",
-							"cwd": "^\"\\${workspaceRoot}\"",
-							"autorun": []
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
+						"label": "Cortex Debug: OpenOCD",
+						"description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
+						"body": {
+							"type": "openocd-gdb",
+							"request": "launch",
+							"name": "${6:Debug Microcontroller}",
+							"executable": "${1:./bin/executable.elf}",
+							"cwd": "^\"\\${workspaceRoot}\""
 						}
 					}
 				]
