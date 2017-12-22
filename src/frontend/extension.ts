@@ -46,18 +46,20 @@ export function activate(context: vscode.ExtensionContext) {
 		return { 'expression': exp, 'path': de.path };
 	});
 
-	vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh'));
-	vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node));
-	vscode.commands.registerCommand('cortexPerhiperals.updateNode', (node: TreeNode) => {
-		if(node.node.recordType == RecordType.Field) {
-			let fn : FieldNode = node.node as FieldNode;
-			fn.performUpdate().then(newval => {
-				peripheralProvider._onDidChangeTreeData.fire();
-				
-			}, reason => {
-			});
-		}
-	});
+	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh')));
+	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node)));
+	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.updateNode', (node: TreeNode) => {
+		node.node.performUpdate().then(
+			(result) => {
+				if (result) {
+					peripheralProvider._onDidChangeTreeData.fire();
+				}
+			},
+			(error) => {
+				vscode.window.showErrorMessage(`Unable to update value: ${error}`);
+			}
+		);
+	}));
 	vscode.commands.registerCommand('cortexPerhiperals.selectedNode', (node: BaseNode) => {
 		if(node.recordType != RecordType.Field) {
 			node.expanded = !node.expanded;
