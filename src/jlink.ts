@@ -7,30 +7,7 @@ import { MI2 } from "./backend/mi2/mi2";
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
 
-
-interface ConfigurationArguments {
-	executable: string;
-	svdPath: string;
-	device: string;
-	swoConfig: any;
-	graphConfig: any;
-}
-
-export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
-	gdbpath: string;
-	executable: string;
-	cwd: string;
-	jlinkpath: string;
-	device: string;
-	debugger_args: string[];
-	valuesFormatting: ValuesFormattingMode;
-	showDevDebugOutput: boolean;
-	svdPath: string;
-	swoConfig: any;
-	graphConfig: any;
-}
-
-export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
+export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	gdbpath: string;
 	executable: string;
 	cwd: string;
@@ -51,68 +28,21 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 	private swoPort: number;
 	private consolePort: number;
 
-	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
+	protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
+		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
+		args.graphConfig = args.graphConfig || [];
 		this.args = args;
-
-		portastic.find({ min: 50000, max: 52000, retrieve: 3 }).then(ports => {
-			this.gdbPort = ports[0];
-			this.swoPort = ports[1];
-			this.consolePort = ports[2];
-
-			this.jlink = new JLink(args.jlinkpath || "JLinkGDBServer", args.device, this.gdbPort, this.swoPort, this.consolePort, undefined);
-			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
-			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
-			this.jlink.on("launcherror", this.launchError.bind(this));
-			this.jlink.on("quit", this.quitEvent.bind(this));
-			
-			this.quit = false;
-			this.attached = false;
-			this.needContinue = false;
-			this.started = false;
-			this.crashed = false;
-			this.debugReady = false;
-			
-			this.jlink.init().then(_ => {
-				this.miDebugger = new MI2(args.gdbpath || "arm-none-eabi-gdb", ["-q", "--interpreter=mi2"], args.debugger_args);
-				this.initDebugger();
-	
-				this.setValuesFormattingMode(args.valuesFormatting);
-				this.miDebugger.printCalls = !!args.showDevDebugOutput;
-				this.miDebugger.debugOutput = !!args.showDevDebugOutput
-				
-				this.miDebugger.connect(args.cwd, args.executable, this.launchCommands(this.gdbPort, args)).then(() => {
-					// if (args.autorun)
-					// 	args.autorun.forEach(command => {
-					// 		this.miDebugger.sendUserInput(command);
-					// 	});
-					
-					setTimeout(() => {
-						this.miDebugger.emit("ui-break-done");
-					}, 50);
-	
-					this.sendResponse(response);
-					this.miDebugger.start().then(() => {
-						this.started = true;
-						if (this.crashed)
-							this.handlePause(undefined);
-					}, err => {
-						this.sendErrorResponse(response, 100, `Failed to Start MI Debugger: ${err.toString()}`);
-					});
-				}, err => {
-					this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`);
-				});			
-			}, err => {
-				this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${err.toString()}`);
-			});
-		}, error => {
-			console.log('Unable to launch');
-			this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${error.toString()}`);
-		});
+		this.processLaunchAttachRequest(response, args, true);
 	}
 
-	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
+	protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
+		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
+		args.graphConfig = args.graphConfig || [];
 		this.args = args;
-		
+		this.processLaunchAttachRequest(response, args, true);
+	}
+	
+	private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments, attach: boolean) {
 		portastic.find({ min: 50000, max: 52000, retrieve: 3 }).then(ports => {
 			this.gdbPort = ports[0];
 			this.swoPort = ports[1];
@@ -138,13 +68,10 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				this.setValuesFormattingMode(args.valuesFormatting);
 				this.miDebugger.printCalls = !!args.showDevDebugOutput;
 				this.miDebugger.debugOutput = !!args.showDevDebugOutput
-				
-				this.miDebugger.connect(args.cwd, args.executable, this.launchCommands(this.gdbPort, args)).then(() => {
-					// if (args.autorun)
-					// 	args.autorun.forEach(command => {
-					// 		this.miDebugger.sendUserInput(command);
-					// 	});
 
+				let commands = attach ? this.attachCommands(this.gdbPort, args) : this.launchCommands(this.gdbPort, args);
+				
+				this.miDebugger.connect(args.cwd, args.executable, commands).then(() => {
 					if(args.swoConfig.enabled) {
 						this.sendEvent(new SWOConfigureEvent('jlink', { path: this.swoPort }));
 					}
@@ -173,7 +100,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		});
 	}
 
-	protected launchCommands(gdbport: number, args: LaunchRequestArguments): string[] {
+	protected launchCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
@@ -198,7 +125,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		return commands;
 	}
 
-	protected attachCommands(gdbport: number, args: AttachRequestArguments): string[] {
+	protected attachCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',

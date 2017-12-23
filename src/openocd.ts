@@ -10,6 +10,8 @@ import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import { clearTimeout } from 'timers';
 
 interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
+	debugger_args: string[];
+	valuesFormatting: ValuesFormattingMode;
 	executable: string;
 	svdPath: string;
 	configFiles: string[];
@@ -21,16 +23,6 @@ interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	showDevDebugOutput: boolean;
 }
 
-export interface LaunchRequestArguments extends ConfigurationArguments {
-	debugger_args: string[];
-	valuesFormatting: ValuesFormattingMode;
-}
-
-export interface AttachRequestArguments extends ConfigurationArguments {
-	debugger_args: string[];
-	valuesFormatting: ValuesFormattingMode;
-}
-
 class OpenOCDGDBDebugSession extends GDBDebugSession {
 	protected openocd : OpenOCD;
 	private args: ConfigurationArguments;
@@ -38,11 +30,23 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 	private swoPath: string;
 	private device: string;
 
-	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
+	protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
 		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
 		args.graphConfig = args.graphConfig || [];
 		this.args = args;
 
+		this.processLaunchAttachRequest(response, args, false);
+	}
+
+	protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
+		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
+		args.graphConfig = args.graphConfig || [];
+		this.args = args;
+
+		this.processLaunchAttachRequest(response, args, true);
+	}
+
+	private processLaunchAttachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments, attach: boolean) {
 		portastic.find({ min: 50000, max: 52000, retrieve: 1 }).then(ports => {
 			this.gdbPort = ports[0];
 			this.swoPath = tmp.tmpNameSync();
@@ -82,8 +86,10 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				this.setValuesFormattingMode(args.valuesFormatting);
 				this.miDebugger.printCalls = !!args.showDevDebugOutput;
 				this.miDebugger.debugOutput = !!args.showDevDebugOutput
+
+				let commands = attach ? this.attachCommands(this.gdbPort, args) : this.launchCommands(this.gdbPort, args);
 				
-				this.miDebugger.connect(args.cwd, args.executable, this.launchCommands(this.gdbPort, args)).then(() => {
+				this.miDebugger.connect(args.cwd, args.executable, commands).then(() => {
 					setTimeout(() => {
 						this.miDebugger.emit("ui-break-done");
 					}, 50);
@@ -120,11 +126,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 		});
 	}
 
-	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		this.sendErrorResponse(response, 103, `Not Implemented.`);
-	}
-
-	protected launchCommands(gdbport: number, args: LaunchRequestArguments): string[] {
+	protected launchCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor reset halt"',
@@ -139,7 +141,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 		return commands;
 	}
 
-	protected attachCommands(gdbport: number, args: AttachRequestArguments): string[] {
+	protected attachCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
