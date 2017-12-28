@@ -573,8 +573,8 @@
                                 "type": "array"
                             }, 
                             "device": {
-                                "default": "STM32F103RB", 
-                                "description": "JLink Device Identifier", 
+                                "default": "", 
+                                "description": "J-Link Target Device Identifier", 
                                 "type": "string"
                             }, 
                             "executable": {
@@ -710,6 +710,12 @@
                                 }, 
                                 "type": "array"
                             }, 
+                            "ipAddress": {
+                                "default": null, 
+                                "description": "IP Address for networked J-Link Adapter", 
+                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
+                                "type": "string"
+                            }, 
                             "jlinkpath": {
                                 "default": "JLinkGDBServer", 
                                 "description": "Path to the JLink", 
@@ -719,6 +725,11 @@
                                 "default": false, 
                                 "description": "Prints all GDB calls to the console", 
                                 "type": "boolean"
+                            }, 
+                            "serialNumber": {
+                                "default": null, 
+                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
+                                "type": "string"
                             }, 
                             "showDevDebugOutput": {
                                 "default": false, 
@@ -823,8 +834,8 @@
                                 "type": "array"
                             }, 
                             "device": {
-                                "default": "STM32F103RB", 
-                                "description": "JLink Device Identifier", 
+                                "default": "", 
+                                "description": "J-Link Target Device Identifier", 
                                 "type": "string"
                             }, 
                             "executable": {
@@ -960,6 +971,12 @@
                                 }, 
                                 "type": "array"
                             }, 
+                            "ipAddress": {
+                                "default": null, 
+                                "description": "IP Address for networked J-Link Adapter", 
+                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
+                                "type": "string"
+                            }, 
                             "jlinkpath": {
                                 "default": "JLinkGDBServer", 
                                 "description": "Path to the JLink", 
@@ -969,6 +986,11 @@
                                 "default": false, 
                                 "description": "Prints all GDB calls to the console", 
                                 "type": "boolean"
+                            }, 
+                            "serialNumber": {
+                                "default": null, 
+                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
+                                "type": "string"
                             }, 
                             "showDevDebugOutput": {
                                 "default": false, 

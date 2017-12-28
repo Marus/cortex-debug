@@ -19,6 +19,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	svdPath: string;
 	swoConfig: any;
 	graphConfig: any;
+	ipAddress: string;
+	serialNumber: string;
 }
 
 class JLinkGDBDebugSession extends GDBDebugSession {
@@ -48,7 +50,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			this.swoPort = ports[1];
 			this.consolePort = ports[2];
 
-			this.jlink = new JLink(args.jlinkpath || "JLinkGDBServer", args.device, this.gdbPort, this.swoPort, this.consolePort, undefined);
+			this.jlink = new JLink(args.jlinkpath || "JLinkGDBServer", args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber);
 			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
 			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
 			this.jlink.on("launcherror", this.launchError.bind(this));

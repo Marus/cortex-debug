@@ -7,7 +7,7 @@ export class JLink extends EventEmitter {
 	private buffer: string;
 	private errbuffer: string;
 
-	constructor(public application: string, public device: string, public gdb_port: number, public swo_raw_port: number, public swo_port: number, procEnv: any) {
+	constructor(public application: string, public device: string, public gdb_port: number, public swo_raw_port: number, public swo_port: number, public ipAddress: string, public serialNumber: string) {
 		super();
 
 		this.buffer = "";
@@ -17,6 +17,14 @@ export class JLink extends EventEmitter {
 	init(): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			let args = ['-if', 'swd', '-port', this.gdb_port.toString(), '-swoport', this.swo_raw_port.toString(), '-telnetport', this.swo_port.toString(), '-device', this.device];
+			if(this.serialNumber) {
+				args.push('-select');
+				args.push(`usb=${this.serialNumber}`);
+			}
+			else if(this.ipAddress) {
+				args.push('-select');
+				args.push(`ip=${this.ipAddress}`);
+			}
 
 			this.process = ChildProcess.spawn(this.application, args, {});
 			this.process.stdout.on('data', this.stdout.bind(this));
