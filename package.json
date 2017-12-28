@@ -8,14 +8,6 @@
     "contributes": {
         "commands": [
             {
-                "command": "cortexPerhiperals.refresh", 
-                "title": "Refresh All"
-            }, 
-            {
-                "command": "cortexPerhiperals.refreshNode", 
-                "title": "Refresh"
-            }, 
-            {
                 "command": "cortexPeripherals.updateNode", 
                 "title": "Update"
             }, 

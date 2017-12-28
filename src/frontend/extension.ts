@@ -46,8 +46,6 @@ export function activate(context: vscode.ExtensionContext) {
 		return { 'expression': exp, 'path': de.path };
 	});
 
-	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh')));
-	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node)));
 	context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', (node: TreeNode) => {
 		node.node.performUpdate().then(
 			(result) => {
