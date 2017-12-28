@@ -16,7 +16,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	debugger_args: string[];
 	valuesFormatting: ValuesFormattingMode;
 	showDevDebugOutput: boolean;
-	svdPath: string;
+	svdFile: string;
 	swoConfig: any;
 	graphConfig: any;
 	ipAddress: string;
@@ -203,7 +203,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					SWOPort: this.swoPort,
 					ConsolePort: this.consolePort,
 					device: this.args.device,
-					SVDPath: this.args.svdPath,
+					SVDFile: this.args.svdFile,
 					SWOConfig: this.args.swoConfig,
 					GraphConfig: this.args.graphConfig
 				};

@@ -13,7 +13,7 @@ interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	debugger_args: string[];
 	valuesFormatting: ValuesFormattingMode;
 	executable: string;
-	svdPath: string;
+	svdFile: string;
 	configFiles: string[];
 	swoConfig: any;
 	graphConfig: any;
@@ -204,7 +204,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 					GDBPort: this.gdbPort,
 					SWOPath: this.swoPath,
 					configFiles: this.args.configFiles,
-					SVDPath: this.args.svdPath,
+					SVDFile: this.args.svdFile,
 					SWOConfig: this.args.swoConfig,
 					GraphConfig: this.args.graphConfig,
 					device: this.device
