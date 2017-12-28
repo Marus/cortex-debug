@@ -355,7 +355,7 @@ export class SWOCore {
 			console.log('WebSocket Server Opened on Port: ', port);
 
 			if(hasGraph) {
-				var grapherURL = `file://${extensionPath}/grapher/dist/index.html?port=${port}`;
+				var grapherURL = `file://${extensionPath}/grapher/index.html?port=${port}`;
 				let grapherURI = vscode.Uri.parse(grapherURL);
 
 				vscode.commands.executeCommand('vscode.previewHtml', grapherURI, vscode.ViewColumn.Two, 'SWO Graphs').then(e => {
