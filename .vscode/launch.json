@@ -12,11 +12,11 @@
 			"sourceMaps": true,
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
-			],
-			"preLaunchTask": "npm"
+			]
+			// "preLaunchTask": "npm"
 		},
 		{
-			"name": "cortex-debug server",
+			"name": "JLink debug server",
 			"type": "node",
 			"request": "launch",
 			"runtimeArgs": [ "--nolazy" ],
@@ -27,8 +27,23 @@
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
 			],
-			"cwd": "${workspaceRoot}",
-			"preLaunchTask": "npm"
+			"cwd": "${workspaceRoot}"
+			// "preLaunchTask": "npm"
+		},
+		{
+			"name": "OpenOCD debug server",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [ "--nolazy" ],
+			"program": "${workspaceRoot}/src/openocd.ts",
+			"stopOnEntry": false,
+			"args": [ "--server=4711" ],
+			"sourceMaps": true,
+			"outFiles": [
+				"${workspaceRoot}/out/**/*.js"
+			],
+			"cwd": "${workspaceRoot}"
+			// "preLaunchTask": "npm"
 		},
 		{
 			"name": "Launch Tests",
@@ -40,8 +55,8 @@
 			"sourceMaps": true,
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
-			],
-			"preLaunchTask": "npm"
+			]
+			// "preLaunchTask": "npm"
 		}
 	]
 }
