@@ -61,6 +61,7 @@ export class GDBDebugSession extends MI2DebugSession {
 			this.sendResponse(response);
 		}, error => {
 			response.body = { 'error': error };
+			this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
 			this.sendResponse(response);
 		})
 	}
@@ -85,7 +86,7 @@ export class GDBDebugSession extends MI2DebugSession {
 			this.sendResponse(response);	
 		}, error => {
 			response.body = { 'error': error };
-			this.sendResponse(response);
+			this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
 		});		
 	}
 
@@ -106,7 +107,7 @@ export class GDBDebugSession extends MI2DebugSession {
 			this.sendResponse(response);
 		}, error => {
 			response.body = { 'error': error };
-			this.sendResponse(response);
+			this.sendErrorResponse(response, 116, `Unable to read register list: ${error.toString()}`);
 		});
 	}
 }
