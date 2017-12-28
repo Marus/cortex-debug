@@ -21,6 +21,9 @@ export class GDBDebugSession extends MI2DebugSession {
 			case 'read-memory':
 				this.readMemoryRequest(response, args['address'], args['length']);	
 				break;
+			case 'write-memory':
+				this.writeMemoryRequest(response, args['address'], args['data']);
+				break;
 			case 'read-registers':
 				this.readRegistersRequest(response);
 				break;
@@ -62,7 +65,16 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
+		})
+	}
+
+	protected writeMemoryRequest(response: DebugProtocol.Response, startAddress: number, data: string) {
+		let address = hexFormat(startAddress, 8);
+		this.miDebugger.sendCommand(`data-write-memory-bytes ${address} ${data}`).then(node => {
 			this.sendResponse(response);
+		}, error => {
+			response.body = { 'error': error };
+			this.sendErrorResponse(response, 114, `Unable to write memory: ${error.toString()}`);
 		})
 	}
 
