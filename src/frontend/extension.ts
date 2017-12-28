@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.refresh', () => console.log('Clicked Refresh')));
 	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.refreshNode', (node) => console.log('Refresh: ', node)));
-	context.subscriptions.push(vscode.commands.registerCommand('cortexPerhiperals.updateNode', (node: TreeNode) => {
+	context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', (node: TreeNode) => {
 		node.node.performUpdate().then(
 			(result) => {
 				if (result) {
@@ -56,11 +56,11 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 			},
 			(error) => {
-				vscode.window.showErrorMessage(`Unable to update value: ${error}`);
+				vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
 			}
 		);
 	}));
-	vscode.commands.registerCommand('cortexPerhiperals.selectedNode', (node: BaseNode) => {
+	vscode.commands.registerCommand('cortexPeripherals.selectedNode', (node: BaseNode) => {
 		if(node.recordType != RecordType.Field) {
 			node.expanded = !node.expanded;
 		}

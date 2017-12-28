@@ -16,11 +16,11 @@
                 "title": "Refresh"
             }, 
             {
-                "command": "cortexPerhiperals.updateNode", 
+                "command": "cortexPeripherals.updateNode", 
                 "title": "Update"
             }, 
             {
-                "command": "cortexPerhiperals.selectedNode", 
+                "command": "cortexPeripherals.selectedNode", 
                 "title": "Selected"
             }
         ], 
@@ -1115,41 +1115,19 @@
         "menus": {
             "view/item/context": [
                 {
-                    "command": "cortexPerhiperals.refreshNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == registerRW"
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals && viewItem == field"
                 }, 
                 {
-                    "command": "cortexPerhiperals.refreshNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == registerRO"
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals && viewItem == registerRW"
                 }, 
                 {
-                    "command": "cortexPerhiperals.refreshNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == registerWO"
-                }, 
-                {
-                    "command": "cortexPerhiperals.refreshNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == perhiperal"
-                }, 
-                {
-                    "command": "cortexPerhiperals.updateNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == field"
-                }, 
-                {
-                    "command": "cortexPerhiperals.updateNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPerhiperals.updateNode", 
-                    "when": "view == cortexPerhiperalsDisabled && viewItem == registerWO"
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals && viewItem == registerWO"
                 }
             ], 
-            "view/title": [
-                {
-                    "command": "cortexPerhiperals.refresh", 
-                    "group": "navigation", 
-                    "when": "view == cortexPerhiperalsDisabled"
-                }
-            ]
+            "view/title": []
         }, 
         "views": {
             "debug": [

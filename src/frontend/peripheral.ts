@@ -22,7 +22,7 @@ export class TreeNode extends vscode.TreeItem {
 	constructor(public readonly label: string, public readonly collapsibleState: vscode.TreeItemCollapsibleState, public contextValue: string, public node: BaseNode) {
 		super(label, collapsibleState);
 		this.command = {
-			command: 'cortexPerhiperals.selectedNode',
+			command: 'cortexPeripherals.selectedNode',
 			arguments: [node],
 			title: 'Selected Node'
 		};
@@ -38,6 +38,10 @@ export class BaseNode {
 
 	selected(): Thenable<boolean> { return Promise.resolve(false); }
 
+	performUpdate() : Thenable<any> {
+		return Promise.resolve(false);
+	}
+	
 	getChildren(): BaseNode[] { return []; }
 	getTreeNode(): TreeNode { return null; }
 }
@@ -64,7 +68,7 @@ export class PeripheralNode extends BaseNode {
 
 	getTreeNode() : TreeNode {
 		let label = this.name + "  [" + hexFormat(this.baseAddress) + "]";
-		return new TreeNode(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed, 'perhiperal', this);
+		return new TreeNode(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed, 'peripheral', this);
 	}
 
 	getChildren(): RegisterNode[] {
@@ -105,6 +109,9 @@ export class RegisterNode extends BaseNode {
 	public fields: FieldNode[];
 	protected currentValue: number;
 	private length: number;
+	private maxValue: number;
+	private hexRegex: RegExp;
+	private binaryRegex: RegExp;
 
 	constructor(public name: string, public offset: number, public size: number, public access: AccessType, public resetValue: number, public peripheral: PeripheralNode) {
 		super(RecordType.Register);
@@ -113,6 +120,10 @@ export class RegisterNode extends BaseNode {
 		this.length = 2;
 		if(this.size == 16) this.length = 4;
 		else if(this.size == 32) this.length = 8;
+
+		this.maxValue = Math.pow(2, size);
+		this.binaryRegex = new RegExp(`^0b[01]{1,${this.size}}$`, 'i');
+		this.hexRegex = new RegExp(`^0x[0-9a-f]{1,${this.length}}$`,'i');
 	}
 
 	reset() {
@@ -123,18 +134,17 @@ export class RegisterNode extends BaseNode {
 		return extractBits(this.currentValue, offset, width);
 	}
 
-	updateBits(offset: number, width: number, value: number): Thenable<any> {
+	updateBits(offset: number, width: number, value: number): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			var limit = Math.pow(2, width);
 			if(value > limit) {
-				vscode.window.showErrorMessage('Value entered is invalid. Maximum value for this field is ' + (limit - 1) + ' (0x' + hexFormat(limit-1, 0) + ')');
+				return reject('Value entered is invalid. Maximum value for this field is ' + (limit - 1) + ' (0x' + hexFormat(limit-1, 0) + ')')
 			}
 			else {
 				let mask = createMask(offset, width);
 				var sv = value << offset;
 				let newval = (this.currentValue & ~mask) | sv;
-				this.currentValue = newval;
-				resolve(this.currentValue);
+				this.updateValueInternal(newval).then(resolve, reject);
 			}
 		});
 	}
@@ -152,6 +162,51 @@ export class RegisterNode extends BaseNode {
 	getChildren(): FieldNode[] {
 		return this.fields;
 	}
+
+	performUpdate() : Thenable<boolean> {
+		return new Promise((resolve, reject) => {
+			vscode.window.showInputBox({ prompt: "Enter new value: (prefix hex with 0x, binary with 0b)" }).then(val => {
+				let numval = undefined;
+				if(val.match(this.hexRegex)) { numval = parseInt(val.substr(2), 16); }
+				else if(val.match(this.binaryRegex)) { numval = parseInt(val.substr(2), 2); }
+				else if(val.match(/^[0-9]+/)) {
+					numval = parseInt(val, 10);
+					if(numval >= this.maxValue) {
+						return reject(`Value entered (${numval}) is greater than the maximum value of ${this.maxValue}`);
+					}
+				}
+				else {
+					return reject('Value entered is not a valid format.');
+					
+				}
+
+				this.updateValueInternal(numval).then(resolve, reject);
+			});
+		});
+	}
+
+	private updateValueInternal(value: number) : Thenable<boolean> {
+		let address = this.peripheral.baseAddress + this.offset;
+		let bytes = [];
+		let numbytes = this.length / 2;
+
+		for(var i = 0; i < numbytes; i++) {
+			let byte = value & 0xFF;
+			value = value >>> 8;
+			let bs = byte.toString(16);
+			if(bs.length == 1) { bs = '0' + bs; }
+			bytes[i] = bs;
+		}
+
+		return new Promise((resolve, reject) => {
+			vscode.debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') }).then(result => {
+				this.peripheral.update().then(() => {}, () => {});
+				resolve(true);
+			}, reject)
+		});
+		
+	}
+
 
 	update(): Thenable<boolean> {
 		let bc = this.size / 8;
@@ -223,22 +278,31 @@ export class FieldNode extends BaseNode {
 		return new Promise((resolve, reject) => {
 			if(this.enumeration) {
 				vscode.window.showQuickPick(this.enumerationValues).then(val => {
-					if(val === undefined) {
-						reject('Input not selected');
-					}
-					else {
-						let numval = this.enumerationMap[val];
-						this.register.updateBits(this.offset, this.width, numval).then(resolve, reject);
-					}
+					if(val === undefined) { return reject('Input not selected'); }
+					
+					let numval = this.enumerationMap[val];
+					this.register.updateBits(this.offset, this.width, numval).then(resolve, reject);
 				});
 			}
 			else {
 				vscode.window.showInputBox({ prompt: "Enter new value: (prefix hex with 0x, binary with 0b)" }).then(val => {
-					var numval = parseInt(val);
+					let numval;
+					if((/^0b([01]+)$/i).test(val)) {
+						numval = parseInt(val.substring(2), 2);
+					}
+					else if((/^0x([0-9a-f]+)$/i).test(val)) {
+						numval = parseInt(val.substring(2), 16);
+					}
+					else if ((/^[0-9]+/i).test(val)) {
+						numval = parseInt(val, 10);
+					}
+					else {
+						return reject('Unable to parse input value.');
+					}
 					this.register.updateBits(this.offset, this.width, numval).then(resolve, reject);
 				});
 			}
-		});		
+		});
 	}
 
 	update() {}
@@ -398,11 +462,10 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 	}
 
 	debugSessionTerminated(): Thenable<any> {
-		return new Promise((resolve, reject) => {
-			this._peripherials = [];
-			this._loaded = false;
-			resolve(true);
-		});		
+		this._peripherials = [];
+		this._loaded = false;
+		this._onDidChangeTreeData.fire();
+		return Promise.resolve(true);
 	}
 
 	debugStopped() {
