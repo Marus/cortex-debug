@@ -68,8 +68,10 @@ export function activate(context: vscode.ExtensionContext) {
 		node.selected().then(updated => { if(updated) { peripheralProvider._onDidChangeTreeData.fire(); } }, error => { console.log('Error: ', error); });
 	});
 	
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPerhiperals', peripheralProvider));
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters', registerProvider));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', peripheralProvider));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', registerProvider));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', peripheralProvider));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', registerProvider));
 
 	context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
 		switch(e.event) {

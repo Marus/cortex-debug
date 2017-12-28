@@ -1154,12 +1154,24 @@
         "views": {
             "debug": [
                 {
-                    "id": "cortexPerhiperals", 
-                    "name": "Cortex Perhiperals"
+                    "id": "cortexPeripherals-jlink", 
+                    "name": "Cortex Peripherals", 
+                    "when": "debugType == jlink-gdb"
                 }, 
                 {
-                    "id": "cortexRegisters", 
-                    "name": "Cortex Registers"
+                    "id": "cortexRegisters-jlink", 
+                    "name": "Cortex Registers", 
+                    "when": "debugType == jlink-gdb"
+                }, 
+                {
+                    "id": "cortexPeripherals-openocd", 
+                    "name": "Cortex Peripherals", 
+                    "when": "debugType == openocd-gdb"
+                }, 
+                {
+                    "id": "cortexRegisters-openocd", 
+                    "name": "Cortex Registers", 
+                    "when": "debugType == openocd-gdb"
                 }
             ]
         }
