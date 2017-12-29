@@ -34,7 +34,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
 		args.graphConfig = args.graphConfig || [];
 		this.args = args;
-		this.processLaunchAttachRequest(response, args, true);
+		this.processLaunchAttachRequest(response, args, false);
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
@@ -75,7 +75,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				
 				this.miDebugger.connect(args.cwd, args.executable, commands).then(() => {
 					if(args.swoConfig.enabled) {
-						this.sendEvent(new SWOConfigureEvent('jlink', { path: this.swoPort }));
+						this.sendEvent(new SWOConfigureEvent('jlink', { port: this.swoPort }));
 					}
 					
 					setTimeout(() => {
