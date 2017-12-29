@@ -6,6 +6,7 @@ import { JLink } from './backend/jlink';
 import { MI2 } from "./backend/mi2/mi2";
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
+import * as os from 'os';
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	gdbpath: string;
@@ -50,7 +51,14 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			this.swoPort = ports[1];
 			this.consolePort = ports[2];
 
-			this.jlink = new JLink(args.jlinkpath || "JLinkGDBServer", args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber);
+			let defaultExecutable = 'JLinkGDBServer';
+			let defaultGDBExecutable = 'arm-none-eabi-gdb';
+			if(os.platform() == 'win32') {
+				defaultExecutable = 'JLinkGDBServer.exe';
+				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
+			}
+
+			this.jlink = new JLink(args.jlinkpath || defaultExecutable, args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber);
 			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
 			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
 			this.jlink.on("launcherror", this.launchError.bind(this));
@@ -64,7 +72,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			this.debugReady = false;
 			
 			this.jlink.init().then(_ => {
-				this.miDebugger = new MI2(args.gdbpath || "arm-none-eabi-gdb", ["-q", "--interpreter=mi2"], args.debugger_args);
+				this.miDebugger = new MI2(args.gdbpath || defaultGDBExecutable, ["-q", "--interpreter=mi2"], args.debugger_args);
 				this.initDebugger();
 	
 				this.setValuesFormattingMode(args.valuesFormatting);

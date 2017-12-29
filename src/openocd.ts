@@ -51,11 +51,16 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 		portastic.find({ min: 50000, max: 52000, retrieve: 1 }).then(ports => {
 			this.gdbPort = ports[0];
 			
+			let defaultExecutable = 'openocd';
+			let defaultGDBExecutable = 'arm-none-eabi-gdb';
+
 			if(os.platform() != 'win32') {
 				this.swoPath = tmp.tmpNameSync();
+				defaultExecutable = 'openocd.exe';
+				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.openocd = new OpenOCD(args.openOCDPath || 'openocd', args.configFiles, this.gdbPort, {
+			this.openocd = new OpenOCD(args.openOCDPath || defaultExecutable, args.configFiles, this.gdbPort, {
 				enabled: args.swoConfig.enabled,
 				cpuFrequency: args.swoConfig.cpuFrequency,
 				swoFrequency: args.swoConfig.swoFrequency,
@@ -84,7 +89,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 					timeout = null;
 				}
 
-				this.miDebugger = new MI2(args.gdbpath || "arm-none-eabi-gdb", ["-q", "--interpreter=mi2"], args.debugger_args);
+				this.miDebugger = new MI2(args.gdbpath || defaultGDBExecutable, ["-q", "--interpreter=mi2"], args.debugger_args);
 				this.initDebugger();
 	
 				this.setValuesFormattingMode(args.valuesFormatting);
