@@ -6,6 +6,7 @@ import { OpenOCD } from './backend/openocd';
 import { MI2 } from "./backend/mi2/mi2";
 import * as portastic from 'portastic';
 import * as tmp from 'tmp';
+import * as os from 'os';
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import { clearTimeout } from 'timers';
 
@@ -49,13 +50,16 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 	private processLaunchAttachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments, attach: boolean) {
 		portastic.find({ min: 50000, max: 52000, retrieve: 1 }).then(ports => {
 			this.gdbPort = ports[0];
-			this.swoPath = tmp.tmpNameSync();
+			
+			if(os.platform() != 'win32') {
+				this.swoPath = tmp.tmpNameSync();
+			}
 
 			this.openocd = new OpenOCD(args.openOCDPath || 'openocd', args.configFiles, this.gdbPort, {
 				enabled: args.swoConfig.enabled,
 				cpuFrequency: args.swoConfig.cpuFrequency,
 				swoFrequency: args.swoConfig.swoFrequency,
-				swoFIFOPath: this.swoPath
+				swoFIFOPath: os.platform() == 'win32' ? null : this.swoPath
 			});
 			this.openocd.on('openocd-output', this.handleAdapterOutput.bind(this));
 			this.openocd.on('openocd-stderr', this.handleAdapterErrorOutput.bind(this));

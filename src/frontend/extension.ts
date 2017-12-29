@@ -82,7 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
 					swosource = new JLinkSWOSource(e.body.port);
 				}
 				else if(e.body.type == 'openocd') {
-					swosource = new OpenOCDSWOSource(e.body.path);
+					if(os.platform() != 'win32') {
+						swosource = new OpenOCDSWOSource(e.body.path);
+					}
 				}
 				break;
 			case 'adapter-output':
@@ -113,6 +115,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 			if (args.SWOConfig.enabled && swosource) {
 				swo = new SWOCore(swosource, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
+			}
+			if(args.SWOConfig.enabled && os.platform() == 'win32' && args.type == 'openocd') {
+				vscode.window.showErrorMessage('SWO Decoding is not support using OpenOCD on Windows');
 			}
 			else if (args.SWOConfig.enabled && !swosource) {
 				vscode.window.showErrorMessage('SWO is Enabled - but extension did not get an SWO Source Configuration Event');
