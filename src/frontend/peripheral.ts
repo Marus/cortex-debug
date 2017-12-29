@@ -474,4 +474,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 			Promise.all(promises).then(_ => { this._onDidChangeTreeData.fire(); }, _ => { this._onDidChangeTreeData.fire(); });
 		}
 	}
+
+	debugContinued() {
+		
+	}
 }

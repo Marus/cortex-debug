@@ -76,6 +76,12 @@ export function activate(context: vscode.ExtensionContext) {
 			case 'custom-stop':
 				peripheralProvider.debugStopped();
 				registerProvider.debugStopped();
+				swo.debugStopped();
+				break;
+			case 'custom-continued':
+				peripheralProvider.debugContinued();
+				registerProvider.debugContinued();
+				swo.debugContinued();
 				break;
 			case 'swo-configure':
 				if(e.body.type == 'jlink') {

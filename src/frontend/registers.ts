@@ -212,4 +212,8 @@ export class RegisterTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 	debugStopped() {
 		this.refresh();
 	}
+
+	debugContinued() {
+		
+	}
 }

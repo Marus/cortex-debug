@@ -95,10 +95,18 @@ interface SWOWebsocketProcessor extends SWOProcessor {
 }
 
 interface WebsocketMessage {
+	type: string;
+}
+
+interface WebsocketDataMessage extends WebsocketMessage {
 	timestamp: number;
 	data: number;
 	port: number;
 	raw: string;
+}
+
+interface WebsocketStatusMessage extends WebsocketMessage {
+	status: string;
 }
 
 interface SWOPortConfig {
@@ -234,7 +242,7 @@ class SWOGraphProcessor implements SWOWebsocketProcessor {
 		let decodedValue = parseEncoded(buffer, this.encoding);
 		let scaledValue = decodedValue * this.scale;
 
-		let message = { timestamp: new Date().getTime(), data: scaledValue, port: this.port, raw: raw };
+		let message = { type: 'data', timestamp: new Date().getTime(), data: scaledValue, port: this.port, raw: raw };
 		this.core.socketServer.broadcastMessage(message);
 	}
 
@@ -266,7 +274,7 @@ class SWOSocketServer {
 	connected(client) {
 		client.on('message', (message) => this.message(client, message));
 		let activePorts = this.processors.map(p => { return { 'port': p.port }; });
-		client.send(JSON.stringify({ 'activePorts': activePorts, 'graphs': this.graphs }));
+		client.send(JSON.stringify({ type: 'configure', 'activePorts': activePorts, 'graphs': this.graphs }));
 	}
 
 	message(client, message) {
@@ -424,6 +432,21 @@ export class SWOCore {
 			mask = (mask | (1 << c.number)) >>> 0;
 		});
 		return mask;
+	}
+
+	debugSessionTerminated() {
+		let message : WebsocketStatusMessage = { type: 'status', status: 'terminated' };
+		this.socketServer.broadcastMessage(message);
+	}
+
+	debugStopped() {
+		let message : WebsocketStatusMessage = { type: 'status', status: 'stopped' };
+		this.socketServer.broadcastMessage(message);
+	}
+
+	debugContinued() {
+		let message : WebsocketStatusMessage = { type: 'status', status: 'continued' };
+		this.socketServer.broadcastMessage(message);
 	}
 	
 	dispose() {
