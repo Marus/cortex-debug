@@ -51,6 +51,11 @@
                                     "oneOf": [
                                         {
                                             "properties": {
+                                                "annotate": {
+                                                    "default": true, 
+                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
+                                                    "type": "boolean"
+                                                }, 
                                                 "label": {
                                                     "description": "Label for Graph", 
                                                     "type": "string"
@@ -212,8 +217,7 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16", 
-                                                        "float"
+                                                        "Q16.16"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -303,6 +307,11 @@
                                     "oneOf": [
                                         {
                                             "properties": {
+                                                "annotate": {
+                                                    "default": true, 
+                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
+                                                    "type": "boolean"
+                                                }, 
                                                 "label": {
                                                     "description": "Label for Graph", 
                                                     "type": "string"
@@ -464,8 +473,7 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16", 
-                                                        "float"
+                                                        "Q16.16"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -583,6 +591,11 @@
                                     "oneOf": [
                                         {
                                             "properties": {
+                                                "annotate": {
+                                                    "default": true, 
+                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
+                                                    "type": "boolean"
+                                                }, 
                                                 "label": {
                                                     "description": "Label for Graph", 
                                                     "type": "string"
@@ -755,8 +768,7 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16", 
-                                                        "float"
+                                                        "Q16.16"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -844,6 +856,11 @@
                                     "oneOf": [
                                         {
                                             "properties": {
+                                                "annotate": {
+                                                    "default": true, 
+                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
+                                                    "type": "boolean"
+                                                }, 
                                                 "label": {
                                                     "description": "Label for Graph", 
                                                     "type": "string"
@@ -1016,8 +1033,7 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16", 
-                                                        "float"
+                                                        "Q16.16"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -1149,7 +1165,6 @@
     "dependencies": {
         "binary-parser": "^1.3.0", 
         "cbarrick-circular-buffer": "^1.2.3", 
-        "d3": "^4.12.0", 
         "portastic": "^1.0.1", 
         "tmp": "0.0.33", 
         "vscode-debugadapter": "^1.16.0", 
