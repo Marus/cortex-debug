@@ -264,6 +264,7 @@ const PROCESSOR_MAP = {
 class SWOSocketServer {
 	processors: SWOWebsocketProcessor[];
 	socket: any;
+	currentStatus: string = 'stopped';
 
 	constructor(serverPort: number, public graphs: GraphConfiguration[]) {
 		this.processors = [];
@@ -274,7 +275,7 @@ class SWOSocketServer {
 	connected(client) {
 		client.on('message', (message) => this.message(client, message));
 		let activePorts = this.processors.map(p => { return { 'port': p.port }; });
-		client.send(JSON.stringify({ type: 'configure', 'activePorts': activePorts, 'graphs': this.graphs }));
+		client.send(JSON.stringify({ type: 'configure', 'activePorts': activePorts, 'graphs': this.graphs, 'status': this.currentStatus }));
 	}
 
 	message(client, message) {
@@ -437,16 +438,19 @@ export class SWOCore {
 	debugSessionTerminated() {
 		let message : WebsocketStatusMessage = { type: 'status', status: 'terminated' };
 		this.socketServer.broadcastMessage(message);
+		this.socketServer.currentStatus = 'terminated';
 	}
 
 	debugStopped() {
 		let message : WebsocketStatusMessage = { type: 'status', status: 'stopped' };
 		this.socketServer.broadcastMessage(message);
+		this.socketServer.currentStatus = 'stopped';
 	}
 
 	debugContinued() {
 		let message : WebsocketStatusMessage = { type: 'status', status: 'continued' };
 		this.socketServer.broadcastMessage(message);
+		this.socketServer.currentStatus = 'continued';
 	}
 	
 	dispose() {
