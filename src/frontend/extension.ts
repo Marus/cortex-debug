@@ -34,7 +34,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let dirPath = path.join(ext.extensionPath, "data", "SVDMap.json");
 
-	let tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
+	let tmp = [];
+	try {
+		tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
+	}
+	catch(e) {}	
 
 	let swosource: SWOSource = null;
 
@@ -58,6 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		);
 	}));
+
 	vscode.commands.registerCommand('cortexPeripherals.selectedNode', (node: BaseNode) => {
 		if(node.recordType != RecordType.Field) {
 			node.expanded = !node.expanded;
@@ -130,7 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		});
 	}));
-
+	
 	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
 		if(adapterOutputChannel) {
 			adapterOutputChannel.dispose();
