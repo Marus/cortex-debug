@@ -7,6 +7,7 @@ import { clearTimeout, setTimeout } from 'timers';
 import * as portastic from 'portastic';
 import { Parser } from 'binary-parser';
 import { EventEmitter } from 'events';
+import * as os from 'os';
 
 var WebSocket = require('ws');
 var CircularBuffer = require('cbarrick-circular-buffer');
@@ -365,9 +366,12 @@ export class SWOCore {
 
 			if(hasGraph) {
 				var grapherURL = `file://${extensionPath}/grapher/index.html?port=${port}`;
-				let grapherURI = vscode.Uri.parse(grapherURL);
+				if(os.platform() == 'win32') {
+					let ep = extensionPath.replace(/\\/g, '/');
+					grapherURL = `file:///${ep}/grapher/index.html?port=${port}`;
+				}
 
-				vscode.commands.executeCommand('vscode.previewHtml', grapherURI, vscode.ViewColumn.Two, 'SWO Graphs').then(e => {
+				vscode.commands.executeCommand('vscode.previewHtml', grapherURL, vscode.ViewColumn.Two, 'SWO Graphs').then(e => {
 					console.log('Preview HTML: ', e);
 				},
 				error => {
