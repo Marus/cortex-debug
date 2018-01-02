@@ -510,17 +510,98 @@ export class MI2DebugSession extends DebugSession {
 		});
 	}
 
-	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
-		if (args.context == "watch" || args.context == "hover")
-			this.miDebugger.evalExpression(args.expression).then((res) => {
+	protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
+		let createVariable = (arg, options?) => {
+			if (options)
+				return this.variableHandles.create(new ExtendedVariable(arg, options));
+			else
+				return this.variableHandles.create(arg);
+		};
+
+		let findOrCreateVariable = (varObj: VariableObject): number => {
+			let id: number;
+			if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
+				id = this.variableHandlesReverse[varObj.name];
+			}
+			else {
+				id = createVariable(varObj);
+				this.variableHandlesReverse[varObj.name] = id;
+			}
+			return varObj.isCompound() ? id : 0;
+		};
+
+		if (args.context == 'watch') {
+			// try {
+			// 	var res = await this.miDebugger.evalExpression(args.expression);
+			// 	response.body = {
+			// 		variablesReference: 0,
+			// 		result: res.result("value")
+			// 	}
+			// 	this.sendResponse(response);
+			// }
+			// catch(e) {
+			// 	this.sendErrorResponse(response, 7, e.toString());
+			// }
+
+			try {
+				let exp = args.expression;
+				let varObjName = `watch_${exp}`;
+				let varObj: VariableObject;
+				try {
+					const changes = await this.miDebugger.varUpdate(varObjName);
+					const changelist = changes.result("changelist");
+					changelist.forEach((change) => {
+						const name = MINode.valueOf(change, "name");
+						const vId = this.variableHandlesReverse[varObjName];
+						const v = this.variableHandles.get(vId) as any;
+						v.applyChanges(change);
+					});
+					const varId = this.variableHandlesReverse[varObjName];
+					varObj = this.variableHandles.get(varId) as any;
+					response.body = {
+						result: varObj.value,
+						variablesReference: varObj.id,
+					}
+				}
+				catch (err) {
+					if (err instanceof MIError && err.message == "Variable object not found") {
+						varObj = await this.miDebugger.varCreate(exp, varObjName);
+						const varId = findOrCreateVariable(varObj);
+						varObj.exp = exp;
+						varObj.id = varId;
+						response.body = {
+							result: varObj.value,
+							variablesReference: varObj.id
+						};
+					}
+					else {
+						throw err;
+					}
+				}
+				
+				this.sendResponse(response);
+			}
+			catch (err) {
+				response.body = {
+					result: `<${err.toString()}>`,
+					variablesReference: 0
+				}
+				this.sendErrorResponse(response, 7, err.toString());	
+			}
+		}
+		else if (args.context == "hover") {
+			try {
+				var res = await this.miDebugger.evalExpression(args.expression);
 				response.body = {
 					variablesReference: 0,
-					result: res.result("value")
-				}
+					result: res.result('value')
+				};
 				this.sendResponse(response);
-			}, msg => {
-				this.sendErrorResponse(response, 7, msg.toString());
-			});
+			}
+			catch(e) {
+				this.sendErrorResponse(response, 7, e.toString());
+			}
+		}
 		else {
 			this.miDebugger.sendUserInput(args.expression).then(output => {
 				if (typeof output == "undefined")
