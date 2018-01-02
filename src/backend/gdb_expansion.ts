@@ -7,7 +7,7 @@ const referenceStringRegex = /^(0x[0-9a-fA-F]+\s*)"/;
 const referenceRegex = /^0x[0-9a-fA-F]+/;
 const nullpointerRegex = /^0x0+\b/;
 const charRegex = /^(\d+) ['"]/;
-const numberRegex = /^\d+/;
+const numberRegex = /^\d+(\.\d+)?/;
 const pointerCombineChar = ".";
 
 export function isExpandable(value: string): number {
