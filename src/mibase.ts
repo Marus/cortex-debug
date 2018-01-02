@@ -1,6 +1,6 @@
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, ContinuedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { Breakpoint, IBackend, Variable, VariableObject, ValuesFormattingMode, MIError } from './backend/backend';
+import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
@@ -48,7 +48,6 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
 export class MI2DebugSession extends DebugSession {
 	protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
 	protected variableHandlesReverse: { [id: string]: number } = {};
-	protected useVarObjects: boolean;
 	protected quit: boolean;
 	protected attached: boolean;
 	protected needContinue: boolean;
@@ -78,23 +77,6 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.on("signal-stop", this.handlePause.bind(this));
 		this.miDebugger.on("running", this.handleRunning.bind(this));
 		this.sendEvent(new InitializedEvent());
-	}
-
-	protected setValuesFormattingMode(mode: ValuesFormattingMode) {
-		switch (mode) {
-			case "disabled":
-				this.useVarObjects = true;
-				this.miDebugger.prettyPrint = false;
-				break;
-			case "prettyPrinters":
-				this.useVarObjects = true;
-				this.miDebugger.prettyPrint = true;
-				break;
-			case "parseText":
-			default:
-				this.useVarObjects = false;
-				this.miDebugger.prettyPrint = false;
-		}
 	}
 
 	protected handleMsg(type: string, msg: string) {
@@ -148,24 +130,16 @@ export class MI2DebugSession extends DebugSession {
 
 	protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
 		try {
-			if (this.useVarObjects) {
-				let name = args.name;
-				if (args.variablesReference >= VAR_HANDLES_START) {
-					const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
-					name = `${parent.name}.${name}`;
-				}
+			let name = args.name;
+			if (args.variablesReference >= VAR_HANDLES_START) {
+				const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
+				name = `${parent.name}.${name}`;
+			}
 
-				let res = await this.miDebugger.varAssign(name, args.value);
-				response.body = {
-					value: res.result("value")
-				};
-			}
-			else {
-				await this.miDebugger.changeVariable(args.name, args.value);
-				response.body = {
-					value: args.value
-				};
-			}
+			let res = await this.miDebugger.varAssign(name, args.value);
+			response.body = {
+				value: res.result("value")
+			};
 			this.sendResponse(response);
 		}
 		catch (err) {
@@ -320,64 +294,40 @@ export class MI2DebugSession extends DebugSession {
 			try {
 				stack = await this.miDebugger.getStackVariables(this.threadID, id);
 				for (const variable of stack) {
-					if (this.useVarObjects) {
+					try {
+						let varObjName = `var_${variable.name}`;
+						let varObj: VariableObject;
 						try {
-							let varObjName = `var_${variable.name}`;
-							let varObj: VariableObject;
-							try {
-								const changes = await this.miDebugger.varUpdate(varObjName);
-								const changelist = changes.result("changelist");
-								changelist.forEach((change) => {
-									const name = MINode.valueOf(change, "name");
-									const vId = this.variableHandlesReverse[varObjName];
-									const v = this.variableHandles.get(vId) as any;
-									v.applyChanges(change);
-								});
-								const varId = this.variableHandlesReverse[varObjName];
-								varObj = this.variableHandles.get(varId) as any;
-							}
-							catch (err) {
-								if (err instanceof MIError && err.message == "Variable object not found") {
-									varObj = await this.miDebugger.varCreate(variable.name, varObjName);
-									const varId = findOrCreateVariable(varObj);
-									varObj.exp = variable.name;
-									varObj.id = varId;
-								}
-								else {
-									throw err;
-								}
-							}
-							variables.push(varObj.toProtocolVariable());
+							const changes = await this.miDebugger.varUpdate(varObjName);
+							const changelist = changes.result("changelist");
+							changelist.forEach((change) => {
+								const name = MINode.valueOf(change, "name");
+								const vId = this.variableHandlesReverse[varObjName];
+								const v = this.variableHandles.get(vId) as any;
+								v.applyChanges(change);
+							});
+							const varId = this.variableHandlesReverse[varObjName];
+							varObj = this.variableHandles.get(varId) as any;
 						}
 						catch (err) {
-							variables.push({
-								name: variable.name,
-								value: `<${err}>`,
-								variablesReference: 0
-							});
-						}
-					}
-					else {
-						if (variable.valueStr !== undefined) {
-							let expanded = expandValue(createVariable, `{${variable.name}=${variable.valueStr})`, "", variable.raw);
-							if (expanded) {
-								if (typeof expanded[0] == "string")
-									expanded = [
-										{
-											name: "<value>",
-											value: prettyStringArray(expanded),
-											variablesReference: 0
-										}
-									];
-								variables.push(expanded[0]);
+							if (err instanceof MIError && err.message == "Variable object not found") {
+								varObj = await this.miDebugger.varCreate(variable.name, varObjName);
+								const varId = findOrCreateVariable(varObj);
+								varObj.exp = variable.name;
+								varObj.id = varId;
 							}
-						} else
-							variables.push({
-								name: variable.name,
-								type: variable.type,
-								value: "<unknown>",
-								variablesReference: createVariable(variable.name)
-							});
+							else {
+								throw err;
+							}
+						}
+						variables.push(varObj.toProtocolVariable());
+					}
+					catch (err) {
+						variables.push({
+							name: variable.name,
+							value: `<${err}>`,
+							variablesReference: 0
+						});
 					}
 				}
 				response.body = {
