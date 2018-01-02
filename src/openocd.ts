@@ -1,7 +1,6 @@
 import { GDBDebugSession } from './gdb';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { ValuesFormattingMode } from './backend/backend';
 import { OpenOCD } from './backend/openocd';
 import { MI2 } from "./backend/mi2/mi2";
 import * as portastic from 'portastic';
@@ -12,7 +11,6 @@ import { clearTimeout } from 'timers';
 
 interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	debugger_args: string[];
-	valuesFormatting: ValuesFormattingMode;
 	executable: string;
 	svdFile: string;
 	configFiles: string[];
@@ -92,7 +90,6 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				this.miDebugger = new MI2(args.gdbpath || defaultGDBExecutable, ["-q", "--interpreter=mi2"], args.debugger_args);
 				this.initDebugger();
 	
-				this.setValuesFormattingMode(args.valuesFormatting);
 				this.miDebugger.printCalls = !!args.showDevDebugOutput;
 				this.miDebugger.debugOutput = !!args.showDevDebugOutput
 
@@ -140,12 +137,9 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor reset halt"',
 			'target-download',
-			'interpreter-exec console "monitor reset halt"'
+			'interpreter-exec console "monitor reset halt"',
+			'enable-pretty-printing'
 		];
-
-		if(args.valuesFormatting == 'prettyPrinters') {
-			commands.push('enable-pretty-printing');
-		}
 
 		return commands;
 	}
@@ -154,11 +148,8 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
+			'enable-pretty-printing'
 		];
-
-		if(args.valuesFormatting == 'prettyPrinters') {
-			commands.push('enable-pretty-printing');
-		}
 
 		return commands;
 	}

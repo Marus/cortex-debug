@@ -23,16 +23,6 @@
 					"description": "Additional arguments to pass to GDB",
 					"default": []
 				},
-				"valuesFormatting": {
-					"type": "string",
-					"description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any",
-					"default": "parseText",
-					"enum": [
-						"disabled",
-						"parseText",
-						"prettyPrinters"
-					]
-				},
 				"printCalls": {
 					"type": "boolean",
 					"description": "Prints all GDB calls to the console",
@@ -103,6 +93,11 @@
 											]
 										},
 										"description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section"
+									},
+									"annotate": {
+										"type": "boolean",
+										"default": true,
+										"description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution)."
 									},
 									"label": {
 										"type": "string",
@@ -178,12 +173,12 @@
 						"swoFrequency": {
 							"type": "number",
 							"default": 0,
-							"description": "SWO frequency in Hz; 0 will attempt to automatically calculate"
+							"description": "SWO frequency in Hz; 0 will attempt to automatically calculate."
 						},
 						"cpuFrequency": {
 							"type": "number",
 							"default": 0,
-							"description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate"
+							"description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate."
 						},
 						"ports": {
 							"type": "array",
@@ -213,8 +208,7 @@
 										"enum": [
 											"unsigned",
 											"signed",
-											"Q16.16",
-											"float"
+											"Q16.16"
 										]
 									},
 									"scale": {

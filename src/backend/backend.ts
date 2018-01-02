@@ -1,8 +1,6 @@
 import { MINode } from "./mi_parse";
 import { DebugProtocol } from "vscode-debugprotocol/lib/debugProtocol";
 
-export type ValuesFormattingMode = "disabled" | "parseText" | "prettyPrinters";
-
 export interface Breakpoint {
 	file?: string;
 	line?: number;

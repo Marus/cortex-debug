@@ -546,7 +546,6 @@ export class MI2 extends EventEmitter implements IBackend {
 		return !!this.process;
 	}
 
-	prettyPrint: boolean = true;
 	printCalls: boolean;
 	debugOutput: boolean;
 	public procEnv: any;

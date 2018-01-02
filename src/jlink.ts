@@ -1,7 +1,6 @@
 import { GDBDebugSession } from './gdb';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { ValuesFormattingMode } from './backend/backend';
 import { JLink } from './backend/jlink';
 import { MI2 } from "./backend/mi2/mi2";
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
@@ -15,7 +14,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	jlinkpath: string;
 	device: string;
 	debugger_args: string[];
-	valuesFormatting: ValuesFormattingMode;
 	showDevDebugOutput: boolean;
 	svdFile: string;
 	swoConfig: any;
@@ -75,7 +73,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				this.miDebugger = new MI2(args.gdbpath || defaultGDBExecutable, ["-q", "--interpreter=mi2"], args.debugger_args);
 				this.initDebugger();
 	
-				this.setValuesFormattingMode(args.valuesFormatting);
 				this.miDebugger.printCalls = !!args.showDevDebugOutput;
 				this.miDebugger.debugOutput = !!args.showDevDebugOutput
 
@@ -116,12 +113,9 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
 			'target-download',
-			'interpreter-exec console "monitor reset"'
+			'interpreter-exec console "monitor reset"',
+			'enable-pretty-printing'
 		];
-
-		if(args.valuesFormatting == 'prettyPrinters') {
-			commands.push('enable-pretty-printing');
-		}
 
 		if(args.swoConfig.enabled) {
 			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
@@ -139,11 +133,8 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
+			'enable-pretty-printing'
 		];
-
-		if(args.valuesFormatting == 'prettyPrinters') {
-			commands.push('enable-pretty-printing');
-		}
 
 		if(args.swoConfig.enabled) {
 			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
