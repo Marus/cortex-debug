@@ -5,7 +5,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Supports J-Link or OpenOCD GDB Server
 * Cortex Core Register Viewer
 * Peripheral Register Viewer (Defined through standard SVD file)
-* SWO Deocding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, 32-bit single percision floating point integers)
+* SWO Deocding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers)
     * Currently SWO decoding is not supported when using OpenOCD on Windows
 * Live graphing of SWO decoded data.
 
@@ -16,6 +16,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Enhanced SVD Auto-selection
 * Support for Black Magic Probe
 * SWO Decoding for OpenOCD on Windows
+* SWO Decoding for 32-bit floating point number
 
 ## Installation
 
