@@ -9,6 +9,14 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * Currently SWO decoding is not supported when using OpenOCD on Windows
 * Live graphing of SWO decoded data.
 
+### Planned Features
+
+* Additional Graphing Options
+* Raw Memory Viewer
+* Enhanced SVD Auto-selection
+* Support for Black Magic Probe
+* SWO Decoding for OpenOCD on Windows
+
 ## Installation
 
 Requirements:
@@ -23,3 +31,7 @@ The extension is not currently available through the Visual Studio Code Extensio
 ## Usage
 
 See https://marcelball.ca/projects/cortex-debug/ for usage information
+
+## Acknowledgments
+
+Parts of this extension are based upon Jan Jurzitza's (WebFreak) code-debug extension (https://github.com/WebFreak001/code-debug). His project provided an excellent base for GDB MI parsing and interaction.
