@@ -6,8 +6,8 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Cortex Core Register Viewer
 * Peripheral Register Viewer (Defined through standard SVD file)
 * SWO Deocding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, 32-bit single percision floating point integers)
-    * Currently SWO decoding is not when supported using OpenOCD on Windows
-* Live graphing of SWO decoded data.*
+    * Currently SWO decoding is not supported when using OpenOCD on Windows
+* Live graphing of SWO decoded data.
 
 ## Installation
 
@@ -22,3 +22,4 @@ The extension is not currently available through the Visual Studio Code Extensio
 
 ## Usage
 
+See https://marcelball.ca/projects/cortex-debug/ for usage information
