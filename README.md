@@ -27,7 +27,7 @@ Requirements:
     * J-Link Software Tools - provides the J-Link GDB Server for J-Link based debuggers (https://www.segger.com/downloads/jlink)
     * OpenOCD - provides a GDB Server that can be used with a number of debuggers (http://openocd.org)
 
-The extension is not currently available through the Visual Studio Code Extension Marketplace, to install download the cortex-debug.vsix extension file and install using the 'Extensions: Install from VSIX...' command in Visual Studio Code.
+The extension is not currently available through the Visual Studio Code Extension Marketplace, to install download the cortex-debug.vsix extension file (from the releases page https://github.com/Marus/cortex-debug/releases) and install using the 'Extensions: Install from VSIX...' command in Visual Studio Code.
 
 ## Usage
 
