@@ -199,7 +199,7 @@
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0, 
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
                                     "enabled": {
@@ -252,22 +252,12 @@
                                     }, 
                                     "swoFrequency": {
                                         "default": 0, 
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }
                                 }, 
                                 "required": [], 
                                 "type": "object"
-                            }, 
-                            "valuesFormatting": {
-                                "default": "parseText", 
-                                "description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any", 
-                                "enum": [
-                                    "disabled", 
-                                    "parseText", 
-                                    "prettyPrinters"
-                                ], 
-                                "type": "string"
                             }
                         }, 
                         "required": [
@@ -455,7 +445,7 @@
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0, 
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
                                     "enabled": {
@@ -508,22 +498,12 @@
                                     }, 
                                     "swoFrequency": {
                                         "default": 0, 
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }
                                 }, 
                                 "required": [], 
                                 "type": "object"
-                            }, 
-                            "valuesFormatting": {
-                                "default": "parseText", 
-                                "description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any", 
-                                "enum": [
-                                    "disabled", 
-                                    "parseText", 
-                                    "prettyPrinters"
-                                ], 
-                                "type": "string"
                             }
                         }, 
                         "required": [
@@ -750,7 +730,7 @@
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0, 
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
                                     "enabled": {
@@ -803,22 +783,12 @@
                                     }, 
                                     "swoFrequency": {
                                         "default": 0, 
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }
                                 }, 
                                 "required": [], 
                                 "type": "object"
-                            }, 
-                            "valuesFormatting": {
-                                "default": "parseText", 
-                                "description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any", 
-                                "enum": [
-                                    "disabled", 
-                                    "parseText", 
-                                    "prettyPrinters"
-                                ], 
-                                "type": "string"
                             }
                         }, 
                         "required": [
@@ -1015,7 +985,7 @@
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0, 
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
                                     "enabled": {
@@ -1068,22 +1038,12 @@
                                     }, 
                                     "swoFrequency": {
                                         "default": 0, 
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate", 
+                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }
                                 }, 
                                 "required": [], 
                                 "type": "object"
-                            }, 
-                            "valuesFormatting": {
-                                "default": "parseText", 
-                                "description": "Set the way of showing variable values. 'disabled' - show value as is, 'parseText' - parse debuggers output text into structure, 'prettyPrinters' - enable debuggers custom pretty-printers if there are any", 
-                                "enum": [
-                                    "disabled", 
-                                    "parseText", 
-                                    "prettyPrinters"
-                                ], 
-                                "type": "string"
                             }
                         }, 
                         "required": [
