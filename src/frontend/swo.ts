@@ -480,6 +480,10 @@ export class SWOCore {
 		let message : WebsocketStatusMessage = { type: 'status', status: 'terminated' };
 		this.socketServer.broadcastMessage(message);
 		this.socketServer.currentStatus = 'terminated';
+		setTimeout(() => {
+			this.socketServer.dispose();
+			this.socketServer = null;
+		}, 250);
 	}
 
 	debugStopped() {
@@ -495,8 +499,10 @@ export class SWOCore {
 	}
 	
 	dispose() {
-		this.socketServer.dispose();
-		this.socketServer = null;
+		if(this.socketServer) {
+			this.socketServer.dispose();
+			this.socketServer = null;
+		}		
 		this.processors.forEach(p => p.dispose());
 		this.processors = null;
 		this.connected = false;

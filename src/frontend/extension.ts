@@ -128,7 +128,9 @@ class CortexDebugExtension {
 	debugSessionTerminated(session: vscode.DebugSession) {
 		this.registerProvider.debugSessionTerminated();
 		this.peripheralProvider.debugSessionTerminated();
-
+		if (this.swo) {
+			this.swo.debugSessionTerminated();
+		}
 		if (this.swosource) {
 			this.swosource.dispose();
 			this.swosource = null;
