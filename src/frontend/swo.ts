@@ -398,16 +398,17 @@ export class SWOCore {
 			this.socketServer = new SWOSocketServer(port, graphs);
 			var hasGraph = configuration.filter(c => c.format == 'graph').length > 0 && graphs.length > 1;
 
-			console.log('WebSocket Server Opened on Port: ', port);
-
 			if(hasGraph) {
-				var grapherURL = `file://${extensionPath}/grapher/index.html?port=${port}`;
+				let now = new Date();
+				let timestamp = now.getTime();
+				let time = now.toTimeString();
+				var grapherURL = `file://${extensionPath}/grapher/index.html?port=${port}&timestamp=${timestamp}`;
 				if(os.platform() == 'win32') {
 					let ep = extensionPath.replace(/\\/g, '/');
-					grapherURL = `file:///${ep}/grapher/index.html?port=${port}`;
+					grapherURL = `file:///${ep}/grapher/index.html?port=${port}&timestamp=${timestamp}`;
 				}
 
-				vscode.commands.executeCommand('vscode.previewHtml', grapherURL, vscode.ViewColumn.Two, 'SWO Graphs').then(e => {
+				vscode.commands.executeCommand('vscode.previewHtml', grapherURL, vscode.ViewColumn.Two, `SWO Graphs [${time}]`).then(e => {
 					console.log('Preview HTML: ', e);
 				},
 				error => {
