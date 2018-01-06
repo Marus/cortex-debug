@@ -8,6 +8,7 @@ import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } fro
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
 import { SWOCore, JLinkSWOSource, OpenOCDSWOSource, SWOSource, OpenOCDFileSWOSource } from './swo';
+import { SWOConfigureEvent } from "../common";
 
 
 interface SVDInfo {
@@ -22,169 +23,191 @@ function getSVDFile(device: string): string {
 	return entry ? entry.path : null;	
 }
 
-export function activate(context: vscode.ExtensionContext) {
-	var adapterOutputChannel: vscode.OutputChannel = null;
-	var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
-	var swo: SWOCore = null;
+class CortexDebugExtension {
+	private adapterOutputChannel: vscode.OutputChannel = null;
+	private swo: SWOCore = null;
+	private swosource: SWOSource = null;
 
-	let ext = vscode.extensions.getExtension('marus.cortex-debug');
-	
-	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
-	const registerProvider = new RegisterTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
+	private peripheralProvider: PeripheralTreeProvider;
+	private registerProvider: RegisterTreeProvider;
 
-	let dirPath = path.join(ext.extensionPath, "data", "SVDMap.json");
+	private SVDDirectory: SVDInfo[] = [];
 
-	let tmp = [];
-	try {
-		tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
+	constructor(private context: vscode.ExtensionContext) {
+		this.peripheralProvider = new PeripheralTreeProvider();
+		this.registerProvider = new RegisterTreeProvider();
+
+		let tmp = [];
+		try {
+			let dirPath = path.join(context.extensionPath, "data", "SVDMap.json");
+			tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
+		}
+		catch(e) {}
+
+		this.SVDDirectory = tmp.map(de => {
+			let exp = null;
+			if (de.id) { exp = new RegExp('^' + de.id + '$', ''); }
+			else { exp = new RegExp(de.expression, de.flags) }
+
+			return { expression: exp, path: de.path };
+		});
+
+		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
+
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', this.registerProvider));	
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', this.registerProvider));
+
+		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)));
+		context.subscriptions.push(vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)));
+		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)));
 	}
-	catch(e) {}	
 
-	let swosource: SWOSource = null;
+	getSVDFile(device: string): string {
+		return '';
+	}
 
-	SVDDirectory = tmp.map(de => {
-		let exp = null;
-		if(de.id) { exp = new RegExp('^' + de.id + '$', ''); }
-		else { exp = new RegExp(de.expression, de.flags); }
-
-		return { 'expression': exp, 'path': de.path };
-	});
-
-	context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', (node: TreeNode) => {
-		node.node.performUpdate().then(
-			(result) => {
-				if (result) {
-					peripheralProvider._onDidChangeTreeData.fire();
-				}
-			},
-			(error) => {
-				vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
+	// Peripherals
+	peripheralsUpdateNode(node: TreeNode): void {
+		node.node.performUpdate().then((result) => {
+			if (result) {
+				this.peripheralProvider.refresh();
 			}
-		);
-	}));
+		}, (error) => {
+			vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
+		});
+	}
 
-	vscode.commands.registerCommand('cortexPeripherals.selectedNode', (node: BaseNode) => {
-		if(node.recordType != RecordType.Field) {
-			node.expanded = !node.expanded;
+	peripheralsSelectedNode(node: BaseNode): void {
+		if (node.recordType != RecordType.Field) { node.expanded = !node.expanded }
+
+		node.selected().then((updated) => {
+			if (updated) {
+				this.peripheralProvider.refresh();
+			}
+		}, (error) => {
+			console.log('Error Selecting Node: ', error.toString());
+		});
+	}
+
+	// Registers
+
+	// Debug Events
+	debugSessionStarted(session: vscode.DebugSession) {
+		// Clean-up Old output channels
+		if (this.adapterOutputChannel) {
+			this.adapterOutputChannel.dispose();
+			this.adapterOutputChannel = null;
 		}
 
-		node.selected().then(updated => { if(updated) { peripheralProvider._onDidChangeTreeData.fire(); } }, error => { console.log('Error: ', error); });
-	});
-	
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', peripheralProvider));
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', registerProvider));
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', peripheralProvider));
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', registerProvider));
-
-	context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
-		switch(e.event) {
-			case 'custom-stop':
-				peripheralProvider.debugStopped();
-				registerProvider.debugStopped();
-				swo.debugStopped();
-				break;
-			case 'custom-continued':
-				peripheralProvider.debugContinued();
-				registerProvider.debugContinued();
-				swo.debugContinued();
-				break;
-			case 'swo-configure':
-				if(e.body.type == 'jlink') {
-					swosource = new JLinkSWOSource(e.body.port);
-				}
-				else if(e.body.type == 'openocd') {
-					// Use filesystem on windows; fifo on other operating systems.
-					if(os.platform() !== 'win32') {
-						swosource = new OpenOCDSWOSource(e.body.path);
-					}
-					else {
-						swosource = new OpenOCDFileSWOSource(e.body.path);
-					}
-				}
-
-				// Debug Session Started before SWO Configuration
-				if(vscode.debug.activeDebugSession) {
-					vscode.debug.activeDebugSession.customRequest('get-arguments').then(args => {
-						initializeSWO(args, swosource)
-					});
-				}
-				break;
-			case 'adapter-output':
-				handleAdapterOutput(e.body.content);
-				break;
+		if (this.swo) {
+			this.swo.dispose();
+			this.swo = null;
 		}
-	}));
 
-	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
 		session.customRequest('get-arguments').then(args => {
 			let svdfile = args.SVDFile;
-			if(!svdfile) {
-				let basepath = getSVDFile(args.device);
+			if (!svdfile) {
+				let basepath = this.getSVDFile(args.device);
 				if(basepath) {
-					svdfile = path.join(ext.extensionPath, basepath);
+					svdfile = path.join(this.context.extensionPath, basepath);
 				}
 			}
 
-			registerProvider.debugSessionStarted();
-			if (svdfile) {
-				peripheralProvider.debugSessionStarted({
-					SVDFile: svdfile
-				});
-			}
-			else {
-				peripheralProvider.debugSessionStarted({ disable: true });
-			}
+			this.registerProvider.debugSessionStarted();
+			this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
-			if(swosource) {
-				initializeSWO(args, swosource)
-			}
+			if(this.swosource) { this.initializeSWO(args); }
+		}, error => {
+			//TODO: Error handling for unable to get arguments
 		});
-	}));
-	
-	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
-		if(adapterOutputChannel) {
-			adapterOutputChannel.dispose();
-			adapterOutputChannel = null;
-		}
-		for(var key in swoOutputChannels) {
-			swoOutputChannels[key].dispose();
-		}
-		swoOutputChannels = {};
+	}
 
-		registerProvider.debugSessionTerminated();
-		peripheralProvider.debugSessionTerminated();
+	debugSessionTerminated(session: vscode.DebugSession) {
+		this.registerProvider.debugSessionTerminated();
+		this.peripheralProvider.debugSessionTerminated();
 
-		if(swo) {
-			swo.dispose();
-			swo = null;
-		}
-		if(swosource) {
-			swosource.dispose();
-			swo = null;
-		}
-	}));
-
-	function initializeSWO(args, source) {
-		if (args.SWOConfig.enabled && source) {
-			swo = new SWOCore(source, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
-		}
-		else if(args.SWOConfig.enabled && os.platform() == 'win32' && args.type == 'openocd') {
-			vscode.window.showErrorMessage('SWO Decoding is not support using OpenOCD on Windows');
+		if (this.swosource) {
+			this.swosource.dispose();
+			this.swosource = null;
 		}
 	}
 
-	function handleAdapterOutput(output) {
-		if(adapterOutputChannel === null) {
-			adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+	receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
+		switch (e.event) {
+			case 'custom-stop':
+				this.receivedStopEvent(e);
+				break;
+			case 'custom-continued':
+				this.receivedContinuedEvent(e);
+				break;
+			case 'swo-configure':
+				this.receivedSWOConfigureEvent(e);
+				break;
+			case 'adapter-output':
+				this.receivedAdapterOutput(e);
+				break;
+			default:
+				break;
+
 		}
-	
-		if(!output.endsWith('\n')) { output += '\n'; }
-		adapterOutputChannel.append(output);
+	}
+
+	receivedStopEvent(e) {
+		this.peripheralProvider.debugStopped();
+		this.registerProvider.debugStopped();
+		if(this.swo) { this.swo.debugStopped(); }
+	}
+
+	receivedContinuedEvent(e) {
+		this.peripheralProvider.debugContinued();
+		this.registerProvider.debugContinued();
+		if (this.swo) { this.swo.debugContinued(); }
+	}
+
+	receivedSWOConfigureEvent(e) {
+		if (e.body.type == 'jlink') {
+			this.swosource = new JLinkSWOSource(e.body.port);
+		}
+		else if (e.body.type == 'openocd') {
+			// Use filesystem on windows; fifo on other operating systems.
+			if(os.platform() === 'win32') {
+				this.swosource = new OpenOCDFileSWOSource(e.body.path);
+			}
+			else {
+				this.swosource = new OpenOCDSWOSource(e.body.path);
+			}
+		}
+
+		if(vscode.debug.activeDebugSession) {
+			vscode.debug.activeDebugSession.customRequest('get-arguments').then(args => {
+				this.initializeSWO(args);
+			});
+		}
+	}
+
+	receivedAdapterOutput(e) {
+		if (!this.adapterOutputChannel) {
+			this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+		}
+
+		let output = e.body.content;
+		if (!output.endsWith('\n')) { output += '\n'; }
+		this.adapterOutputChannel.append(output);
+	}
+
+	initializeSWO(args) {
+		if (!this.swosource) {
+			vscode.window.showErrorMessage('Tried to initialize SWO Decoding without a SWO data source');
+			return;
+		}
+
+		this.swo = new SWOCore(this.swosource, args.SWOConfig.ports, args.GraphConfig, this.context.extensionPath);
 	}
 }
 
-
-
-
-
-
+export function activate(context: vscode.ExtensionContext) {
+	let extension = new CortexDebugExtension(context);
+}

@@ -118,7 +118,7 @@ export class RegisterTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 	private _registerMap: { [number: number] : RegisterNode };
 	private _loaded: boolean = false;
 
-	constructor(private workspaceRoot: string, private extensionPath: string) {
+	constructor() {
 		this._registers = [];
 		this._registerMap = {};
 	}

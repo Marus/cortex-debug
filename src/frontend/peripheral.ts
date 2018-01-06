@@ -317,8 +317,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 	_loaded: boolean = false;
 	_SVDPath: string = '';
 
-	constructor(private workspaceRoot: string, private extensionPath: string) {
-		// this._loadSVD();
+	constructor() {
+
 	}
 
 	_parseFields(fields: any[], register: RegisterNode): FieldNode[] {
@@ -449,14 +449,16 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 		}
 	}
 
-	debugSessionStarted(config: any): Thenable<any> {
+	debugSessionStarted(svdfile: string): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			this._peripherials = [];
 			this._loaded = false;
-			if(!config.disable) {
-				this._loadSVD(config.SVDFile).then(_ => {
-					resolve(true);
-				});
+			
+			if(svdfile) {
+				this._loadSVD(svdfile).then(_ => { resolve(); });
+			}
+			else {
+				resolve();
 			}
 		});
 	}
