@@ -62,7 +62,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				enabled: args.swoConfig.enabled,
 				cpuFrequency: args.swoConfig.cpuFrequency,
 				swoFrequency: args.swoConfig.swoFrequency,
-				swoFIFOPath: os.platform() == 'win32' ? null : this.swoPath
+				swoFIFOPath: this.swoPath
 			});
 			this.openocd.on('openocd-output', this.handleAdapterOutput.bind(this));
 			this.openocd.on('openocd-stderr', this.handleAdapterErrorOutput.bind(this));
