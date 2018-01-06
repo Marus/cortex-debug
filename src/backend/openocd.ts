@@ -1,7 +1,7 @@
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from "events";
 import * as portastic from 'portastic';
-
+import * as os from 'os';
 
 let infoRegex = /^Info\s:\s([^\n])$/i;
 let cpuRegex = /^([^\n\.]*)\.cpu([^\n]*)$/i;
@@ -32,9 +32,10 @@ export class OpenOCD extends EventEmitter {
 
 			let commands = [`gdb_port ${this.gdb_port}`];
 			if(this.swoConfig.enabled) {
-				let mkfifoReturn = ChildProcess.spawnSync('mkfifo', [this.swoConfig.swoFIFOPath]);
-				console.log('Make Fifo Return: ', mkfifoReturn);
-				
+				if(os.platform() !== 'win32') { // Use FIFO on non-windows platforms
+					let mkfifoReturn = ChildProcess.spawnSync('mkfifo', [this.swoConfig.swoFIFOPath]);
+				}
+
 				commands.push(`tpiu config internal ${this.swoConfig.swoFIFOPath} uart off ${this.swoConfig.cpuFrequency} ${this.swoConfig.swoFrequency}`);
 			}
 
@@ -98,7 +99,6 @@ export class OpenOCD extends EventEmitter {
 
 	onOutput(text: string) {
 		let m = text.match(infoRegex);
-		console.log('Output: ', text);
 		if(text.startsWith('Info :')) {
 			let infostring = text.substr(6);
 			this.emit('openocd-info', infostring);

@@ -49,11 +49,11 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 		portastic.find({ min: 50000, max: 52000, retrieve: 1 }).then(ports => {
 			this.gdbPort = ports[0];
 			
+			this.swoPath = tmp.tmpNameSync();
+
 			let defaultExecutable = 'openocd';
 			let defaultGDBExecutable = 'arm-none-eabi-gdb';
-
-			if(os.platform() != 'win32') {
-				this.swoPath = tmp.tmpNameSync();
+			if(os.platform() === 'win32') {
 				defaultExecutable = 'openocd.exe';
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}

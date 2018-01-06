@@ -7,12 +7,8 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
-import { SWOCore, JLinkSWOSource, OpenOCDSWOSource, SWOSource } from './swo';
+import { SWOCore, JLinkSWOSource, OpenOCDSWOSource, SWOSource, OpenOCDFileSWOSource } from './swo';
 
-var adapterOutputChannel: vscode.OutputChannel = null;
-var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
-
-var swo: SWOCore = null;
 
 interface SVDInfo {
 	expression: RegExp;
@@ -27,6 +23,10 @@ function getSVDFile(device: string): string {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+	var adapterOutputChannel: vscode.OutputChannel = null;
+	var swoOutputChannels: { [swoPort: number]: vscode.OutputChannel } = {};
+	var swo: SWOCore = null;
+
 	let ext = vscode.extensions.getExtension('marus.cortex-debug');
 	
 	const peripheralProvider = new PeripheralTreeProvider(vscode.workspace.rootPath, ext.extensionPath);
@@ -93,9 +93,20 @@ export function activate(context: vscode.ExtensionContext) {
 					swosource = new JLinkSWOSource(e.body.port);
 				}
 				else if(e.body.type == 'openocd') {
-					if(os.platform() != 'win32') {
+					// Use filesystem on windows; fifo on other operating systems.
+					if(os.platform() !== 'win32') {
 						swosource = new OpenOCDSWOSource(e.body.path);
 					}
+					else {
+						swosource = new OpenOCDFileSWOSource(e.body.path);
+					}
+				}
+
+				// Debug Session Started before SWO Configuration
+				if(vscode.debug.activeDebugSession) {
+					vscode.debug.activeDebugSession.customRequest('get-arguments').then(args => {
+						initializeSWO(args, swosource)
+					});
 				}
 				break;
 			case 'adapter-output':
@@ -124,14 +135,8 @@ export function activate(context: vscode.ExtensionContext) {
 				peripheralProvider.debugSessionStarted({ disable: true });
 			}
 
-			if (args.SWOConfig.enabled && swosource) {
-				swo = new SWOCore(swosource, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
-			}
-			if(args.SWOConfig.enabled && os.platform() == 'win32' && args.type == 'openocd') {
-				vscode.window.showErrorMessage('SWO Decoding is not support using OpenOCD on Windows');
-			}
-			else if (args.SWOConfig.enabled && !swosource) {
-				vscode.window.showErrorMessage('SWO is Enabled - but extension did not get an SWO Source Configuration Event');
+			if(swosource) {
+				initializeSWO(args, swosource)
 			}
 		});
 	}));
@@ -158,15 +163,28 @@ export function activate(context: vscode.ExtensionContext) {
 			swo = null;
 		}
 	}));
-}
 
-function handleAdapterOutput(output) {
-	if(adapterOutputChannel === null) {
-		adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+	function initializeSWO(args, source) {
+		if (args.SWOConfig.enabled && source) {
+			swo = new SWOCore(source, args.SWOConfig.ports, args.GraphConfig, ext.extensionPath);
+		}
+		else if(args.SWOConfig.enabled && os.platform() == 'win32' && args.type == 'openocd') {
+			vscode.window.showErrorMessage('SWO Decoding is not support using OpenOCD on Windows');
+		}
 	}
 
-	if(!output.endsWith('\n')) { output += '\n'; }
-	adapterOutputChannel.append(output);
+	function handleAdapterOutput(output) {
+		if(adapterOutputChannel === null) {
+			adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+		}
+	
+		if(!output.endsWith('\n')) { output += '\n'; }
+		adapterOutputChannel.append(output);
+	}
 }
+
+
+
+
 
 
