@@ -88,7 +88,6 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected handleRunning(info: MINode) {
-		console.log('Running: ', info);
 		this.sendEvent(new ContinuedEvent(this.threadID, true));
 		this.sendEvent(new CustomContinuedEvent(this.threadID, true));
 	}
