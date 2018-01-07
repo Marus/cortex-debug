@@ -26,3 +26,13 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
 		super('swo-configure', body);
 	}
 }
+
+export function makeObjectFromArrays(arrays: any[]) {
+	let obj = {};
+	arrays.forEach((arr, index) => {
+		let key = arr[0];
+		let value = arr[1];
+		obj[key] = value;
+	});
+	return obj;
+}
