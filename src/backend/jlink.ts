@@ -7,7 +7,7 @@ export class JLink extends EventEmitter {
 	private buffer: string;
 	private errbuffer: string;
 
-	constructor(public application: string, public device: string, public gdb_port: number, public swo_raw_port: number, public swo_port: number, public ipAddress: string, public serialNumber: string) {
+	constructor(public application: string, public device: string, public gdb_port: number, public swo_raw_port: number, public swo_port: number, public ipAddress: string, public serialNumber: string, public rtos: string) {
 		super();
 
 		this.buffer = "";
@@ -24,6 +24,11 @@ export class JLink extends EventEmitter {
 			else if(this.ipAddress) {
 				args.push('-select');
 				args.push(`ip=${this.ipAddress}`);
+			}
+
+			if(this.rtos && this.rtos !== 'none') {
+				args.push('-rtos');
+				args.push(`GDBServer/RTOSPlugin_${this.rtos}`);
 			}
 
 			this.process = ChildProcess.spawn(this.application, args, {});

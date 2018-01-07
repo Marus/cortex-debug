@@ -20,6 +20,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	graphConfig: any;
 	ipAddress: string;
 	serialNumber: string;
+	rtos: string;
 }
 
 class JLinkGDBDebugSession extends GDBDebugSession {
@@ -56,7 +57,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.jlink = new JLink(args.jlinkpath || defaultExecutable, args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber);
+			this.jlink = new JLink(args.jlinkpath || defaultExecutable, args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber, args.rtos);
 			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
 			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
 			this.jlink.on("launcherror", this.launchError.bind(this));
