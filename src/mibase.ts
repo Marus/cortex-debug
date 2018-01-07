@@ -75,12 +75,11 @@ export class MI2DebugSession extends DebugSession {
 	protected crashed: boolean;
 	protected debugReady: boolean;
 	protected miDebugger: MI2;
-	protected threadID: number = 1;
+	protected currentThreadId: number = 0;
 	protected commandServer: net.Server;
 
-	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
+	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
-		this.threadID = threadID;
 	}
 
 	protected initDebugger() {
@@ -106,31 +105,31 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected handleRunning(info: MINode) {
-		this.sendEvent(new ContinuedEvent(this.threadID, true));
-		this.sendEvent(new CustomContinuedEvent(this.threadID, true));
+		this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
+		this.sendEvent(new CustomContinuedEvent(this.currentThreadId, true));
 	}
 
 	protected handleBreakpoint(info: MINode) {
-		this.sendEvent(new StoppedEvent("breakpoint", this.threadID));
-		this.sendEvent(new CustomStoppedEvent("breakpoint", this.threadID));
+		this.sendEvent(new StoppedEvent("breakpoint", this.currentThreadId, true));
+		this.sendEvent(new CustomStoppedEvent("breakpoint", this.currentThreadId));
 	}
 
 	protected handleBreak(info: MINode) {
-		this.sendEvent(new StoppedEvent("step", this.threadID));
-		this.sendEvent(new CustomStoppedEvent("step", this.threadID));
+		this.sendEvent(new StoppedEvent("step", this.currentThreadId, true));
+		this.sendEvent(new CustomStoppedEvent("step", this.currentThreadId));
 	}
 
 	protected handlePause(info: MINode) {
-		this.sendEvent(new StoppedEvent("user request", this.threadID));
-		this.sendEvent(new CustomStoppedEvent("user request", this.threadID));
+		this.sendEvent(new StoppedEvent("user request", this.currentThreadId, true));
+		this.sendEvent(new CustomStoppedEvent("user request", this.currentThreadId));
 	}
 
 	protected stopEvent(info: MINode) {
 		if (!this.started)
 			this.crashed = true;
 		if (!this.quit) {
-			this.sendEvent(new StoppedEvent("exception", this.threadID));
-			this.sendEvent(new CustomStoppedEvent("exception", this.threadID));
+			this.sendEvent(new StoppedEvent("exception", this.currentThreadId, true));
+			this.sendEvent(new CustomStoppedEvent("exception", this.currentThreadId));
 		}
 	}
 
