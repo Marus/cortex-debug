@@ -404,14 +404,12 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	getStack(maxLevels: number): Thenable<Stack[]> {
+	getStack(threadId: number, maxLevels: number): Thenable<Stack[]> {
 		if (trace)
 			this.log("stderr", "getStack");
 		return new Promise((resolve, reject) => {
-			let command = "stack-list-frames";
-			if (maxLevels) {
-				command += " 0 " + maxLevels;
-			}
+			if(!maxLevels) { maxLevels = 50; }
+			let command = `stack-list-frames --thread ${threadId} 0 ${maxLevels}`;
 			this.sendCommand(command).then((result) => {
 				let stack = result.result("stack");
 				let ret: Stack[] = [];

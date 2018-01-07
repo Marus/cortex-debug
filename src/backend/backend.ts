@@ -39,7 +39,7 @@ export interface IBackend {
 	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]>;
 	removeBreakPoint(breakpoint: Breakpoint): Thenable<boolean>;
 	clearBreakPoints(): Thenable<any>;
-	getStack(maxLevels: number): Thenable<Stack[]>;
+	getStack(threadId: number, maxLevels: number): Thenable<Stack[]>;
 	getStackVariables(thread: number, frame: number): Thenable<Variable[]>;
 	evalExpression(name: string): Thenable<any>;
 	isReady(): boolean;

@@ -291,15 +291,16 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
-		this.miDebugger.getStack(args.levels).then(stack => {
+		this.miDebugger.getStack(args.threadId, args.levels).then(stack => {
 			let ret: StackFrame[] = [];
 			stack.forEach(element => {
+				let id = (args.threadId << 8 | (element.level & 0xFF)) & 0xFFFF;
 				let file = element.file;
 				if (file) {
-					ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
+					ret.push(new StackFrame(id, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
 				}
 				else
-					ret.push(new StackFrame(element.level, element.function + "@" + element.address, null, element.line, 0));
+					ret.push(new StackFrame(id, element.function + "@" + element.address, null, element.line, 0));
 			});
 			response.body = {
 				stackFrames: ret
