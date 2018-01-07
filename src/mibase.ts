@@ -94,6 +94,9 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.on("step-out-end", this.handleBreak.bind(this));
 		this.miDebugger.on("signal-stop", this.handlePause.bind(this));
 		this.miDebugger.on("running", this.handleRunning.bind(this));
+		this.miDebugger.on('thread-created', this.handleThreadCreated.bind(this));
+		this.miDebugger.on('thread-exited', this.handleThreadExited.bind(this));
+		this.miDebugger.on('thread-selected', this.handleThreadSelected.bind(this));
 		this.sendEvent(new InitializedEvent());
 	}
 
@@ -123,6 +126,19 @@ export class MI2DebugSession extends DebugSession {
 	protected handlePause(info: MINode) {
 		this.sendEvent(new StoppedEvent("user request", this.currentThreadId, true));
 		this.sendEvent(new CustomStoppedEvent("user request", this.currentThreadId));
+	}
+
+	protected handleThreadCreated(info: { threadId: number, threadGroupId: number }) {
+		this.sendEvent(new ThreadEvent('started', info.threadId));
+	}
+
+	protected handleThreadExited(info: { threadId: number, threadGroupId: number }) {
+		this.sendEvent(new ThreadEvent('exited', info.threadId));
+	}
+
+	protected handleThreadSelected(info: { threadId: number }) {
+		this.currentThreadId = info.threadId;
+		this.sendEvent(new ThreadEvent('selected', info.threadId));
 	}
 
 	protected stopEvent(info: MINode) {

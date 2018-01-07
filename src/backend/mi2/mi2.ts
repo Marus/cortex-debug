@@ -161,6 +161,22 @@ export class MI2 extends EventEmitter implements IBackend {
 								} else
 									this.log("log", JSON.stringify(parsed));
 							}
+							else if (record.type == 'notify') {
+								if (record.asyncClass == 'thread-created') {
+									let tid = parsed.result('id');
+									let gid = parsed.result('group-id');
+									this.emit('thread-created', { 'threadId': tid, 'threadGroupId': gid });
+								}
+								else if(record.asyncClass == 'thread-exited') {
+									let tid = parsed.result('id');
+									let gid = parsed.result('group-id');
+									this.emit('thread-exited', { 'threadId': tid, 'threadGroupId': gid });
+								}
+								else if(record.asyncClass == 'thread-selected') {
+									let tid = parsed.result('id');
+									this.emit('thread-selected', { 'threadId': tid });
+								}
+							}
 						}
 					});
 					handled = true;
