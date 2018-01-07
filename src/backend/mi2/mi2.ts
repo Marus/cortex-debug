@@ -211,51 +211,51 @@ export class MI2 extends EventEmitter implements IBackend {
 		this.sendRaw("-target-detach");
 	}
 
-	interrupt(): Thenable<boolean> {
+	interrupt(threadId: number): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "interrupt");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-interrupt").then((info) => {
+			this.sendCommand(`exec-interrupt --thread ${threadId}`).then((info) => {
 				resolve(info.resultRecords.resultClass == "done");
 			}, reject);
 		});
 	}
 
-	continue(): Thenable<boolean> {
+	continue(threadId: number): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "continue");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-continue").then((info) => {
+			this.sendCommand(`exec-continue --thread ${threadId}`).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	next(): Thenable<boolean> {
+	next(threadId: number): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "next");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-next").then((info) => {
+			this.sendCommand(`exec-next --thread ${threadId}`).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	step(): Thenable<boolean> {
+	step(threadId: number): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "step");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-step").then((info) => {
+			this.sendCommand(`exec-step --thread ${threadId}`).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	stepOut(): Thenable<boolean> {
+	stepOut(threadId: number): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "stepOut");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-finish").then((info) => {
+			this.sendCommand(`exec-finish --thread ${threadId}`).then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});

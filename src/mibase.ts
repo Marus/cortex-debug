@@ -1,4 +1,4 @@
-import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, ContinuedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
+import { DebugSession, InitializedEvent, TerminatedEvent, ContinuedEvent, OutputEvent, Thread, ThreadEvent, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
 import { MINode } from './backend/mi_parse';
@@ -30,6 +30,24 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 
 	constructor(reason: string, threadID: number) {
 		super('custom-stop', { reason: reason, threadID: threadID });
+	}
+}
+
+class StoppedEvent extends Event implements DebugProtocol.Event {
+	body: {
+		reason: string;
+		description?: string;
+		threadId?: number;
+		text?: string;
+		allThreadsStopped?: boolean;
+	};
+
+	constructor(reason: string, threadId: number, allThreadsStopped: boolean) {
+		super('stopped', {
+			reason: reason,
+			threadId: threadId,
+			allThreadsStopped: allThreadsStopped
+		});
 	}
 }
 
@@ -469,7 +487,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected pauseRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-		this.miDebugger.interrupt().then(done => {
+		this.miDebugger.interrupt(args.threadId).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 3, `Could not pause: ${msg}`);
@@ -478,7 +496,8 @@ export class MI2DebugSession extends DebugSession {
 
 
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-		this.miDebugger.continue().then(done => {
+		this.miDebugger.continue(args.threadId).then(done => {
+			response.body = { allThreadsContinued: true };
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
@@ -486,7 +505,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.step().then(done => {
+		this.miDebugger.step(args.threadId).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 4, `Could not step in: ${msg}`);
@@ -494,7 +513,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected stepOutRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.stepOut().then(done => {
+		this.miDebugger.stepOut(args.threadId).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 5, `Could not step out: ${msg}`);
@@ -502,7 +521,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.next().then(done => {
+		this.miDebugger.next(args.threadId).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);
