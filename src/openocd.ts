@@ -71,7 +71,6 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 			
 			this.quit = false;
 			this.attached = false;
-			this.needContinue = false;
 			this.started = false;
 			this.crashed = false;
 			this.debugReady = false;

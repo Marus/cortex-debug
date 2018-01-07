@@ -73,7 +73,6 @@ export class MI2DebugSession extends DebugSession {
 	protected variableHandlesReverse: { [id: string]: number } = {};
 	protected quit: boolean;
 	protected attached: boolean;
-	protected needContinue: boolean;
 	protected trimCWD: string;
 	protected switchCWD: string;
 	protected started: boolean;
@@ -316,16 +315,7 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse, args: DebugProtocol.ConfigurationDoneArguments): void {
-		// FIXME: Does not seem to get called in january release
-		if (this.needContinue) {
-			this.miDebugger.continue().then(done => {
-				this.sendResponse(response);
-			}, msg => {
-				this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
-			});
-		}
-		else
-			this.sendResponse(response);
+		this.sendResponse(response);
 	}
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
@@ -550,7 +540,7 @@ export class MI2DebugSession extends DebugSession {
 		}
 	}
 
-	protected pauseRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
+	protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.ContinueArguments): void {
 		this.miDebugger.interrupt(args.threadId).then(done => {
 			this.sendResponse(response);
 		}, msg => {
@@ -613,18 +603,6 @@ export class MI2DebugSession extends DebugSession {
 		};
 
 		if (args.context == 'watch') {
-			// try {
-			// 	var res = await this.miDebugger.evalExpression(args.expression);
-			// 	response.body = {
-			// 		variablesReference: 0,
-			// 		result: res.result("value")
-			// 	}
-			// 	this.sendResponse(response);
-			// }
-			// catch(e) {
-			// 	this.sendErrorResponse(response, 7, e.toString());
-			// }
-
 			try {
 				let exp = args.expression;
 				let varObjName = `watch_${exp}`;
