@@ -5,6 +5,7 @@ import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { MI2 } from './backend/mi2/mi2';
 import { posix } from "path";
+import { makeObjectFromArrays } from './common';
 import * as systemPath from "path";
 import * as net from "net";
 import * as os from "os";
@@ -225,12 +226,52 @@ export class MI2DebugSession extends DebugSession {
 	}
 
 	protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
-		response.body = {
-			threads: [
-				new Thread(this.threadID, "Thread 1")
-			]
-		};
-		this.sendResponse(response);
+		this.miDebugger.sendCommand('thread-list-ids').then((node) => {
+			let ids = node.result('thread-ids').map((ti) => ti[1]);
+			let currentThread = node.result('current-thread-id');
+			
+			let promise : Thenable<any>;
+			if(!currentThread) {
+				promise = this.miDebugger.sendCommand(`thread-select ${ids[0]}`).then((node) => {
+					this.currentThreadId = ids[0];
+				});
+			}
+			else {
+				this.currentThreadId = currentThread;
+				promise = Promise.resolve(true);
+			}
+
+			promise.then(() => {
+				Promise.all(ids.map((id) => this.miDebugger.sendCommand(`thread-info ${id}`)))
+				.then((nodes) => {
+					let threads = nodes.map((node: MINode) => {
+						let th = node.result('threads').map((th) => makeObjectFromArrays(th));
+						if (th && th.length == 1) {
+							let ti = th[0];
+							let id = ti['id'];
+							let name = ti['target-id'];
+							if(ti['details']) {
+								name = ti['details'];
+							}
+							return new Thread(id, name);
+						}
+						else {
+							return null;
+						}
+					});
+					threads = threads.filter(t => t !== null);					
+
+					response.body = { threads: threads };
+					this.sendResponse(response);
+				}, error => {
+					this.sendErrorResponse(response, 100, `Unable to request thread info: ${error.toString()}`);
+				});
+			}, error => {
+				this.sendErrorResponse(response, 100, `Unable to request thread info: ${error.toString()}`);
+			});
+		}, (error) => {
+			this.sendErrorResponse(response, 100, `Unable to request thread info: ${error.toString()}`);
+		});
 	}
 
 	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
