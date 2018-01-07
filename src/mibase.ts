@@ -19,8 +19,12 @@ class ExtendedVariable {
 	}
 }
 
-const STACK_HANDLES_START = 1000;
-const VAR_HANDLES_START = 2000;
+
+const THREAD_ID_SIZE = 16;
+const THREAD_ID_MASK = 0xFFFF00;
+const FRAME_ID_SIZE = 8
+const FRAME_ID_MASK = 0xFF;
+const VAR_HANDLES_START = 1 << (THREAD_ID_SIZE + FRAME_ID_SIZE);
 
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 	body: {
@@ -294,7 +298,7 @@ export class MI2DebugSession extends DebugSession {
 		this.miDebugger.getStack(args.threadId, args.levels).then(stack => {
 			let ret: StackFrame[] = [];
 			stack.forEach(element => {
-				let id = (args.threadId << 8 | (element.level & 0xFF)) & 0xFFFF;
+				let id = ((args.threadId << FRAME_ID_SIZE) & THREAD_ID_MASK) | (element.level & FRAME_ID_MASK);
 				let file = element.file;
 				if (file) {
 					ret.push(new StackFrame(id, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
@@ -326,7 +330,7 @@ export class MI2DebugSession extends DebugSession {
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
 		const scopes = new Array<Scope>();
-		scopes.push(new Scope("Local", STACK_HANDLES_START + (parseInt(args.frameId as any) || 0), false));
+		scopes.push(new Scope("Local", parseInt(args.frameId as any), false));
 
 		response.body = {
 			scopes: scopes
@@ -337,8 +341,11 @@ export class MI2DebugSession extends DebugSession {
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
 		const variables: DebugProtocol.Variable[] = [];
 		let id: number | string | VariableObject | ExtendedVariable;
+		let threadId: number;
+
 		if (args.variablesReference < VAR_HANDLES_START) {
-			id = args.variablesReference - STACK_HANDLES_START;
+			id = args.variablesReference & FRAME_ID_MASK;
+			threadId = (args.variablesReference & THREAD_ID_MASK) >>> FRAME_ID_SIZE;
 		}
 		else {
 			id = this.variableHandles.get(args.variablesReference);
@@ -366,7 +373,7 @@ export class MI2DebugSession extends DebugSession {
 		if (typeof id == "number") {
 			let stack: Variable[];
 			try {
-				stack = await this.miDebugger.getStackVariables(this.threadID, id);
+				stack = await this.miDebugger.getStackVariables(threadId, id);
 				for (const variable of stack) {
 					try {
 						let varObjName = `var_${variable.name}`;
