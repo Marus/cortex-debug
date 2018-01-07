@@ -711,6 +711,15 @@
                                 "description": "Prints all GDB calls to the console", 
                                 "type": "boolean"
                             }, 
+                            "rtos": {
+                                "default": "none", 
+                                "enum": [
+                                    "none", 
+                                    "FreeRTOS", 
+                                    "embOS"
+                                ], 
+                                "type": "string"
+                            }, 
                             "serialNumber": {
                                 "default": null, 
                                 "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
@@ -965,6 +974,15 @@
                                 "default": false, 
                                 "description": "Prints all GDB calls to the console", 
                                 "type": "boolean"
+                            }, 
+                            "rtos": {
+                                "default": "none", 
+                                "enum": [
+                                    "none", 
+                                    "FreeRTOS", 
+                                    "embOS"
+                                ], 
+                                "type": "string"
                             }, 
                             "serialNumber": {
                                 "default": null, 
