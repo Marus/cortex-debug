@@ -468,7 +468,7 @@ export class MI2DebugSession extends DebugSession {
 		}
 	}
 
-	protected pauseRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
+	protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.ContinueArguments): void {
 		this.miDebugger.interrupt().then(done => {
 			this.sendResponse(response);
 		}, msg => {
