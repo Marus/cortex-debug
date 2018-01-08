@@ -44,6 +44,12 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 	}
 	
 	private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments, attach: boolean) {
+		this.quit = false;
+		this.attached = false;
+		this.started = false;
+		this.crashed = false;
+		this.debugReady = false;
+		
 		portastic.find({ min: 50000, max: 52000, retrieve: 3 }).then(ports => {
 			this.gdbPort = ports[0];
 			this.swoPort = ports[1];
@@ -59,16 +65,27 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			this.jlink = new JLink(args.jlinkpath || defaultExecutable, args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber);
 			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
 			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
-			this.jlink.on("launcherror", this.launchError.bind(this));
-			this.jlink.on("quit", this.quitEvent.bind(this));
 			
-			this.quit = false;
-			this.attached = false;
-			this.started = false;
-			this.crashed = false;
-			this.debugReady = false;
-			
-			this.jlink.init().then(_ => {
+			this.jlink.on("launcherror", (err) => {
+				this.sendErrorResponse(response, 103, `Failed to launch J-Link GDB Server: ${err.toString()}`);
+			});
+			this.jlink.on("quit", () => {
+				if (this.started) {
+					this.quitEvent.bind(this)
+				}
+				else {
+					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
+				}
+			});
+
+			let timeout = null;
+
+			this.jlink.on('jlink-init', () => {
+				if(timeout) {
+					clearTimeout(timeout);
+					timeout = null;
+				}
+
 				this.miDebugger = new MI2(args.gdbpath || defaultGDBExecutable, ["-q", "--interpreter=mi2"], args.debugger_args);
 				this.initDebugger();
 	
@@ -86,9 +103,10 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 						this.miDebugger.emit("ui-break-done");
 					}, 50);
 	
-					this.sendResponse(response);
 					this.miDebugger.start().then(() => {
 						this.started = true;
+						this.sendResponse(response);
+						
 						if (this.crashed)
 							this.handlePause(undefined);
 					}, err => {
@@ -96,10 +114,15 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					});
 				}, err => {
 					this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`);
-				});			
-			}, err => {
-				this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${err.toString()}`);
+				});
 			});
+			
+			this.jlink.init().then(_ => {}, _ => {});
+			
+			timeout = setTimeout(() => {
+				this.jlink.exit();
+				this.sendErrorResponse(response, 103, `Failed to launch JLink Server: Timeout.`);
+			}, 10000);
 		}, error => {
 			console.log('Unable to launch');
 			this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${error.toString()}`);

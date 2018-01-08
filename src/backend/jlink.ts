@@ -6,10 +6,12 @@ export class JLink extends EventEmitter {
 	private process: any;
 	private buffer: string;
 	private errbuffer: string;
+	private initSent: boolean;
 
 	constructor(public application: string, public device: string, public gdb_port: number, public swo_raw_port: number, public swo_port: number, public ipAddress: string, public serialNumber: string) {
 		super();
 
+		this.initSent = false;
 		this.buffer = "";
 		this.errbuffer = "";
 	}
@@ -36,7 +38,7 @@ export class JLink extends EventEmitter {
 	}
 
 	exit() : void {
-		this.process.exit();
+		this.process.kill();
 	}
 
 	error() : void {
@@ -52,6 +54,13 @@ export class JLink extends EventEmitter {
 			this.buffer += data;
 		else
 			this.buffer += data.toString("utf8");
+		
+		if(this.buffer.indexOf('Waiting for GDB connection...') !== -1) {
+			if (!this.initSent) {
+				this.emit('jlink-init');
+				this.initSent = true;
+			}
+		}
 		
 		let end = this.buffer.lastIndexOf('\n');
 		if(end != -1) {
