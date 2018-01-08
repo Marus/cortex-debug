@@ -46,6 +46,12 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 	}
 
 	private processLaunchAttachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments, attach: boolean) {
+		this.quit = false;
+		this.attached = false;
+		this.started = false;
+		this.crashed = false;
+		this.debugReady = false;
+
 		portastic.find({ min: 50000, max: 52000, retrieve: 1 }).then(ports => {
 			this.gdbPort = ports[0];
 			
@@ -66,14 +72,17 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 			});
 			this.openocd.on('openocd-output', this.handleAdapterOutput.bind(this));
 			this.openocd.on('openocd-stderr', this.handleAdapterErrorOutput.bind(this));
-			this.openocd.on("launcherror", this.launchError.bind(this));
-			this.openocd.on("quit", this.quitEvent.bind(this));
-			
-			this.quit = false;
-			this.attached = false;
-			this.started = false;
-			this.crashed = false;
-			this.debugReady = false;
+			this.openocd.on("launcherror", (error) => {
+				this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server: ${error.toString()}`);
+			});
+			this.openocd.on("quit", () => {
+				if (this.started) {
+					this.quitEvent.bind(this)
+				}
+				else {
+					this.sendErrorResponse(response, 103, `OpenOCD GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
+				}
+			});
 			
 			let timeout = null;
 
@@ -99,9 +108,9 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 						this.miDebugger.emit("ui-break-done");
 					}, 50);
 	
-					this.sendResponse(response);
 					this.miDebugger.start().then(() => {
 						this.started = true;
+						this.sendResponse(response);
 						if (this.crashed)
 							this.handlePause(undefined);
 					}, err => {
