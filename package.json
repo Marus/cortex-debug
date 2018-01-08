@@ -217,7 +217,8 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16"
+                                                        "Q16.16", 
+                                                        "float"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -463,7 +464,8 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16"
+                                                        "Q16.16", 
+                                                        "float"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -748,7 +750,8 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16"
+                                                        "Q16.16", 
+                                                        "float"
                                                     ], 
                                                     "type": "string"
                                                 }, 
@@ -1003,7 +1006,8 @@
                                                     "enum": [
                                                         "unsigned", 
                                                         "signed", 
-                                                        "Q16.16"
+                                                        "Q16.16", 
+                                                        "float"
                                                     ], 
                                                     "type": "string"
                                                 }, 
