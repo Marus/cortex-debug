@@ -97,11 +97,6 @@ class CortexDebugExtension {
 	// Debug Events
 	debugSessionStarted(session: vscode.DebugSession) {
 		// Clean-up Old output channels
-		if (this.adapterOutputChannel) {
-			this.adapterOutputChannel.dispose();
-			this.adapterOutputChannel = null;
-		}
-
 		if (this.swo) {
 			this.swo.dispose();
 			this.swo = null;
