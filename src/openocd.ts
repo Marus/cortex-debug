@@ -6,6 +6,7 @@ import { MI2 } from "./backend/mi2/mi2";
 import * as portastic from 'portastic';
 import * as tmp from 'tmp';
 import * as os from 'os';
+import * as fs from 'fs';
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import { clearTimeout } from 'timers';
 
@@ -20,6 +21,7 @@ interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	openOCDPath: string;
 	cwd: string;
 	showDevDebugOutput: boolean;
+	rtos: string;
 }
 
 class OpenOCDGDBDebugSession extends GDBDebugSession {
@@ -58,7 +60,15 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.openocd = new OpenOCD(args.openOCDPath || defaultExecutable, args.configFiles, this.gdbPort, {
+			let configFiles = [...args.configFiles];
+
+			if(args.rtos && args.rtos !== 'none') {
+				let tmpCfgPath = tmp.tmpNameSync();
+				fs.writeFileSync(tmpCfgPath, `$_TARGETNAME configure -rtos ${args.rtos}\n`, 'utf-8');
+				configFiles.push(tmpCfgPath);
+			}
+
+			this.openocd = new OpenOCD(args.openOCDPath || defaultExecutable, configFiles, this.gdbPort, {
 				enabled: args.swoConfig.enabled,
 				cpuFrequency: args.swoConfig.cpuFrequency,
 				swoFrequency: args.swoConfig.swoFrequency,

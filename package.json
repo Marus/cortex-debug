@@ -185,6 +185,21 @@
                                 "description": "Prints all GDB calls to the console", 
                                 "type": "boolean"
                             }, 
+                            "rtos": {
+                                "default": "none", 
+                                "description": "If the embedded program your are debugging uses an RTOS and you want to have multi-threaded aware debugging enter your RTOS here.", 
+                                "enum": [
+                                    "none", 
+                                    "eCos", 
+                                    "ThreadX", 
+                                    "FreeRTOS", 
+                                    "ChibiOS", 
+                                    "embKernel", 
+                                    "mqx", 
+                                    "uCOS-III"
+                                ], 
+                                "type": "string"
+                            }, 
                             "showDevDebugOutput": {
                                 "default": false, 
                                 "description": "Prints all GDB responses to the console", 
@@ -430,6 +445,21 @@
                                 "default": false, 
                                 "description": "Prints all GDB calls to the console", 
                                 "type": "boolean"
+                            }, 
+                            "rtos": {
+                                "default": "none", 
+                                "description": "If the embedded program your are debugging uses an RTOS and you want to have multi-threaded aware debugging enter your RTOS here.", 
+                                "enum": [
+                                    "none", 
+                                    "eCos", 
+                                    "ThreadX", 
+                                    "FreeRTOS", 
+                                    "ChibiOS", 
+                                    "embKernel", 
+                                    "mqx", 
+                                    "uCOS-III"
+                                ], 
+                                "type": "string"
                             }, 
                             "showDevDebugOutput": {
                                 "default": false, 
@@ -713,6 +743,7 @@
                             }, 
                             "rtos": {
                                 "default": "none", 
+                                "description": "If the embedded program your are debugging uses an RTOS and you want to have multi-threaded aware debugging enter your RTOS here.", 
                                 "enum": [
                                     "none", 
                                     "FreeRTOS", 
@@ -977,6 +1008,7 @@
                             }, 
                             "rtos": {
                                 "default": "none", 
+                                "description": "If the embedded program your are debugging uses an RTOS and you want to have multi-threaded aware debugging enter your RTOS here.", 
                                 "enum": [
                                     "none", 
                                     "FreeRTOS", 

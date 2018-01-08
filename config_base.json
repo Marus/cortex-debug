@@ -267,6 +267,7 @@
 				"rtos": {
 					"type": "string",
 					"enum": [ "none", "FreeRTOS", "embOS" ],
+					"description": "If the embedded program your are debugging uses an RTOS and you want to have multi-threaded aware debugging enter your RTOS here.",
 					"default": "none"
 				}
 			}
@@ -295,6 +296,12 @@
 					"type": "array",
 					"description": "OpenOCD configuration file(s) to load",
 					"items": { "type": "string" }
+				},
+				"rtos": {
+					"type": "string",
+					"enum": [ "none", "eCos", "ThreadX", "FreeRTOS", "ChibiOS", "embKernel", "mqx", "uCOS-III"],
+					"description": "If the embedded program your are debugging uses an RTOS and you want to have multi-threaded aware debugging enter your RTOS here.",
+					"default": "none"
 				}
 			}
 		},
