@@ -7,7 +7,11 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
-import { SWOCore, JLinkSWOSource, OpenOCDSWOSource, SWOSource, OpenOCDFileSWOSource } from './swo';
+import { SWOCore } from './swo/core';
+import { SWOSource } from './swo/sources/common';
+import { JLinkSWOSource } from './swo/sources/jlink';
+import { OpenOCDSWOSource, OpenOCDFileSWOSource } from './swo/sources/openocd';
+
 import { SWOConfigureEvent } from "../common";
 
 
