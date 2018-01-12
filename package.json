@@ -14,18 +14,18 @@
             {
                 "command": "cortexPeripherals.selectedNode", 
                 "title": "Selected"
-            },
+            }, 
             {
-                "command": "marus.cortex-debug-openocd.examineMemory",
-                "title": "View Memory Content",
-                "category": "Cortex-Debug"
-            },
+                "category": "Cortex-Debug", 
+                "command": "marus.cortex-debug-openocd.examineMemory", 
+                "title": "View Memory Content"
+            }, 
             {
-                "command": "marus.cortex-debug-jlink.examineMemory",
-                "title": "View Memory Content",
-                "category": "Cortex-Debug"
+                "category": "Cortex-Debug", 
+                "command": "marus.cortex-debug-jlink.examineMemory", 
+                "title": "View Memory Content"
             }
-        ],
+        ], 
         "debuggers": [
             {
                 "configurationAttributes": {
@@ -1455,6 +1455,24 @@
             }
         ], 
         "menus": {
+            "commandPalette": [
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "false"
+                }, 
+                {
+                    "command": "cortexPeripherals.selectedNode", 
+                    "when": "false"
+                }, 
+                {
+                    "command": "marus.cortex-debug-openocd.examineMemory", 
+                    "when": "debugType == openocd-gdb"
+                }, 
+                {
+                    "command": "marus.cortex-debug-jlink.examineMemory", 
+                    "when": "debugType == jlink-gdb"
+                }
+            ], 
             "view/item/context": [
                 {
                     "command": "cortexPeripherals.updateNode", 
@@ -1469,25 +1487,7 @@
                     "when": "view == cortexPeripherals && viewItem == registerWO"
                 }
             ], 
-            "view/title": [],
-            "commandPalette": [
-                {
-                    "command": "cortexPeripherals.updateNode",
-                    "when": "false"
-                },
-                {
-                    "command": "cortexPeripherals.selectedNode",
-                    "when": "false"
-                },
-                {
-                    "command": "marus.cortex-debug-openocd.examineMemory",
-                    "when": "debugType == openocd-gdb"
-                },
-                {
-                    "command": "marus.cortex-debug-jlink.examineMemory",
-                    "when": "debugType == jlink-gdb"
-                }
-            ]
+            "view/title": []
         }, 
         "views": {
             "debug": [
