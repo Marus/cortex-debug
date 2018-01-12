@@ -325,7 +325,8 @@
                                                 {
                                                     "properties": {
                                                         "config": {
-                                                            "type": "any"
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
                                                         }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
@@ -665,7 +666,8 @@
                                                 {
                                                     "properties": {
                                                         "config": {
-                                                            "type": "any"
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
                                                         }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
@@ -1044,7 +1046,8 @@
                                                 {
                                                     "properties": {
                                                         "config": {
-                                                            "type": "any"
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
                                                         }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
@@ -1393,7 +1396,8 @@
                                                 {
                                                     "properties": {
                                                         "config": {
-                                                            "type": "any"
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
                                                         }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
