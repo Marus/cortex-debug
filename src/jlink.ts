@@ -6,6 +6,7 @@ import { MI2 } from "./backend/mi2/mi2";
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
 import * as os from 'os';
+import { TelemetryEvent } from './common';
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	gdbpath: string;
@@ -75,6 +76,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				}
 				else {
 					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
+					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly.`);
 				}
 			});
 
@@ -111,9 +113,11 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 							this.handlePause(undefined);
 					}, err => {
 						this.sendErrorResponse(response, 100, `Failed to launch GDB: ${err.toString()}`);
+						this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
 					});
 				}, err => {
 					this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
+					this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
 				});
 			});
 			
@@ -121,9 +125,11 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			
 			timeout = setTimeout(() => {
 				this.jlink.exit();
+				this.sendEvent(new TelemetryEvent('error-launching-jlink', { error: `Failed to launch JLink Server: Timeout.` }, {}));
 				this.sendErrorResponse(response, 103, `Failed to launch JLink Server: Timeout.`);
 			}, 10000);
 		}, err => {
+			this.sendEvent(new TelemetryEvent('error-launching-jlink', { error: err.toString() }, {}));
 			this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${err.toString()}`);
 		});
 	}

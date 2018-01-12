@@ -13,6 +13,7 @@ import { JLinkSWOSource } from './swo/sources/jlink';
 import { OpenOCDSWOSource, OpenOCDFileSWOSource } from './swo/sources/openocd';
 import { SWOConfigureEvent } from "../common";
 import { MemoryContentProvider } from './memory_content_provider';
+import Reporting from '../reporting';
 
 interface SVDInfo {
 	expression: RegExp;
@@ -47,6 +48,8 @@ class CortexDebugExtension {
 
 			return { expression: exp, path: de.path };
 		});
+
+		Reporting.activate(context);
 
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()));
 
@@ -96,6 +99,7 @@ class CortexDebugExtension {
 			address => {
 				if (!validateValue(address)) {
 					vscode.window.showErrorMessage('Invalid memory address entered');
+					Reporting.sendEvent('examine-memory-invalid-address', { address: address }, {});
 					return;
 				}
 
@@ -107,9 +111,11 @@ class CortexDebugExtension {
 					(length) => {
 						if (!validateValue(length)) {
 							vscode.window.showErrorMessage('Invalid length entered');
+							Reporting.sendEvent('examine-memory-invalid-length', { length: length }, {});
 							return;
 						}
 
+						Reporting.sendEvent('examine-memory', {}, {});
 						vscode.window.showTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}]?address=${address}&length=${length}`), { viewColumn: 2 });
 					},
 					(error) => {
@@ -165,6 +171,18 @@ class CortexDebugExtension {
 				}
 			}
 
+			let info = {
+				type: args.type,
+				swo: args.SWOConfig.enabled ? 'enabled' : 'disabled',
+				graphing: (args.GraphConfig && args.GraphConfig.length > 0) ? 'enabled' : 'disabled'
+			};
+
+			if (args.type == 'jlink-gdb') {
+				info['device'] = args.device;
+			}
+
+			Reporting.sendEvent('debug-session-started', info, {});
+			
 			this.registerProvider.debugSessionStarted();
 			this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
@@ -175,6 +193,8 @@ class CortexDebugExtension {
 	}
 
 	debugSessionTerminated(session: vscode.DebugSession) {
+		Reporting.sendEvent('debug-session-terminated', {}, {});
+
 		this.registerProvider.debugSessionTerminated();
 		this.peripheralProvider.debugSessionTerminated();
 		if (this.swo) {
@@ -200,6 +220,9 @@ class CortexDebugExtension {
 			case 'adapter-output':
 				this.receivedAdapterOutput(e);
 				break;
+			case 'record-telemetry-event':
+				this.receivedTelemetryEvent(e);
+				break;
 			default:
 				break;
 
@@ -216,6 +239,10 @@ class CortexDebugExtension {
 		this.peripheralProvider.debugContinued();
 		this.registerProvider.debugContinued();
 		if (this.swo) { this.swo.debugContinued(); }
+	}
+
+	receivedTelemetryEvent(e) {
+		Reporting.sendEvent(e.body.event, e.body.properties || {}, e.body.measures || {});
 	}
 
 	receivedSWOConfigureEvent(e) {

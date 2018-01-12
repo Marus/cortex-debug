@@ -8,6 +8,7 @@ import * as tmp from 'tmp';
 import * as os from 'os';
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import { clearTimeout } from 'timers';
+import { TelemetryEvent } from './common';
 
 interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	debugger_args: string[];
@@ -81,6 +82,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				}
 				else {
 					this.sendErrorResponse(response, 103, `OpenOCD GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
+					this.sendErrorResponse(response, 103, `OpenOCD GDB Server Quit Unexpectedly.`);
 				}
 			});
 			
@@ -115,9 +117,11 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 							this.handlePause(undefined);
 					}, err => {
 						this.sendErrorResponse(response, 100, `Failed to launch GDB: ${err.toString()}`);
+						this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
 					});
 				}, err => {
 					this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
+					this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
 				});
 			})
 
@@ -127,15 +131,18 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				}
 			}, err => {
 				this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server: ${err.toString()}`);
+				this.sendEvent(new TelemetryEvent('error-launching-openocd', { error: err.toString() }, {}));
 			});
 
 			timeout = setTimeout(() => {
 				this.openocd.exit();
 				this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server. Timeout.`);
+				this.sendEvent(new TelemetryEvent('error-launching-openocd', { error: `Failed to launch OpenOCD Server. Timeout.` }, {}));
 			}, 10000); // Timeout Launching
 
 		}, err => {
 			this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server: ${err.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-launching-openocd', { error: err.toString() }, {}));
 		});
 	}
 

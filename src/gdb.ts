@@ -3,6 +3,7 @@ import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEv
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from "./backend/mi2/mi2";
 import { hexFormat } from './frontend/utils';
+import { TelemetryEvent } from './common';
 
 export class GDBDebugSession extends MI2DebugSession {
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
@@ -65,6 +66,7 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-reading-memory', { address: startAddress.toString(), length: length.toString() }, {}));
 		});
 	}
 
@@ -75,6 +77,7 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to write memory: ${error.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-writing-memory', { address: startAddress.toString(), length: data.length.toString() }, {}));
 		});
 	}
 
@@ -99,7 +102,8 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
-		});		
+			this.sendEvent(new TelemetryEvent('error-reading-registers', {}, {}));
+		});
 	}
 
 	protected readRegisterListRequest(response: DebugProtocol.Response) {
@@ -120,6 +124,7 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 116, `Unable to read register list: ${error.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-reading-register-list', {}, {}));
 		});
 	}
 }
