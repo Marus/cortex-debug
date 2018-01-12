@@ -20,13 +20,6 @@ interface SVDInfo {
 	path: string;
 }
 
-var SVDDirectory: SVDInfo[] = [];
-
-function getSVDFile(device: string): string {
-	let entry = SVDDirectory.find(de => de.expression.test(device));
-	return entry ? entry.path : null;	
-}
-
 class CortexDebugExtension {
 	private adapterOutputChannel: vscode.OutputChannel = null;
 	private swo: SWOCore = null;
@@ -70,7 +63,9 @@ class CortexDebugExtension {
 	}
 
 	getSVDFile(device: string): string {
-		return '';
+		let entry = this.SVDDirectory.find(de => de.expression.test(device));
+		return entry ? entry.path : null;	
+	}
 	}
 
 	// Peripherals
