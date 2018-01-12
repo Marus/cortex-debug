@@ -81,7 +81,7 @@
                                                     "type": "number"
                                                 }, 
                                                 "plots": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
@@ -118,7 +118,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -171,8 +171,8 @@
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -324,6 +324,9 @@
                                                 }, 
                                                 {
                                                     "properties": {
+                                                        "config": {
+                                                            "type": "any"
+                                                        }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
@@ -418,7 +421,7 @@
                                                     "type": "number"
                                                 }, 
                                                 "plots": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
@@ -455,7 +458,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -508,8 +511,8 @@
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -661,6 +664,9 @@
                                                 }, 
                                                 {
                                                     "properties": {
+                                                        "config": {
+                                                            "type": "any"
+                                                        }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
@@ -783,7 +789,7 @@
                                                     "type": "number"
                                                 }, 
                                                 "plots": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
@@ -820,7 +826,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -873,8 +879,8 @@
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -1037,6 +1043,9 @@
                                                 }, 
                                                 {
                                                     "properties": {
+                                                        "config": {
+                                                            "type": "any"
+                                                        }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
@@ -1129,7 +1138,7 @@
                                                     "type": "number"
                                                 }, 
                                                 "plots": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
@@ -1166,7 +1175,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -1219,8 +1228,8 @@
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -1383,6 +1392,9 @@
                                                 }, 
                                                 {
                                                     "properties": {
+                                                        "config": {
+                                                            "type": "any"
+                                                        }, 
                                                         "decoder": {
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
