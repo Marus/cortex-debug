@@ -18,19 +18,39 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 				let offset = address - lineAddress;
 
 				let output = '';
+				output += 'Address   \t|\tData                                            \t|\tCharacter\n';
+				output += '-------------------------------------------------------------------------------------------------------\n';
 
-				output += hexFormat(lineAddress, 8) + '\t\t';
+				output += hexFormat(lineAddress, 8) + '\t|\t';
 
-				for (let i = 0; i < offset; i++) { output += '   '; }
+				let lineend = '';
+
+				for (let i = 0; i < offset; i++) { output += '   '; lineend += '  '; }
 
 				for (let i = 0; i < length; i++) {
-					output += hexFormat(bytes[i], 2, false) + ' ';
+					let byte = bytes[i];
+					output += hexFormat(byte, 2, false) + ' ';
+					if (byte <= 32 || (byte >= 127 && byte <= 159)) {
+						lineend += '. ';
+					}
+					else {
+						lineend	+= String.fromCharCode(bytes[i]) + ' ';
+					}
+
 					if ((address + i) % 16 === 15 && i < length - 1) {
+						output += '\t|\t' + lineend;
+						lineend = '';
 						output += '\n';
 						lineAddress += 16;
-						output += hexFormat(lineAddress, 8) + '\t\t';
+						output += hexFormat(lineAddress, 8) + '\t|\t';
 					}
 				}
+
+				let endaddress = address + length;
+				let extra = (16 - (endaddress % 16)) % 16;
+
+				for (let i = 0; i < extra; i++) { output += '   '; }
+				output += '\t|\t' + lineend;
 
 				output += '\n';
 
