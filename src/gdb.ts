@@ -65,7 +65,7 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
-		})
+		});
 	}
 
 	protected writeMemoryRequest(response: DebugProtocol.Response, startAddress: number, data: string) {
@@ -75,12 +75,12 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to write memory: ${error.toString()}`);
-		})
+		});
 	}
 
 	protected readRegistersRequest(response: DebugProtocol.Response) {
 		this.miDebugger.sendCommand('data-list-register-values x').then(node => {
-			if(node.resultRecords.resultClass == 'done') {
+			if (node.resultRecords.resultClass == 'done') {
 				let rv = node.resultRecords.results[0][1];
 				response.body = rv.map(n => {
 					let val = {};
@@ -104,10 +104,10 @@ export class GDBDebugSession extends MI2DebugSession {
 
 	protected readRegisterListRequest(response: DebugProtocol.Response) {
 		this.miDebugger.sendCommand('data-list-register-names').then(node => {
-			if(node.resultRecords.resultClass == 'done') {
+			if (node.resultRecords.resultClass == 'done') {
 				let registerNames;
 				node.resultRecords.results.forEach(rr => {
-					if(rr[0] == 'register-names') {
+					if (rr[0] == 'register-names') {
 						registerNames = rr[1];
 					}
 				});

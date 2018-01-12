@@ -114,10 +114,10 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 						if (this.crashed)
 							this.handlePause(undefined);
 					}, err => {
-						this.sendErrorResponse(response, 100, `Failed to Start MI Debugger: ${err.toString()}`);
+						this.sendErrorResponse(response, 100, `Failed to launch GDB: ${err.toString()}`);
 					});
 				}, err => {
-					this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`);
+					this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
 				});
 			})
 
@@ -134,9 +134,8 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server. Timeout.`);
 			}, 10000); // Timeout Launching
 
-		}, error => {
-			console.log('Unable to launch');
-			this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server: ${error.toString()}`);
+		}, err => {
+			this.sendErrorResponse(response, 103, `Failed to launch OpenOCD Server: ${err.toString()}`);
 		});
 	}
 
