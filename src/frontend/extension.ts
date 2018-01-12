@@ -11,9 +11,8 @@ import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
 import { JLinkSWOSource } from './swo/sources/jlink';
 import { OpenOCDSWOSource, OpenOCDFileSWOSource } from './swo/sources/openocd';
-
 import { SWOConfigureEvent } from "../common";
-
+import { MemoryContentProvider } from './memory_content_provider';
 
 interface SVDInfo {
 	expression: RegExp;
@@ -49,8 +48,12 @@ class CortexDebugExtension {
 			return { expression: exp, path: de.path };
 		});
 
+		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()));
+
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
 
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
@@ -66,6 +69,58 @@ class CortexDebugExtension {
 		let entry = this.SVDDirectory.find(de => de.expression.test(device));
 		return entry ? entry.path : null;	
 	}
+
+	examineMemory() {
+		function validateValue(address) {
+			if(/^0x[0-9a-f]{1,8}$/i.test(address)) {
+				return address;
+			}
+			else if(/^[0-9]+$/i.test(address)) {
+				return address;
+			}
+			else {
+				return null;
+			}
+		}
+
+		if(!vscode.debug.activeDebugSession) {
+			vscode.window.showErrorMessage('No debugging session available');
+			return;
+		}
+
+		vscode.window.showInputBox({
+			placeHolder: 'Prefix with 0x for hexidecimal format',
+			ignoreFocusOut: true,
+			prompt: 'Memory Address'			
+		}).then(
+			address => {
+				if (!validateValue(address)) {
+					vscode.window.showErrorMessage('Invalid memory address entered');
+					return;
+				}
+
+				vscode.window.showInputBox({
+					placeHolder: 'Prefix with 0x for hexidecimal format',
+					ignoreFocusOut: true,
+					prompt: 'Length'
+				}).then(
+					(length) => {
+						if (!validateValue(length)) {
+							vscode.window.showErrorMessage('Invalid length entered');
+							return;
+						}
+
+						vscode.window.showTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}]?address=${address}&length=${length}`), { viewColumn: 2 });
+					},
+					(error) => {
+
+					}
+				);
+			},
+			(error) => {
+
+			}
+		);
 	}
 
 	// Peripherals
