@@ -180,7 +180,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			'exec-interrupt',
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
-			'exec-continue'
+			'exec-step-instruction'
 		];
 	}
 

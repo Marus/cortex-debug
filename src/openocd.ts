@@ -172,7 +172,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 		return [
 			'exec-interrupt',
 			'interpreter-exec console "monitor reset halt"',
-			'exec-continue'
+			'exec-step-instruction'
 		];
 	}
 
