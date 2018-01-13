@@ -56,7 +56,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
 				resolve(output);
 			}, (error) => {
-				vscode.window.showErrorMessage(`Unable to read memory at ${address}`);
+				vscode.window.showErrorMessage(`Unable to read memory from ${hexFormat(address, 8)} to ${hexFormat(address + length, 8)}`);
 				reject(error.toString());
 			});
 		});
