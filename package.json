@@ -1573,5 +1573,5 @@
         "postinstall": "node ./node_modules/vscode/bin/install", 
         "vscode:prepublish": "tsc -p ./"
     }, 
-    "version": "0.1.2"
+    "version": "0.1.4"
 }
