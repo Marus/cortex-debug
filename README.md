@@ -1,6 +1,6 @@
 # Cortex Debug
 
-![Visual Studio Code with Cortex-Debug Installed](images/vs-code-screenshot.png)
+![Visual Studio Code with Cortex-Debug Installed](./images/vs-code-screenshot.png)
 
 Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
