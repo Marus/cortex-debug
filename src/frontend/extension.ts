@@ -116,7 +116,8 @@ class CortexDebugExtension {
 						}
 
 						Reporting.sendEvent('examine-memory', {}, {});
-						vscode.window.showTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}]?address=${address}&length=${length}`), { viewColumn: 2 });
+						let timestamp = new Date().getTime();
+						vscode.window.showTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}]?address=${address}&length=${length}&timestamp=${timestamp}`), { viewColumn: 2 });
 					},
 					(error) => {
 
