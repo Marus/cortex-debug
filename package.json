@@ -17,13 +17,13 @@
             }, 
             {
                 "category": "Cortex-Debug", 
-                "command": "marus.cortex-debug-openocd.examineMemory", 
-                "title": "View Memory Content"
+                "command": "marus25.cortex-debug-openocd.examineMemory", 
+                "title": "View Memory"
             }, 
             {
                 "category": "Cortex-Debug", 
-                "command": "marus.cortex-debug-jlink.examineMemory", 
-                "title": "View Memory Content"
+                "command": "marus25.cortex-debug-jlink.examineMemory", 
+                "title": "View Memory"
             }
         ], 
         "debuggers": [
@@ -1481,11 +1481,11 @@
                     "when": "false"
                 }, 
                 {
-                    "command": "marus.cortex-debug-openocd.examineMemory", 
+                    "command": "marus25.cortex-debug-openocd.examineMemory", 
                     "when": "debugType == openocd-gdb"
                 }, 
                 {
-                    "command": "marus.cortex-debug-jlink.examineMemory", 
+                    "command": "marus25.cortex-debug-jlink.examineMemory", 
                     "when": "debugType == jlink-gdb"
                 }
             ], 
@@ -1563,7 +1563,7 @@
     ], 
     "main": "./out/src/frontend/extension", 
     "name": "cortex-debug", 
-    "publisher": "marus", 
+    "publisher": "marus25", 
     "repository": {
         "type": "git", 
         "url": "https://github.com/Marus/cortex-debug.git"

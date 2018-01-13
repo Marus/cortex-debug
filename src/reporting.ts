@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 let reporter: TelemetryReporter;
 
-const extension = vscode.extensions.getExtension('marus.cortex-debug');
+const extension = vscode.extensions.getExtension('marus25.cortex-debug');
 
 const extensionId = extension.id;
 const extensionVersion = extension.packageJSON.version;

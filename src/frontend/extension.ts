@@ -55,8 +55,8 @@ class CortexDebugExtension {
 
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
 
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
