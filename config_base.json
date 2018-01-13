@@ -252,7 +252,7 @@
 												"type": "string",
 												"description": "Path to a javascript module to implement the decoding functionality."
 											},
-											"config": { "type": "any" }
+											"config": { "type": "object", "additionalProperties": true }
 										},
 										"required": ["number", "decoder"]
 									}
