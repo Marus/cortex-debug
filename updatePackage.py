@@ -41,6 +41,11 @@ def make_config(dtype, request):
 	properties.update(properties_2)
 	properties.update(properties_3)
 	properties.update(properties_4)
+
+	if 'removeProperties' in config_base[dtype]:
+		for prop in config_base[dtype]['removeProperties']:
+			if prop in properties:
+				del properties[prop]
 	
 	return { 'required': required, 'properties': properties }
 
