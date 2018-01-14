@@ -22,6 +22,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Additional Graphing Options
 * Enhanced SVD Auto-selection
 * Support for Black Magic Probe
+* Semihosting Support
 
 ## Installation
 
