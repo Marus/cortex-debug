@@ -13,6 +13,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * Ability to define JavaScript modules to decode complex data formats streamed over a particular ITM port. Data can be printed to a output window, or sent to the graphing system.
 * Live graphing of decoded ITM data.
 * Raw Memory Viewer (From the command menu select Cortex-Debug: View Memory)
+* Initial support for PyOCD GDB Server (No SWO support for PyOCD)
 
 ### In Progress Features
 * RTOS/Muti-Threaded Support (Dependant on GDB server support)
