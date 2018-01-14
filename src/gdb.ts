@@ -3,6 +3,7 @@ import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEv
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from "./backend/mi2/mi2";
 import { hexFormat } from './frontend/utils';
+import { TelemetryEvent } from './common';
 
 export class GDBDebugSession extends MI2DebugSession {
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
@@ -65,7 +66,8 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
-		})
+			this.sendEvent(new TelemetryEvent('error-reading-memory', { address: startAddress.toString(), length: length.toString() }, {}));
+		});
 	}
 
 	protected writeMemoryRequest(response: DebugProtocol.Response, startAddress: number, data: string) {
@@ -75,12 +77,13 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to write memory: ${error.toString()}`);
-		})
+			this.sendEvent(new TelemetryEvent('error-writing-memory', { address: startAddress.toString(), length: data.length.toString() }, {}));
+		});
 	}
 
 	protected readRegistersRequest(response: DebugProtocol.Response) {
 		this.miDebugger.sendCommand('data-list-register-values x').then(node => {
-			if(node.resultRecords.resultClass == 'done') {
+			if (node.resultRecords.resultClass == 'done') {
 				let rv = node.resultRecords.results[0][1];
 				response.body = rv.map(n => {
 					let val = {};
@@ -99,15 +102,16 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
-		});		
+			this.sendEvent(new TelemetryEvent('error-reading-registers', {}, {}));
+		});
 	}
 
 	protected readRegisterListRequest(response: DebugProtocol.Response) {
 		this.miDebugger.sendCommand('data-list-register-names').then(node => {
-			if(node.resultRecords.resultClass == 'done') {
+			if (node.resultRecords.resultClass == 'done') {
 				let registerNames;
 				node.resultRecords.results.forEach(rr => {
-					if(rr[0] == 'register-names') {
+					if (rr[0] == 'register-names') {
 						registerNames = rr[1];
 					}
 				});
@@ -120,6 +124,7 @@ export class GDBDebugSession extends MI2DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 116, `Unable to read register list: ${error.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-reading-register-list', {}, {}));
 		});
 	}
 }

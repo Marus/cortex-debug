@@ -47,6 +47,69 @@ export class BaseNode {
 }
 
 
+function parseInteger(value: string): number {
+	if((/^0b([01]+)$/i).test(value)) {
+		return parseInt(value.substring(2), 2);
+	}
+	else if((/^0x([0-9a-f]+)$/i).test(value)) {
+		return parseInt(value.substring(2), 16);
+	}
+	else if ((/^[0-9]+/i).test(value)) {
+		return parseInt(value, 10);
+	}
+	else if ((/^#[0-1]+/i).test(value)) {
+		return parseInt(value.substring(1), 2);
+	}
+	return undefined;
+}
+
+function parseDimIndex(spec: string, count: number) : string[] {
+	if (spec.indexOf(',') !== -1) {
+		let components = spec.split(',').map(c => c.trim());
+		if (components.length !== count) {
+			throw new Error(`dimIndex Element has invalid specification.`);
+		}
+		return components;
+	}
+
+	if (/^([0-9]+)\-([0-9]+)$/i.test(spec)) {
+		let parts = spec.split('-').map(p => parseInteger(p));
+		let start = parts[0];
+		let end = parts[1];
+
+		let diff = end - start;
+		if (diff < count) {
+			throw new Error(`dimIndex Element has invalid specification.`);
+		}
+
+		let components = [];
+		for (let i = 0; i < count; i++) {
+			components.push(`${start + i}`);
+		}
+
+		return components;
+	}
+
+	if (/^[a-zA-Z]\-[a-zA-Z]$/.test(spec)) {
+		let start = spec.charCodeAt(0);
+		let end = spec.charCodeAt(2);
+
+		let diff = end - start;
+		if (diff < count) {
+			throw new Error(`dimIndex Element has invalid specification.`);
+		}
+
+		let components = [];
+		for (let i = 0; i < count; i++) {
+			components.push(String.fromCharCode(start + i));
+		}
+
+		return components;
+	}
+
+	return [];
+}
+
 
 interface EnumerationMap {
 	[value:number] : EnumeratedValue;
@@ -155,12 +218,13 @@ export class RegisterNode extends BaseNode {
 		else if(this.access == AccessType.WriteOnly) { cv = 'registerWO'; }
 
 		let label = this.name + ' [' + hexFormat(this.offset, 2) + '] = ' + hexFormat(this.currentValue, this.length);
-
-		return new TreeNode(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed, cv, this);
+		let collapseState = this.fields && this.fields.length > 0 ? (this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed) : vscode.TreeItemCollapsibleState.None
+		
+		return new TreeNode(label, collapseState, cv, this);
 	}
 
 	getChildren(): FieldNode[] {
-		return this.fields;
+		return this.fields || [];
 	}
 
 	performUpdate() : Thenable<boolean> {
@@ -286,17 +350,8 @@ export class FieldNode extends BaseNode {
 			}
 			else {
 				vscode.window.showInputBox({ prompt: "Enter new value: (prefix hex with 0x, binary with 0b)" }).then(val => {
-					let numval;
-					if((/^0b([01]+)$/i).test(val)) {
-						numval = parseInt(val.substring(2), 2);
-					}
-					else if((/^0x([0-9a-f]+)$/i).test(val)) {
-						numval = parseInt(val.substring(2), 16);
-					}
-					else if ((/^[0-9]+/i).test(val)) {
-						numval = parseInt(val, 10);
-					}
-					else {
+					let numval = parseInteger(val);
+					if (numval === undefined) {
 						return reject('Unable to parse input value.');
 					}
 					this.register.updateBits(this.offset, this.width, numval).then(resolve, reject);
@@ -348,8 +403,9 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 				ev.enumeratedValue.map(ev => {
 					let evname = ev.name[0];
 					let evdesc = ev.description[0];
-					let evvalue = parseInt(ev.value[0]);
-
+					let val = ev.value[0].toLowerCase();
+					let evvalue = parseInteger(val);
+					
 					value_map[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
 				});
 			}
@@ -358,8 +414,10 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 		});
 	}
 
-	_parseRegisters(registers: any[], peripheral: PeripheralNode): RegisterNode[] {
-		return registers.map(r => {
+	_parseRegisters(regInfo: any[], peripheral: PeripheralNode): RegisterNode[] {
+		let registers: RegisterNode[] = [];
+
+		regInfo.forEach(r => {
 			let accessType = AccessType.ReadWrite;
 			if(r.access && r.access.length == 1) {
 				let access = r.access[0];
@@ -372,11 +430,45 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 				size = parseInt(r.size[0]);
 			}
 
-			let register = new RegisterNode(r.name[0], parseInt(r.addressOffset[0], 16), size, accessType, parseInt(r.resetValue[0]), peripheral);
-			let fields = this._parseFields(r.fields[0].field, register);
-			register.fields = fields;			
-			return register;
+			if (r.dim) {
+				if (!r.dimIncrement) { throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimIncrement element`); }
+
+				let count = parseInteger(r.dim[0]);
+				let increment = parseInteger(r.dimIncrement[0]);
+				let index = parseDimIndex(r.dimIndex[0], count);
+
+				let namebase: string = r.name[0];
+				let offsetbase = parseInteger(r.addressOffset[0]);
+				let resetvalue = parseInteger(r.resetValue[0]);
+
+				for (let i = 0; i < count; i++) {
+					let name = namebase.replace('%s', index[i]);
+
+					let register = new RegisterNode(name, offsetbase + (increment * i), size, accessType, resetvalue, peripheral);
+					if (r.fields && r.fields.length == 1) {
+						let fields = this._parseFields(r.fields[0].field, register);
+						register.fields = fields;
+					}
+					registers.push(register);
+				}
+			}
+			else {
+				let register = new RegisterNode(r.name[0], parseInteger(r.addressOffset[0]), size, accessType, parseInteger(r.resetValue[0]), peripheral);
+				if (r.fields && r.fields.length == 1) {
+					let fields = this._parseFields(r.fields[0].field, register);
+					register.fields = fields;
+				}
+				registers.push(register);
+			}
 		});
+
+		registers.sort((a, b) => {
+			if (a.offset < b.offset) { return -1; }
+			else if(a.offset > b.offset) { return 1; }
+			else { return 0; }
+		});
+
+		return registers;
 	}
 
 	_parsePeripheral(p: any): PeripheralNode {
@@ -455,7 +547,15 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 			this._loaded = false;
 			
 			if(svdfile) {
-				this._loadSVD(svdfile).then(_ => { resolve(); });
+				try {
+					this._loadSVD(svdfile).then(resolve, reject);
+				}
+				catch (e) {
+					this._peripherials = [];
+					this._loaded = false;
+					vscode.window.showErrorMessage(`Unable to parse SVD file: ${e.toString()}`);
+					reject();
+				}
 			}
 			else {
 				resolve();

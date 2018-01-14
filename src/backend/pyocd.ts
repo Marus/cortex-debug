@@ -1,36 +1,35 @@
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from "events";
 import * as portastic from 'portastic';
+import * as os from 'os';
 
-export class JLink extends EventEmitter {
+let infoRegex = /^Info\s:\s([^\n])$/i;
+let cpuRegex = /^([^\n\.]*)\.cpu([^\n]*)$/i;
+
+export class PyOCD extends EventEmitter {
 	private process: any;
 	private buffer: string;
 	private errbuffer: string;
-	private initSent: boolean;
 
-	constructor(public application: string, public device: string, public gdb_port: number, public swo_raw_port: number, public swo_port: number, public ipAddress: string, public serialNumber: string, public rtos: string) {
+	constructor(public application: string, public gdb_port: number, public boardId: string, public targetId: string) {
 		super();
 
-		this.initSent = false;
 		this.buffer = "";
 		this.errbuffer = "";
 	}
 
 	init(): Thenable<any> {
 		return new Promise((resolve, reject) => {
-			let args = ['-if', 'swd', '-port', this.gdb_port.toString(), '-swoport', this.swo_raw_port.toString(), '-telnetport', this.swo_port.toString(), '-device', this.device];
-			if(this.serialNumber) {
-				args.push('-select');
-				args.push(`usb=${this.serialNumber}`);
-			}
-			else if(this.ipAddress) {
-				args.push('-select');
-				args.push(`ip=${this.ipAddress}`);
+			let args = ['--persist', '--port', `${this.gdb_port}`, '--reset-break'];
+
+			if (this.boardId) {
+				args.push('--board');
+				args.push(this.boardId)
 			}
 
-			if(this.rtos && this.rtos !== 'none') {
-				args.push('-rtos');
-				args.push(`GDBServer/RTOSPlugin_${this.rtos}`);
+			if (this.targetId) {
+				args.push('--target');
+				args.push(this.targetId);
 			}
 
 			this.process = ChildProcess.spawn(this.application, args, {});
@@ -38,7 +37,11 @@ export class JLink extends EventEmitter {
 			this.process.stderr.on('data', this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-			setTimeout(resolve, 50);
+			
+			setTimeout(_ => {
+				console.log('Started PyOCD');
+				resolve();
+			}, 1000);
 		});
 	}
 
@@ -51,7 +54,7 @@ export class JLink extends EventEmitter {
 	}
 
 	close(code, signal) {
-		console.log('Closed JLink with ', code, signal);
+		console.log('Closed PyOCD with ', code, signal);
 	}
 
 	stdout(data) {
@@ -59,13 +62,6 @@ export class JLink extends EventEmitter {
 			this.buffer += data;
 		else
 			this.buffer += data.toString("utf8");
-		
-		if(this.buffer.indexOf('Waiting for GDB connection...') !== -1) {
-			if (!this.initSent) {
-				this.emit('jlink-init');
-				this.initSent = true;
-			}
-		}
 		
 		let end = this.buffer.lastIndexOf('\n');
 		if(end != -1) {
@@ -92,10 +88,19 @@ export class JLink extends EventEmitter {
 	}
 
 	onOutput(text: string) {
-		this.emit('jlink-output', text);
+		let m = text.match(infoRegex);
+		if(text.startsWith('INFO:')) {
+			let infostring = text.substr(5);
+			this.emit('pyocd-info', infostring);
+			if (infostring.indexOf('GDB server started at port') != -1) {
+				this.emit('pyocd-init');
+			}
+		}
+
+		this.emit('pyocd-output', text);
 	}
 
 	onErrOutput(text: string) {
-		this.emit('jlink-stderr', text);
+		this.emit('pyocd-stderr', text);
 	}
 }

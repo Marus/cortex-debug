@@ -1,89 +1,84 @@
 import { GDBDebugSession } from './gdb';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { JLink } from './backend/jlink';
+import { PyOCD } from './backend/pyocd';
 import { MI2 } from "./backend/mi2/mi2";
-import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
+import * as tmp from 'tmp';
 import * as os from 'os';
+import { AdapterOutputEvent, SWOConfigureEvent } from './common';
+import { clearTimeout } from 'timers';
 import { TelemetryEvent } from './common';
 
-export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
-	gdbpath: string;
-	executable: string;
-	cwd: string;
-	jlinkpath: string;
-	device: string;
+interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	debugger_args: string[];
-	showDevDebugOutput: boolean;
+	executable: string;
 	svdFile: string;
-	swoConfig: any;
-	graphConfig: any;
-	ipAddress: string;
-	serialNumber: string;
-	rtos: string;
+	configFiles: string[];
+	gdbpath: string;
+	pyocdPath: string;
+	cwd: string;
+	showDevDebugOutput: boolean;
+	boardId: string;
+	targetId: string;
 }
 
-class JLinkGDBDebugSession extends GDBDebugSession {
-	protected jlink : JLink;
+class PyOCDGDBDebugSession extends GDBDebugSession {
+	protected pyocd : PyOCD;
 	private args: ConfigurationArguments;
 	private gdbPort: number;
-	private swoPort: number;
-	private consolePort: number;
+	private swoPath: string;
+	private device: string;
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
-		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
-		args.graphConfig = args.graphConfig || [];
 		this.args = args;
+
 		this.processLaunchAttachRequest(response, args, false);
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
-		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
-		args.graphConfig = args.graphConfig || [];
 		this.args = args;
+
 		this.processLaunchAttachRequest(response, args, true);
 	}
-	
-	private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments, attach: boolean) {
+
+	private processLaunchAttachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments, attach: boolean) {
 		this.quit = false;
 		this.attached = false;
 		this.started = false;
 		this.crashed = false;
 		this.debugReady = false;
-		
-		portastic.find({ min: 50000, max: 52000, retrieve: 3 }).then(ports => {
-			this.gdbPort = ports[0];
-			this.swoPort = ports[1];
-			this.consolePort = ports[2];
 
-			let defaultExecutable = 'JLinkGDBServer';
+		portastic.find({ min: 50000, max: 52000, retrieve: 1 }).then(ports => {
+			this.gdbPort = ports[0];
+			
+			let defaultExecutable = 'pyocd-gdbserver';
 			let defaultGDBExecutable = 'arm-none-eabi-gdb';
-			if(os.platform() == 'win32') {
-				defaultExecutable = 'JLinkGDBServer.exe';
+			if(os.platform() === 'win32') {
+				defaultExecutable = 'pyocd-gdbserver';
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.jlink = new JLink(args.jlinkpath || defaultExecutable, args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber, args.rtos);
-			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
-			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
-			
-			this.jlink.on("launcherror", (err) => {
-				this.sendErrorResponse(response, 103, `Failed to launch J-Link GDB Server: ${err.toString()}`);
+			this.pyocd = new PyOCD(args.pyocdPath || defaultExecutable, this.gdbPort, args.boardId, args.targetId);
+
+			this.pyocd.on('pyocd-output', this.handleAdapterOutput.bind(this));
+			this.pyocd.on('pyocd-stderr', this.handleAdapterErrorOutput.bind(this));
+			this.pyocd.on("launcherror", (error) => {
+				this.sendErrorResponse(response, 103, `Failed to launch PyOCD GDB Server: ${error.toString()}`);
 			});
-			this.jlink.on("quit", () => {
+			this.pyocd.on("quit", () => {
 				if (this.started) {
 					this.quitEvent.bind(this)
 				}
 				else {
-					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
-					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly.`);
+					this.sendErrorResponse(response, 103, `PyOCD GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
+					this.sendErrorResponse(response, 103, `PyOCD GDB Server Quit Unexpectedly.`);
 				}
 			});
-
+			
 			let timeout = null;
 
-			this.jlink.on('jlink-init', () => {
+			this.pyocd.on('pyocd-init', (cpu: string) => {
 				if(timeout) {
 					clearTimeout(timeout);
 					timeout = null;
@@ -98,10 +93,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				let commands = attach ? this.attachCommands(this.gdbPort, args) : this.launchCommands(this.gdbPort, args);
 				
 				this.miDebugger.connect(args.cwd, args.executable, commands).then(() => {
-					if(args.swoConfig.enabled) {
-						this.sendEvent(new SWOConfigureEvent('jlink', { port: this.swoPort }));
-					}
-					
 					setTimeout(() => {
 						this.miDebugger.emit("ui-break-done");
 					}, 50);
@@ -109,7 +100,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					this.miDebugger.start().then(() => {
 						this.started = true;
 						this.sendResponse(response);
-						
 						if (this.crashed)
 							this.handlePause(undefined);
 					}, err => {
@@ -120,39 +110,33 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
 					this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
 				});
+			})
+
+			this.pyocd.init().then(_ => {}, err => {
+				this.sendErrorResponse(response, 103, `Failed to launch PyOCD GDB Server: ${err.toString()}`);
+				this.sendEvent(new TelemetryEvent('error-launching-pyocd', { error: err.toString() }, {}));
 			});
-			
-			this.jlink.init().then(_ => {}, _ => {});
-			
+
 			timeout = setTimeout(() => {
-				this.jlink.exit();
-				this.sendEvent(new TelemetryEvent('error-launching-jlink', { error: `Failed to launch JLink Server: Timeout.` }, {}));
-				this.sendErrorResponse(response, 103, `Failed to launch JLink Server: Timeout.`);
-			}, 10000);
+				this.pyocd.exit();
+				this.sendErrorResponse(response, 103, `Failed to launch PyOCD GDB Server. Timeout.`);
+				this.sendEvent(new TelemetryEvent('error-launching-pyocd', { error: `Failed to launch PyOCD GDB Server. Timeout.` }, {}));
+			}, 10000); // Timeout Launching
+
 		}, err => {
-			this.sendEvent(new TelemetryEvent('error-launching-jlink', { error: err.toString() }, {}));
-			this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${err.toString()}`);
+			this.sendErrorResponse(response, 103, `Failed to launch PyOCD GDB Server: ${err.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-launching-pyocd', { error: err.toString() }, {}));
 		});
 	}
 
 	protected launchCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
 			`target-select extended-remote localhost:${gdbport}`,
-			'interpreter-exec console "monitor halt"',
-			'interpreter-exec console "monitor reset"',
+			'interpreter-exec console "monitor reset halt"',
 			'target-download',
-			'interpreter-exec console "monitor reset"',
+			'interpreter-exec console "monitor reset halt"',
 			'enable-pretty-printing'
 		];
-
-		if(args.swoConfig.enabled) {
-			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
-			let swoFrequency = args.swoConfig.swoFrequency | 0;
-			let cpuFrequency = args.swoConfig.cpuFrequency | 0;
-
-			let command = `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`;
-			commands.push(`interpreter-exec console "${command}"`);
-		}
 
 		return commands;
 	}
@@ -164,22 +148,12 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			'enable-pretty-printing'
 		];
 
-		if(args.swoConfig.enabled) {
-			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
-			let swoFrequency = args.swoConfig.swoFrequency | 0;
-			let cpuFrequency = args.swoConfig.cpuFrequency | 0;
-
-			let command = `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`;
-			commands.push(`interpreter-exec console "${command}"`);
-		}
-
 		return commands;
 	}
 
 	protected restartCommands(): string[] {
 		return [
 			'exec-interrupt',
-			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
 			'exec-step-instruction'
 		];
@@ -197,27 +171,25 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			this.commandServer = undefined;
 		}
 
-		try { this.jlink.stop(); }
+		try { this.pyocd.stop(); }
 		catch(e) {}
 
 		this.sendResponse(response);
 	}
 
 	protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
-		let commands = this.restartCommands();
-
-		this.miDebugger.restart(commands).then(done => {
+		this.miDebugger.restart(this.restartCommands()).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
 		})
 	}
 
-	protected handleJLinkOutput(output) {
+	protected handleAdapterOutput(output) {
 		this.sendEvent(new AdapterOutputEvent(output, 'out'));
 	}
 
-	protected handleJLinkErrorOutput(output) {
+	protected handleAdapterErrorOutput(output) {
 		this.sendEvent(new AdapterOutputEvent(output, 'err'));
 	}
 
@@ -225,14 +197,14 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		switch(command) {
 			case 'get-arguments':
 				response.body = {
-					type: 'jlink',
+					type: 'pyocd',
 					GDBPort: this.gdbPort,
-					SWOPort: this.swoPort,
-					ConsolePort: this.consolePort,
-					device: this.args.device,
+					SWOPath: this.swoPath,
+					configFiles: this.args.configFiles,
 					SVDFile: this.args.svdFile,
-					SWOConfig: this.args.swoConfig,
-					GraphConfig: this.args.graphConfig
+					SWOConfig: { enabled: false },
+					GraphConfig: [],
+					device: this.device
 				};
 				this.sendResponse(response);
 				break;
@@ -251,4 +223,4 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 	}
 }
 
-DebugSession.run(JLinkGDBDebugSession);
+DebugSession.run(PyOCDGDBDebugSession);

@@ -36,3 +36,17 @@ export function makeObjectFromArrays(arrays: any[]) {
 	});
 	return obj;
 }
+
+export class TelemetryEvent extends Event implements DebugProtocol.Event {
+	body: {
+		event: string,
+		parameters: { [key: string]: string },
+		measures: { [key: string]: number }
+	};
+	event: string;
+
+	constructor(event: string, parameters: { [key: string]: string }, measures: { [key: string]: number }) {
+		let body = { event: event, parameters: parameters, measures: measures };
+		super('record-telemetry-event', body);
+	}
+}

@@ -7,20 +7,17 @@ import * as os from "os";
 import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode } from './peripheral';
 import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode } from './registers';
 import { setTimeout } from "timers";
-import { SWOCore, JLinkSWOSource, OpenOCDSWOSource, SWOSource, OpenOCDFileSWOSource } from './swo';
+import { SWOCore } from './swo/core';
+import { SWOSource } from './swo/sources/common';
+import { JLinkSWOSource } from './swo/sources/jlink';
+import { OpenOCDSWOSource, OpenOCDFileSWOSource } from './swo/sources/openocd';
 import { SWOConfigureEvent } from "../common";
-
+import { MemoryContentProvider } from './memory_content_provider';
+import Reporting from '../reporting';
 
 interface SVDInfo {
 	expression: RegExp;
 	path: string;
-}
-
-var SVDDirectory: SVDInfo[] = [];
-
-function getSVDFile(device: string): string {
-	let entry = SVDDirectory.find(de => de.expression.test(device));
-	return entry ? entry.path : null;	
 }
 
 class CortexDebugExtension {
@@ -52,13 +49,22 @@ class CortexDebugExtension {
 			return { expression: exp, path: de.path };
 		});
 
+		Reporting.activate(context);
+
+		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()));
+
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-pyocd.examineMemory', this.examineMemory.bind(this)));
 
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-pyocd', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', this.registerProvider));	
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', this.registerProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-pyocd', this.registerProvider));
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)));
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)));
@@ -66,7 +72,65 @@ class CortexDebugExtension {
 	}
 
 	getSVDFile(device: string): string {
-		return '';
+		let entry = this.SVDDirectory.find(de => de.expression.test(device));
+		return entry ? entry.path : null;	
+	}
+
+	examineMemory() {
+		function validateValue(address) {
+			if(/^0x[0-9a-f]{1,8}$/i.test(address)) {
+				return address;
+			}
+			else if(/^[0-9]+$/i.test(address)) {
+				return address;
+			}
+			else {
+				return null;
+			}
+		}
+
+		if(!vscode.debug.activeDebugSession) {
+			vscode.window.showErrorMessage('No debugging session available');
+			return;
+		}
+
+		vscode.window.showInputBox({
+			placeHolder: 'Prefix with 0x for hexidecimal format',
+			ignoreFocusOut: true,
+			prompt: 'Memory Address'			
+		}).then(
+			address => {
+				if (!validateValue(address)) {
+					vscode.window.showErrorMessage('Invalid memory address entered');
+					Reporting.sendEvent('examine-memory-invalid-address', { address: address }, {});
+					return;
+				}
+
+				vscode.window.showInputBox({
+					placeHolder: 'Prefix with 0x for hexidecimal format',
+					ignoreFocusOut: true,
+					prompt: 'Length'
+				}).then(
+					(length) => {
+						if (!validateValue(length)) {
+							vscode.window.showErrorMessage('Invalid length entered');
+							Reporting.sendEvent('examine-memory-invalid-length', { length: length }, {});
+							return;
+						}
+
+						Reporting.sendEvent('examine-memory', {}, {});
+						let timestamp = new Date().getTime();
+						vscode.window.showTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}]?address=${address}&length=${length}&timestamp=${timestamp}`), { viewColumn: 2 });
+					},
+					(error) => {
+
+					}
+				);
+			},
+			(error) => {
+
+			}
+		);
 	}
 
 	// Peripherals
@@ -97,11 +161,6 @@ class CortexDebugExtension {
 	// Debug Events
 	debugSessionStarted(session: vscode.DebugSession) {
 		// Clean-up Old output channels
-		if (this.adapterOutputChannel) {
-			this.adapterOutputChannel.dispose();
-			this.adapterOutputChannel = null;
-		}
-
 		if (this.swo) {
 			this.swo.dispose();
 			this.swo = null;
@@ -116,6 +175,18 @@ class CortexDebugExtension {
 				}
 			}
 
+			let info = {
+				type: args.type,
+				swo: args.SWOConfig.enabled ? 'enabled' : 'disabled',
+				graphing: (args.GraphConfig && args.GraphConfig.length > 0) ? 'enabled' : 'disabled'
+			};
+
+			if (args.type == 'jlink-gdb') {
+				info['device'] = args.device;
+			}
+
+			Reporting.sendEvent('debug-session-started', info, {});
+			
 			this.registerProvider.debugSessionStarted();
 			this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
@@ -126,6 +197,8 @@ class CortexDebugExtension {
 	}
 
 	debugSessionTerminated(session: vscode.DebugSession) {
+		Reporting.sendEvent('debug-session-terminated', {}, {});
+
 		this.registerProvider.debugSessionTerminated();
 		this.peripheralProvider.debugSessionTerminated();
 		if (this.swo) {
@@ -151,6 +224,9 @@ class CortexDebugExtension {
 			case 'adapter-output':
 				this.receivedAdapterOutput(e);
 				break;
+			case 'record-telemetry-event':
+				this.receivedTelemetryEvent(e);
+				break;
 			default:
 				break;
 
@@ -167,6 +243,10 @@ class CortexDebugExtension {
 		this.peripheralProvider.debugContinued();
 		this.registerProvider.debugContinued();
 		if (this.swo) { this.swo.debugContinued(); }
+	}
+
+	receivedTelemetryEvent(e) {
+		Reporting.sendEvent(e.body.event, e.body.properties || {}, e.body.measures || {});
 	}
 
 	receivedSWOConfigureEvent(e) {

@@ -14,6 +14,21 @@
             {
                 "command": "cortexPeripherals.selectedNode", 
                 "title": "Selected"
+            }, 
+            {
+                "category": "Cortex-Debug", 
+                "command": "marus25.cortex-debug-openocd.examineMemory", 
+                "title": "View Memory"
+            }, 
+            {
+                "category": "Cortex-Debug", 
+                "command": "marus25.cortex-debug-jlink.examineMemory", 
+                "title": "View Memory"
+            }, 
+            {
+                "category": "Cortex-Debug", 
+                "command": "marus25.cortex-debug-pyocd.examineMemory", 
+                "title": "View Memory"
             }
         ], 
         "debuggers": [
@@ -70,29 +85,25 @@
                                                     "description": "Minimum value for the Y-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "ports": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                "plots": {
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
                                                                 "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
                                                                 "type": "string"
                                                             }, 
+                                                            "graphId": {
+                                                                "description": "Graph Data Source Id for the plot.", 
+                                                                "type": "string"
+                                                            }, 
                                                             "label": {
                                                                 "description": "A label for this data set", 
                                                                 "type": "string"
-                                                            }, 
-                                                            "number": {
-                                                                "default": 0, 
-                                                                "description": "The SWO port number", 
-                                                                "maximum": 31, 
-                                                                "minimum": 0, 
-                                                                "type": "number"
                                                             }
                                                         }, 
                                                         "required": [
-                                                            "number", 
-                                                            "label"
+                                                            "graphId"
                                                         ], 
                                                         "type": "object"
                                                     }, 
@@ -112,7 +123,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -135,6 +146,10 @@
                                                     ], 
                                                     "type": "string"
                                                 }, 
+                                                "xGraphId": {
+                                                    "description": "Graph Data Source Id for the X axis", 
+                                                    "type": "string"
+                                                }, 
                                                 "xMaximum": {
                                                     "default": 65535, 
                                                     "description": "Maximum value on the X-Axis", 
@@ -145,9 +160,9 @@
                                                     "description": "Minimum value on the X-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "xPort": {
-                                                    "description": "SWO Port for the X axis", 
-                                                    "type": "number"
+                                                "yGraphId": {
+                                                    "description": "Graph Data Source Id Port for the Y axis", 
+                                                    "type": "string"
                                                 }, 
                                                 "yMaximum": {
                                                     "default": 65535, 
@@ -158,15 +173,11 @@
                                                     "default": 0, 
                                                     "description": "Minimum value on the Y-Axis", 
                                                     "type": "number"
-                                                }, 
-                                                "yPort": {
-                                                    "description": "SWO Port for the Y axis", 
-                                                    "type": "number"
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -225,43 +236,142 @@
                                     "ports": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
-                                            "properties": {
-                                                "encoding": {
-                                                    "default": "unsigned", 
-                                                    "description": "This property is only used for binary and graph output formats.", 
-                                                    "enum": [
-                                                        "unsigned", 
-                                                        "signed", 
-                                                        "Q16.16"
+                                            "anyOf": [
+                                                {
+                                                    "properties": {
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "SWO Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "console"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "format": {
-                                                    "description": "Output format for this port.", 
-                                                    "enum": [
-                                                        "console", 
-                                                        "binary", 
-                                                        "graph"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "binary"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "number": {
-                                                    "description": "SWO Port Number", 
-                                                    "maximum": 31, 
-                                                    "minimum": 0, 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "graphId": {
+                                                            "description": "The identifier to use for this data in graph configurations.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "graph"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "graphId"
+                                                    ], 
+                                                    "type": "object"
                                                 }, 
-                                                "scale": {
-                                                    "default": 1, 
-                                                    "description": "This setting will scale the raw value from the SWO port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "config": {
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
+                                                        }, 
+                                                        "decoder": {
+                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "advanced"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "decoder"
+                                                    ], 
+                                                    "type": "object"
                                                 }
-                                            }, 
-                                            "required": [
-                                                "number", 
-                                                "format"
-                                            ], 
-                                            "type": "object"
+                                            ]
                                         }, 
                                         "type": "array"
                                     }, 
@@ -331,29 +441,25 @@
                                                     "description": "Minimum value for the Y-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "ports": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                "plots": {
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
                                                                 "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
                                                                 "type": "string"
                                                             }, 
+                                                            "graphId": {
+                                                                "description": "Graph Data Source Id for the plot.", 
+                                                                "type": "string"
+                                                            }, 
                                                             "label": {
                                                                 "description": "A label for this data set", 
                                                                 "type": "string"
-                                                            }, 
-                                                            "number": {
-                                                                "default": 0, 
-                                                                "description": "The SWO port number", 
-                                                                "maximum": 31, 
-                                                                "minimum": 0, 
-                                                                "type": "number"
                                                             }
                                                         }, 
                                                         "required": [
-                                                            "number", 
-                                                            "label"
+                                                            "graphId"
                                                         ], 
                                                         "type": "object"
                                                     }, 
@@ -373,7 +479,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -396,6 +502,10 @@
                                                     ], 
                                                     "type": "string"
                                                 }, 
+                                                "xGraphId": {
+                                                    "description": "Graph Data Source Id for the X axis", 
+                                                    "type": "string"
+                                                }, 
                                                 "xMaximum": {
                                                     "default": 65535, 
                                                     "description": "Maximum value on the X-Axis", 
@@ -406,9 +516,9 @@
                                                     "description": "Minimum value on the X-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "xPort": {
-                                                    "description": "SWO Port for the X axis", 
-                                                    "type": "number"
+                                                "yGraphId": {
+                                                    "description": "Graph Data Source Id Port for the Y axis", 
+                                                    "type": "string"
                                                 }, 
                                                 "yMaximum": {
                                                     "default": 65535, 
@@ -419,15 +529,11 @@
                                                     "default": 0, 
                                                     "description": "Minimum value on the Y-Axis", 
                                                     "type": "number"
-                                                }, 
-                                                "yPort": {
-                                                    "description": "SWO Port for the Y axis", 
-                                                    "type": "number"
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -486,43 +592,142 @@
                                     "ports": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
-                                            "properties": {
-                                                "encoding": {
-                                                    "default": "unsigned", 
-                                                    "description": "This property is only used for binary and graph output formats.", 
-                                                    "enum": [
-                                                        "unsigned", 
-                                                        "signed", 
-                                                        "Q16.16"
+                                            "anyOf": [
+                                                {
+                                                    "properties": {
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "SWO Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "console"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "format": {
-                                                    "description": "Output format for this port.", 
-                                                    "enum": [
-                                                        "console", 
-                                                        "binary", 
-                                                        "graph"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "binary"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "number": {
-                                                    "description": "SWO Port Number", 
-                                                    "maximum": 31, 
-                                                    "minimum": 0, 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "graphId": {
+                                                            "description": "The identifier to use for this data in graph configurations.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "graph"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "graphId"
+                                                    ], 
+                                                    "type": "object"
                                                 }, 
-                                                "scale": {
-                                                    "default": 1, 
-                                                    "description": "This setting will scale the raw value from the SWO port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "config": {
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
+                                                        }, 
+                                                        "decoder": {
+                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "advanced"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "decoder"
+                                                    ], 
+                                                    "type": "object"
                                                 }
-                                            }, 
-                                            "required": [
-                                                "number", 
-                                                "format"
-                                            ], 
-                                            "type": "object"
+                                            ]
                                         }, 
                                         "type": "array"
                                     }, 
@@ -620,29 +825,25 @@
                                                     "description": "Minimum value for the Y-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "ports": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                "plots": {
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
                                                                 "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
                                                                 "type": "string"
                                                             }, 
+                                                            "graphId": {
+                                                                "description": "Graph Data Source Id for the plot.", 
+                                                                "type": "string"
+                                                            }, 
                                                             "label": {
                                                                 "description": "A label for this data set", 
                                                                 "type": "string"
-                                                            }, 
-                                                            "number": {
-                                                                "default": 0, 
-                                                                "description": "The SWO port number", 
-                                                                "maximum": 31, 
-                                                                "minimum": 0, 
-                                                                "type": "number"
                                                             }
                                                         }, 
                                                         "required": [
-                                                            "number", 
-                                                            "label"
+                                                            "graphId"
                                                         ], 
                                                         "type": "object"
                                                     }, 
@@ -662,7 +863,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -685,6 +886,10 @@
                                                     ], 
                                                     "type": "string"
                                                 }, 
+                                                "xGraphId": {
+                                                    "description": "Graph Data Source Id for the X axis", 
+                                                    "type": "string"
+                                                }, 
                                                 "xMaximum": {
                                                     "default": 65535, 
                                                     "description": "Maximum value on the X-Axis", 
@@ -695,9 +900,9 @@
                                                     "description": "Minimum value on the X-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "xPort": {
-                                                    "description": "SWO Port for the X axis", 
-                                                    "type": "number"
+                                                "yGraphId": {
+                                                    "description": "Graph Data Source Id Port for the Y axis", 
+                                                    "type": "string"
                                                 }, 
                                                 "yMaximum": {
                                                     "default": 65535, 
@@ -708,15 +913,11 @@
                                                     "default": 0, 
                                                     "description": "Minimum value on the Y-Axis", 
                                                     "type": "number"
-                                                }, 
-                                                "yPort": {
-                                                    "description": "SWO Port for the Y axis", 
-                                                    "type": "number"
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -781,43 +982,142 @@
                                     "ports": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
-                                            "properties": {
-                                                "encoding": {
-                                                    "default": "unsigned", 
-                                                    "description": "This property is only used for binary and graph output formats.", 
-                                                    "enum": [
-                                                        "unsigned", 
-                                                        "signed", 
-                                                        "Q16.16"
+                                            "anyOf": [
+                                                {
+                                                    "properties": {
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "SWO Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "console"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "format": {
-                                                    "description": "Output format for this port.", 
-                                                    "enum": [
-                                                        "console", 
-                                                        "binary", 
-                                                        "graph"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "binary"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "number": {
-                                                    "description": "SWO Port Number", 
-                                                    "maximum": 31, 
-                                                    "minimum": 0, 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "graphId": {
+                                                            "description": "The identifier to use for this data in graph configurations.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "graph"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "graphId"
+                                                    ], 
+                                                    "type": "object"
                                                 }, 
-                                                "scale": {
-                                                    "default": 1, 
-                                                    "description": "This setting will scale the raw value from the SWO port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "config": {
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
+                                                        }, 
+                                                        "decoder": {
+                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "advanced"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "decoder"
+                                                    ], 
+                                                    "type": "object"
                                                 }
-                                            }, 
-                                            "required": [
-                                                "number", 
-                                                "format"
-                                            ], 
-                                            "type": "object"
+                                            ]
                                         }, 
                                         "type": "array"
                                     }, 
@@ -885,29 +1185,25 @@
                                                     "description": "Minimum value for the Y-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "ports": {
-                                                    "description": "SWO Port configuration. Ports selected must be configured as a \"graph\" format port in the \"swoConfig\" section", 
+                                                "plots": {
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
                                                                 "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
                                                                 "type": "string"
                                                             }, 
+                                                            "graphId": {
+                                                                "description": "Graph Data Source Id for the plot.", 
+                                                                "type": "string"
+                                                            }, 
                                                             "label": {
                                                                 "description": "A label for this data set", 
                                                                 "type": "string"
-                                                            }, 
-                                                            "number": {
-                                                                "default": 0, 
-                                                                "description": "The SWO port number", 
-                                                                "maximum": 31, 
-                                                                "minimum": 0, 
-                                                                "type": "number"
                                                             }
                                                         }, 
                                                         "required": [
-                                                            "number", 
-                                                            "label"
+                                                            "graphId"
                                                         ], 
                                                         "type": "object"
                                                     }, 
@@ -927,7 +1223,7 @@
                                             }, 
                                             "required": [
                                                 "label", 
-                                                "ports", 
+                                                "plots", 
                                                 "minimum", 
                                                 "maximum"
                                             ], 
@@ -950,6 +1246,10 @@
                                                     ], 
                                                     "type": "string"
                                                 }, 
+                                                "xGraphId": {
+                                                    "description": "Graph Data Source Id for the X axis", 
+                                                    "type": "string"
+                                                }, 
                                                 "xMaximum": {
                                                     "default": 65535, 
                                                     "description": "Maximum value on the X-Axis", 
@@ -960,9 +1260,9 @@
                                                     "description": "Minimum value on the X-Axis", 
                                                     "type": "number"
                                                 }, 
-                                                "xPort": {
-                                                    "description": "SWO Port for the X axis", 
-                                                    "type": "number"
+                                                "yGraphId": {
+                                                    "description": "Graph Data Source Id Port for the Y axis", 
+                                                    "type": "string"
                                                 }, 
                                                 "yMaximum": {
                                                     "default": 65535, 
@@ -973,15 +1273,11 @@
                                                     "default": 0, 
                                                     "description": "Minimum value on the Y-Axis", 
                                                     "type": "number"
-                                                }, 
-                                                "yPort": {
-                                                    "description": "SWO Port for the Y axis", 
-                                                    "type": "number"
                                                 }
                                             }, 
                                             "required": [
-                                                "xPort", 
-                                                "yPort", 
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
                                             ], 
                                             "type": "object"
@@ -1046,43 +1342,142 @@
                                     "ports": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
-                                            "properties": {
-                                                "encoding": {
-                                                    "default": "unsigned", 
-                                                    "description": "This property is only used for binary and graph output formats.", 
-                                                    "enum": [
-                                                        "unsigned", 
-                                                        "signed", 
-                                                        "Q16.16"
+                                            "anyOf": [
+                                                {
+                                                    "properties": {
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "SWO Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "console"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "format": {
-                                                    "description": "Output format for this port.", 
-                                                    "enum": [
-                                                        "console", 
-                                                        "binary", 
-                                                        "graph"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "label": {
+                                                            "description": "A label for the output window.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "binary"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number"
                                                     ], 
-                                                    "type": "string"
+                                                    "type": "object"
                                                 }, 
-                                                "number": {
-                                                    "description": "SWO Port Number", 
-                                                    "maximum": 31, 
-                                                    "minimum": 0, 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
+                                                            "enum": [
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
+                                                                "float"
+                                                            ], 
+                                                            "type": "string"
+                                                        }, 
+                                                        "graphId": {
+                                                            "description": "The identifier to use for this data in graph configurations.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "scale": {
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "graph"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "graphId"
+                                                    ], 
+                                                    "type": "object"
                                                 }, 
-                                                "scale": {
-                                                    "default": 1, 
-                                                    "description": "This setting will scale the raw value from the SWO port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                    "type": "number"
+                                                {
+                                                    "properties": {
+                                                        "config": {
+                                                            "additionalProperties": true, 
+                                                            "type": "object"
+                                                        }, 
+                                                        "decoder": {
+                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
+                                                            "type": "string"
+                                                        }, 
+                                                        "number": {
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
+                                                            "type": "number"
+                                                        }, 
+                                                        "type": {
+                                                            "enum": [
+                                                                "advanced"
+                                                            ], 
+                                                            "type": "string"
+                                                        }
+                                                    }, 
+                                                    "required": [
+                                                        "number", 
+                                                        "decoder"
+                                                    ], 
+                                                    "type": "object"
                                                 }
-                                            }, 
-                                            "required": [
-                                                "number", 
-                                                "format"
-                                            ], 
-                                            "type": "object"
+                                            ]
                                         }, 
                                         "type": "array"
                                     }, 
@@ -1128,9 +1523,247 @@
                 "runtime": "node", 
                 "type": "jlink-gdb", 
                 "variables": {}
+            }, 
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {
+                            "boardId": {
+                                "description": "Connect to board by board id. Only needed if multiple PyOCD compatible boards are connected.", 
+                                "type": "string"
+                            }, 
+                            "cwd": {
+                                "description": "Path of project", 
+                                "type": "string"
+                            }, 
+                            "debugger_args": {
+                                "default": [], 
+                                "description": "Additional arguments to pass to GDB", 
+                                "type": "array"
+                            }, 
+                            "executable": {
+                                "description": "Path of executable", 
+                                "type": "string"
+                            }, 
+                            "gdbpath": {
+                                "default": "arm-none-eabi-gdb", 
+                                "description": "Path to the gdb executable or the command if in PATH", 
+                                "type": "string"
+                            }, 
+                            "printCalls": {
+                                "default": false, 
+                                "description": "Prints all GDB calls to the console", 
+                                "type": "boolean"
+                            }, 
+                            "pyocdPath": {
+                                "default": "pyocd-gdbserver", 
+                                "description": "Path to the pyocd-gdbserver executable", 
+                                "type": "string"
+                            }, 
+                            "showDevDebugOutput": {
+                                "default": false, 
+                                "description": "Prints all GDB responses to the console", 
+                                "type": "boolean"
+                            }, 
+                            "svdFile": {
+                                "default": null, 
+                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
+                                "type": "string"
+                            }, 
+                            "target": {
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
+                                "enum": [
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
+                                    "kw01z4"
+                                ], 
+                                "type": "string"
+                            }
+                        }, 
+                        "required": [
+                            "executable"
+                        ]
+                    }, 
+                    "launch": {
+                        "properties": {
+                            "boardId": {
+                                "description": "Connect to board by board id. Only needed if multiple PyOCD compatible boards are connected.", 
+                                "type": "string"
+                            }, 
+                            "cwd": {
+                                "description": "Path of project", 
+                                "type": "string"
+                            }, 
+                            "debugger_args": {
+                                "default": [], 
+                                "description": "Additional arguments to pass to GDB", 
+                                "type": "array"
+                            }, 
+                            "executable": {
+                                "description": "Path of executable", 
+                                "type": "string"
+                            }, 
+                            "gdbpath": {
+                                "default": "arm-none-eabi-gdb", 
+                                "description": "Path to the gdb executable or the command if in PATH", 
+                                "type": "string"
+                            }, 
+                            "printCalls": {
+                                "default": false, 
+                                "description": "Prints all GDB calls to the console", 
+                                "type": "boolean"
+                            }, 
+                            "pyocdPath": {
+                                "default": "pyocd-gdbserver", 
+                                "description": "Path to the pyocd-gdbserver executable", 
+                                "type": "string"
+                            }, 
+                            "showDevDebugOutput": {
+                                "default": false, 
+                                "description": "Prints all GDB responses to the console", 
+                                "type": "boolean"
+                            }, 
+                            "svdFile": {
+                                "default": null, 
+                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
+                                "type": "string"
+                            }, 
+                            "target": {
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
+                                "enum": [
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
+                                    "kw01z4"
+                                ], 
+                                "type": "string"
+                            }
+                        }, 
+                        "required": [
+                            "executable"
+                        ]
+                    }
+                }, 
+                "configurationSnippets": [
+                    {
+                        "body": {
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
+                            "type": "pyocd-gdb"
+                        }, 
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD", 
+                        "label": "Cortex Debug: PyOCD"
+                    }
+                ], 
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm"
+                    ]
+                }, 
+                "extensions": [], 
+                "label": "Cortex Debug: PyOCD", 
+                "program": "./out/src/pyocd.js", 
+                "runtime": "node", 
+                "type": "pyocd-gdb", 
+                "variables": {}
             }
         ], 
         "menus": {
+            "commandPalette": [
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "false"
+                }, 
+                {
+                    "command": "cortexPeripherals.selectedNode", 
+                    "when": "false"
+                }, 
+                {
+                    "command": "marus25.cortex-debug-openocd.examineMemory", 
+                    "when": "debugType == openocd-gdb"
+                }, 
+                {
+                    "command": "marus25.cortex-debug-jlink.examineMemory", 
+                    "when": "debugType == jlink-gdb"
+                }, 
+                {
+                    "command": "marus25.cortex-debug-pyocd.examineMemory", 
+                    "when": "debugType == pyocd-gdb"
+                }
+            ], 
             "view/item/context": [
                 {
                     "command": "cortexPeripherals.updateNode", 
@@ -1168,6 +1801,16 @@
                     "id": "cortexRegisters-openocd", 
                     "name": "Cortex Registers", 
                     "when": "debugType == openocd-gdb"
+                }, 
+                {
+                    "id": "cortexPeripherals-pyocd", 
+                    "name": "Cortex Peripherals", 
+                    "when": "debugType == pyocd-gdb"
+                }, 
+                {
+                    "id": "cortexRegisters-pyocd", 
+                    "name": "Cortex Registers", 
+                    "when": "debugType == pyocd-gdb"
                 }
             ]
         }
@@ -1176,9 +1819,11 @@
         "binary-parser": "^1.3.0", 
         "cbarrick-circular-buffer": "^1.2.3", 
         "portastic": "^1.0.1", 
+        "protobufjs": "~6.8.4", 
         "tmp": "0.0.33", 
         "vscode-debugadapter": "^1.16.0", 
         "vscode-debugprotocol": "^1.16.0", 
+        "vscode-extension-telemetry": "0.0.10", 
         "ws": "^3.3.2", 
         "xml2js": "^0.4.19"
     }, 
@@ -1203,7 +1848,8 @@
     ], 
     "main": "./out/src/frontend/extension", 
     "name": "cortex-debug", 
-    "publisher": "marus", 
+    "preview": true, 
+    "publisher": "marus25", 
     "repository": {
         "type": "git", 
         "url": "https://github.com/Marus/cortex-debug.git"
@@ -1213,5 +1859,5 @@
         "postinstall": "node ./node_modules/vscode/bin/install", 
         "vscode:prepublish": "tsc -p ./"
     }, 
-    "version": "0.1.2"
+    "version": "0.1.6"
 }
