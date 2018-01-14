@@ -17,11 +17,7 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWOProcessor {
 		this.port = -1;
 
 		let decoderPath = config.decoder;
-		if(decoderPath == 'protobuf') {
-			let extension = vscode.extensions.getExtension('marus25.cortex-debug');
-			decoderPath = `${extension.extensionPath}/out/src/frontend/swo/decoders/protobuf.js`;
-		}
-		
+
 		var decoderModule = require(decoderPath);
 
 		if(decoderModule && decoderModule.default) {
