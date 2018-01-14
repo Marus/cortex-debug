@@ -2,6 +2,7 @@
 {
 	"version": "0.1.0",
 	"configurations": [
+
 		{
 			"name": "Launch Extension",
 			"type": "extensionHost",
@@ -36,6 +37,21 @@
 			"request": "launch",
 			"runtimeArgs": [ "--nolazy" ],
 			"program": "${workspaceRoot}/src/openocd.ts",
+			"stopOnEntry": false,
+			"args": [ "--server=4711" ],
+			"sourceMaps": true,
+			"outFiles": [
+				"${workspaceRoot}/out/**/*.js"
+			],
+			"cwd": "${workspaceRoot}"
+			// "preLaunchTask": "npm"
+		},
+		{
+			"name": "PyOCD debug server",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [ "--nolazy" ],
+			"program": "${workspaceRoot}/src/pyocd.ts",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,

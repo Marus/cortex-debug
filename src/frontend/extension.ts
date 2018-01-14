@@ -57,11 +57,14 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-pyocd.examineMemory', this.examineMemory.bind(this)));
 
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-pyocd', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', this.registerProvider));	
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', this.registerProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-pyocd', this.registerProvider));
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)));
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)));

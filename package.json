@@ -24,6 +24,11 @@
                 "category": "Cortex-Debug", 
                 "command": "marus25.cortex-debug-jlink.examineMemory", 
                 "title": "View Memory"
+            }, 
+            {
+                "category": "Cortex-Debug", 
+                "command": "marus25.cortex-debug-pyocd.examineMemory", 
+                "title": "View Memory"
             }
         ], 
         "debuggers": [
@@ -1468,6 +1473,222 @@
                 "runtime": "node", 
                 "type": "jlink-gdb", 
                 "variables": {}
+            }, 
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {
+                            "boardId": {
+                                "description": "Connect to board by board id. Only needed if multiple PyOCD compatible boards are connected.", 
+                                "type": "string"
+                            }, 
+                            "cwd": {
+                                "description": "Path of project", 
+                                "type": "string"
+                            }, 
+                            "debugger_args": {
+                                "default": [], 
+                                "description": "Additional arguments to pass to GDB", 
+                                "type": "array"
+                            }, 
+                            "executable": {
+                                "description": "Path of executable", 
+                                "type": "string"
+                            }, 
+                            "gdbpath": {
+                                "default": "arm-none-eabi-gdb", 
+                                "description": "Path to the gdb executable or the command if in PATH", 
+                                "type": "string"
+                            }, 
+                            "printCalls": {
+                                "default": false, 
+                                "description": "Prints all GDB calls to the console", 
+                                "type": "boolean"
+                            }, 
+                            "pyocdPath": {
+                                "default": "pyocd-gdbserver", 
+                                "description": "Path to the pyocd-gdbserver executable", 
+                                "type": "string"
+                            }, 
+                            "showDevDebugOutput": {
+                                "default": false, 
+                                "description": "Prints all GDB responses to the console", 
+                                "type": "boolean"
+                            }, 
+                            "svdFile": {
+                                "default": null, 
+                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
+                                "type": "string"
+                            }, 
+                            "target": {
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
+                                "enum": [
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
+                                    "kw01z4"
+                                ], 
+                                "type": "string"
+                            }
+                        }, 
+                        "required": [
+                            "executable"
+                        ]
+                    }, 
+                    "launch": {
+                        "properties": {
+                            "boardId": {
+                                "description": "Connect to board by board id. Only needed if multiple PyOCD compatible boards are connected.", 
+                                "type": "string"
+                            }, 
+                            "cwd": {
+                                "description": "Path of project", 
+                                "type": "string"
+                            }, 
+                            "debugger_args": {
+                                "default": [], 
+                                "description": "Additional arguments to pass to GDB", 
+                                "type": "array"
+                            }, 
+                            "executable": {
+                                "description": "Path of executable", 
+                                "type": "string"
+                            }, 
+                            "gdbpath": {
+                                "default": "arm-none-eabi-gdb", 
+                                "description": "Path to the gdb executable or the command if in PATH", 
+                                "type": "string"
+                            }, 
+                            "printCalls": {
+                                "default": false, 
+                                "description": "Prints all GDB calls to the console", 
+                                "type": "boolean"
+                            }, 
+                            "pyocdPath": {
+                                "default": "pyocd-gdbserver", 
+                                "description": "Path to the pyocd-gdbserver executable", 
+                                "type": "string"
+                            }, 
+                            "showDevDebugOutput": {
+                                "default": false, 
+                                "description": "Prints all GDB responses to the console", 
+                                "type": "boolean"
+                            }, 
+                            "svdFile": {
+                                "default": null, 
+                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
+                                "type": "string"
+                            }, 
+                            "target": {
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
+                                "enum": [
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
+                                    "kw01z4"
+                                ], 
+                                "type": "string"
+                            }
+                        }, 
+                        "required": [
+                            "executable"
+                        ]
+                    }
+                }, 
+                "configurationSnippets": [
+                    {
+                        "body": {
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
+                            "type": "pyocd-gdb"
+                        }, 
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD", 
+                        "label": "Cortex Debug: PyOCD"
+                    }
+                ], 
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm"
+                    ]
+                }, 
+                "extensions": [], 
+                "label": "Cortex Debug: PyOCD", 
+                "program": "./out/src/pyocd.js", 
+                "runtime": "node", 
+                "type": "pyocd-gdb", 
+                "variables": {}
             }
         ], 
         "menus": {
@@ -1487,6 +1708,10 @@
                 {
                     "command": "marus25.cortex-debug-jlink.examineMemory", 
                     "when": "debugType == jlink-gdb"
+                }, 
+                {
+                    "command": "marus25.cortex-debug-pyocd.examineMemory", 
+                    "when": "debugType == pyocd-gdb"
                 }
             ], 
             "view/item/context": [
@@ -1526,6 +1751,16 @@
                     "id": "cortexRegisters-openocd", 
                     "name": "Cortex Registers", 
                     "when": "debugType == openocd-gdb"
+                }, 
+                {
+                    "id": "cortexPeripherals-pyocd", 
+                    "name": "Cortex Peripherals", 
+                    "when": "debugType == pyocd-gdb"
+                }, 
+                {
+                    "id": "cortexRegisters-pyocd", 
+                    "name": "Cortex Registers", 
+                    "when": "debugType == pyocd-gdb"
                 }
             ]
         }
@@ -1563,6 +1798,7 @@
     ], 
     "main": "./out/src/frontend/extension", 
     "name": "cortex-debug", 
+    "preview": true, 
     "publisher": "marus25", 
     "repository": {
         "type": "git", 
@@ -1573,6 +1809,5 @@
         "postinstall": "node ./node_modules/vscode/bin/install", 
         "vscode:prepublish": "tsc -p ./"
     }, 
-    "version": "0.1.5",
-    "preview": true
+    "version": "0.1.6"
 }
