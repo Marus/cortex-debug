@@ -46,7 +46,7 @@ export class RegisterNode extends BaseNode {
 		super(RecordType.Register);
 		this.name = this.name;
 
-		if(name.toUpperCase() === 'XPSR') {
+		if(name.toUpperCase() === 'XPSR' || name.toUpperCase() === 'CPSR') {
 			this.fields = [
 				new FieldNode('Negative Flag (N)', 31, 1, this),
 				new FieldNode('Zero Flag (Z)', 30, 1, this),

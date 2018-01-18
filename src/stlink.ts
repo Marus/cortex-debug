@@ -1,7 +1,7 @@
 import { GDBDebugSession } from './gdb';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { JLink } from './backend/jlink';
+import { STLink } from './backend/stlink';
 import { MI2 } from "./backend/mi2/mi2";
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
@@ -12,36 +12,22 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	gdbpath: string;
 	executable: string;
 	cwd: string;
-	jlinkpath: string;
 	device: string;
+	stutilpath: string;
 	debugger_args: string[];
 	showDevDebugOutput: boolean;
 	svdFile: string;
-	swoConfig: any;
-	graphConfig: any;
-	ipAddress: string;
-	serialNumber: string;
 }
 
-class JLinkGDBDebugSession extends GDBDebugSession {
-	protected jlink : JLink;
+class STLinkGDBDebugSession extends GDBDebugSession {
+	protected stutil : STLink;
 	private args: ConfigurationArguments;
 	private gdbPort: number;
-	private swoPort: number;
 	private consolePort: number;
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
-		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
-		args.graphConfig = args.graphConfig || [];
 		this.args = args;
 		this.processLaunchAttachRequest(response, args, false);
-	}
-
-	protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
-		args.swoConfig = args.swoConfig || { enabled: false, cpuFrequency: 0, swoFrequency: 0 };
-		args.graphConfig = args.graphConfig || [];
-		this.args = args;
-		this.processLaunchAttachRequest(response, args, true);
 	}
 	
 	private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments, attach: boolean) {
@@ -51,38 +37,37 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		
-		portastic.find({ min: 50000, max: 52000, retrieve: 3 }).then(ports => {
+		portastic.find({ min: 50000, max: 52000, retrieve: 2 }).then(ports => {
 			this.gdbPort = ports[0];
-			this.swoPort = ports[1];
-			this.consolePort = ports[2];
+			this.consolePort = ports[1];
 
-			let defaultExecutable = 'JLinkGDBServer';
+			let defaultExecutable = 'st-util';	// the name of the program is st-util rather than STLink
 			let defaultGDBExecutable = 'arm-none-eabi-gdb';
 			if(os.platform() == 'win32') {
-				defaultExecutable = 'JLinkGDBServer.exe';
+				defaultExecutable = 'st-util.exe';
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.jlink = new JLink(args.jlinkpath || defaultExecutable, args.device, this.gdbPort, this.swoPort, this.consolePort, args.ipAddress, args.serialNumber);
-			this.jlink.on('jlink-output', this.handleJLinkOutput.bind(this));
-			this.jlink.on('jlink-stderr', this.handleJLinkErrorOutput.bind(this));
+			this.stutil = new STLink(args.stutilpath || defaultExecutable, this.gdbPort);
+			this.stutil.on('stutil-output', this.handleSTUtilOutput.bind(this));
+			this.stutil.on('stutil-stderr', this.handleSTUtilErrorOutput.bind(this));
 			
-			this.jlink.on("launcherror", (err) => {
-				this.sendErrorResponse(response, 103, `Failed to launch J-Link GDB Server: ${err.toString()}`);
+			this.stutil.on("launcherror", (err) => {
+				this.sendErrorResponse(response, 103, `Failed to launch STLink GDB Server: ${err.toString()}`);
 			});
-			this.jlink.on("quit", () => {
+			this.stutil.on("quit", () => {
 				if (this.started) {
 					this.quitEvent.bind(this)
 				}
 				else {
-					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
-					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly.`);
+					this.sendErrorResponse(response, 103, `STLink GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
+					this.sendErrorResponse(response, 103, `STLink GDB Server Quit Unexpectedly.`);
 				}
 			});
 
 			let timeout = null;
 
-			this.jlink.on('jlink-init', () => {
+			this.stutil.on('stlink-init', () => {
 				if(timeout) {
 					clearTimeout(timeout);
 					timeout = null;
@@ -97,10 +82,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				let commands = attach ? this.attachCommands(this.gdbPort, args) : this.launchCommands(this.gdbPort, args);
 				
 				this.miDebugger.connect(args.cwd, args.executable, commands).then(() => {
-					if(args.swoConfig.enabled) {
-						this.sendEvent(new SWOConfigureEvent('jlink', { port: this.swoPort }));
-					}
-					
 					setTimeout(() => {
 						this.miDebugger.emit("ui-break-done");
 					}, 50);
@@ -121,16 +102,16 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				});
 			});
 			
-			this.jlink.init().then(_ => {}, _ => {});
+			this.stutil.init().then(_ => {}, _ => {});
 			
 			timeout = setTimeout(() => {
-				this.jlink.exit();
-				this.sendEvent(new TelemetryEvent('error-launching-jlink', { error: `Failed to launch JLink Server: Timeout.` }, {}));
-				this.sendErrorResponse(response, 103, `Failed to launch JLink Server: Timeout.`);
+				this.stutil.exit();
+				this.sendEvent(new TelemetryEvent('error-launching-stlink', { error: `Failed to launch STLink Server: Timeout.` }, {}));
+				this.sendErrorResponse(response, 103, `Failed to launch STLink Server: Timeout.`);
 			}, 10000);
 		}, err => {
-			this.sendEvent(new TelemetryEvent('error-launching-jlink', { error: err.toString() }, {}));
-			this.sendErrorResponse(response, 103, `Failed to launch JLink Server: ${err.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-launching-stlink', { error: err.toString() }, {}));
+			this.sendErrorResponse(response, 103, `Failed to launch STLink Server: ${err.toString()}`);
 		});
 	}
 
@@ -144,15 +125,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			'enable-pretty-printing'
 		];
 
-		if(args.swoConfig.enabled) {
-			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
-			let swoFrequency = args.swoConfig.swoFrequency | 0;
-			let cpuFrequency = args.swoConfig.cpuFrequency | 0;
-
-			let command = `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`;
-			commands.push(`interpreter-exec console "${command}"`);
-		}
-
 		return commands;
 	}
 
@@ -162,15 +134,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			'interpreter-exec console "monitor halt"',
 			'enable-pretty-printing'
 		];
-
-		if(args.swoConfig.enabled) {
-			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
-			let swoFrequency = args.swoConfig.swoFrequency | 0;
-			let cpuFrequency = args.swoConfig.cpuFrequency | 0;
-
-			let command = `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`;
-			commands.push(`interpreter-exec console "${command}"`);
-		}
 
 		return commands;
 	}
@@ -196,7 +159,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			this.commandServer = undefined;
 		}
 
-		try { this.jlink.stop(); }
+		try { this.stutil.stop(); }
 		catch(e) {}
 
 		this.sendResponse(response);
@@ -212,11 +175,11 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		})
 	}
 
-	protected handleJLinkOutput(output) {
+	protected handleSTUtilOutput(output) {
 		this.sendEvent(new AdapterOutputEvent(output, 'out'));
 	}
 
-	protected handleJLinkErrorOutput(output) {
+	protected handleSTUtilErrorOutput(output) {
 		this.sendEvent(new AdapterOutputEvent(output, 'err'));
 	}
 
@@ -224,14 +187,13 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 		switch(command) {
 			case 'get-arguments':
 				response.body = {
-					type: 'jlink-gdb',
-					GDBPort: this.gdbPort,
-					SWOPort: this.swoPort,
-					ConsolePort: this.consolePort,
+					type: 'stlink-gdb',
 					device: this.args.device,
+					GDBPort: this.gdbPort,
+					ConsolePort: this.consolePort,
 					SVDFile: this.args.svdFile,
-					SWOConfig: this.args.swoConfig,
-					GraphConfig: this.args.graphConfig
+					SWOConfig: { enabled: false, cpuFrequency: 0, swoFrequency: 0 },
+					GraphConfig: []
 				};
 				this.sendResponse(response);
 				break;
@@ -250,4 +212,4 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 	}
 }
 
-DebugSession.run(JLinkGDBDebugSession);
+DebugSession.run(STLinkGDBDebugSession);
