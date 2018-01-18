@@ -1805,7 +1805,8 @@
         "url": "https://github.com/Marus/cortex-debug.git"
     }, 
     "scripts": {
-        "compile": "tsc -watch -p ./", 
+        "watch": "tsc -watch -p ./",
+        "compile": "tsc -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install", 
         "vscode:prepublish": "tsc -p ./"
     }, 

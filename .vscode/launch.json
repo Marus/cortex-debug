@@ -13,8 +13,8 @@
 			"sourceMaps": true,
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
-			]
-			// "preLaunchTask": "npm"
+			],
+			"preLaunchTask": "npm"
 		},
 		{
 			"name": "JLink debug server",
@@ -28,8 +28,8 @@
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
 			],
-			"cwd": "${workspaceRoot}"
-			// "preLaunchTask": "npm"
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "npm"
 		},
 		{
 			"name": "OpenOCD debug server",
@@ -43,8 +43,8 @@
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
 			],
-			"cwd": "${workspaceRoot}"
-			// "preLaunchTask": "npm"
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "npm"
 		},
 		{
 			"name": "PyOCD debug server",
@@ -58,8 +58,8 @@
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
 			],
-			"cwd": "${workspaceRoot}"
-			// "preLaunchTask": "npm"
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "npm"
 		},
 		{
 			"name": "Launch Tests",
@@ -71,8 +71,22 @@
 			"sourceMaps": true,
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
-			]
-			// "preLaunchTask": "npm"
+			],
+			"preLaunchTask": "npm"
+		}
+	],
+	"compounds": [
+		{
+			"name": "Extension + JLink Server",
+			"configurations": ["Launch Extension", "JLink debug server"]
+		},
+		{
+			"name": "Extension + OpenOCD Server",
+			"configurations": ["Launch Extension", "OpenOCD debug server"]
+		},
+		{
+			"name": "Extension + PyOCD Server",
+			"configurations": ["Launch Extension", "PyOCD debug server"]
 		}
 	]
 }
