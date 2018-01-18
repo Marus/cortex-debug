@@ -1,5 +1,4 @@
-export interface SWOProcessor {
-	port: number;
+export interface SWODecoder {
 	format: string;
 
 	processMessage(buffer: Buffer);

@@ -1,27 +1,31 @@
-export interface SWOPortConfig {
+export interface SWODecoderConfig {
 	type: string;
-	number: number;
 }
 
-export interface SWOConsolePortConfig extends SWOPortConfig {
+export interface SWOBasicDecoderConfig extends SWODecoderConfig {
+	port: number;
+}
+
+export interface SWOConsoleDecoderConfig extends SWOBasicDecoderConfig {
 	label: string;
 }
 
-export interface SWOBinaryPortConfig extends SWOPortConfig {
+export interface SWOBinaryDecoderConfig extends SWOBasicDecoderConfig {
 	encoding: string;
 	scale: number;
 	label: string;
 }
 
-export interface SWOGraphPortConfig extends SWOPortConfig {
+export interface SWOGraphDecoderConfig extends SWOBasicDecoderConfig {
 	encoding: string;
 	scale: number;
 	graphId: string;
 }
 
-export interface SWOAdvancedPortConfig extends SWOPortConfig {
+export interface SWOAdvancedDecoderConfig extends SWODecoderConfig {
 	decoder: string;
 	config: any;
+	ports: number[]
 }
 
 export interface GraphConfiguration {
@@ -32,8 +36,8 @@ export interface GraphConfiguration {
 export interface RealtimeGraphConfiguration extends GraphConfiguration {
 	minimum: number;
 	maximum: number;
-	ports: {
-		number: number,
+	plots: {
+		graphId: number,
 		label: string,
 		color: string
 	}[];

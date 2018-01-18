@@ -16,8 +16,7 @@ export class SWOSocketServer {
 
 	connected(client) {
 		client.on('message', (message) => this.message(client, message));
-		let activePorts = this.processors.map(p => { return { 'port': p.port }; });
-		client.send(JSON.stringify({ type: 'configure', 'activePorts': activePorts, 'graphs': this.graphs, 'status': this.currentStatus }));
+		client.send(JSON.stringify({ type: 'configure', 'graphs': this.graphs, 'status': this.currentStatus }));
 	}
 
 	message(client, message) {

@@ -176,7 +176,7 @@
 							"default": 0,
 							"description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate."
 						},
-						"ports": {
+						"decoders": {
 							"type": "array",
 							"description": "SWO Port Configuration",
 							"items": {
@@ -185,16 +185,16 @@
 										"type": "object",
 										"properties": {
 											"type":  { "type": "string", "enum": ["console"] },
-											"number": { "type": "number", "description": "SWO Port Number", "minimum": 0, "maximum": 31 },
+											"port": { "type": "number", "description": "SWO Port Number", "minimum": 0, "maximum": 31 },
 											"label": { "type": "string", "description": "A label for the output window." }
 										},
-										"required": [ "number" ]
+										"required": [ "port" ]
 									},
 									{
 										"type": "object",
 										"properties": {
 											"type":  { "type": "string", "enum": ["binary"] },
-											"number": { "type": "number", "description": "ITM Port Number", "minimum": 0, "maximum": 31 },
+											"port": { "type": "number", "description": "ITM Port Number", "minimum": 0, "maximum": 31 },
 											"encoding": {
 												"type": "string",
 												"description": "This property is only used for binary and graph output formats.",
@@ -213,13 +213,13 @@
 											},
 											"label": { "type": "string", "description": "A label for the output window." }
 										},
-										"required": ["number"]
+										"required": ["port"]
 									},
 									{
 										"type": "object",
 										"properties": {
 											"type":  { "type": "string", "enum": ["graph"] },
-											"number": { "type": "number", "description": "ITM Port Number", "minimum": 0, "maximum": 31 },
+											"port": { "type": "number", "description": "ITM Port Number", "minimum": 0, "maximum": 31 },
 											"encoding": {
 												"type": "string",
 												"description": "This property is only used for binary and graph output formats.",
@@ -241,20 +241,20 @@
 												"description": "The identifier to use for this data in graph configurations."
 											}
 										},
-										"required": ["number", "graphId"]
+										"required": ["port", "graphId"]
 									},
 									{
 										"type": "object",
 										"properties": {
 											"type":  { "type": "string", "enum": ["advanced"] },
-											"number": { "type": "number", "description": "ITM Port Number", "minimum": 0, "maximum": 31 },
+											"ports": { "type": "array", "items": ["number"] },
 											"decoder": {
 												"type": "string",
 												"description": "Path to a javascript module to implement the decoding functionality."
 											},
 											"config": { "type": "object", "additionalProperties": true }
 										},
-										"required": ["number", "decoder"]
+										"required": ["ports", "decoder"]
 									}
 								]
 							}

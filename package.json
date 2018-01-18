@@ -213,12 +213,7 @@
                                         "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
-                                    "enabled": {
-                                        "default": false, 
-                                        "description": "Enable SWO decoding.", 
-                                        "type": "boolean"
-                                    }, 
-                                    "ports": {
+                                    "decoders": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
                                             "anyOf": [
@@ -228,7 +223,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "SWO Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -242,7 +237,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -263,7 +258,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -282,7 +277,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -303,7 +298,7 @@
                                                             "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -322,7 +317,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "port", 
                                                         "graphId"
                                                     ], 
                                                     "type": "object"
@@ -337,11 +332,11 @@
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
+                                                        "ports": {
+                                                            "items": [
+                                                                "number"
+                                                            ], 
+                                                            "type": "array"
                                                         }, 
                                                         "type": {
                                                             "enum": [
@@ -351,7 +346,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "ports", 
                                                         "decoder"
                                                     ], 
                                                     "type": "object"
@@ -360,6 +355,12 @@
                                         }, 
                                         "type": "array"
                                     }, 
+                                    "enabled": {
+                                        "default": false, 
+                                        "description": "Enable SWO decoding.", 
+                                        "type": "boolean"
+                                    }, 
+                                    "profile": {}, 
                                     "swoFrequency": {
                                         "default": 0, 
                                         "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
@@ -554,12 +555,7 @@
                                         "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
-                                    "enabled": {
-                                        "default": false, 
-                                        "description": "Enable SWO decoding.", 
-                                        "type": "boolean"
-                                    }, 
-                                    "ports": {
+                                    "decoders": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
                                             "anyOf": [
@@ -569,7 +565,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "SWO Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -583,7 +579,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -604,7 +600,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -623,7 +619,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -644,7 +640,7 @@
                                                             "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -663,7 +659,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "port", 
                                                         "graphId"
                                                     ], 
                                                     "type": "object"
@@ -678,11 +674,11 @@
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
+                                                        "ports": {
+                                                            "items": [
+                                                                "number"
+                                                            ], 
+                                                            "type": "array"
                                                         }, 
                                                         "type": {
                                                             "enum": [
@@ -692,7 +688,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "ports", 
                                                         "decoder"
                                                     ], 
                                                     "type": "object"
@@ -701,6 +697,12 @@
                                         }, 
                                         "type": "array"
                                     }, 
+                                    "enabled": {
+                                        "default": false, 
+                                        "description": "Enable SWO decoding.", 
+                                        "type": "boolean"
+                                    }, 
+                                    "profile": {}, 
                                     "swoFrequency": {
                                         "default": 0, 
                                         "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
@@ -934,12 +936,7 @@
                                         "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
-                                    "enabled": {
-                                        "default": false, 
-                                        "description": "Enable SWO decoding.", 
-                                        "type": "boolean"
-                                    }, 
-                                    "ports": {
+                                    "decoders": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
                                             "anyOf": [
@@ -949,7 +946,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "SWO Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -963,7 +960,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -984,7 +981,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -1003,7 +1000,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -1024,7 +1021,7 @@
                                                             "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -1043,7 +1040,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "port", 
                                                         "graphId"
                                                     ], 
                                                     "type": "object"
@@ -1058,11 +1055,11 @@
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
+                                                        "ports": {
+                                                            "items": [
+                                                                "number"
+                                                            ], 
+                                                            "type": "array"
                                                         }, 
                                                         "type": {
                                                             "enum": [
@@ -1072,7 +1069,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "ports", 
                                                         "decoder"
                                                     ], 
                                                     "type": "object"
@@ -1081,6 +1078,12 @@
                                         }, 
                                         "type": "array"
                                     }, 
+                                    "enabled": {
+                                        "default": false, 
+                                        "description": "Enable SWO decoding.", 
+                                        "type": "boolean"
+                                    }, 
+                                    "profile": {}, 
                                     "swoFrequency": {
                                         "default": 0, 
                                         "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
@@ -1284,12 +1287,7 @@
                                         "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }, 
-                                    "enabled": {
-                                        "default": false, 
-                                        "description": "Enable SWO decoding.", 
-                                        "type": "boolean"
-                                    }, 
-                                    "ports": {
+                                    "decoders": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
                                             "anyOf": [
@@ -1299,7 +1297,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "SWO Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -1313,7 +1311,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -1334,7 +1332,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -1353,7 +1351,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -1374,7 +1372,7 @@
                                                             "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -1393,7 +1391,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "port", 
                                                         "graphId"
                                                     ], 
                                                     "type": "object"
@@ -1408,11 +1406,11 @@
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
+                                                        "ports": {
+                                                            "items": [
+                                                                "number"
+                                                            ], 
+                                                            "type": "array"
                                                         }, 
                                                         "type": {
                                                             "enum": [
@@ -1422,7 +1420,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "ports", 
                                                         "decoder"
                                                     ], 
                                                     "type": "object"
@@ -1431,6 +1429,12 @@
                                         }, 
                                         "type": "array"
                                     }, 
+                                    "enabled": {
+                                        "default": false, 
+                                        "description": "Enable SWO decoding.", 
+                                        "type": "boolean"
+                                    }, 
+                                    "profile": {}, 
                                     "swoFrequency": {
                                         "default": 0, 
                                         "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 

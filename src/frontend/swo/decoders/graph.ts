@@ -1,24 +1,24 @@
 import * as vscode from "vscode";
-import { SWOProcessor } from './common';
+import { SWODecoder } from './common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
-import { SWOGraphPortConfig, WebsocketDataMessage } from '../common';
+import { SWOGraphDecoderConfig, WebsocketDataMessage } from '../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
 	return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
 }
 
-export class SWOGraphProcessor extends EventEmitter implements SWOProcessor {
+export class SWOGraphProcessor extends EventEmitter implements SWODecoder {
 	format: string = 'graph';
 	port: number;
 	scale: number;
 	encoding: string;
 	graphId: string;
 
-	constructor(config: SWOGraphPortConfig) {
+	constructor(config: SWOGraphDecoderConfig) {
 		super();
 		// core.socketServer.registerProcessor(this);
-		this.port = config.number;
+		this.port = config.port;
 		this.encoding = config.encoding || 'unsigned';
 		this.scale = config.scale || 1;
 		this.graphId = config.graphId;

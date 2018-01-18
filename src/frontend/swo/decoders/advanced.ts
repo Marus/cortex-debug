@@ -1,20 +1,20 @@
 import * as vscode from "vscode";
-import { SWOProcessor } from './common';
-import { SWOAdvancedPortConfig, WebsocketDataMessage, AdvancedDecoder } from '../common';
+import { SWODecoder } from './common';
+import { SWOAdvancedDecoderConfig, WebsocketDataMessage, AdvancedDecoder } from '../common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
 import { decoders } from './utils';
 
 
-export class SWOAdvancedProcessor extends EventEmitter implements SWOProcessor {
+export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
 	output: vscode.OutputChannel;
 	format: string = 'advanced';
-	port: number;
+	ports: number[];
 	decoder: AdvancedDecoder;
 	
-	constructor(config: SWOAdvancedPortConfig) {
+	constructor(config: SWOAdvancedDecoderConfig) {
 		super();
-		this.port = -1;
+		this.ports = [];
 
 		let decoderPath = config.decoder;
 
@@ -31,8 +31,8 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWOProcessor {
 				return;
 			}
 
-			this.port = config.number;
-			this.output = vscode.window.createOutputChannel(`SWO: ${this.decoder.outputLabel() || ''} [port: ${this.port}, type: ${this.decoder.name}]`);
+			this.ports = config.ports;
+			this.output = vscode.window.createOutputChannel(`SWO: ${this.decoder.outputLabel() || ''} [type: ${this.decoder.name}]`);
 		}
 		else {
 			vscode.window.showErrorMessage(`Unable to load decoder class from: ${config.decoder}`);

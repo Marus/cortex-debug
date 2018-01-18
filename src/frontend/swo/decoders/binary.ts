@@ -1,21 +1,21 @@
 import * as vscode from "vscode";
-import { SWOProcessor } from './common';
-import { SWOBinaryPortConfig } from '../common';
+import { SWODecoder } from './common';
+import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
 	return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
 }
 
-export class SWOBinaryProcessor implements SWOProcessor {
+export class SWOBinaryProcessor implements SWODecoder {
 	output: vscode.OutputChannel;
 	format: string = 'binary';
 	port: number;
 	scale: number;
 	encoding: string;
 
-	constructor(config: SWOBinaryPortConfig) {
-		this.port = config.number;
+	constructor(config: SWOBinaryDecoderConfig) {
+		this.port = config.port;
 		this.scale = config.scale || 1;
 		this.encoding = (config.encoding || 'unsigned').replace('.', '_');
 

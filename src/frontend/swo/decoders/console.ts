@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 
-import { SWOProcessor } from './common';
+import { SWODecoder } from './common';
 import { parseUnsigned } from './utils';
-import { SWOConsolePortConfig } from "../common";
+import { SWOConsoleDecoderConfig } from "../common";
 
-export class SWOConsoleProcessor implements SWOProcessor {
+export class SWOConsoleProcessor implements SWODecoder {
 	positionCount: number;
 	output: vscode.OutputChannel;
 	position: number = 0;
@@ -12,8 +12,8 @@ export class SWOConsoleProcessor implements SWOProcessor {
 	format: string = 'console';
 	port: number;
 	
-	constructor(config: SWOConsolePortConfig) {
-		this.port = config.number;
+	constructor(config: SWOConsoleDecoderConfig) {
+		this.port = config.port;
 		this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, type: console]`);
 	}
 

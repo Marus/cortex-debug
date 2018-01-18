@@ -353,7 +353,7 @@ class CortexDebugExtension {
 			return;
 		}
 
-		this.swo = new SWOCore(this.swosource, args.SWOConfig.ports, args.GraphConfig, this.context.extensionPath);
+		this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
 	}
 }
 
