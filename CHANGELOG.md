@@ -1,4 +1,4 @@
-# V0.1.7
+# V0.1.8
 
 * Fixed possible freeze with memory viewer command and addresses above 0x80000000
 

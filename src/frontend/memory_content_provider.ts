@@ -13,7 +13,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 			vscode.debug.activeDebugSession.customRequest('read-memory', { address: address, length: length || 32 }).then((data) => {
 				let bytes = data.bytes;
 				
-				let lineAddress = address & 0xFFFFFFF0;
+				let lineAddress = address - (address % 16);
 				let lineLength = 16;
 				let offset = address - lineAddress;
 
