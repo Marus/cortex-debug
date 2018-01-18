@@ -8,9 +8,8 @@ define SetupOpenOCDSWO
 	set *0xE0040304 = 0x100
 	set *0xE00400F0 = 2
 	set *0xE0040010 = $arg0
-	set *0xE0001000 = 0
-	set *0xE0000E80 = 0
-	set *0xE000EDFC |= 0x1000000
+	set *0xE0001000 &= ~(0x8000)
+	set *0xE0001000 |= 0xBFF
 end
 
 define SetITMTimestampFrequency

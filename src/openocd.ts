@@ -149,6 +149,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 
 	protected launchCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor reset halt"',
 			'target-download',
@@ -156,25 +157,64 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 			'enable-pretty-printing'
 		];
 
+		if(this.args.swoConfig.enabled) {
+			commands = commands.concat(this.SWOCommands());
+		}
+
 		return commands;
 	}
 
 	protected attachCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'enable-pretty-printing'
 		];
 
+		if(this.args.swoConfig.enabled) {
+			commands = commands.concat(this.SWOCommands());
+		}
+
 		return commands;
 	}
 
 	protected restartCommands(): string[] {
-		return [
+		let commands: string[] = [
 			'exec-interrupt',
 			'interpreter-exec console "monitor reset halt"',
 			'exec-step-instruction'
 		];
+
+		if(this.args.swoConfig.enabled) {
+			commands = commands.concat(this.SWOCommands());
+		}
+
+		return commands;
+	}
+
+	protected SWOCommands(): string[] {
+		let portMask = '0x' + this.calculateSWOPortMask(this.args.swoConfig.decoders).toString(16);
+		let swoFrequency = this.args.swoConfig.swoFrequency;
+		let cpuFrequency = this.args.swoConfig.cpuFrequency;
+
+		let ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+		
+		let commands: string[] = [
+			'EnableITMAccess',
+			`SetupOpenOCDSWO ${ratio}`,
+			'SetITMId 1',
+			'ITMDWTTransferEnable',
+			'DisableITMPorts 0xFFFFFFFF',
+			`EnableITMPorts ${portMask}`,
+			'EnableDWTSync',
+			'ITMSyncEnable',
+			'ITMGlobalEnable'
+		];
+
+		commands.push(this.args.swoConfig.pcSample ? 'EnablePCSample' : 'DisablePCSample');
+		
+		return commands.map(c => `interpreter-exec console "${c}"`);
 	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
