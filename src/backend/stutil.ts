@@ -2,7 +2,7 @@ import * as ChildProcess from 'child_process';
 import { EventEmitter } from "events";
 import * as portastic from 'portastic';
 
-export class STLink extends EventEmitter {
+export class STUtil extends EventEmitter {
 	private process: any;
 	private buffer: string;
 	private errbuffer: string;
@@ -63,7 +63,7 @@ export class STLink extends EventEmitter {
 		// st-util prints information to stderr rather than stdout
 		if (this.errbuffer.indexOf(`Listening at *:${this.gdb_port}...`) !== -1) {
 			if (!this.initSent) {
-				this.emit('stlink-init');
+				this.emit('stutil-init');
 				this.initSent = true;
 			}
 		}
@@ -80,10 +80,10 @@ export class STLink extends EventEmitter {
 	}
 
 	onOutput(text: string) {
-		this.emit('stlink-output', text);
+		this.emit('stutil-output', text);
 	}
 
 	onErrOutput(text: string) {
-		this.emit('stlink-stderr', text);
+		this.emit('stutil-stderr', text);
 	}
 }

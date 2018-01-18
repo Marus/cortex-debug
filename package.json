@@ -27,7 +27,7 @@
             }, 
             {
                 "category": "Cortex-Debug", 
-                "command": "marus25.cortex-debug-stlink.examineMemory", 
+                "command": "marus25.cortex-debug-stutil.examineMemory", 
                 "title": "View Memory"
             }, 
             {
@@ -1591,10 +1591,10 @@
                             "name": "${6:Debug Microcontroller}", 
                             "request": "launch", 
                             "stutilpath": "${2:st-util}", 
-                            "type": "stlink-gdb"
+                            "type": "stutil-gdb"
                         }, 
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STLink", 
-                        "label": "Cortex Debug: STLink"
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)", 
+                        "label": "Cortex Debug: ST-Util"
                     }
                 ], 
                 "enableBreakpointsFor": {
@@ -1615,13 +1615,13 @@
                         "name": "Cortex Debug", 
                         "request": "launch", 
                         "stutilpath": "st-util", 
-                        "type": "stlink-gdb"
+                        "type": "stutil-gdb"
                     }
                 ], 
-                "label": "Cortex Debug: STLink", 
-                "program": "./out/src/stlink.js", 
+                "label": "Cortex Debug: ST-Util", 
+                "program": "./out/src/stutil.js", 
                 "runtime": "node", 
-                "type": "stlink-gdb", 
+                "type": "stutil-gdb", 
                 "variables": {}
             }, 
             {
@@ -1860,8 +1860,8 @@
                     "when": "debugType == jlink-gdb"
                 }, 
                 {
-                    "command": "marus25.cortex-debug-stlink.examineMemory", 
-                    "when": "debugType == stlink-gdb"
+                    "command": "marus25.cortex-debug-stutil.examineMemory", 
+                    "when": "debugType == stutil-gdb"
                 }, 
                 {
                     "command": "marus25.cortex-debug-pyocd.examineMemory", 
@@ -1897,14 +1897,14 @@
                     "when": "debugType == jlink-gdb"
                 }, 
                 {
-                    "id": "cortexPeripherals-stlink", 
+                    "id": "cortexPeripherals-stutil", 
                     "name": "Cortex Peripherals", 
-                    "when": "debugType == stlink-gdb"
+                    "when": "debugType == stutil-gdb"
                 }, 
                 {
-                    "id": "cortexRegisters-stlink", 
+                    "id": "cortexRegisters-stutil", 
                     "name": "Cortex Registers", 
-                    "when": "debugType == stlink-gdb"
+                    "when": "debugType == stutil-gdb"
                 }, 
                 {
                     "id": "cortexPeripherals-openocd", 

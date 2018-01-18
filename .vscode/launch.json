@@ -32,11 +32,11 @@
 			"preLaunchTask": "npm"
 		},
 		{
-			"name": "STLink debug server",
+			"name": "ST-Util debug server",
 			"type": "node",
 			"request": "launch",
 			"runtimeArgs": [ "--nolazy" ],
-			"program": "${workspaceRoot}/src/stlink.ts",
+			"program": "${workspaceRoot}/src/stutil.ts",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
@@ -92,8 +92,8 @@
 	],
 	"compounds": [
 		{
-			"name": "Extension + STLink Server",
-			"configurations": ["Launch Extension", "STLink debug server"]
+			"name": "Extension + ST-Util Server",
+			"configurations": ["Launch Extension", "ST-Util debug server"]
 		},
 		{
 			"name": "Extension + JLink Server",

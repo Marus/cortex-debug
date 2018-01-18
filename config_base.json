@@ -368,7 +368,7 @@
 		},
 		"removeProperties": [ "swoConfig", "graphConfig" ]
 	},
-	"stlink-gdb": {
+	"stutil-gdb": {
 		"common": {
 			"properties": {
 				"stutilpath": {

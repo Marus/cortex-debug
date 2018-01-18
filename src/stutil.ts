@@ -1,7 +1,7 @@
 import { GDBDebugSession } from './gdb';
 import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { STLink } from './backend/stlink';
+import { STUtil } from './backend/stutil';
 import { MI2 } from "./backend/mi2/mi2";
 import { AdapterOutputEvent, SWOConfigureEvent } from './common';
 import * as portastic from 'portastic';
@@ -19,8 +19,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	svdFile: string;
 }
 
-class STLinkGDBDebugSession extends GDBDebugSession {
-	protected stutil : STLink;
+class STUtilGDBDebugSession extends GDBDebugSession {
+	protected stutil : STUtil;
 	private args: ConfigurationArguments;
 	private gdbPort: number;
 	private consolePort: number;
@@ -41,33 +41,32 @@ class STLinkGDBDebugSession extends GDBDebugSession {
 			this.gdbPort = ports[0];
 			this.consolePort = ports[1];
 
-			let defaultExecutable = 'st-util';	// the name of the program is st-util rather than STLink
+			let defaultExecutable = 'st-util';
 			let defaultGDBExecutable = 'arm-none-eabi-gdb';
 			if(os.platform() == 'win32') {
 				defaultExecutable = 'st-util.exe';
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.stutil = new STLink(args.stutilpath || defaultExecutable, this.gdbPort);
+			this.stutil = new STUtil(args.stutilpath || defaultExecutable, this.gdbPort);
 			this.stutil.on('stutil-output', this.handleSTUtilOutput.bind(this));
 			this.stutil.on('stutil-stderr', this.handleSTUtilErrorOutput.bind(this));
 			
 			this.stutil.on("launcherror", (err) => {
-				this.sendErrorResponse(response, 103, `Failed to launch STLink GDB Server: ${err.toString()}`);
+				this.sendErrorResponse(response, 103, `Failed to launch ST-Util GDB Server: ${err.toString()}`);
 			});
 			this.stutil.on("quit", () => {
 				if (this.started) {
 					this.quitEvent.bind(this)
 				}
 				else {
-					this.sendErrorResponse(response, 103, `STLink GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
-					this.sendErrorResponse(response, 103, `STLink GDB Server Quit Unexpectedly.`);
+					this.sendErrorResponse(response, 103, `ST-Util GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
 				}
 			});
 
 			let timeout = null;
 
-			this.stutil.on('stlink-init', () => {
+			this.stutil.on('stutil-init', () => {
 				if(timeout) {
 					clearTimeout(timeout);
 					timeout = null;
@@ -106,12 +105,12 @@ class STLinkGDBDebugSession extends GDBDebugSession {
 			
 			timeout = setTimeout(() => {
 				this.stutil.exit();
-				this.sendEvent(new TelemetryEvent('error-launching-stlink', { error: `Failed to launch STLink Server: Timeout.` }, {}));
-				this.sendErrorResponse(response, 103, `Failed to launch STLink Server: Timeout.`);
+				this.sendEvent(new TelemetryEvent('error-launching-stutil', { error: `Failed to launch ST-Util GDB Server: Timeout.` }, {}));
+				this.sendErrorResponse(response, 103, `Failed to launch ST-Util GDB Server: Timeout.`);
 			}, 10000);
 		}, err => {
-			this.sendEvent(new TelemetryEvent('error-launching-stlink', { error: err.toString() }, {}));
-			this.sendErrorResponse(response, 103, `Failed to launch STLink Server: ${err.toString()}`);
+			this.sendEvent(new TelemetryEvent('error-launching-stutil', { error: err.toString() }, {}));
+			this.sendErrorResponse(response, 103, `Failed to launch ST-Util GDB Server: ${err.toString()}`);
 		});
 	}
 
@@ -187,7 +186,7 @@ class STLinkGDBDebugSession extends GDBDebugSession {
 		switch(command) {
 			case 'get-arguments':
 				response.body = {
-					type: 'stlink-gdb',
+					type: 'stutil-gdb',
 					device: this.args.device,
 					GDBPort: this.gdbPort,
 					ConsolePort: this.consolePort,
@@ -212,4 +211,4 @@ class STLinkGDBDebugSession extends GDBDebugSession {
 	}
 }
 
-DebugSession.run(STLinkGDBDebugSession);
+DebugSession.run(STUtilGDBDebugSession);

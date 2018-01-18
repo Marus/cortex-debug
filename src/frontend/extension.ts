@@ -56,16 +56,16 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-stlink.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-stutil.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-pyocd.examineMemory', this.examineMemory.bind(this)));
 
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-stlink', this.peripheralProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-stutil', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-pyocd', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', this.registerProvider));	
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-stlink', this.registerProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-stutil', this.registerProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', this.registerProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-pyocd', this.registerProvider));
 
@@ -184,7 +184,7 @@ class CortexDebugExtension {
 				graphing: (args.GraphConfig && args.GraphConfig.length > 0) ? 'enabled' : 'disabled'
 			};
 
-			if (args.type == 'jlink-gdb' || args.type == 'stlink-gdb') {
+			if (args.type == 'jlink-gdb' || (args.type == 'stutil-gdb' && args.device)) {
 				info['device'] = args.device;
 			}
 
