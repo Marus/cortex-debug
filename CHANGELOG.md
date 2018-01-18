@@ -1,3 +1,7 @@
+# V0.1.7
+
+* Fixed possible freeze with memory viewer command and addresses above 0x80000000
+
 # V0.1.6
 
 * Improved parsing of SVD definitions (registers without fields; repeating registesr (dim, dimInteger, dimIncrement))
