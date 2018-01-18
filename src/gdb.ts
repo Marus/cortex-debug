@@ -127,4 +127,19 @@ export class GDBDebugSession extends MI2DebugSession {
 			this.sendEvent(new TelemetryEvent('error-reading-register-list', {}, {}));
 		});
 	}
+
+	public calculateSWOPortMask(configuration: any[]) {
+		let mask: number = 0;
+		configuration.forEach(c => {
+			if (c.type == 'advanced') {
+				for (let port of c.ports) {
+					mask = (mask | (1 << port)) >>> 0;
+				}
+			}
+			else {
+				mask = (mask | (1 << c.port)) >>> 0;
+			}
+		});
+		return mask;
+	}
 }

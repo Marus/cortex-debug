@@ -227,14 +227,6 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				break;
 		}
 	}
-
-	private calculatePortMask(configuration: any[]) {
-		let mask: number = 0;
-		configuration.forEach(c => {
-			mask = (mask | (1 << c.number)) >>> 0;
-		});
-		return mask;
-	}
 }
 
 DebugSession.run(OpenOCDGDBDebugSession);
