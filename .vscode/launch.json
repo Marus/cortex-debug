@@ -32,6 +32,21 @@
 			"preLaunchTask": "npm"
 		},
 		{
+			"name": "STLink debug server",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [ "--nolazy" ],
+			"program": "${workspaceRoot}/src/stlink.ts",
+			"stopOnEntry": false,
+			"args": [ "--server=4711" ],
+			"sourceMaps": true,
+			"outFiles": [
+				"${workspaceRoot}/out/**/*.js"
+			],
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "npm"
+		},
+		{
 			"name": "OpenOCD debug server",
 			"type": "node",
 			"request": "launch",
@@ -76,6 +91,10 @@
 		}
 	],
 	"compounds": [
+		{
+			"name": "Extension + STLink Server",
+			"configurations": ["Launch Extension", "STLink debug server"]
+		},
 		{
 			"name": "Extension + JLink Server",
 			"configurations": ["Launch Extension", "JLink debug server"]
