@@ -367,5 +367,31 @@
 			"properties": {}
 		},
 		"removeProperties": [ "swoConfig", "graphConfig" ]
+	},
+	"stlink-gdb": {
+		"common": {
+			"properties": {
+				"stutilpath": {
+					"type": "string",
+					"description": "Path to the st-util GDB Server executable",
+					"default": "st-util"
+				},
+				"device": {
+					"type": "string",
+					"description": "Target Device Identifier",
+					"default": ""
+				}
+			},
+			"required": []
+		},
+		"launch": {
+			"required": [],
+			"properties": {}
+		},
+		"attach": {
+			"required": [],
+			"properties": {}
+		},
+		"removeProperties": [ "swoConfig", "graphConfig" ]
 	}
 }
