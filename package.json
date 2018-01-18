@@ -1881,15 +1881,39 @@
             "view/item/context": [
                 {
                     "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals && viewItem == field"
+                    "when": "view == cortexPeripherals-jlink && viewItem == field"
                 }, 
                 {
                     "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals && viewItem == registerRW"
+                    "when": "view == cortexPeripherals-jlink && viewItem == registerRW"
                 }, 
                 {
                     "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals && viewItem == registerWO"
+                    "when": "view == cortexPeripherals-jlink && viewItem == registerWO"
+                },
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-stutil && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-stutil && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-stutil && viewItem == registerWO"
+                },
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-pyocd && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-pyocd && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-pyocd && viewItem == registerWO"
                 }
             ], 
             "view/title": []
