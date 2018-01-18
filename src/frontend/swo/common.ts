@@ -62,6 +62,12 @@ export interface WebsocketDataMessage extends WebsocketMessage {
 	id: string;
 }
 
+export interface WebsocketProgramCounterMessage extends WebsocketMessage {
+	timestamp: number;
+	counter: number;
+	function: string;
+}
+
 export interface WebsocketStatusMessage extends WebsocketMessage {
 	status: string;
 }
@@ -71,4 +77,29 @@ export interface AdvancedDecoder {
 
 	processData(buffer: Buffer): void;
 	outputLabel(): string;
+}
+
+export enum PacketType {
+	HARDWARE = 1,
+	SOFTWARE,
+	TIMESTAMP
+};
+
+export enum TimestampType {
+	CURRENT,
+	DELAYED,
+	EVENT_DELAYED,
+	EVENT_TIME_DELAYED
+};
+
+export interface TimestampPacket {
+	type: TimestampType,
+	timestamp: number;
+}
+
+export interface Packet {
+	type: PacketType;
+	port: number;
+	size: number;
+	data: Buffer;
 }

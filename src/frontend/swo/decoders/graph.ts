@@ -3,6 +3,7 @@ import { SWODecoder } from './common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
 import { SWOGraphDecoderConfig, WebsocketDataMessage } from '../common';
+import { Packet } from '../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
 	return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
@@ -24,16 +25,21 @@ export class SWOGraphProcessor extends EventEmitter implements SWODecoder {
 		this.graphId = config.graphId;
 	}
 
-	processMessage(buffer: Buffer) {
-		let raw = buffer.toString('hex');
-		let decodedValue = parseEncoded(buffer, this.encoding);
+	softwareEvent(packet: Packet) {
+		if (packet.port != this.port) { return; }
+
+		let raw = packet.data.toString('hex');
+		let decodedValue = parseEncoded(packet.data, this.encoding);
 		let scaledValue = decodedValue * this.scale;
 
 		let message: WebsocketDataMessage = { type: 'data', timestamp: new Date().getTime(), data: scaledValue, id: this.graphId };
 		this.emit('message', message);
 	}
 
+	hardwareEvent(event: Packet) {}
+	synchronized() {}
+	lostSynchronization() {}
+
 	dispose() {
-		
 	}
 }

@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { SWODecoder } from './common';
 import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
+import { Packet } from '../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
 	return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
@@ -22,15 +23,21 @@ export class SWOBinaryProcessor implements SWODecoder {
 		this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, encoding: ${this.encoding}]`);
 	}
 
-	processMessage(buffer: Buffer) {
+	softwareEvent(packet: Packet) {
+		if(packet.port != this.port) { return; }
+
 		let date = new Date();
 		
-		let hexvalue = buffer.toString('hex');
-		let decodedValue = parseEncoded(buffer, this.encoding);
+		let hexvalue = packet.data.toString('hex');
+		let decodedValue = parseEncoded(packet.data, this.encoding);
 		let scaledValue = decodedValue * this.scale;
 		
 		this.output.appendLine(`[${date.toISOString()}]   ${hexvalue} - ${decodedValue} - ${scaledValue}`);
 	}
+
+	hardwareEvent(event: Packet) {}
+	synchronized() {}
+	lostSynchronization() {}
 
 	dispose() {
 		this.output.dispose();

@@ -4,7 +4,7 @@ import { SWOAdvancedDecoderConfig, WebsocketDataMessage, AdvancedDecoder } from 
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
 import { decoders } from './utils';
-
+import { Packet } from '../common';
 
 export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
 	output: vscode.OutputChannel;
@@ -40,9 +40,13 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
 		
 	}
 
-	processMessage(buffer: Buffer) {
-		this.decoder.processData(buffer);
+	softwareEvent(packet: Packet) {
+		// this.decoder.softwareEvent(buffer);
 	}
+
+	hardwareEvent(event: Packet) {}
+	synchronized() {}
+	lostSynchronization() {}
 
 	displayOutput(output: string) {
 		this.output.append(output);
