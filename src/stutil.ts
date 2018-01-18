@@ -17,6 +17,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	debugger_args: string[];
 	showDevDebugOutput: boolean;
 	svdFile: string;
+	v1: boolean;
 }
 
 class STUtilGDBDebugSession extends GDBDebugSession {
@@ -28,6 +29,11 @@ class STUtilGDBDebugSession extends GDBDebugSession {
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
 		this.args = args;
 		this.processLaunchAttachRequest(response, args, false);
+	}
+
+	protected attachRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
+		this.args = args;
+		this.processLaunchAttachRequest(response, args, true);
 	}
 	
 	private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments, attach: boolean) {
@@ -48,7 +54,7 @@ class STUtilGDBDebugSession extends GDBDebugSession {
 				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
 			}
 
-			this.stutil = new STUtil(args.stutilpath || defaultExecutable, this.gdbPort);
+			this.stutil = new STUtil(args.stutilpath || defaultExecutable, this.gdbPort, args.v1, !attach);
 			this.stutil.on('stutil-output', this.handleSTUtilOutput.bind(this));
 			this.stutil.on('stutil-stderr', this.handleSTUtilErrorOutput.bind(this));
 			

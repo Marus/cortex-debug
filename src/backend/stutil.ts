@@ -8,7 +8,7 @@ export class STUtil extends EventEmitter {
 	private errbuffer: string;
 	private initSent: boolean;
 
-	constructor(public application: string, public gdb_port: number) {
+	constructor(public application: string, public gdb_port: number, private v1: boolean, private resetOnConnect: boolean = true) {
 		super();
 
 		this.initSent = false;
@@ -19,6 +19,12 @@ export class STUtil extends EventEmitter {
 	init(): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			let args = ["-p", this.gdb_port.toString(), '-v'];
+			if (this.v1) {
+				args.push('--stlinkv1');
+			}
+			if (!this.resetOnConnect) {
+				args.push('--no-reset');
+			}
 
 			this.process = ChildProcess.spawn(this.application, args, {});
 			this.process.stdout.on('data', this.stdout.bind(this));

@@ -1525,6 +1525,11 @@
                                 "default": null, 
                                 "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
                                 "type": "string"
+                            }, 
+                            "v1": {
+                                "default": false, 
+                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
+                                "type": "boolean"
                             }
                         }, 
                         "required": [
@@ -1575,6 +1580,11 @@
                                 "default": null, 
                                 "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
                                 "type": "string"
+                            }, 
+                            "v1": {
+                                "default": false, 
+                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
+                                "type": "boolean"
                             }
                         }, 
                         "required": [
