@@ -17,6 +17,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
 ### In Progress Features
 * RTOS/Muti-Threaded Support (Dependant on GDB server support)
+* Improved SWO Decoding
 
 ### Planned Features
 
