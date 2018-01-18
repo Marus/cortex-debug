@@ -136,6 +136,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 
 	protected launchCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
@@ -144,13 +145,8 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 			'enable-pretty-printing'
 		];
 
-		if(args.swoConfig.enabled) {
-			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
-			let swoFrequency = args.swoConfig.swoFrequency | 0;
-			let cpuFrequency = args.swoConfig.cpuFrequency | 0;
-
-			let command = `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`;
-			commands.push(`interpreter-exec console "${command}"`);
+		if(this.args.swoConfig.enabled) {
+			commands = commands.concat(this.SWOCommands());
 		}
 
 		return commands;
@@ -158,30 +154,50 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 
 	protected attachCommands(gdbport: number, args: ConfigurationArguments): string[] {
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'enable-pretty-printing'
 		];
 
-		if(args.swoConfig.enabled) {
-			let portMask = '0x' + this.calculatePortMask(args.swoConfig.ports).toString(16);
-			let swoFrequency = args.swoConfig.swoFrequency | 0;
-			let cpuFrequency = args.swoConfig.cpuFrequency | 0;
-
-			let command = `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`;
-			commands.push(`interpreter-exec console "${command}"`);
+		if(this.args.swoConfig.enabled) {
+			commands = commands.concat(this.SWOCommands());
 		}
 
 		return commands;
 	}
 
 	protected restartCommands(): string[] {
-		return [
+		let commands: string[] = [
 			'exec-interrupt',
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
-			'exec-step-instruction'
+			// 'exec-step-instruction'
 		];
+
+		if(this.args.swoConfig.enabled) {
+			commands = commands.concat(this.SWOCommands());
+		}
+
+		return commands;
+	}
+
+	protected SWOCommands(): string[] {
+		let portMask = '0x' + this.calculateSWOPortMask(this.args.swoConfig.decoders).toString(16);
+		let swoFrequency = this.args.swoConfig.swoFrequency | 0;
+		let cpuFrequency = this.args.swoConfig.cpuFrequency | 0;
+		
+		let commands: string[] = [
+			`monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`,
+			`DisableITMPorts 0xFFFFFFFF`,
+			`EnableITMPorts ${portMask}`,
+			`EnableDWTSync`,
+			`ITMSyncEnable`
+		];
+
+		commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+		
+		return commands.map(c => `interpreter-exec console "${c}"`);
 	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
