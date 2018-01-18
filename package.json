@@ -1543,6 +1543,18 @@
                         "label": "Cortex Debug: STLink"
                     }
                 ],
+                "initialConfigurations": [
+                    {
+                        "type": "stlink-gdb",
+                        "request": "launch",
+                        "name": "Cortex Debug",
+                        "cwd": "${workspaceRoot}",
+                        "executable": "./bin/executable.elf",
+                        "stutilpath": "st-util",
+                        "gdbpath": "arm-none-eabi-gdb",
+                        "device": ""
+                    }
+                ],
                 "enableBreakpointsFor": {
                     "languageIds": [
                         "c",
