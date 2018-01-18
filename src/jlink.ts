@@ -21,6 +21,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	graphConfig: any;
 	ipAddress: string;
 	serialNumber: string;
+	extensionPath: string;
 }
 
 class JLinkGDBDebugSession extends GDBDebugSession {
@@ -228,10 +229,7 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 					GDBPort: this.gdbPort,
 					SWOPort: this.swoPort,
 					ConsolePort: this.consolePort,
-					device: this.args.device,
-					SVDFile: this.args.svdFile,
-					SWOConfig: this.args.swoConfig,
-					GraphConfig: this.args.graphConfig
+					...this.args
 				};
 				this.sendResponse(response);
 				break;

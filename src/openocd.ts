@@ -21,6 +21,7 @@ interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
 	openOCDPath: string;
 	cwd: string;
 	showDevDebugOutput: boolean;
+	extensionPath: string;
 }
 
 class OpenOCDGDBDebugSession extends GDBDebugSession {
@@ -217,11 +218,7 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 					type: 'openocd',
 					GDBPort: this.gdbPort,
 					SWOPath: this.swoPath,
-					configFiles: this.args.configFiles,
-					SVDFile: this.args.svdFile,
-					SWOConfig: this.args.swoConfig,
-					GraphConfig: this.args.graphConfig,
-					device: this.device
+					...this.args
 				};
 				this.sendResponse(response);
 				break;

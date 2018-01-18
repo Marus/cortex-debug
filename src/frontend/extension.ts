@@ -234,7 +234,7 @@ class CortexDebugExtension {
 		}
 
 		session.customRequest('get-arguments').then(args => {
-			let svdfile = args.SVDFile;
+			let svdfile = args.svdFile;
 			if (!svdfile) {
 				let basepath = this.getSVDFile(args.device);
 				if(basepath) {
@@ -244,7 +244,7 @@ class CortexDebugExtension {
 
 			let info = {
 				type: args.type,
-				swo: args.SWOConfig.enabled ? 'enabled' : 'disabled',
+				swo: args.swoConfig.enabled ? 'enabled' : 'disabled',
 				graphing: (args.GraphConfig && args.GraphConfig.length > 0) ? 'enabled' : 'disabled'
 			};
 
