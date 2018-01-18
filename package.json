@@ -1774,6 +1774,7 @@
         "cbarrick-circular-buffer": "^1.2.3", 
         "portastic": "^1.0.1", 
         "protobufjs": "~6.8.4", 
+        "ringbufferjs": "^1.1.0", 
         "tmp": "0.0.33", 
         "vscode-debugadapter": "^1.16.0", 
         "vscode-debugprotocol": "^1.16.0", 

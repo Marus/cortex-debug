@@ -2,10 +2,12 @@ var WebSocket = require('ws');
 import { SWOGraphProcessor } from './decoders/graph';
 import { WebsocketMessage, GraphConfiguration } from './common';
 import { SWOAdvancedProcessor } from './decoders/advanced';
+var RingBuffer = require('ringbufferjs');
 
 export class SWOSocketServer {
 	processors: (SWOGraphProcessor|SWOAdvancedProcessor)[];
 	socket: any;
+	messageBuffer = new RingBuffer(250000);
 	currentStatus: string = 'stopped';
 
 	constructor(serverPort: number, public graphs: GraphConfiguration[]) {
@@ -19,7 +21,28 @@ export class SWOSocketServer {
 		client.send(JSON.stringify({ type: 'configure', 'graphs': this.graphs, 'status': this.currentStatus }));
 	}
 
+	private chunk(array, size) {
+		var results = [];
+		while (array.length) {
+			results.push(array.splice(0, size));
+		}
+		return results;
+	}
+
 	message(client, message) {
+		let msg = JSON.parse(message);
+		if (msg.history) {
+			let hm = this.messageBuffer.peekN(this.messageBuffer.size());
+			let chunks = this.chunk(hm, 500);
+			chunks.forEach((chunk, idx) => {
+				setTimeout(() => {
+					client.send(JSON.stringify({
+						type: 'history',
+						messages: chunk
+					}));
+				}, idx * 5);
+			});
+		}
 	}
 
 	registerProcessor(processor: SWOGraphProcessor | SWOAdvancedProcessor) {
@@ -34,6 +57,7 @@ export class SWOSocketServer {
 				client.send(encoded);
 			}
 		});
+		this.messageBuffer.enq(message);
 	}
 
 	dispose() {
