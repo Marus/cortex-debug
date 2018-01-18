@@ -76,7 +76,6 @@ class JLinkGDBDebugSession extends GDBDebugSession {
 				}
 				else {
 					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
-					this.sendErrorResponse(response, 103, `J-Link GDB Server Quit Unexpectedly.`);
 				}
 			});
 

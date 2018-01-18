@@ -82,7 +82,6 @@ class OpenOCDGDBDebugSession extends GDBDebugSession {
 				}
 				else {
 					this.sendErrorResponse(response, 103, `OpenOCD GDB Server Quit Unexpectedly. See Adapter Output for more details.`);
-					this.sendErrorResponse(response, 103, `OpenOCD GDB Server Quit Unexpectedly.`);
 				}
 			});
 			
