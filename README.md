@@ -4,10 +4,12 @@
 
 Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
-* Supports J-Link or OpenOCD GDB Server
+* Support J-Link, OpenOCD GDB Server
+* Partial support for PyOCD and textane/stlink (st-util) GDB Servers (SWO decoding is not supported with these GDB servers)
 * Cortex Core Register Viewer
+    * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
 * Peripheral Register Viewer (Defined through standard SVD file)
-* SWO Deocding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single percision floating point values)
+* SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single percision floating point values)
     * Currently decoding of ITM Timestamp and Synchronization packets are not supported; these features will need to be disabled in the code for the microcontroller.
 * Support for Custom ITM Data Decoders:
     * Ability to define JavaScript modules to decode complex data formats streamed over a particular ITM port. Data can be printed to a output window, or sent to the graphing system.
