@@ -15,6 +15,8 @@ import { SWOConfigureEvent } from "../common";
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
+import * as CopyPaste from 'copy-paste';
+
 interface SVDInfo {
 	expression: RegExp;
 	path: string;
@@ -55,6 +57,8 @@ class CortexDebugExtension {
 
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.copyValue', this.peripheralsCopyValue.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortexRegisters.copyValue', this.registersCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-stutil.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
@@ -159,7 +163,20 @@ class CortexDebugExtension {
 		});
 	}
 
+	peripheralsCopyValue(tn: TreeNode): void {
+		let cv = tn.node.getCopyValue();
+		if (cv) {
+			CopyPaste.copy(cv);
+		}
+	}
+
 	// Registers
+	registersCopyValue(tn: RTreeNode): void {
+		let cv = tn.node.getCopyValue();
+		if (cv) {
+			CopyPaste.copy(cv);
+		}
+	}
 
 	// Debug Events
 	debugSessionStarted(session: vscode.DebugSession) {

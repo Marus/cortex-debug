@@ -44,6 +44,7 @@ export class BaseNode {
 	
 	getChildren(): BaseNode[] { return []; }
 	getTreeNode(): TreeNode { return null; }
+	getCopyValue(): string { return null; }
 }
 
 
@@ -227,6 +228,10 @@ export class RegisterNode extends BaseNode {
 		return this.fields || [];
 	}
 
+	getCopyValue(): string {
+		return hexFormat(this.currentValue, this.length);
+	}
+
 	performUpdate() : Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			vscode.window.showInputBox({ prompt: "Enter new value: (prefix hex with 0x, binary with 0b)" }).then(val => {
@@ -358,6 +363,11 @@ export class FieldNode extends BaseNode {
 				});
 			}
 		});
+	}
+
+	getCopyValue() : string {
+		let value = this.register.extractBits(this.offset, this.width);
+		return binaryFormat(value, this.width);
 	}
 
 	update() {}

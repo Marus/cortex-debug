@@ -36,6 +36,7 @@ export class BaseNode {
 
 	getChildren(): BaseNode[] { return []; }
 	getTreeNode(): TreeNode { return null; }
+	getCopyValue(): string { return null; }
 }
 
 export class RegisterNode extends BaseNode {
@@ -93,6 +94,10 @@ export class RegisterNode extends BaseNode {
 	setValue(newValue: number) {
 		this.currentValue = newValue;
 	}
+
+	getCopyValue(): string {
+		return hexFormat(this.currentValue, 8);
+	}
 }
 
 export class FieldNode extends BaseNode {
@@ -107,6 +112,12 @@ export class FieldNode extends BaseNode {
 		else { label += hexFormat(value, 0); }
 
 		return new TreeNode(label, vscode.TreeItemCollapsibleState.None, 'field', this);
+	}
+
+	getCopyValue() : string {
+		let value = this.register.extractBits(this.offset, this.size);
+		if(this.size == 1) { return value.toString(); }
+		else { return hexFormat(value); }
 	}
 }
 

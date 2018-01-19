@@ -16,6 +16,14 @@
                 "title": "Selected"
             }, 
             {
+                "command": "cortexPeripherals.copyValue", 
+                "title": "Copy Value"
+            }, 
+            {
+                "command": "cortexRegisters.copyValue", 
+                "title": "Copy Value"
+            }, 
+            {
                 "category": "Cortex-Debug", 
                 "command": "marus25.cortex-debug-openocd.examineMemory", 
                 "title": "View Memory"
@@ -1862,6 +1870,14 @@
                     "when": "false"
                 }, 
                 {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "false"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "false"
+                }, 
+                {
                     "command": "marus25.cortex-debug-openocd.examineMemory", 
                     "when": "debugType == openocd-gdb"
                 }, 
@@ -1890,7 +1906,7 @@
                 {
                     "command": "cortexPeripherals.updateNode", 
                     "when": "view == cortexPeripherals-jlink && viewItem == registerWO"
-                },
+                }, 
                 {
                     "command": "cortexPeripherals.updateNode", 
                     "when": "view == cortexPeripherals-stutil && viewItem == field"
@@ -1902,7 +1918,7 @@
                 {
                     "command": "cortexPeripherals.updateNode", 
                     "when": "view == cortexPeripherals-stutil && viewItem == registerWO"
-                },
+                }, 
                 {
                     "command": "cortexPeripherals.updateNode", 
                     "when": "view == cortexPeripherals-pyocd && viewItem == field"
@@ -1914,6 +1930,98 @@
                 {
                     "command": "cortexPeripherals.updateNode", 
                     "when": "view == cortexPeripherals-pyocd && viewItem == registerWO"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-openocd && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-openocd && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.updateNode", 
+                    "when": "view == cortexPeripherals-openocd && viewItem == registerWO"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-jlink && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-jlink && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-jlink && viewItem == registerRO"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-stutil && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-stutil && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-stutil && viewItem == registerRO"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-pyocd && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-pyocd && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-pyocd && viewItem == registerRO"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-openocd && viewItem == field"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-openocd && viewItem == registerRW"
+                }, 
+                {
+                    "command": "cortexPeripherals.copyValue", 
+                    "when": "view == cortexPeripherals-openocd && viewItem == registerRO"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-jlink && viewItem == register"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-jlink && viewItem == field"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-stutil && viewItem == register"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-stutil && viewItem == field"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-pyocd && viewItem == register"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-pyocd && viewItem == field"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-openocd && viewItem == register"
+                }, 
+                {
+                    "command": "cortexRegisters.copyValue", 
+                    "when": "view == cortexRegisters-openocd && viewItem == field"
                 }
             ], 
             "view/title": []
@@ -1966,6 +2074,7 @@
     "dependencies": {
         "binary-parser": "^1.3.0", 
         "cbarrick-circular-buffer": "^1.2.3", 
+        "copy-paste": "^1.3.0", 
         "portastic": "^1.0.1", 
         "protobufjs": "~6.8.4", 
         "tmp": "0.0.33", 
