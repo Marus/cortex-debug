@@ -189,20 +189,20 @@ export class RegisterTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 		this._onDidChangeTreeData.fire();
 	}
 
-	getChildren(element? : TreeNode): Thenable<TreeNode[]> {
+	getChildren(element? : TreeNode): vscode.ProviderResult<TreeNode[]> {
 		if(this._loaded && this._registers.length > 0) {
 			if(element) {
-				return Promise.resolve(element.node.getChildren().map(c => c.getTreeNode()));
+				return element.node.getChildren().map(c => c.getTreeNode());
 			}
 			else {
-				return Promise.resolve(this._registers.map(r => r.getTreeNode()));
+				return this._registers.map(r => r.getTreeNode());
 			}
 		}
 		else if(!this._loaded) {
-			return Promise.resolve([new TreeNode('Not in active debug session.', vscode.TreeItemCollapsibleState.None, 'message', null)]);
+			return [new TreeNode('Not in active debug session.', vscode.TreeItemCollapsibleState.None, 'message', null)];
 		}
 		else {
-			return Promise.resolve([]);
+			return [];
 		}
 	}
 
