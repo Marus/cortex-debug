@@ -26,7 +26,7 @@ function couldBeOutput(line: string) {
 const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
-	constructor(public application: string, public preargs: string[], public extraargs: string[]) {
+	constructor(public application: string, public args: string[]) {
 		super();
 	}
 
@@ -35,9 +35,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			executable = nativePath.join(cwd, executable);
 			
 		return new Promise((resolve, reject) => {
-			let args = this.preargs.concat(this.extraargs || []);
-			args.push(executable);
-
+			let args = [...this.args, executable];
 			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));

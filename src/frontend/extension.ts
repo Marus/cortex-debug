@@ -16,6 +16,7 @@ import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import * as CopyPaste from 'copy-paste';
+import { DeprecatedDebugConfigurationProvider, CortexDebugConfigurationProvider } from "./configprovider";
 
 interface SVDInfo {
 	expression: RegExp;
@@ -55,27 +56,24 @@ class CortexDebugExtension {
 
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()));
 
-		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('cortexPeripherals.copyValue', this.peripheralsCopyValue.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('cortexRegisters.copyValue', this.registersCopyValue.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-jlink.examineMemory', this.examineMemory.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-stutil.examineMemory', this.examineMemory.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-openocd.examineMemory', this.examineMemory.bind(this)));
-		context.subscriptions.push(vscode.commands.registerCommand('marus25.cortex-debug-pyocd.examineMemory', this.examineMemory.bind(this)));
-
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-jlink', this.peripheralProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-stutil', this.peripheralProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-openocd', this.peripheralProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexPeripherals-pyocd', this.peripheralProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-jlink', this.registerProvider));	
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-stutil', this.registerProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-openocd', this.registerProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortexRegisters-pyocd', this.registerProvider));
-
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)));
+		
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortex-debug.peripherals', this.peripheralProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortex-debug.registers', this.registerProvider));	
+		
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)));
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)));
 		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)));
+
+		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('jlink-gdb', new DeprecatedDebugConfigurationProvider(context, 'jlink')));
+		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('openocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'openocd')));
+		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('stutil-gdb', new DeprecatedDebugConfigurationProvider(context, 'stutil')));
+		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('pyocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'pyocd')));
+		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('cortex-debug', new CortexDebugConfigurationProvider(context)));
 	}
 
 	getSVDFile(device: string): string {
@@ -187,7 +185,7 @@ class CortexDebugExtension {
 		}
 
 		session.customRequest('get-arguments').then(args => {
-			let svdfile = args.SVDFile;
+			let svdfile = args.svdFile;
 			if (!svdfile) {
 				let basepath = this.getSVDFile(args.device);
 				if(basepath) {
@@ -196,9 +194,9 @@ class CortexDebugExtension {
 			}
 
 			let info = {
-				type: args.type,
-				swo: args.SWOConfig.enabled ? 'enabled' : 'disabled',
-				graphing: (args.GraphConfig && args.GraphConfig.length > 0) ? 'enabled' : 'disabled'
+				type: args.servertype,
+				swo: args.swoConfig.enabled ? 'enabled' : 'disabled',
+				graphing: (args.graphConfig && args.graphConfig.length > 0) ? 'enabled' : 'disabled'
 			};
 
 			if (args.type == 'jlink-gdb' || (args.type == 'stutil-gdb' && args.device)) {
@@ -306,7 +304,7 @@ class CortexDebugExtension {
 			return;
 		}
 
-		this.swo = new SWOCore(this.swosource, args.SWOConfig.ports, args.GraphConfig, this.context.extensionPath);
+		this.swo = new SWOCore(this.swosource, args.swoConfig.decoders, args.graphConfig, this.context.extensionPath);
 	}
 }
 

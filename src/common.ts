@@ -1,5 +1,6 @@
 import { Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
+import { EventEmitter } from 'events';
 
 export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
 	body: {
@@ -21,8 +22,8 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
 	};
 	event: string;
 
-	constructor(type: string, params: any) {
-		let body = { type: type, ...params };
+	constructor(params: any) {
+		let body = params;
 		super('swo-configure', body);
 	}
 }
@@ -39,4 +40,67 @@ export class TelemetryEvent extends Event implements DebugProtocol.Event {
 		let body = { event: event, parameters: parameters, measures: measures };
 		super('record-telemetry-event', body);
 	}
+}
+
+export interface SWOConfiguration {
+	enabled: boolean;
+	cpuFrequency: number;
+	swoFrequency: number;
+	decoders: any[];
+}
+
+export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
+	gdbpath: string;
+	executable: string;
+	servertype: string;
+	serverpath: string;
+	device: string;
+	debuggerArgs: string[];
+	svdFile: string;
+	swoConfig: SWOConfiguration;
+	graphConfig: any[];
+	showDevDebugOutput: boolean;
+	cwd: string;
+
+	// J-Link Specific
+	ipAddress: string;
+	serialNumber: string;
+
+	// OpenOCD Specific
+	configFiles: string[]
+
+	// PyOCD Specific
+	boardId: string;
+	targetId: string;
+
+	// StUtil Specific
+	v1: boolean;
+}
+
+export interface GDBServerController extends EventEmitter {
+	portsNeeded: string[];
+	name: string;
+
+	setPorts(ports: { [name: string]: number }): void;
+	setArguments(args: ConfigurationArguments): void;
+
+	customRequest(command: string, response: DebugProtocol.Response, args: any): boolean;
+	launchCommands(): string[];
+	attachCommands(): string[];
+	restartCommands(): string[];
+	serverExecutable(): string;
+	serverArguments(): string[];
+	initMatch(): RegExp;
+	serverLaunchStarted(): void;
+	serverLaunchCompleted(): void;
+	debuggerLaunchStarted(): void;
+	debuggerLaunchCompleted(): void;
+}
+
+export function calculatePortMask(decoders: any[]) {
+	let mask: number = 0;
+	decoders.forEach(d => {
+		mask = (mask | (1 << d.number)) >>> 0;
+	});
+	return mask;
 }

@@ -5,6 +5,7 @@ import * as os from "os";
 import * as xml2js from 'xml2js';
 
 import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
+import { ProviderResult } from 'vscode';
 
 export enum RecordType {
 	Peripheral = 1,
@@ -22,7 +23,7 @@ export class TreeNode extends vscode.TreeItem {
 	constructor(public readonly label: string, public readonly collapsibleState: vscode.TreeItemCollapsibleState, public contextValue: string, public node: BaseNode) {
 		super(label, collapsibleState);
 		this.command = {
-			command: 'cortexPeripherals.selectedNode',
+			command: 'cortex-debug.peripherals.selectedNode',
 			arguments: [node],
 			title: 'Selected Node'
 		};
@@ -518,7 +519,6 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 					}
 
 					this._loaded = true;
-					this._onDidChangeTreeData.fire();
 
 					resolve(true);
 				});
@@ -534,20 +534,20 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 		return element;
 	}
 
-	getChildren(element?: TreeNode): Thenable<TreeNode[]> {
+	getChildren(element?: TreeNode): ProviderResult<TreeNode[]> {
 		if(this._loaded && this._peripherials.length > 0) {
 			if(element) {
-				return Promise.resolve(element.node.getChildren().map(c => c.getTreeNode()));
+				return element.node.getChildren().map(c => c.getTreeNode());
 			}
 			else {
-				return Promise.resolve(this._peripherials.map(p => p.getTreeNode()));
+				return this._peripherials.map(p => p.getTreeNode());
 			}
 		}
 		else if(!this._loaded) {
-			return Promise.resolve([new TreeNode('No SVD File Loaded', vscode.TreeItemCollapsibleState.None, 'message', null)]);
+			return [new TreeNode('No SVD File Loaded', vscode.TreeItemCollapsibleState.None, 'message', null)];
 		}
 		else {
-			return Promise.resolve([]);
+			return [];
 		}
 	}
 
@@ -555,17 +555,23 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 		return new Promise((resolve, reject) => {
 			this._peripherials = [];
 			this._loaded = false;
+			this._onDidChangeTreeData.fire();
 			
 			if(svdfile) {
-				try {
-					this._loadSVD(svdfile).then(resolve, reject);
-				}
-				catch (e) {
-					this._peripherials = [];
-					this._loaded = false;
-					vscode.window.showErrorMessage(`Unable to parse SVD file: ${e.toString()}`);
-					reject();
-				}
+				setTimeout(() => {
+					this._loadSVD(svdfile).then(
+						() => {
+							this._onDidChangeTreeData.fire();
+							resolve();
+						},
+						(e) => {
+							this._peripherials = [];
+							this._loaded = false;
+							this._onDidChangeTreeData.fire();
+							vscode.window.showErrorMessage(`Unable to parse SVD file: ${e.toString()}`);
+						}
+					);
+				}, 150);
 			}
 			else {
 				resolve();

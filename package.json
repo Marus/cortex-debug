@@ -1,46 +1,35 @@
 {
     "activationEvents": [
-        "*"
-    ], 
+        "onDebugResolve:cortex-debug",
+        "onDebugResolve:jlink-gdb",
+        "onDebugResolve:openocd-gdb",
+        "onDebugResolve:pyocd-gdb",
+        "onDebugResolve:stutil-gdb"
+    ],
     "categories": [
         "Debuggers"
     ], 
     "contributes": {
         "commands": [
             {
-                "command": "cortexPeripherals.updateNode", 
+                "command": "cortex-debug.peripherals.updateNode", 
                 "title": "Update"
             }, 
             {
-                "command": "cortexPeripherals.selectedNode", 
+                "command": "cortex-debug.peripherals.selectedNode", 
                 "title": "Selected"
             }, 
             {
-                "command": "cortexPeripherals.copyValue", 
+                "command": "cortex-debug.peripherals.copyValue", 
                 "title": "Copy Value"
             }, 
             {
-                "command": "cortexRegisters.copyValue", 
+                "command": "cortex-debug.registers.copyValue", 
                 "title": "Copy Value"
             }, 
             {
                 "category": "Cortex-Debug", 
-                "command": "marus25.cortex-debug-openocd.examineMemory", 
-                "title": "View Memory"
-            }, 
-            {
-                "category": "Cortex-Debug", 
-                "command": "marus25.cortex-debug-jlink.examineMemory", 
-                "title": "View Memory"
-            }, 
-            {
-                "category": "Cortex-Debug", 
-                "command": "marus25.cortex-debug-stutil.examineMemory", 
-                "title": "View Memory"
-            }, 
-            {
-                "category": "Cortex-Debug", 
-                "command": "marus25.cortex-debug-pyocd.examineMemory", 
+                "command": "cortex-debug.examineMemory", 
                 "title": "View Memory"
             }
         ], 
@@ -49,21 +38,24 @@
                 "configurationAttributes": {
                     "attach": {
                         "properties": {
-                            "configFiles": {
-                                "description": "OpenOCD configuration file(s) to load", 
-                                "items": {
-                                    "type": "string"
-                                }, 
-                                "type": "array"
-                            }, 
+                            "servertype": {
+                                "type": "string",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd and stutil",
+                                "enum": ["jlink", "openocd", "pyocd", "stutil"]
+                            },
                             "cwd": {
                                 "description": "Path of project", 
                                 "type": "string"
                             }, 
-                            "debugger_args": {
+                            "debuggerArgs": {
                                 "default": [], 
                                 "description": "Additional arguments to pass to GDB", 
                                 "type": "array"
+                            }, 
+                            "device": {
+                                "default": "", 
+                                "description": "Target Device Identifier", 
+                                "type": "string"
                             }, 
                             "executable": {
                                 "description": "Path of executable", 
@@ -198,17 +190,12 @@
                                     ]
                                 }, 
                                 "type": "array"
-                            }, 
-                            "openOCDPath": {
-                                "default": "openocd", 
-                                "description": "Path to the openocd executable", 
+                            },
+                            "serverpath": {
+                                "default": "", 
+                                "description": "Path to the GDB server if it is not on the system path", 
                                 "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
+                            },
                             "showDevDebugOutput": {
                                 "default": false, 
                                 "description": "Prints all GDB responses to the console", 
@@ -231,7 +218,7 @@
                                         "description": "Enable SWO decoding.", 
                                         "type": "boolean"
                                     }, 
-                                    "ports": {
+                                    "decoders": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
                                             "anyOf": [
@@ -381,30 +368,103 @@
                                 }, 
                                 "required": [], 
                                 "type": "object"
+                            },
+                            "ipAddress": {
+                                "default": null, 
+                                "description": "IP Address for networked J-Link Adapter", 
+                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
+                                "type": "string"
+                            }, 
+                            "serialNumber": {
+                                "default": null, 
+                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
+                                "type": "string"
+                            }, 
+                            "configFiles": {
+                                "description": "OpenOCD configuration file(s) to load", 
+                                "items": {
+                                    "type": "string"
+                                }, 
+                                "type": "array"
+                            },
+                            "v1": {
+                                "default": false, 
+                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
+                                "type": "boolean"
+                            },
+                            "targetId": {
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
+                                "enum": [
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
+                                    "kw01z4"
+                                ], 
+                                "type": "string"
+                            },
+                            "boardId": {
+                                "description": "PyOCD Board Identifier. Needed if multiple compatible boards are connected.",
+                                "type": "string"
                             }
                         }, 
                         "required": [
-                            "executable", 
-                            "configFiles"
+                            "executable"
                         ]
                     }, 
                     "launch": {
                         "properties": {
-                            "configFiles": {
-                                "description": "OpenOCD configuration file(s) to load", 
-                                "items": {
-                                    "type": "string"
-                                }, 
-                                "type": "array"
-                            }, 
+                            "servertype": {
+                                "type": "string",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd and stutil",
+                                "enum": ["jlink", "openocd", "pyocd", "stutil"]
+                            },
                             "cwd": {
                                 "description": "Path of project", 
                                 "type": "string"
                             }, 
-                            "debugger_args": {
+                            "debuggerArgs": {
                                 "default": [], 
                                 "description": "Additional arguments to pass to GDB", 
                                 "type": "array"
+                            }, 
+                            "device": {
+                                "default": "", 
+                                "description": "Target Device Identifier", 
+                                "type": "string"
                             }, 
                             "executable": {
                                 "description": "Path of executable", 
@@ -540,15 +600,10 @@
                                 }, 
                                 "type": "array"
                             }, 
-                            "openOCDPath": {
-                                "default": "openocd", 
-                                "description": "Path to the openocd executable", 
+                            "serverpath": {
+                                "default": "", 
+                                "description": "Path to the GDB server if the executable is not on the system path", 
                                 "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
                             }, 
                             "showDevDebugOutput": {
                                 "default": false, 
@@ -572,7 +627,7 @@
                                         "description": "Enable SWO decoding.", 
                                         "type": "boolean"
                                     }, 
-                                    "ports": {
+                                    "decoders": {
                                         "description": "SWO Port Configuration", 
                                         "items": {
                                             "anyOf": [
@@ -722,11 +777,81 @@
                                 }, 
                                 "required": [], 
                                 "type": "object"
+                            },
+                            "ipAddress": {
+                                "default": null, 
+                                "description": "IP Address for networked J-Link Adapter", 
+                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
+                                "type": "string"
+                            }, 
+                            "serialNumber": {
+                                "default": null, 
+                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
+                                "type": "string"
+                            }, 
+                            "configFiles": {
+                                "description": "OpenOCD configuration file(s) to load", 
+                                "items": {
+                                    "type": "string"
+                                }, 
+                                "type": "array"
+                            },
+                            "v1": {
+                                "default": false, 
+                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
+                                "type": "boolean"
+                            },
+                            "targetId": {
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
+                                "enum": [
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
+                                    "kw01z4"
+                                ], 
+                                "type": "string"
+                            },
+                            "boardId": {
+                                "description": "PyOCD Board Identifier. Needed if multiple compatible boards are connected.",
+                                "type": "string"
                             }
                         }, 
                         "required": [
-                            "executable", 
-                            "configFiles"
+                            "executable"
                         ]
                     }
                 }, 
@@ -737,870 +862,24 @@
                             "executable": "${1:./bin/executable.elf}", 
                             "name": "${6:Debug Microcontroller}", 
                             "request": "launch", 
-                            "type": "openocd-gdb"
-                        }, 
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD", 
-                        "label": "Cortex Debug: OpenOCD"
-                    }
-                ], 
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c", 
-                        "cpp", 
-                        "asm"
-                    ]
-                }, 
-                "extensions": [], 
-                "label": "Cortex Debug: OpenOCD", 
-                "program": "./out/src/openocd.js", 
-                "runtime": "node", 
-                "type": "openocd-gdb", 
-                "variables": {}
-            }, 
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {
-                            "cwd": {
-                                "description": "Path of project", 
-                                "type": "string"
-                            }, 
-                            "debugger_args": {
-                                "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
-                                "type": "array"
-                            }, 
-                            "device": {
-                                "default": "", 
-                                "description": "J-Link Target Device Identifier", 
-                                "type": "string"
-                            }, 
-                            "executable": {
-                                "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
-                            "graphConfig": {
-                                "items": {
-                                    "oneOf": [
-                                        {
-                                            "properties": {
-                                                "annotate": {
-                                                    "default": true, 
-                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
-                                                    "type": "boolean"
-                                                }, 
-                                                "label": {
-                                                    "description": "Label for Graph", 
-                                                    "type": "string"
-                                                }, 
-                                                "maximum": {
-                                                    "default": 65535, 
-                                                    "description": "Maximum value for the X-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "minimum": {
-                                                    "default": 0, 
-                                                    "description": "Minimum value for the Y-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "plots": {
-                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
-                                                    "items": {
-                                                        "properties": {
-                                                            "color": {
-                                                                "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
-                                                                "type": "string"
-                                                            }, 
-                                                            "graphId": {
-                                                                "description": "Graph Data Source Id for the plot.", 
-                                                                "type": "string"
-                                                            }, 
-                                                            "label": {
-                                                                "description": "A label for this data set", 
-                                                                "type": "string"
-                                                            }
-                                                        }, 
-                                                        "required": [
-                                                            "graphId"
-                                                        ], 
-                                                        "type": "object"
-                                                    }, 
-                                                    "type": "array"
-                                                }, 
-                                                "timespan": {
-                                                    "default": 30, 
-                                                    "description": "Length of time (seconds) to be plotted on screen.", 
-                                                    "type": "number"
-                                                }, 
-                                                "type": {
-                                                    "enum": [
-                                                        "realtime"
-                                                    ], 
-                                                    "type": "string"
-                                                }
-                                            }, 
-                                            "required": [
-                                                "label", 
-                                                "plots", 
-                                                "minimum", 
-                                                "maximum"
-                                            ], 
-                                            "type": "object"
-                                        }, 
-                                        {
-                                            "properties": {
-                                                "label": {
-                                                    "description": "Label for graph", 
-                                                    "type": "string"
-                                                }, 
-                                                "timespan": {
-                                                    "default": 10, 
-                                                    "description": "The amount of time (seconds) that the XY Plot will show the trace for.", 
-                                                    "type": "number"
-                                                }, 
-                                                "type": {
-                                                    "enum": [
-                                                        "x-y-plot"
-                                                    ], 
-                                                    "type": "string"
-                                                }, 
-                                                "xGraphId": {
-                                                    "description": "Graph Data Source Id for the X axis", 
-                                                    "type": "string"
-                                                }, 
-                                                "xMaximum": {
-                                                    "default": 65535, 
-                                                    "description": "Maximum value on the X-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "xMinimum": {
-                                                    "default": 0, 
-                                                    "description": "Minimum value on the X-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "yGraphId": {
-                                                    "description": "Graph Data Source Id Port for the Y axis", 
-                                                    "type": "string"
-                                                }, 
-                                                "yMaximum": {
-                                                    "default": 65535, 
-                                                    "description": "Maximum value on the Y-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "yMinimum": {
-                                                    "default": 0, 
-                                                    "description": "Minimum value on the Y-Axis", 
-                                                    "type": "number"
-                                                }
-                                            }, 
-                                            "required": [
-                                                "xGraphId", 
-                                                "yGraphId", 
-                                                "label"
-                                            ], 
-                                            "type": "object"
-                                        }
-                                    ]
-                                }, 
-                                "type": "array"
-                            }, 
-                            "ipAddress": {
-                                "default": null, 
-                                "description": "IP Address for networked J-Link Adapter", 
-                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
-                                "type": "string"
-                            }, 
-                            "jlinkpath": {
-                                "default": "JLinkGDBServer", 
-                                "description": "Path to the JLink", 
-                                "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
-                            "serialNumber": {
-                                "default": null, 
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
-                                "type": "string"
-                            }, 
-                            "showDevDebugOutput": {
-                                "default": false, 
-                                "description": "Prints all GDB responses to the console", 
-                                "type": "boolean"
-                            }, 
-                            "svdFile": {
-                                "default": null, 
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
-                                "type": "string"
-                            }, 
-                            "swoConfig": {
-                                "properties": {
-                                    "cpuFrequency": {
-                                        "default": 0, 
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
-                                        "type": "number"
-                                    }, 
-                                    "enabled": {
-                                        "default": false, 
-                                        "description": "Enable SWO decoding.", 
-                                        "type": "boolean"
-                                    }, 
-                                    "ports": {
-                                        "description": "SWO Port Configuration", 
-                                        "items": {
-                                            "anyOf": [
-                                                {
-                                                    "properties": {
-                                                        "label": {
-                                                            "description": "A label for the output window.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "SWO Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "console"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number"
-                                                    ], 
-                                                    "type": "object"
-                                                }, 
-                                                {
-                                                    "properties": {
-                                                        "encoding": {
-                                                            "default": "unsigned", 
-                                                            "description": "This property is only used for binary and graph output formats.", 
-                                                            "enum": [
-                                                                "unsigned", 
-                                                                "signed", 
-                                                                "Q16.16", 
-                                                                "float"
-                                                            ], 
-                                                            "type": "string"
-                                                        }, 
-                                                        "label": {
-                                                            "description": "A label for the output window.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "scale": {
-                                                            "default": 1, 
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "binary"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number"
-                                                    ], 
-                                                    "type": "object"
-                                                }, 
-                                                {
-                                                    "properties": {
-                                                        "encoding": {
-                                                            "default": "unsigned", 
-                                                            "description": "This property is only used for binary and graph output formats.", 
-                                                            "enum": [
-                                                                "unsigned", 
-                                                                "signed", 
-                                                                "Q16.16", 
-                                                                "float"
-                                                            ], 
-                                                            "type": "string"
-                                                        }, 
-                                                        "graphId": {
-                                                            "description": "The identifier to use for this data in graph configurations.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "scale": {
-                                                            "default": 1, 
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "graph"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number", 
-                                                        "graphId"
-                                                    ], 
-                                                    "type": "object"
-                                                }, 
-                                                {
-                                                    "properties": {
-                                                        "config": {
-                                                            "additionalProperties": true, 
-                                                            "type": "object"
-                                                        }, 
-                                                        "decoder": {
-                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "advanced"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number", 
-                                                        "decoder"
-                                                    ], 
-                                                    "type": "object"
-                                                }
-                                            ]
-                                        }, 
-                                        "type": "array"
-                                    }, 
-                                    "swoFrequency": {
-                                        "default": 0, 
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
-                                        "type": "number"
-                                    }
-                                }, 
-                                "required": [], 
-                                "type": "object"
-                            }
-                        }, 
-                        "required": [
-                            "executable", 
-                            "device"
-                        ]
-                    }, 
-                    "launch": {
-                        "properties": {
-                            "cwd": {
-                                "description": "Path of project", 
-                                "type": "string"
-                            }, 
-                            "debugger_args": {
-                                "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
-                                "type": "array"
-                            }, 
-                            "device": {
-                                "default": "", 
-                                "description": "J-Link Target Device Identifier", 
-                                "type": "string"
-                            }, 
-                            "executable": {
-                                "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
-                            "graphConfig": {
-                                "items": {
-                                    "oneOf": [
-                                        {
-                                            "properties": {
-                                                "annotate": {
-                                                    "default": true, 
-                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
-                                                    "type": "boolean"
-                                                }, 
-                                                "label": {
-                                                    "description": "Label for Graph", 
-                                                    "type": "string"
-                                                }, 
-                                                "maximum": {
-                                                    "default": 65535, 
-                                                    "description": "Maximum value for the X-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "minimum": {
-                                                    "default": 0, 
-                                                    "description": "Minimum value for the Y-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "plots": {
-                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
-                                                    "items": {
-                                                        "properties": {
-                                                            "color": {
-                                                                "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
-                                                                "type": "string"
-                                                            }, 
-                                                            "graphId": {
-                                                                "description": "Graph Data Source Id for the plot.", 
-                                                                "type": "string"
-                                                            }, 
-                                                            "label": {
-                                                                "description": "A label for this data set", 
-                                                                "type": "string"
-                                                            }
-                                                        }, 
-                                                        "required": [
-                                                            "graphId"
-                                                        ], 
-                                                        "type": "object"
-                                                    }, 
-                                                    "type": "array"
-                                                }, 
-                                                "timespan": {
-                                                    "default": 30, 
-                                                    "description": "Length of time (seconds) to be plotted on screen.", 
-                                                    "type": "number"
-                                                }, 
-                                                "type": {
-                                                    "enum": [
-                                                        "realtime"
-                                                    ], 
-                                                    "type": "string"
-                                                }
-                                            }, 
-                                            "required": [
-                                                "label", 
-                                                "plots", 
-                                                "minimum", 
-                                                "maximum"
-                                            ], 
-                                            "type": "object"
-                                        }, 
-                                        {
-                                            "properties": {
-                                                "label": {
-                                                    "description": "Label for graph", 
-                                                    "type": "string"
-                                                }, 
-                                                "timespan": {
-                                                    "default": 10, 
-                                                    "description": "The amount of time (seconds) that the XY Plot will show the trace for.", 
-                                                    "type": "number"
-                                                }, 
-                                                "type": {
-                                                    "enum": [
-                                                        "x-y-plot"
-                                                    ], 
-                                                    "type": "string"
-                                                }, 
-                                                "xGraphId": {
-                                                    "description": "Graph Data Source Id for the X axis", 
-                                                    "type": "string"
-                                                }, 
-                                                "xMaximum": {
-                                                    "default": 65535, 
-                                                    "description": "Maximum value on the X-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "xMinimum": {
-                                                    "default": 0, 
-                                                    "description": "Minimum value on the X-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "yGraphId": {
-                                                    "description": "Graph Data Source Id Port for the Y axis", 
-                                                    "type": "string"
-                                                }, 
-                                                "yMaximum": {
-                                                    "default": 65535, 
-                                                    "description": "Maximum value on the Y-Axis", 
-                                                    "type": "number"
-                                                }, 
-                                                "yMinimum": {
-                                                    "default": 0, 
-                                                    "description": "Minimum value on the Y-Axis", 
-                                                    "type": "number"
-                                                }
-                                            }, 
-                                            "required": [
-                                                "xGraphId", 
-                                                "yGraphId", 
-                                                "label"
-                                            ], 
-                                            "type": "object"
-                                        }
-                                    ]
-                                }, 
-                                "type": "array"
-                            }, 
-                            "ipAddress": {
-                                "default": null, 
-                                "description": "IP Address for networked J-Link Adapter", 
-                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
-                                "type": "string"
-                            }, 
-                            "jlinkpath": {
-                                "default": "JLinkGDBServer", 
-                                "description": "Path to the JLink", 
-                                "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
-                            "serialNumber": {
-                                "default": null, 
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
-                                "type": "string"
-                            }, 
-                            "showDevDebugOutput": {
-                                "default": false, 
-                                "description": "Prints all GDB responses to the console", 
-                                "type": "boolean"
-                            }, 
-                            "svdFile": {
-                                "default": null, 
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
-                                "type": "string"
-                            }, 
-                            "swoConfig": {
-                                "properties": {
-                                    "cpuFrequency": {
-                                        "default": 0, 
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
-                                        "type": "number"
-                                    }, 
-                                    "enabled": {
-                                        "default": false, 
-                                        "description": "Enable SWO decoding.", 
-                                        "type": "boolean"
-                                    }, 
-                                    "ports": {
-                                        "description": "SWO Port Configuration", 
-                                        "items": {
-                                            "anyOf": [
-                                                {
-                                                    "properties": {
-                                                        "label": {
-                                                            "description": "A label for the output window.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "SWO Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "console"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number"
-                                                    ], 
-                                                    "type": "object"
-                                                }, 
-                                                {
-                                                    "properties": {
-                                                        "encoding": {
-                                                            "default": "unsigned", 
-                                                            "description": "This property is only used for binary and graph output formats.", 
-                                                            "enum": [
-                                                                "unsigned", 
-                                                                "signed", 
-                                                                "Q16.16", 
-                                                                "float"
-                                                            ], 
-                                                            "type": "string"
-                                                        }, 
-                                                        "label": {
-                                                            "description": "A label for the output window.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "scale": {
-                                                            "default": 1, 
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "binary"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number"
-                                                    ], 
-                                                    "type": "object"
-                                                }, 
-                                                {
-                                                    "properties": {
-                                                        "encoding": {
-                                                            "default": "unsigned", 
-                                                            "description": "This property is only used for binary and graph output formats.", 
-                                                            "enum": [
-                                                                "unsigned", 
-                                                                "signed", 
-                                                                "Q16.16", 
-                                                                "float"
-                                                            ], 
-                                                            "type": "string"
-                                                        }, 
-                                                        "graphId": {
-                                                            "description": "The identifier to use for this data in graph configurations.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "scale": {
-                                                            "default": 1, 
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "graph"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number", 
-                                                        "graphId"
-                                                    ], 
-                                                    "type": "object"
-                                                }, 
-                                                {
-                                                    "properties": {
-                                                        "config": {
-                                                            "additionalProperties": true, 
-                                                            "type": "object"
-                                                        }, 
-                                                        "decoder": {
-                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
-                                                            "type": "string"
-                                                        }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
-                                                        "type": {
-                                                            "enum": [
-                                                                "advanced"
-                                                            ], 
-                                                            "type": "string"
-                                                        }
-                                                    }, 
-                                                    "required": [
-                                                        "number", 
-                                                        "decoder"
-                                                    ], 
-                                                    "type": "object"
-                                                }
-                                            ]
-                                        }, 
-                                        "type": "array"
-                                    }, 
-                                    "swoFrequency": {
-                                        "default": 0, 
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
-                                        "type": "number"
-                                    }
-                                }, 
-                                "required": [], 
-                                "type": "object"
-                            }
-                        }, 
-                        "required": [
-                            "executable", 
-                            "device"
-                        ]
-                    }
-                }, 
-                "configurationSnippets": [
-                    {
-                        "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"", 
-                            "executable": "${1:./bin/executable.elf}", 
-                            "name": "${6:Debug Microcontroller}", 
-                            "request": "launch", 
-                            "type": "jlink-gdb"
+                            "type": "cortex-debug",
+                            "servertype": "jlink"
                         }, 
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink", 
                         "label": "Cortex Debug: JLink"
-                    }
-                ], 
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c", 
-                        "cpp", 
-                        "asm"
-                    ]
-                }, 
-                "extensions": [], 
-                "label": "Cortex Debug: JLink", 
-                "program": "./out/src/jlink.js", 
-                "runtime": "node", 
-                "type": "jlink-gdb", 
-                "variables": {}
-            }, 
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {
-                            "cwd": {
-                                "description": "Path of project", 
-                                "type": "string"
-                            }, 
-                            "debugger_args": {
-                                "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
-                                "type": "array"
-                            }, 
-                            "device": {
-                                "default": "", 
-                                "description": "Target Device Identifier", 
-                                "type": "string"
-                            }, 
-                            "executable": {
-                                "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
-                            "showDevDebugOutput": {
-                                "default": false, 
-                                "description": "Prints all GDB responses to the console", 
-                                "type": "boolean"
-                            }, 
-                            "stutilpath": {
-                                "default": "st-util", 
-                                "description": "Path to the st-util GDB Server executable", 
-                                "type": "string"
-                            }, 
-                            "svdFile": {
-                                "default": null, 
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
-                                "type": "string"
-                            }, 
-                            "v1": {
-                                "default": false, 
-                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
-                                "type": "boolean"
-                            }
+                    },
+                    {
+                        "body": {
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
+                            "type": "cortex-debug",
+                            "servertype": "openocd"
                         }, 
-                        "required": [
-                            "executable"
-                        ]
-                    }, 
-                    "launch": {
-                        "properties": {
-                            "cwd": {
-                                "description": "Path of project", 
-                                "type": "string"
-                            }, 
-                            "debugger_args": {
-                                "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
-                                "type": "array"
-                            }, 
-                            "device": {
-                                "default": "", 
-                                "description": "Target Device Identifier", 
-                                "type": "string"
-                            }, 
-                            "executable": {
-                                "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
-                            "showDevDebugOutput": {
-                                "default": false, 
-                                "description": "Prints all GDB responses to the console", 
-                                "type": "boolean"
-                            }, 
-                            "stutilpath": {
-                                "default": "st-util", 
-                                "description": "Path to the st-util GDB Server executable", 
-                                "type": "string"
-                            }, 
-                            "svdFile": {
-                                "default": null, 
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
-                                "type": "string"
-                            }, 
-                            "v1": {
-                                "default": false, 
-                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
-                                "type": "boolean"
-                            }
-                        }, 
-                        "required": [
-                            "executable"
-                        ]
-                    }
-                }, 
-                "configurationSnippets": [
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD", 
+                        "label": "Cortex Debug: OpenOCD"
+                    },
                     {
                         "body": {
                             "cwd": "^\"\\${workspaceRoot}\"", 
@@ -1609,236 +888,20 @@
                             "name": "${6:Debug Microcontroller}", 
                             "request": "launch", 
                             "stutilpath": "${2:st-util}", 
-                            "type": "stutil-gdb"
+                            "type": "cortex-debug",
+                            "servertype": "stutil"
                         }, 
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)", 
                         "label": "Cortex Debug: ST-Util"
-                    }
-                ], 
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c", 
-                        "cpp", 
-                        "asm", 
-                        "arm"
-                    ]
-                }, 
-                "extensions": [], 
-                "initialConfigurations": [
-                    {
-                        "cwd": "${workspaceRoot}", 
-                        "device": "", 
-                        "executable": "./bin/executable.elf", 
-                        "gdbpath": "arm-none-eabi-gdb", 
-                        "name": "Cortex Debug", 
-                        "request": "launch", 
-                        "stutilpath": "st-util", 
-                        "type": "stutil-gdb"
-                    }
-                ], 
-                "label": "Cortex Debug: ST-Util", 
-                "program": "./out/src/stutil.js", 
-                "runtime": "node", 
-                "type": "stutil-gdb", 
-                "variables": {}
-            }, 
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {
-                            "boardId": {
-                                "description": "Connect to board by board id. Only needed if multiple PyOCD compatible boards are connected.", 
-                                "type": "string"
-                            }, 
-                            "cwd": {
-                                "description": "Path of project", 
-                                "type": "string"
-                            }, 
-                            "debugger_args": {
-                                "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
-                                "type": "array"
-                            }, 
-                            "executable": {
-                                "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
-                            "pyocdPath": {
-                                "default": "pyocd-gdbserver", 
-                                "description": "Path to the pyocd-gdbserver executable", 
-                                "type": "string"
-                            }, 
-                            "showDevDebugOutput": {
-                                "default": false, 
-                                "description": "Prints all GDB responses to the console", 
-                                "type": "boolean"
-                            }, 
-                            "svdFile": {
-                                "default": null, 
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
-                                "type": "string"
-                            }, 
-                            "target": {
-                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
-                                "enum": [
-                                    "kl25z", 
-                                    "kl26z", 
-                                    "lpc824", 
-                                    "k82f25615", 
-                                    "lpc11xx_32", 
-                                    "kinetis", 
-                                    "lpc800", 
-                                    "lpc4088qsb", 
-                                    "maxwsnenv", 
-                                    "kl05z", 
-                                    "k64f", 
-                                    "lpc1768", 
-                                    "lpc4088", 
-                                    "lpc4330", 
-                                    "max32600mbed", 
-                                    "k66f18", 
-                                    "w7500", 
-                                    "ke18f16", 
-                                    "k22f", 
-                                    "lpc4088dm", 
-                                    "ke15z7", 
-                                    "kv11z7", 
-                                    "nrf51", 
-                                    "nrf52", 
-                                    "kv10z7", 
-                                    "k20d50m", 
-                                    "kl46z", 
-                                    "stm32f103rc", 
-                                    "kl27z4", 
-                                    "kw40z4", 
-                                    "cortex_m", 
-                                    "lpc11u24", 
-                                    "stm32f051", 
-                                    "kl02z", 
-                                    "ncs36510", 
-                                    "kl28z", 
-                                    "kl43z4", 
-                                    "kw01z4"
-                                ], 
-                                "type": "string"
-                            }
-                        }, 
-                        "required": [
-                            "executable"
-                        ]
-                    }, 
-                    "launch": {
-                        "properties": {
-                            "boardId": {
-                                "description": "Connect to board by board id. Only needed if multiple PyOCD compatible boards are connected.", 
-                                "type": "string"
-                            }, 
-                            "cwd": {
-                                "description": "Path of project", 
-                                "type": "string"
-                            }, 
-                            "debugger_args": {
-                                "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
-                                "type": "array"
-                            }, 
-                            "executable": {
-                                "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
-                            "printCalls": {
-                                "default": false, 
-                                "description": "Prints all GDB calls to the console", 
-                                "type": "boolean"
-                            }, 
-                            "pyocdPath": {
-                                "default": "pyocd-gdbserver", 
-                                "description": "Path to the pyocd-gdbserver executable", 
-                                "type": "string"
-                            }, 
-                            "showDevDebugOutput": {
-                                "default": false, 
-                                "description": "Prints all GDB responses to the console", 
-                                "type": "boolean"
-                            }, 
-                            "svdFile": {
-                                "default": null, 
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
-                                "type": "string"
-                            }, 
-                            "target": {
-                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
-                                "enum": [
-                                    "kl25z", 
-                                    "kl26z", 
-                                    "lpc824", 
-                                    "k82f25615", 
-                                    "lpc11xx_32", 
-                                    "kinetis", 
-                                    "lpc800", 
-                                    "lpc4088qsb", 
-                                    "maxwsnenv", 
-                                    "kl05z", 
-                                    "k64f", 
-                                    "lpc1768", 
-                                    "lpc4088", 
-                                    "lpc4330", 
-                                    "max32600mbed", 
-                                    "k66f18", 
-                                    "w7500", 
-                                    "ke18f16", 
-                                    "k22f", 
-                                    "lpc4088dm", 
-                                    "ke15z7", 
-                                    "kv11z7", 
-                                    "nrf51", 
-                                    "nrf52", 
-                                    "kv10z7", 
-                                    "k20d50m", 
-                                    "kl46z", 
-                                    "stm32f103rc", 
-                                    "kl27z4", 
-                                    "kw40z4", 
-                                    "cortex_m", 
-                                    "lpc11u24", 
-                                    "stm32f051", 
-                                    "kl02z", 
-                                    "ncs36510", 
-                                    "kl28z", 
-                                    "kl43z4", 
-                                    "kw01z4"
-                                ], 
-                                "type": "string"
-                            }
-                        }, 
-                        "required": [
-                            "executable"
-                        ]
-                    }
-                }, 
-                "configurationSnippets": [
+                    },
                     {
                         "body": {
                             "cwd": "^\"\\${workspaceRoot}\"", 
                             "executable": "${1:./bin/executable.elf}", 
                             "name": "${6:Debug Microcontroller}", 
                             "request": "launch", 
-                            "type": "pyocd-gdb"
+                            "type": "cortex-debug",
+                            "servertype": "pyocd"
                         }, 
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD", 
                         "label": "Cortex Debug: PyOCD"
@@ -1848,12 +911,152 @@
                     "languageIds": [
                         "c", 
                         "cpp", 
-                        "asm"
+                        "asm",
+                        "arm"
                     ]
-                }, 
+                },
+                "initialConfigurations": [
+                    {
+                        "name": "Cortex Debug", 
+                        "cwd": "${workspaceRoot}", 
+                        "executable": "./bin/executable.elf", 
+                        "request": "launch", 
+                        "type": "cortex-debug",
+                        "servertype": "jlink"
+                    },
+                    {
+                        "name": "Cortex Debug", 
+                        "cwd": "${workspaceRoot}", 
+                        "executable": "./bin/executable.elf", 
+                        "request": "launch", 
+                        "type": "cortex-debug",
+                        "servertype": "openocd"
+                    },
+                    {
+                        "name": "Cortex Debug", 
+                        "cwd": "${workspaceRoot}", 
+                        "executable": "./bin/executable.elf", 
+                        "request": "launch", 
+                        "type": "cortex-debug",
+                        "servertype": "pyocd"
+                    },
+                    {
+                        "name": "Cortex Debug", 
+                        "cwd": "${workspaceRoot}", 
+                        "executable": "./bin/executable.elf", 
+                        "request": "launch", 
+                        "type": "cortex-debug",
+                        "servertype": "stutil"
+                    }
+                ],
                 "extensions": [], 
-                "label": "Cortex Debug: PyOCD", 
-                "program": "./out/src/pyocd.js", 
+                "label": "Cortex Debug", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "cortex-debug", 
+                "variables": {}
+            },
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {},
+                        "required": []
+                    }, 
+                    "launch": {
+                        "properties": {},
+                        "required": []
+                    }
+                }, 
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm",
+                        "arm"
+                    ]
+                },
+                "extensions": [], 
+                "label": "Cortex Debug: OpenOCD (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "openocd-gdb", 
+                "variables": {}
+            }, 
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {},
+                        "required": []
+                    },
+                    "launch": {
+                        "properties": {},
+                        "required": []
+                    }
+                }, 
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm",
+                        "arm"
+                    ]
+                },
+                "extensions": [], 
+                "label": "Cortex Debug: JLink (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "jlink-gdb", 
+                "variables": {}
+            },
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {},
+                        "required": []
+                    }, 
+                    "launch": {
+                        "properties": {},
+                        "required": []
+                    }
+                }, 
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm",
+                        "arm"
+                    ]
+                },
+                "extensions": [], 
+                "initialConfigurations": [], 
+                "label": "Cortex Debug: ST-Util (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "stutil-gdb", 
+                "variables": {}
+            }, 
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {},
+                        "required": []
+                    }, 
+                    "launch": {
+                        "properties": {},
+                        "required": []
+                    }
+                },
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm",
+                        "arm"
+                    ]
+                },
+                "extensions": [], 
+                "label": "Cortex Debug: PyOCD (Deprecated)", 
+                "program": "./out/src/gdb.js", 
                 "runtime": "node", 
                 "type": "pyocd-gdb", 
                 "variables": {}
@@ -1862,166 +1065,58 @@
         "menus": {
             "commandPalette": [
                 {
-                    "command": "cortexPeripherals.updateNode", 
+                    "command": "cortex-debug.peripherals.updateNode", 
                     "when": "false"
                 }, 
                 {
-                    "command": "cortexPeripherals.selectedNode", 
+                    "command": "cortex-debug.peripherals.selectedNode", 
                     "when": "false"
                 }, 
                 {
-                    "command": "cortexPeripherals.copyValue", 
+                    "command": "cortex-debug.peripherals.copyValue", 
                     "when": "false"
                 }, 
                 {
-                    "command": "cortexRegisters.copyValue", 
+                    "command": "cortex-debug.registers.copyValue", 
                     "when": "false"
                 }, 
                 {
-                    "command": "marus25.cortex-debug-openocd.examineMemory", 
-                    "when": "debugType == openocd-gdb"
-                }, 
-                {
-                    "command": "marus25.cortex-debug-jlink.examineMemory", 
-                    "when": "debugType == jlink-gdb"
-                }, 
-                {
-                    "command": "marus25.cortex-debug-stutil.examineMemory", 
-                    "when": "debugType == stutil-gdb"
-                }, 
-                {
-                    "command": "marus25.cortex-debug-pyocd.examineMemory", 
-                    "when": "debugType == pyocd-gdb"
+                    "command": "cortex-debug.examineMemory", 
+                    "when": "debugType == cortex-debug"
                 }
             ], 
             "view/item/context": [
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-jlink && viewItem == field"
+                    "command": "cortex-debug.peripherals.updateNode", 
+                    "when": "view == cortex-debug.peripherals && viewItem == field"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-jlink && viewItem == registerRW"
+                    "command": "cortex-debug.peripherals.updateNode", 
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-jlink && viewItem == registerWO"
+                    "command": "cortex-debug.peripherals.updateNode", 
+                    "when": "view == cortex-debug.peripherals && viewItem == registerWO"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-stutil && viewItem == field"
+                    "command": "cortex-debug.peripherals.copyValue", 
+                    "when": "view == cortex-debug.peripherals && viewItem == field"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-stutil && viewItem == registerRW"
+                    "command": "cortex-debug.peripherals.copyValue", 
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-stutil && viewItem == registerWO"
+                    "command": "cortex-debug.peripherals.copyValue", 
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRO"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-pyocd && viewItem == field"
+                    "command": "cortex-debug.registers.copyValue", 
+                    "when": "view == cortex-debug.registers && viewItem == register"
                 }, 
                 {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-pyocd && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-pyocd && viewItem == registerWO"
-                }, 
-                {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-openocd && viewItem == field"
-                }, 
-                {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-openocd && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPeripherals.updateNode", 
-                    "when": "view == cortexPeripherals-openocd && viewItem == registerWO"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-jlink && viewItem == field"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-jlink && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-jlink && viewItem == registerRO"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-stutil && viewItem == field"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-stutil && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-stutil && viewItem == registerRO"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-pyocd && viewItem == field"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-pyocd && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-pyocd && viewItem == registerRO"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-openocd && viewItem == field"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-openocd && viewItem == registerRW"
-                }, 
-                {
-                    "command": "cortexPeripherals.copyValue", 
-                    "when": "view == cortexPeripherals-openocd && viewItem == registerRO"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-jlink && viewItem == register"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-jlink && viewItem == field"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-stutil && viewItem == register"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-stutil && viewItem == field"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-pyocd && viewItem == register"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-pyocd && viewItem == field"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-openocd && viewItem == register"
-                }, 
-                {
-                    "command": "cortexRegisters.copyValue", 
-                    "when": "view == cortexRegisters-openocd && viewItem == field"
+                    "command": "cortex-debug.registers.copyValue", 
+                    "when": "view == cortex-debug.registers && viewItem == field"
                 }
             ], 
             "view/title": []
@@ -2029,44 +1124,14 @@
         "views": {
             "debug": [
                 {
-                    "id": "cortexPeripherals-jlink", 
+                    "id": "cortex-debug.peripherals", 
                     "name": "Cortex Peripherals", 
-                    "when": "debugType == jlink-gdb"
+                    "when": "debugType == cortex-debug"
                 }, 
                 {
-                    "id": "cortexRegisters-jlink", 
+                    "id": "cortex-debug.registers", 
                     "name": "Cortex Registers", 
-                    "when": "debugType == jlink-gdb"
-                }, 
-                {
-                    "id": "cortexPeripherals-stutil", 
-                    "name": "Cortex Peripherals", 
-                    "when": "debugType == stutil-gdb"
-                }, 
-                {
-                    "id": "cortexRegisters-stutil", 
-                    "name": "Cortex Registers", 
-                    "when": "debugType == stutil-gdb"
-                }, 
-                {
-                    "id": "cortexPeripherals-openocd", 
-                    "name": "Cortex Peripherals", 
-                    "when": "debugType == openocd-gdb"
-                }, 
-                {
-                    "id": "cortexRegisters-openocd", 
-                    "name": "Cortex Registers", 
-                    "when": "debugType == openocd-gdb"
-                }, 
-                {
-                    "id": "cortexPeripherals-pyocd", 
-                    "name": "Cortex Peripherals", 
-                    "when": "debugType == pyocd-gdb"
-                }, 
-                {
-                    "id": "cortexRegisters-pyocd", 
-                    "name": "Cortex Registers", 
-                    "when": "debugType == pyocd-gdb"
+                    "when": "debugType == cortex-debug"
                 }
             ]
         }
@@ -2117,5 +1182,5 @@
         "vscode:prepublish": "tsc -p ./", 
         "watch": "tsc -watch -p ./"
     }, 
-    "version": "0.1.9"
+    "version": "0.1.10"
 }

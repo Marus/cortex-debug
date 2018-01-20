@@ -20,7 +20,7 @@ export class TreeNode extends vscode.TreeItem {
 		super(label, collapsibleState);
 
 		this.command = {
-			command: 'cortexRegisters.selectedNode',
+			command: 'cortex-debug.registers.selectedNode',
 			arguments: [node],
 			title: 'Selected Node'
 		};
