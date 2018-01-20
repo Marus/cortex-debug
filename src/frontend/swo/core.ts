@@ -17,7 +17,6 @@ import { parseUnsigned } from './decoders/utils';
 import { hexFormat } from "../utils";
 import { SymbolInformation, SymbolTable } from './symbols';
 
-var CircularBuffer = require('cbarrick-circular-buffer');
 var RingBuffer = require('ringbufferjs');
 
 enum Status {
