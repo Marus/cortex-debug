@@ -219,7 +219,7 @@
                                         "type": "boolean"
                                     }, 
                                     "decoders": {
-                                        "description": "SWO Port Configuration", 
+                                        "description": "SWO Decoder Configuration", 
                                         "items": {
                                             "anyOf": [
                                                 {
@@ -228,8 +228,8 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "SWO Port Number", 
+                                                        "port": {
+                                                            "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
                                                             "type": "number"
@@ -263,7 +263,7 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
@@ -303,12 +303,12 @@
                                                             "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
                                                             "type": "number"
-                                                        }, 
+                                                        },
                                                         "scale": {
                                                             "default": 1, 
                                                             "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
@@ -337,11 +337,14 @@
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
+                                                        "ports": {
+                                                            "description": "ITM Port Numbers",
+                                                            "type": "array",
+                                                            "items": {
+                                                                "maximum": 31, 
+                                                                "minimum": 0, 
+                                                                "type": "number"
+                                                            }
                                                         }, 
                                                         "type": {
                                                             "enum": [
@@ -628,7 +631,7 @@
                                         "type": "boolean"
                                     }, 
                                     "decoders": {
-                                        "description": "SWO Port Configuration", 
+                                        "description": "SWO Decoder Configuration", 
                                         "items": {
                                             "anyOf": [
                                                 {
@@ -637,8 +640,8 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "SWO Port Number", 
+                                                        "port": {
+                                                            "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
                                                             "type": "number"
@@ -672,12 +675,12 @@
                                                             "description": "A label for the output window.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
                                                             "type": "number"
-                                                        }, 
+                                                        },
                                                         "scale": {
                                                             "default": 1, 
                                                             "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
@@ -712,12 +715,12 @@
                                                             "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
+                                                        "port": {
                                                             "description": "ITM Port Number", 
                                                             "maximum": 31, 
                                                             "minimum": 0, 
                                                             "type": "number"
-                                                        }, 
+                                                        },
                                                         "scale": {
                                                             "default": 1, 
                                                             "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
@@ -746,12 +749,15 @@
                                                             "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
                                                         }, 
-                                                        "number": {
-                                                            "description": "ITM Port Number", 
-                                                            "maximum": 31, 
-                                                            "minimum": 0, 
-                                                            "type": "number"
-                                                        }, 
+                                                        "ports": {
+                                                            "description": "ITM Port Numbers",
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "number",
+                                                                "maximum": 31, 
+                                                                "minimum": 0
+                                                            }
+                                                        },
                                                         "type": {
                                                             "enum": [
                                                                 "advanced"

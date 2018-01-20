@@ -30,6 +30,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 		let gdbport = this.ports['gdbPort'];
 
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
@@ -50,6 +51,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 		let gdbport = this.ports['gdbPort'];
 
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'enable-pretty-printing'
@@ -64,11 +66,11 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 	}
 
 	public restartCommands(): string[] {
-		let commands = [
+		let commands: string[] = [
 			'exec-interrupt',
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
-			'exec-step-instruction'
+			// 'exec-step-instruction'
 		];
 
 		if (this.args.swoConfig.enabled) {
@@ -79,10 +81,23 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 		return commands;
 	}
 
-	private SWOConfigurationCommands(): string[] {
-		let portMask = calculatePortMask(this.args.swoConfig.decoders);
-		let commands = [`monitor SWO EnableTarget ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency} ${portMask} 0`];
 
+
+	private SWOConfigurationCommands(): string[] {
+		let portMask = calculatePortMask(this.args.swoConfig.decoders).toString(16);
+		let swoFrequency = this.args.swoConfig.swoFrequency | 0;
+		let cpuFrequency = this.args.swoConfig.cpuFrequency | 0;
+		
+		let commands: string[] = [
+			`monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`,
+			`DisableITMPorts 0xFFFFFFFF`,
+			`EnableITMPorts ${portMask}`,
+			`EnableDWTSync`,
+			`ITMSyncEnable`
+		];
+
+		commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+		
 		return commands.map(c => `interpreter-exec console "${c}"`);
 	}
 

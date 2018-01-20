@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 
-import { SWOProcessor } from './common';
+import { SWODecoder } from './common';
 import { parseUnsigned } from './utils';
-import { SWOConsolePortConfig } from "../common";
+import { SWOConsoleDecoderConfig } from "../common";
+import { Packet } from '../common';
 
-export class SWOConsoleProcessor implements SWOProcessor {
+export class SWOConsoleProcessor implements SWODecoder {
 	positionCount: number;
 	output: vscode.OutputChannel;
 	position: number = 0;
@@ -12,15 +13,17 @@ export class SWOConsoleProcessor implements SWOProcessor {
 	format: string = 'console';
 	port: number;
 	
-	constructor(config: SWOConsolePortConfig) {
-		this.port = config.number;
+	constructor(config: SWOConsoleDecoderConfig) {
+		this.port = config.port;
 		this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, type: console]`);
 	}
 
-	processMessage(buffer: Buffer) {
+	softwareEvent(packet: Packet) {
+		if (packet.port != this.port) { return; }
+
 		if(this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
 
-		var data = parseUnsigned(buffer);
+		var data = parseUnsigned(packet.data);
 
 		let letter = String.fromCharCode(data);
 		if(letter == '\n') {
@@ -50,6 +53,10 @@ export class SWOConsoleProcessor implements SWOProcessor {
 			}, 5000);
 		}
 	}
+
+	hardwareEvent(event: Packet) {}
+	synchronized() {}
+	lostSynchronization() {}
 
 	dispose() {
 		this.output.dispose();

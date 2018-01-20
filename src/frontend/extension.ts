@@ -23,6 +23,70 @@ interface SVDInfo {
 	path: string;
 }
 
+class JLinkCortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+	constructor(private context: vscode.ExtensionContext) {}
+
+	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+		if (!config.graphConfig) { config.graphConfig = []; }
+		if (!config.swoConfig) { config.swoConfig = { enabled: false }; }
+
+		if (!config.device) {
+			vscode.window.showErrorMessage('You must supply a device setting for Cortex-Debug: J-Link GDB Sessions.');
+			return undefined;
+		}
+
+		config.extensionPath = this.context.extensionPath;
+
+		let executable: string = (config.executable || "");
+		executable = executable.replace(/\$\{\s*workspaceRoot\s*\}/, folder.uri.fsPath);
+
+		if (!fs.existsSync(executable)) {
+			vscode.window.showErrorMessage(`Invalid executable: ${executable} not found.`);
+			return undefined;
+		}		
+
+		return config;
+	}
+}
+
+class OpenOCDCortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+	constructor(private context: vscode.ExtensionContext) {}
+
+	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+		if (!config.graphConfig) { config.graphConfig = []; }
+		if (!config.swoConfig) { config.swoConfig = { enabled: false }; }
+
+		if (!config.configFiles || config.configFiles.length == 0) {
+			vscode.window.showErrorMessage('You must supply at least one OpenOCD configuration file.');
+			return undefined;
+		}
+
+		config.extensionPath = this.context.extensionPath;
+
+		let executable: string = (config.executable || "");
+		executable = executable.replace(/\$\{\s*workspaceRoot\s*\}/, folder.uri.fsPath);
+
+		if (!fs.existsSync(executable)) {
+			vscode.window.showErrorMessage(`Invalid executable: ${executable} not found.`);
+			return undefined;
+		}		
+
+		if (config.swoConfig.enabled) {
+			if (!config.swoConfig.cpuFrequency || !config.swoConfig.swoFrequency) {
+				vscode.window.showErrorMessage('CPU and SWO Frequencies must be provided.');
+				return undefined;
+			}
+
+			if (config.swoConfig.cpuFrequency % config.swoConfig.swoFrequency !== 0) {
+				vscode.window.showErrorMessage('CPU Frequency should be a multiple of SWO Frequency.');
+				return undefined;
+			}
+		}
+
+		return config;
+	}
+}
+
 class CortexDebugExtension {
 	private adapterOutputChannel: vscode.OutputChannel = null;
 	private swo: SWOCore = null;
@@ -304,7 +368,7 @@ class CortexDebugExtension {
 			return;
 		}
 
-		this.swo = new SWOCore(this.swosource, args.swoConfig.decoders, args.graphConfig, this.context.extensionPath);
+		this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
 	}
 }
 

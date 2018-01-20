@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { TelemetryEvent, GDBServerController, ConfigurationArguments, SWOConfigureEvent } from './common';
+import { TelemetryEvent, GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as ChildProcess from 'child_process'
@@ -33,6 +33,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 		let gdbport = this.ports['gdbPort'];
 
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor reset halt"',
 			'target-download',
@@ -52,6 +53,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 		let gdbport = this.ports['gdbPort'];
 
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'enable-pretty-printing'
@@ -66,7 +68,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 	}
 
 	public restartCommands(): string[] {
-		let commands = [
+		let commands: string[] = [
 			'exec-interrupt',
 			'interpreter-exec console "monitor reset halt"',
 			'exec-step-instruction'
@@ -81,7 +83,27 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 	}
 
 	private SWOConfigurationCommands(): string[] {
-		return [];
+		let portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
+		let swoFrequency = this.args.swoConfig.swoFrequency;
+		let cpuFrequency = this.args.swoConfig.cpuFrequency;
+
+		let ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+		
+		let commands: string[] = [
+			'EnableITMAccess',
+			`SetupOpenOCDSWO ${ratio}`,
+			'SetITMId 1',
+			'ITMDWTTransferEnable',
+			'DisableITMPorts 0xFFFFFFFF',
+			`EnableITMPorts ${portMask}`,
+			'EnableDWTSync',
+			'ITMSyncEnable',
+			'ITMGlobalEnable'
+		];
+
+		commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+		
+		return commands.map(c => `interpreter-exec console "${c}"`);
 	}
 
 	public serverExecutable(): string {

@@ -47,6 +47,7 @@ export interface SWOConfiguration {
 	cpuFrequency: number;
 	swoFrequency: number;
 	decoders: any[];
+	profile: boolean;
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
@@ -61,6 +62,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	graphConfig: any[];
 	showDevDebugOutput: boolean;
 	cwd: string;
+	extensionPath: string;
 
 	// J-Link Specific
 	ipAddress: string;
@@ -98,9 +100,18 @@ export interface GDBServerController extends EventEmitter {
 }
 
 export function calculatePortMask(decoders: any[]) {
+	if (!decoders) { return 0; }
+
 	let mask: number = 0;
 	decoders.forEach(d => {
-		mask = (mask | (1 << d.number)) >>> 0;
+		if (d.type == 'advanced') {
+			for (let port of d.ports) {
+				mask = (mask | (1 << port)) >>> 0;
+			}
+		}
+		else {
+			mask = (mask | (1 << d.port)) >>> 0;
+		}
 	});
 	return mask;
 }

@@ -1,0 +1,153 @@
+
+define EnableITMAccess
+	set *0xE000EDFC |= 0x1000000
+	set *0xE0000FB0 = 0xC5ACCE55
+end
+
+define SetupOpenOCDSWO
+	set *0xE0040304 = 0x100
+	set *0xE00400F0 = 2
+	set *0xE0040010 = $arg0
+	set *0xE0001000 &= ~(0x8000)
+	set *0xE0001000 |= 0xBFF
+end
+
+define SetITMTimestampFrequency
+	set *0xE0000E80 &= ~(0x3 << 10)
+	set *0xE0000E80 |= ($arg0 << 10)
+end
+
+define SetITMTimestampPrescale
+	set *0xE0000E80 &= ~(0x3 << 8)
+	set *0xE0000E80 |= ($arg0 << 8)
+end
+
+define EnableITMPorts
+	set *0xE0000E00 |= $arg0
+end
+
+define DisableITMPorts
+	set *0xE0000E00 &= ~($arg0)
+end
+
+define SetITMId
+	set *0xE0000E80 &= ~(0x7F << 16)
+	set *0xE0000E80 |= ($arg0 << 16)
+end
+
+define ITMGlobalEnable
+	set $busy = ((*0xE0000E80 & 0x800000))
+	while ($busy)
+		set $busy = ((*0xE0000E80 & 0x800000))
+	end
+
+	set *0xE0000E80 |= 0x1
+
+	set $busy = ((*0xE0000E80 & 0x800000))
+	while ($busy)
+		set $busy = ((*0xE0000E80 & 0x800000))
+	end
+end
+
+define ITMGlobalDisable
+	set $busy = ((*0xE0000E80 & 0x800000))
+	while ($busy)
+		set $busy = ((*0xE0000E80 & 0x800000))
+	end
+
+	set *0xE0000E80 &= ~(0x1)
+
+	set $busy = ((*0xE0000E80 & 0x800000))
+	while ($busy)
+		set $busy = ((*0xE0000E80 & 0x800000))
+	end
+end
+
+define ITMTimestampEnable
+	set *0xE0000E80 |= 0x302
+end
+
+define ITMTimestampDisable
+	set *0xE0000E80 &= ~(0x2)
+end
+
+define ITMSyncEnable
+	set *0xE0000E80 |= 0x4
+end
+
+define ITMSyncDisable
+	set *0xE0000E80 &= ~(0x4)
+end
+
+define ITMDWTTransferEnable
+	set *0xE0000E80 |= 0x8
+end
+
+define ITMDWTTransferDisable
+	set *0xE0000E80 &= (~0x8)
+end
+
+def EnableDWTSync
+	set *0xE0001000 |= 0x800
+end
+
+def DisableDWTSync
+	set *0xE0001000 &= ~(0x800)
+end
+
+def EnablePCSample
+	set *0xE0001004 = 0x0
+	set *0xE0001000 |= 0x1201
+end
+
+def DisablePCSample
+	set *0xE0001000 &= ~(0x1000)
+end
+
+def EnableCycleCountEvent
+	set *0xE0001000 |= 0x400000
+end
+
+def DisableCycleCountEvent
+	set *0xE0001000 &= ~(0x400000)
+end
+
+def EnableFoldedEvent
+	set *0xE0001000 |= 0x200000
+end
+
+def DisableFoldedEvent
+	set *0xE0001000 &= ~(0x200000)
+end
+
+def EnableLSUCountEvent
+	set *0xE0001000 |= 0x100000
+end
+
+def DisableLSUCountEvent
+	set *0xE0001000 &= ~(0x100000)
+end
+
+def EnableSleepCountEvent
+	set *0xE0001000 |= 0x80000
+end
+
+def DisableSleepCountEvent
+	set *0xE0001000 &= ~(0x80000)
+end
+
+def EnableInterruptOverheadEvent
+	set *0xE0001000 |= 0x40000
+end
+
+def DisableInterruptOverheadEvent
+	set *0xE0001000 &= ~(0x40000)
+end
+
+def EnableCPICountEvent
+	set *0xE0001000 |= 0x20000
+end
+
+def EnableCPICountEvent
+	set *0xE0001000 &= ~(0x20000)
+end

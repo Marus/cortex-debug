@@ -1,7 +1,12 @@
-export interface SWOProcessor {
-	port: number;
+import { Packet } from '../common';
+
+export interface SWODecoder {
 	format: string;
 
-	processMessage(buffer: Buffer);
+	softwareEvent(buffer: Packet);
+	hardwareEvent(event: Packet);
+	synchronized();
+	lostSynchronization();
+
 	dispose();
 }
