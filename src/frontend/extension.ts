@@ -9,14 +9,15 @@ import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType,
 import { setTimeout } from "timers";
 import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
-import { JLinkSWOSource } from './swo/sources/jlink';
-import { OpenOCDSWOSource, OpenOCDFileSWOSource } from './swo/sources/openocd';
 import { SWOConfigureEvent } from "../common";
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import * as CopyPaste from 'copy-paste';
 import { DeprecatedDebugConfigurationProvider, CortexDebugConfigurationProvider } from "./configprovider";
+import { SocketSWOSource } from "./swo/sources/socket";
+import { FifoSWOSource } from "./swo/sources/fifo";
+import { FileSWOSource } from "./swo/sources/file";
 
 interface SVDInfo {
 	expression: RegExp;
@@ -332,17 +333,17 @@ class CortexDebugExtension {
 	}
 
 	receivedSWOConfigureEvent(e) {
-		if (e.body.type == 'jlink') {
-			this.swosource = new JLinkSWOSource(e.body.port);
+		if (e.body.type == 'socket') {
+			this.swosource = new SocketSWOSource(e.body.port);
 		}
-		else if (e.body.type == 'openocd') {
-			// Use filesystem on windows; fifo on other operating systems.
-			if(os.platform() === 'win32') {
-				this.swosource = new OpenOCDFileSWOSource(e.body.path);
-			}
-			else {
-				this.swosource = new OpenOCDSWOSource(e.body.path);
-			}
+		else if (e.body.type == 'fifo') {
+			this.swosource = new FifoSWOSource(e.body.path);
+		}
+		else if (e.body.type == 'file') {
+			this.swosource = new FileSWOSource(e.body.path);
+		}
+		else if (e.body.type == 'serial') {
+			
 		}
 
 		if(vscode.debug.activeDebugSession) {

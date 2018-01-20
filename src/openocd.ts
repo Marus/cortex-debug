@@ -146,13 +146,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 	public serverLaunchStarted(): void {
 		if (os.platform() !== 'win32') {
 			let mkfifoReturn = ChildProcess.spawnSync('mkfifo', [this.swoPath]);
-			this.emit('event', new SWOConfigureEvent({ type: 'openocd', path: this.swoPath }));
+			this.emit('event', new SWOConfigureEvent({ type: 'fifo', path: this.swoPath }));
 		}
 	}
 
 	public serverLaunchCompleted(): void {
 		if (os.platform() === 'win32') {
-			this.emit('event', new SWOConfigureEvent({ type: 'openocd', path: this.swoPath }));
+			this.emit('event', new SWOConfigureEvent({ type: 'file', path: this.swoPath }));
 		}
 	}
 
