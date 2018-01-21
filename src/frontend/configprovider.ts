@@ -31,17 +31,31 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 		let validationResponse: string = null;
 
 		if (!config.swoConfig) {
-			config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
+			config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: "probe" };
 		}
 		else {
 			if (config.swoConfig.ports && !config.swoConfig.decoders) {
 				config.swoConfig.decoders = config.swoConfig.ports;
 			}
+			if (!config.swoConfig.source) { config.swoConfig.source = 'probe'; }
+			if (!config.swoConfig.decoders) { config.swoConfig.decoders = []; }
+			config.swoConfig.decoders.forEach((d, idx) => {
+				if (d.type == 'advanced') {
+					if (d.ports === undefined && d.number !== undefined) {
+						d.ports = [d.number];
+					}
+				}
+				else {
+					if (d.port === undefined && d.number !== undefined) {
+						d.port = d.number;
+					}
+				}
+			});
 		}
 		if (!config.graphConfig) { config.graphConfig = []; }
 
 		switch (type) {
-			case "jlink":
+			case 'jlink':
 				validationResponse = this.verifyJLinkConfiguration(folder, config);
 				break;
 			case 'openocd':
@@ -67,7 +81,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 		
 		let executable: string = (config.executable || "");
 		executable = executable.replace(/\$\{\s*workspaceRoot\s*\}/, folder.uri.fsPath);
-		let cwd = config.cwd || "${workspaceRoot}";
+		let cwd = config.cwd || '${workspaceRoot}';
 		cwd = cwd.replace(/\$\{\s*workspaceRoot\s*\}/, folder.uri.fsPath);
 
 		if (!path.isAbsolute(executable)) {
