@@ -70,7 +70,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 			'exec-interrupt',
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
-			// 'exec-step-instruction'
+			'exec-step-instruction'
 		];
 
 		if (this.args.swoConfig.enabled) {
