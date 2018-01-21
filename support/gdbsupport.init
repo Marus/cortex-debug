@@ -4,7 +4,7 @@ define EnableITMAccess
 	set *0xE0000FB0 = 0xC5ACCE55
 end
 
-define SetupOpenOCDSWO
+define BaseSWOSetup
 	set *0xE0040304 = 0x100
 	set *0xE00400F0 = 2
 	set *0xE0040010 = $arg0

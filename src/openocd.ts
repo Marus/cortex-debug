@@ -91,7 +91,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 		
 		let commands: string[] = [
 			'EnableITMAccess',
-			`SetupOpenOCDSWO ${ratio}`,
+			`BaseSWOSetup ${ratio}`,
 			'SetITMId 1',
 			'ITMDWTTransferEnable',
 			'DisableITMPorts 0xFFFFFFFF',
