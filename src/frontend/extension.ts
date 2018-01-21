@@ -18,6 +18,7 @@ import { DeprecatedDebugConfigurationProvider, CortexDebugConfigurationProvider 
 import { SocketSWOSource } from "./swo/sources/socket";
 import { FifoSWOSource } from "./swo/sources/fifo";
 import { FileSWOSource } from "./swo/sources/file";
+import { SerialSWOSource } from "./swo/sources/serial";
 
 interface SVDInfo {
 	expression: RegExp;
@@ -343,7 +344,7 @@ class CortexDebugExtension {
 			this.swosource = new FileSWOSource(e.body.path);
 		}
 		else if (e.body.type == 'serial') {
-			
+			this.swosource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
 		}
 
 		if(vscode.debug.activeDebugSession) {
