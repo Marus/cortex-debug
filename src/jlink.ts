@@ -132,7 +132,14 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
 	public serverLaunchStarted(): void {}
 	public serverLaunchCompleted(): void {
-		this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports['swoPort'] }));
+		if (this.args.swoConfig.enabled) {
+			if (this.args.swoConfig.source == 'probe') {
+				this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports['swoPort'] }));
+			}
+			else {
+				this.emit('event', new SWOConfigureEvent({ type: 'serial', device: this.args.swoConfig.source, baudRate: this.args.swoConfig.swoFrequency }));
+			}
+		}
 	}
 	public debuggerLaunchStarted(): void {}
 	public debuggerLaunchCompleted(): void {}
