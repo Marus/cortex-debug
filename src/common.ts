@@ -78,6 +78,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
 	// StUtil Specific
 	v1: boolean;
+
+	// BMP Specific
+	BMPGDBSerialPort: string;
 }
 
 export interface GDBServerController extends EventEmitter {

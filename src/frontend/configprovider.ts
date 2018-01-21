@@ -67,8 +67,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 			case 'pyocd':
 				validationResponse = this.verifyPyOCDConfiguration(folder, config);
 				break;
+			case 'bmp':
+				validationResponse = this.verifyBMPConfiguration(folder, config);
+				break;
 			default:
-				validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd"';
+				validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp"';
 				break;
 		}
 
@@ -138,6 +141,18 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 		if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
 			vscode.window.showWarningMessage('SWO support is not available from the probe when using the PyOCD GDB server. Disabling SWO.');
+			config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
+			config.graphConfig = [];
+		}
+
+		return null;
+	}
+
+	verifyBMPConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+		if (!config.BMPGDBSerialPort) { return 'A Serial Port for the Black Magic Probe GDB server is required.'; }
+
+		if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+			vscode.window.showWarningMessage('SWO support is not available from the probe when using the BMP GDB server. Disabling SWO.');
 			config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
 			config.graphConfig = [];
 		}

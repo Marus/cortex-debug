@@ -14,12 +14,14 @@ import { JLinkServerController } from './jlink';
 import { OpenOCDServerController } from './openocd';
 import { STUtilServerController } from './stutil';
 import { PyOCDServerController } from './pyocd';
+import { BMPServerController } from './bmp';
 
 const SERVER_TYPE_MAP = {
 	'jlink': JLinkServerController,
 	'openocd': OpenOCDServerController,
 	'stutil': STUtilServerController,
-	'pyocd': PyOCDServerController
+	'pyocd': PyOCDServerController,
+	'bmp': BMPServerController
 };
 
 export class GDBDebugSession extends MI2DebugSession {

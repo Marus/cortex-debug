@@ -151,3 +151,11 @@ end
 def EnableCPICountEvent
 	set *0xE0001000 &= ~(0x20000)
 end
+
+def SoftwareReset
+	set *0xE000ED0C = 0x05FA0004
+	set $busy = (*0xE000ED0C & 0x4)
+	while ($busy)
+		set $busy = (*0xE000ED0C & 0x4)
+	end
+end

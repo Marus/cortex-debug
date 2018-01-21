@@ -41,7 +41,7 @@
                             "servertype": {
                                 "type": "string",
                                 "description": "GDB Server type - supported types are jlink, openocd, pyocd and stutil",
-                                "enum": ["jlink", "openocd", "pyocd", "stutil"]
+                                "enum": ["jlink", "openocd", "pyocd", "stutil", "bmp"]
                             },
                             "cwd": {
                                 "description": "Path of project", 
@@ -447,6 +447,10 @@
                             "boardId": {
                                 "description": "PyOCD Board Identifier. Needed if multiple compatible boards are connected.",
                                 "type": "string"
+                            },
+                            "BMPGDBSerialPort": {
+                                "type": "string",
+                                "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
                             }
                         }, 
                         "required": [
@@ -458,7 +462,7 @@
                             "servertype": {
                                 "type": "string",
                                 "description": "GDB Server type - supported types are jlink, openocd, pyocd and stutil",
-                                "enum": ["jlink", "openocd", "pyocd", "stutil"]
+                                "enum": ["jlink", "openocd", "pyocd", "stutil", "bmp"]
                             },
                             "cwd": {
                                 "description": "Path of project", 
@@ -864,6 +868,10 @@
                             "boardId": {
                                 "description": "PyOCD Board Identifier. Needed if multiple compatible boards are connected.",
                                 "type": "string"
+                            },
+                            "BMPGDBSerialPort": {
+                                "type": "string",
+                                "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
                             }
                         }, 
                         "required": [
