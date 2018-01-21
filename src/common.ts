@@ -48,6 +48,7 @@ export interface SWOConfiguration {
 	swoFrequency: number;
 	decoders: any[];
 	profile: boolean;
+	source: string;
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {

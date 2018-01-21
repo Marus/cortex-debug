@@ -217,7 +217,12 @@
                                         "default": false, 
                                         "description": "Enable SWO decoding.", 
                                         "type": "boolean"
-                                    }, 
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "default": "probe",
+                                        "description": "Source for SWO data. Can either be \"probe\" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe."
+                                    },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration", 
                                         "items": {
@@ -630,6 +635,11 @@
                                         "description": "Enable SWO decoding.", 
                                         "type": "boolean"
                                     }, 
+                                    "source": {
+                                        "type": "string",
+                                        "default": "probe",
+                                        "description": "Source for SWO data. Can either be \"probe\" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe."
+                                    },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration", 
                                         "items": {
