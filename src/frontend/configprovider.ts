@@ -122,8 +122,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 	verifySTUtilConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
 		if (config.stutilpath && !config.serverpath) { config.serverpath = config.stutilpath; }
 
-		if (config.swoConfig.enabled) {
-			vscode.window.showWarningMessage('SWO support is not available for the st-util server. Disabling.');
+		if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+			vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Util GDB server. Disabling SWO.');
 			config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
 			config.graphConfig = [];
 		}
@@ -136,8 +136,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 		if (config.board && !config.boardId) { config.boardId = config.board; }
 		if (config.target && !config.targetId) { config.targetId = config.target; }
 
-		if (config.swoConfig.enabled) {
-			vscode.window.showWarningMessage('SWO support is not available for the PyOCD server. Disabling.');
+		if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+			vscode.window.showWarningMessage('SWO support is not available from the probe when using the PyOCD GDB server. Disabling SWO.');
 			config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
 			config.graphConfig = [];
 		}

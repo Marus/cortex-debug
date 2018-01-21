@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { TelemetryEvent, ConfigurationArguments, GDBServerController } from './common';
+import { TelemetryEvent, ConfigurationArguments, GDBServerController, SWOConfigureEvent } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -87,7 +87,12 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 	}
 
 	public serverLaunchStarted(): void {}
-	public serverLaunchCompleted(): void {}
+	public serverLaunchCompleted(): void {
+		if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
+			this.emit('event', new SWOConfigureEvent({ type: 'serial', device: this.args.swoConfig.source, baudRate: this.args.swoConfig.swoFrequency }));
+		}
+	}
+	
 	public debuggerLaunchStarted(): void {}
 	public debuggerLaunchCompleted(): void {}
 }
