@@ -126,10 +126,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 		let commands = [`gdb_port ${gdbport}`];
 
 		if(this.args.swoConfig.enabled) {
-			if(os.platform() !== 'win32') { // Use FIFO on non-windows platforms
-				
-			}
-
 			commands.push(`tpiu config internal ${this.swoPath} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
 		}
 
@@ -144,16 +140,21 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 	}
 
 	public serverLaunchStarted(): void {
-		if (os.platform() !== 'win32') {
+		if (this.args.swoConfig.enabled && this.args.swoConfig.source === 'probe' && os.platform() !== 'win32') {
 			let mkfifoReturn = ChildProcess.spawnSync('mkfifo', [this.swoPath]);
 			this.emit('event', new SWOConfigureEvent({ type: 'fifo', path: this.swoPath }));
 		}
 	}
 
 	public serverLaunchCompleted(): void {
-		if (os.platform() === 'win32') {
-			this.emit('event', new SWOConfigureEvent({ type: 'file', path: this.swoPath }));
-		}
+		if(this.args.swoConfig.enabled) {
+			if (this.args.swoConfig.source == 'probe' && os.platform() === 'win32') {
+				this.emit('event', new SWOConfigureEvent({ type: 'file', path: this.swoPath }));
+			}
+			else if (this.args.swoConfig.source !== 'probe') {
+				this.emit('event', new SWOConfigureEvent({ type: 'serial', device: this.args.swoConfig.source, baudRate: this.args.swoConfig.swoFrequency }));
+			}
+		}		
 	}
 
 	public debuggerLaunchStarted(): void {}
