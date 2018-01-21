@@ -30,6 +30,7 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
 		let gdbport = this.ports['gdbPort'];
 
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'interpreter-exec console "monitor reset"',
@@ -50,6 +51,7 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
 		let gdbport = this.ports['gdbPort'];
 
 		let commands = [
+			`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
 			`target-select extended-remote localhost:${gdbport}`,
 			'interpreter-exec console "monitor halt"',
 			'enable-pretty-printing'
