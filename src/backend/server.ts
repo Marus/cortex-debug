@@ -16,19 +16,26 @@ export class GDBServer extends EventEmitter {
 
 	init(): Thenable<any> {
 		return new Promise((resolve, reject) => {
-			this.initResolve = resolve;
-			this.initReject = reject;
+			if (this.application !== null) {
+				this.initResolve = resolve;
+				this.initReject = reject;
 
-			this.process = ChildProcess.spawn(this.application, this.args, {});
-			this.process.stdout.on('data', this.onStdout.bind(this));
-			this.process.stderr.on('data', this.onStderr.bind(this));
-			this.process.on('exit', this.onExit.bind(this));
-			this.process.on('error', this.onError.bind(this));
+				this.process = ChildProcess.spawn(this.application, this.args, {});
+				this.process.stdout.on('data', this.onStdout.bind(this));
+				this.process.stderr.on('data', this.onStderr.bind(this));
+				this.process.on('exit', this.onExit.bind(this));
+				this.process.on('error', this.onError.bind(this));
+			}
+			else { // For servers like BMP that are always running directly on the probe
+				resolve();
+			}
 		});
 	}
 
 	exit(): void {
-		this.process.kill();
+		if (this.process) {
+			this.process.kill();
+		}
 	}
 
 	onExit(code, signal) {
