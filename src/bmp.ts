@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { TelemetryEvent, ConfigurationArguments, GDBServerController, SWOConfigureEvent } from './common';
+import { TelemetryEvent, ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -40,6 +40,11 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 			'enable-pretty-printing'
 		];
 
+		if (this.args.swoConfig.enabled) {
+			let swocommands = this.SWOConfigurationCommands();
+			commands.push(...swocommands);
+		}
+
 		return commands;
 	}
 
@@ -53,15 +58,53 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 			'enable-pretty-printing'
 		];
 
+		if (this.args.swoConfig.enabled) {
+			let swocommands = this.SWOConfigurationCommands();
+			commands.push(...swocommands);
+		}
+
 		return commands;
 	}
 
 	public restartCommands(): string[] {
-		return [
+		let commands : string[] = [
 			'exec-interrupt',
 			'interpreter-exec console "SoftwareReset"',
 			'exec-step-instruction'
 		];
+
+		if (this.args.swoConfig.enabled) {
+			let swocommands = this.SWOConfigurationCommands();
+			commands.push(...swocommands);
+		}
+
+		return commands;
+	}
+
+	private SWOConfigurationCommands(): string[] {
+		let portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
+		let swoFrequency = this.args.swoConfig.swoFrequency;
+		let cpuFrequency = this.args.swoConfig.cpuFrequency;
+
+		let ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+		
+		let commands: string[] = [];
+
+		commands.push(
+			'EnableITMAccess',
+			`BaseSWOSetup ${ratio}`,
+			'SetITMId 1',
+			'ITMDWTTransferEnable',
+			'DisableITMPorts 0xFFFFFFFF',
+			`EnableITMPorts ${portMask}`,
+			'EnableDWTSync',
+			'ITMSyncEnable',
+			'ITMGlobalEnable'
+		);
+
+		commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+		
+		return commands.map(c => `interpreter-exec console "${c}"`);
 	}
 
 	public serverExecutable(): string {
