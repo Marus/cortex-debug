@@ -986,30 +986,6 @@
                         "request": "launch", 
                         "type": "cortex-debug",
                         "servertype": "jlink"
-                    },
-                    {
-                        "name": "Cortex Debug", 
-                        "cwd": "${workspaceRoot}", 
-                        "executable": "./bin/executable.elf", 
-                        "request": "launch", 
-                        "type": "cortex-debug",
-                        "servertype": "openocd"
-                    },
-                    {
-                        "name": "Cortex Debug", 
-                        "cwd": "${workspaceRoot}", 
-                        "executable": "./bin/executable.elf", 
-                        "request": "launch", 
-                        "type": "cortex-debug",
-                        "servertype": "pyocd"
-                    },
-                    {
-                        "name": "Cortex Debug", 
-                        "cwd": "${workspaceRoot}", 
-                        "executable": "./bin/executable.elf", 
-                        "request": "launch", 
-                        "type": "cortex-debug",
-                        "servertype": "stutil"
                     }
                 ],
                 "extensions": [], 
@@ -1259,5 +1235,5 @@
         "vscode:prepublish": "tsc -p ./", 
         "watch": "tsc -watch -p ./"
     }, 
-    "version": "0.1.10"
+    "version": "0.1.10-pre2"
 }
