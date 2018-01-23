@@ -374,6 +374,33 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
+	getFrame(thread: number, frame: number): Thenable<Stack> {
+		return new Promise((resolve, reject) => {
+			let command = `stack-info-frame --thread ${thread} --frame ${frame}`;
+
+			this.sendCommand(command).then((result) => {
+				let frame = result.result('frame');
+				let level = MINode.valueOf(frame, 'level');
+				let addr = MINode.valueOf(frame, 'addr');
+				let func = MINode.valueOf(frame, 'func');
+				let file = MINode.valueOf(frame, 'file');
+				let fullname = MINode.valueOf(frame, 'fullname');
+				let line = 0;
+				let linestr = MINode.valueOf(frame, 'line');
+				if (linestr) { line = parseInt(linestr); }
+
+				resolve({
+					address: addr,
+					fileName: file,
+					file: fullname,
+					function: func,
+					level: level,
+					line: line
+				});
+			}, reject);
+		});
+	}
+
 	getStack(maxLevels: number): Thenable<Stack[]> {
 		if (trace)
 			this.log("stderr", "getStack");
@@ -393,8 +420,7 @@ export class MI2 extends EventEmitter implements IBackend {
 					let file = MINode.valueOf(element, "@frame.fullname");
 					let line = 0;
 					let lnstr = MINode.valueOf(element, "@frame.line");
-					if (lnstr)
-						line = parseInt(lnstr);
+					if (lnstr) { line = parseInt(lnstr); }
 					let from = parseInt(MINode.valueOf(element, "@frame.from"));
 					ret.push({
 						address: addr,
