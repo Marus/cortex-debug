@@ -86,6 +86,7 @@ export class GDBDebugSession extends DebugSession {
 	protected forceDisassembly: boolean = false;
 
 	protected breakpointMap: Map<string, Breakpoint[]> = new Map();
+	protected fileExistsCache: Map<string, boolean> = new Map();
 
 	private currentFile: string;
 
@@ -125,6 +126,7 @@ export class GDBDebugSession extends DebugSession {
 		this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
 		this.symbolTable.loadSymbols();
 		this.breakpointMap = new Map();
+		this.fileExistsCache = new Map();
 		this.processLaunchAttachRequest(response, false);
 	}
 
@@ -134,6 +136,7 @@ export class GDBDebugSession extends DebugSession {
 		this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
 		this.symbolTable.loadSymbols();
 		this.breakpointMap = new Map();
+		this.fileExistsCache = new Map();
 		this.processLaunchAttachRequest(response, true);
 	}
 
@@ -692,7 +695,9 @@ export class GDBDebugSession extends DebugSession {
 			let ret: StackFrame[] = [];
 			for (let element of stack) {
 				let file = element.file;
-				let disassemble = this.forceDisassembly || !file || !fs.existsSync(file);
+				let disassemble = this.forceDisassembly || !file;
+				
+				if (!disassemble) { disassemble = !(await this.checkFileExists(file)); }
 				
 				try {
 					if (disassemble) {
@@ -703,7 +708,13 @@ export class GDBDebugSession extends DebugSession {
 						});
 
 						if (line !== -1) {
-							let fname = `${element.fileName}::${element.function}`
+							let fname: string;
+							if (element.fileName) {
+								fname = `${element.fileName}::${element.function}`;
+							}
+							else {
+								fname = element.function;
+							}
 							let url = `disassembly:///${fname}.cdasm?function=${element.function}&file=${element.fileName}`;
 							ret.push(new StackFrame(element.level, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
 						}
@@ -716,7 +727,6 @@ export class GDBDebugSession extends DebugSession {
 					}
 				}
 				catch (e) {
-					console.log(`Error Preparing Stack: ${e.toString()}`);
 					ret.push(new StackFrame(element.level, element.function + "@" + element.address, null, element.line, 0));
 				}
 			}
@@ -1078,12 +1088,20 @@ export class GDBDebugSession extends DebugSession {
 		});
 	}
 
-	protected stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.step(this.forceDisassembly).then(done => {
+	protected async stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): Promise<void> {
+		try {
+			let assemblyMode = this.forceDisassembly;
+			if (!assemblyMode) {
+				let frame = await this.miDebugger.getFrame(this.threadID, 0);
+				assemblyMode = !(await this.checkFileExists(frame.file));
+			}
+
+			let done = await this.miDebugger.step(assemblyMode);
 			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 4, `Could not step in: ${msg}`);
-		});
+		}
+		catch (msg) {
+			this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);
+		}
 	}
 
 	protected stepOutRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
@@ -1094,11 +1112,34 @@ export class GDBDebugSession extends DebugSession {
 		});
 	}
 
-	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.next(this.forceDisassembly).then(done => {
+	protected async nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): Promise<void> {
+		try {
+			let assemblyMode = this.forceDisassembly;
+			if (!assemblyMode) {
+				let frame = await this.miDebugger.getFrame(this.threadID, 0);
+				assemblyMode = !(await this.checkFileExists(frame.file));
+			}
+
+			let done = await this.miDebugger.next(assemblyMode);
 			this.sendResponse(response);
-		}, msg => {
+		}
+		catch (msg) {
 			this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);
+		}
+	}
+
+	protected checkFileExists(name: string): Promise<boolean> {
+		if (!name) { return Promise.resolve(false); }
+
+		if (this.fileExistsCache.has(name)) { // Check cache
+			return Promise.resolve(this.fileExistsCache.get(name));
+		}
+
+		return new Promise((resolve, reject) => {
+			fs.exists(name, (exists) => {
+				this.fileExistsCache.set(name, exists);
+				resolve(exists);
+			});
 		});
 	}
 
