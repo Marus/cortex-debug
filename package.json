@@ -73,7 +73,25 @@
                 "command": "cortex-debug.setForceDisassembly",
                 "title": "Set Force Disassembly"
             }
-        ], 
+        ],
+        "languages": [
+            {
+                "id": "cortex-debug.disassembly",
+                "aliases": [
+                    "Cortex-Debug Disassembly"
+                ],
+                "extensions": [
+                    ".cdasm"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "cortex-debug.disassembly",
+                "scopeName": "source.cortex-debug-disassembly",
+                "path": "./syntaxes/cortex-debug-disassembly.json"
+            }
+        ],
         "debuggers": [
             {
                 "configurationAttributes": {

@@ -164,7 +164,7 @@ class CortexDebugExtension {
 				prompt: 'Function Name to Disassemble'
 			});
 
-			vscode.window.showTextDocument(vscode.Uri.parse(`disassembly:///Disassembly%3A%20${funcname}?function=${funcname}`));
+			vscode.window.showTextDocument(vscode.Uri.parse(`disassembly:///${funcname}.cdasm?function=${funcname}`));
 		}
 		catch (e) {
 			vscode.window.showErrorMessage('Unable to get function name');

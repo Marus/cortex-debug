@@ -666,7 +666,7 @@ export class GDBDebugSession extends DebugSession {
 
 						if (line !== -1) {
 							let fname = `${element.fileName}::${element.function}`
-							let url = `disassembly:///${fname}?function=${element.function}&file=${element.fileName}`;
+							let url = `disassembly:///${fname}.cdasm?function=${element.function}&file=${element.fileName}`;
 							ret.push(new StackFrame(element.level, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
 						}
 						else {
