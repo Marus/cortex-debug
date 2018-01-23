@@ -9,7 +9,8 @@ import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import * as portastic from 'portastic';
 import * as os from 'os';
-import * as net from "net";
+import * as net from 'net';
+import * as path from 'path';
 import { setTimeout } from 'timers';
 
 import { JLinkServerController } from './jlink';
@@ -117,7 +118,7 @@ export class GDBDebugSession extends DebugSession {
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
 		args.graphConfig = args.graphConfig || [];
 		this.args = args;
-		this.symbolTable = new SymbolTable(args.executable);
+		this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
 		this.symbolTable.loadSymbols();
 		this.processLaunchAttachRequest(response, false);
 	}
@@ -125,7 +126,7 @@ export class GDBDebugSession extends DebugSession {
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
 		args.graphConfig = args.graphConfig || [];
 		this.args = args;
-		this.symbolTable = new SymbolTable(args.executable);
+		this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
 		this.symbolTable.loadSymbols();
 		this.processLaunchAttachRequest(response, true);
 	}
@@ -153,9 +154,9 @@ export class GDBDebugSession extends DebugSession {
 			let executable = this.serverController.serverExecutable();
 			let args = this.serverController.serverArguments();
 
-			let defaultGDBExecutable = 'arm-none-eabi-gdb';
-			if(os.platform() == 'win32') {
-				defaultGDBExecutable = 'arm-none-eabi-gdb.exe';
+			let gdbExePath = os.platform() !== 'win32' ? 'arm-none-eabi-gdb' : 'arm-none-eabi-gdb.exe';
+			if (this.args.toolchainPath) {
+				gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
 			}
 
 			this.server = new GDBServer(executable, args, this.serverController.initMatch());
@@ -190,7 +191,7 @@ export class GDBDebugSession extends DebugSession {
 				let gdbargs = ["-q", "--interpreter=mi2"];
 				gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
 
-				this.miDebugger = new MI2(this.args.gdbpath || defaultGDBExecutable, gdbargs);
+				this.miDebugger = new MI2(gdbExePath, gdbargs);
 				this.initDebugger();
 
 				this.miDebugger.printCalls = !!this.args.showDevDebugOutput;
@@ -618,11 +619,9 @@ export class GDBDebugSession extends DebugSession {
 
 		try {
 			let frame = await this.miDebugger.getFrame(this.threadID, frameId);
-			console.log('Frame Info: ', frame);
 			let file = frame.fileName;
 			let staticSymbols = this.symbolTable.getStaticVariables(file);
-			console.log('staticSymbols: ', staticSymbols);
-
+			
 			for (let symbol of staticSymbols) {
 				let varObjName = `${file}_static_var_${symbol.name}`;
 				let varObj: VariableObject;
