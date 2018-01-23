@@ -18,7 +18,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 				let offset = address - lineAddress;
 
 				let output = '';
-				output += 'Address   \t|\tData                                            \t|\tCharacter\n';
+				output += 'Address   \t|\t00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F  \t|\tCharacter\n';
 				output += '-------------------------------------------------------------------------------------------------------\n';
 
 				output += hexFormat(lineAddress, 8) + '\t|\t';
