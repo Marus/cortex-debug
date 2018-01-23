@@ -52,7 +52,7 @@ export interface SWOConfiguration {
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
-	gdbpath: string;
+	toolchainPath: string;
 	executable: string;
 	servertype: string;
 	serverpath: string;

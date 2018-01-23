@@ -10,6 +10,37 @@
         "Debuggers"
     ], 
     "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "Cortex-Debug Configuration",
+            "properties": {
+                "cortex-debug.armToolchainPath": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to the GCC Arm Toolchain (prefix arm-none-eabi) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                },
+                "cortex-debug.JLinkGDBServerPath": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServer.exe on Windows) must be on the system path."
+                },
+                "cortex-debug.openocdPath": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
+                },
+                "cortex-debug.pyocdPath": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
+                },
+                "cortex-debug.stutilPath": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
+                }
+            }
+        },
         "commands": [
             {
                 "command": "cortex-debug.peripherals.updateNode", 
@@ -59,11 +90,6 @@
                             }, 
                             "executable": {
                                 "description": "Path of executable", 
-                                "type": "string"
-                            }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
                                 "type": "string"
                             }, 
                             "graphConfig": {
@@ -190,11 +216,6 @@
                                     ]
                                 }, 
                                 "type": "array"
-                            },
-                            "serverpath": {
-                                "default": "", 
-                                "description": "Path to the GDB server if it is not on the system path", 
-                                "type": "string"
                             },
                             "showDevDebugOutput": {
                                 "default": false, 
@@ -482,11 +503,6 @@
                                 "description": "Path of executable", 
                                 "type": "string"
                             }, 
-                            "gdbpath": {
-                                "default": "arm-none-eabi-gdb", 
-                                "description": "Path to the gdb executable or the command if in PATH", 
-                                "type": "string"
-                            }, 
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [
@@ -611,11 +627,6 @@
                                     ]
                                 }, 
                                 "type": "array"
-                            }, 
-                            "serverpath": {
-                                "default": "", 
-                                "description": "Path to the GDB server if the executable is not on the system path", 
-                                "type": "string"
                             }, 
                             "showDevDebugOutput": {
                                 "default": false, 
@@ -908,7 +919,6 @@
                         "body": {
                             "cwd": "^\"\\${workspaceRoot}\"", 
                             "executable": "${1:./bin/executable.elf}", 
-                            "gdbpath": "${3:arm-none-eabi-gdb}", 
                             "name": "${6:Debug Microcontroller}", 
                             "request": "launch", 
                             "stutilpath": "${2:st-util}", 
