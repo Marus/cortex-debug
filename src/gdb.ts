@@ -11,6 +11,7 @@ import * as portastic from 'portastic';
 import * as os from 'os';
 import * as net from 'net';
 import * as path from 'path';
+import * as fs from 'fs';
 import { setTimeout } from 'timers';
 
 import { JLinkServerController } from './jlink';
@@ -82,7 +83,8 @@ export class GDBDebugSession extends DebugSession {
 	protected miDebugger: MI2;
 	protected threadID: number = 1;
 	protected commandServer: net.Server;
-	
+	protected forceDisassembly: boolean = false;
+
 	private currentFile: string;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
@@ -244,6 +246,11 @@ export class GDBDebugSession extends DebugSession {
 		}
 
 		switch(command) {
+			case 'set-force-disassembly':
+				response.body = { success: true };
+				this.forceDisassembly = args.force;
+				this.sendResponse(response);
+				break;
 			case 'load-function-symbols':
 				response.body = { functionSymbols: this.symbolTable.getFunctionSymbols() };
 				this.sendResponse(response);
@@ -641,24 +648,49 @@ export class GDBDebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
-	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
-		this.miDebugger.getStack(args.levels).then(stack => {
+	protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
+		try {
+			let stack = await this.miDebugger.getStack(args.levels);
 			let ret: StackFrame[] = [];
-			stack.forEach(element => {
+			for (let element of stack) {
 				let file = element.file;
-				if (file) {
-					ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
+				let disassemble = this.forceDisassembly || !file || !fs.existsSync(file);
+				
+				try {
+					if (disassemble) {
+						let symbolInfo = await this.getDisassemblyForFunction(element.function, element.fileName);
+						let line = -1;
+						symbolInfo.instructions.forEach((inst, idx) => {
+							if (inst.address == element.address) { line = idx + 1; }
+						});
+
+						if (line !== -1) {
+							let fname = `${element.fileName}::${element.function}`
+							let url = `disassembly:///${fname}?function=${element.function}&file=${element.fileName}`;
+							ret.push(new StackFrame(element.level, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
+						}
+						else {
+							ret.push(new StackFrame(element.level, element.function + "@" + element.address, null, element.line, 0));		
+						}
+					}
+					else {
+						ret.push(new StackFrame(element.level, element.function + "@" + element.address, new Source(element.fileName, file), element.line, 0));
+					}
 				}
-				else
+				catch (e) {
+					console.log(`Error Preparing Stack: ${e.toString()}`);
 					ret.push(new StackFrame(element.level, element.function + "@" + element.address, null, element.line, 0));
-			});
+				}
+			}
+
 			response.body = {
 				stackFrames: ret
 			};
 			this.sendResponse(response);
-		}, err => {
+		}
+		catch (err) {
 			this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`)
-		});
+		}
 	}
 
 	protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse, args: DebugProtocol.ConfigurationDoneArguments): void {
@@ -1009,7 +1041,7 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.step().then(done => {
+		this.miDebugger.step(this.forceDisassembly).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 4, `Could not step in: ${msg}`);
@@ -1025,7 +1057,7 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.miDebugger.next().then(done => {
+		this.miDebugger.next(this.forceDisassembly).then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);

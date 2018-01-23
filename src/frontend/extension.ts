@@ -130,6 +130,7 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)));
 		
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortex-debug.peripherals', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortex-debug.registers', this.registerProvider));	
@@ -169,6 +170,20 @@ class CortexDebugExtension {
 			vscode.window.showErrorMessage('Unable to get function name');
 		}
 	}
+
+	setForceDisassembly() {
+		vscode.window.showQuickPick(
+			[
+				{ label: 'Auto', description: 'Show disassembly for functions when source cannot be located.' },
+				{ label: 'Forced', description: 'Always show disassembly for functions.' }
+			], 
+			{ matchOnDescription: true, ignoreFocusOut: true }
+		).then((result) => {
+			let force = result.label == 'Forced';
+			vscode.debug.activeDebugSession.customRequest('set-force-disassembly', { force: force });
+		}, error => {});
+	}
+
 	examineMemory() {
 		function validateValue(address) {
 			if(/^0x[0-9a-f]{1,8}$/i.test(address)) {
@@ -182,7 +197,7 @@ class CortexDebugExtension {
 			}
 		}
 
-		if(!vscode.debug.activeDebugSession) {
+		if (!vscode.debug.activeDebugSession) {
 			vscode.window.showErrorMessage('No debugging session available');
 			return;
 		}

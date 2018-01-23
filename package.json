@@ -67,6 +67,11 @@
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.viewDisassembly",
                 "title": "View Disassembly (Function)"
+            },
+            {
+                "category": "Cortex-Debug",
+                "command": "cortex-debug.setForceDisassembly",
+                "title": "Set Force Disassembly"
             }
         ], 
         "debuggers": [
@@ -1125,6 +1130,10 @@
                 },
                 {
                     "command": "cortex-debug.viewDisassembly",
+                    "when": "debugType == cortex-debug"
+                },
+                {
+                    "command": "cortex-debug.setForceDisassembly",
                     "when": "debugType == cortex-debug"
                 }
             ], 
