@@ -62,6 +62,11 @@
                 "category": "Cortex-Debug", 
                 "command": "cortex-debug.examineMemory", 
                 "title": "View Memory"
+            },
+            {
+                "category": "Cortex-Debug",
+                "command": "cortex-debug.viewDisassembly",
+                "title": "View Disassembly (Function)"
             }
         ], 
         "debuggers": [
@@ -1116,6 +1121,10 @@
                 }, 
                 {
                     "command": "cortex-debug.examineMemory", 
+                    "when": "debugType == cortex-debug"
+                },
+                {
+                    "command": "cortex-debug.viewDisassembly",
                     "when": "debugType == cortex-debug"
                 }
             ], 

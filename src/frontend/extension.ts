@@ -19,6 +19,7 @@ import { SocketSWOSource } from "./swo/sources/socket";
 import { FifoSWOSource } from "./swo/sources/fifo";
 import { FileSWOSource } from "./swo/sources/file";
 import { SerialSWOSource } from "./swo/sources/serial";
+import { DisassemblyContentProvider } from "./disassembly_content_provider";
 
 interface SVDInfo {
 	expression: RegExp;
@@ -121,12 +122,14 @@ class CortexDebugExtension {
 		Reporting.activate(context);
 
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()));
+		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()));
 
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)));
 		
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortex-debug.peripherals', this.peripheralProvider));
 		context.subscriptions.push(vscode.window.registerTreeDataProvider('cortex-debug.registers', this.registerProvider));	
@@ -147,6 +150,25 @@ class CortexDebugExtension {
 		return entry ? entry.path : null;
 	}
 
+	async showDisassembly() {
+		if (!vscode.debug.activeDebugSession) {
+			vscode.window.showErrorMessage('No debugging session available');
+			return;
+		}
+
+		try {
+			let funcname: string = await vscode.window.showInputBox({
+				placeHolder: 'main',
+				ignoreFocusOut: true,
+				prompt: 'Function Name to Disassemble'
+			});
+
+			vscode.window.showTextDocument(vscode.Uri.parse(`disassembly:///Disassembly%3A%20${funcname}?function=${funcname}`));
+		}
+		catch (e) {
+			vscode.window.showErrorMessage('Unable to get function name');
+		}
+	}
 	examineMemory() {
 		function validateValue(address) {
 			if(/^0x[0-9a-f]{1,8}$/i.test(address)) {

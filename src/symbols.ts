@@ -1,3 +1,5 @@
+import { DisassemblyInstruction } from "./common";
+
 export enum SymbolType {
 	Function,
 	File,
@@ -20,4 +22,5 @@ export interface SymbolInformation {
 	type: SymbolType;
 	scope: SymbolScope;
 	file: string;
+	instructions: DisassemblyInstruction[]
 };

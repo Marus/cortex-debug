@@ -3,7 +3,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from "./backend/mi2/mi2";
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, GDBServerController, AdapterOutputEvent, SWOConfigureEvent } from './common';
+import { TelemetryEvent, ConfigurationArguments, GDBServerController, AdapterOutputEvent, SWOConfigureEvent, DisassemblyInstruction } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -264,6 +264,9 @@ export class GDBDebugSession extends DebugSession {
 			case 'read-register-list':
 				this.readRegisterListRequest(response);
 				break;
+			case 'disassemble':
+				this.disassembleRequest(response, args);
+				break;
 			case 'execute-command':
 				let cmd = args['command'] as string;
 				if(cmd.startsWith('-')) { cmd = cmd.substring(1); }
@@ -281,6 +284,109 @@ export class GDBDebugSession extends DebugSession {
 				this.sendResponse(response);
 				break;
 		}
+	}
+
+	protected async disassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {
+		if (args.function) {
+			try {
+				let funcInfo: SymbolInformation = await this.getDisassemblyForFunction(args.function);
+				response.body = {
+					instructions: funcInfo.instructions,
+					name: funcInfo.name,
+					file: funcInfo.file,
+					address: funcInfo.address,
+					length: funcInfo.length
+				};
+				this.sendResponse(response);
+			}
+			catch (e) {
+				this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
+			}
+			return;
+		}
+		else if(args.startAddress) {
+			try {
+				let funcInfo = this.symbolTable.getFunctionAtAddress(args.startAddress);
+				if (funcInfo) {
+					funcInfo = await this.getDisassemblyForFunction(funcInfo.name, funcInfo.file);
+					response.body = {
+						instructions: funcInfo.instructions,
+						name: funcInfo.name,
+						file: funcInfo.file,
+						address: funcInfo.address,
+						length: funcInfo.length
+					};
+					this.sendResponse(response);
+				}
+				else {
+					let instructions: DisassemblyInstruction[] = await this.getDisassemblyForAddresses(args.startAddress, args.length || 256);
+					response.body = { instructions: instructions };
+					this.sendResponse(response);
+				}
+			}
+			catch (e) {
+				this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
+			}
+			return;
+		}
+		else {
+			this.sendErrorResponse(response, 1, `Unable to disassemble; invalid parameters.`);
+		}
+	}
+
+	private async getDisassemblyForFunction(functionName: string, file?: string): Promise<SymbolInformation> {
+		let symbol: SymbolInformation = this.symbolTable.getFunctionByName(functionName, file);
+
+		if (!symbol) { throw new Error(`Unable to find function with name ${functionName}.`); }
+
+		if (symbol.instructions) { return symbol; }
+
+		let startAddress = symbol.address;
+		let endAddress = symbol.address + symbol.length;
+
+		let result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress,8)} -e ${hexFormat(endAddress,8)} -- 2`);
+		let rawInstructions = result.result('asm_insns');
+		let instructions: DisassemblyInstruction[] = rawInstructions.map(ri => {
+			let address = MINode.valueOf(ri, 'address');
+			let functionName = MINode.valueOf(ri, 'func-name');
+			let offset = parseInt(MINode.valueOf(ri, 'offset'));
+			let inst = MINode.valueOf(ri, 'inst');
+			let opcodes = MINode.valueOf(ri, 'opcodes');
+
+			return {
+				address: address,
+				functionName: functionName,
+				offset: offset,
+				instruction: inst,
+				opcodes: opcodes
+			};
+		});
+		symbol.instructions = instructions;
+		return symbol;
+	}
+
+	private async getDisassemblyForAddresses(startAddress: number, length: number): Promise<DisassemblyInstruction[]> {
+		let endAddress = startAddress + length;
+
+		let result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress,8)} -e ${hexFormat(endAddress,8)} -- 2`);
+		let rawInstructions = result.result('asm_insns');
+		let instructions: DisassemblyInstruction[] = rawInstructions.map(ri => {
+			let address = MINode.valueOf(ri, 'address');
+			let functionName = MINode.valueOf(ri, 'func-name');
+			let offset = parseInt(MINode.valueOf(ri, 'offset'));
+			let inst = MINode.valueOf(ri, 'inst');
+			let opcodes = MINode.valueOf(ri, 'opcodes');
+
+			return {
+				address: address,
+				functionName: functionName,
+				offset: offset,
+				instruction: inst,
+				opcodes: opcodes
+			};
+		});
+
+		return instructions;
 	}
 
 	protected readMemoryRequest(response: DebugProtocol.Response, startAddress: number, length: number) {

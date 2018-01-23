@@ -83,6 +83,14 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	BMPGDBSerialPort: string;
 }
 
+export interface DisassemblyInstruction {
+	address: string;
+	functionName: string;
+	offset: number;
+	instruction: string;
+	opcodes: string;
+}
+
 export interface GDBServerController extends EventEmitter {
 	portsNeeded: string[];
 	name: string;
