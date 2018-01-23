@@ -75,6 +75,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 				break;
 		}
 
+		let configuration = vscode.workspace.getConfiguration('cortex-debug');
+		config.toolchainPath = configuration.armToolchainPath;
+
 		config.extensionPath = this.context.extensionPath;
 		
 		if (validationResponse) {
@@ -104,6 +107,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 	verifyJLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
 		if (config.jlinkpath && !config.serverpath) { config.serverpath = config.jlinkpath; }
+		if (!config.serverpath) {
+			let configuration = vscode.workspace.getConfiguration('cortex-debug');
+			config.serverpath = configuration.JLinkGDBServerPath;
+		}
 
 		if (!config.device) {
 			return 'Device Identifier is required for J-Link configurations. Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
@@ -114,6 +121,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 	verifyOpenOCDConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
 		if (config.openOCDPath && !config.serverpath) { config.serverpath = config.openOCDPath; }
+		if (!config.serverpath) {
+			let configuration = vscode.workspace.getConfiguration('cortex-debug');
+			config.serverpath = configuration.openocdPath;
+		}
 
 		if (!config.configFiles || config.configFiles.length === 0) {
 			return 'At least one OpenOCD Configuration File must be specified.';
@@ -124,6 +135,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 	verifySTUtilConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
 		if (config.stutilpath && !config.serverpath) { config.serverpath = config.stutilpath; }
+		if (!config.serverpath) {
+			let configuration = vscode.workspace.getConfiguration('cortex-debug');
+			config.serverpath = configuration.stutilPath;
+		}
 
 		if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
 			vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Util GDB server. Disabling SWO.');
@@ -136,6 +151,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 	verifyPyOCDConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
 		if (config.pyocdPath && !config.serverpath) { config.serverpath = config.pyocdPath; }
+		if (!config.serverpath) {
+			let configuration = vscode.workspace.getConfiguration('cortex-debug');
+			config.serverpath = configuration.pyocdPath;
+		}
+
 		if (config.board && !config.boardId) { config.boardId = config.board; }
 		if (config.target && !config.targetId) { config.targetId = config.target; }
 
