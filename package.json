@@ -247,7 +247,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -287,7 +287,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -327,7 +327,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "port", 
                                                         "graphId"
                                                     ], 
                                                     "type": "object"
@@ -359,7 +359,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "ports", 
                                                         "decoder"
                                                     ], 
                                                     "type": "object"
@@ -668,7 +668,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -708,7 +708,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number"
+                                                        "port"
                                                     ], 
                                                     "type": "object"
                                                 }, 
@@ -748,7 +748,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "port", 
                                                         "graphId"
                                                     ], 
                                                     "type": "object"
@@ -780,7 +780,7 @@
                                                         }
                                                     }, 
                                                     "required": [
-                                                        "number", 
+                                                        "ports", 
                                                         "decoder"
                                                     ], 
                                                     "type": "object"
