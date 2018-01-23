@@ -166,6 +166,10 @@ export class GDBDebugSession extends MI2DebugSession {
 		}
 
 		switch(command) {
+			case 'load-function-symbols':
+				response.body = { functionSymbols: this.symbolTable.getFunctionSymbols() };
+				this.sendResponse(response);
+				break;
 			case 'get-arguments':
 				response.body = this.args;
 				this.sendResponse(response);

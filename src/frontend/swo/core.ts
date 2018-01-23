@@ -15,7 +15,7 @@ import { EventEmitter } from "events";
 import { PacketType, Packet, TimestampType, TimestampPacket } from './common';
 import { parseUnsigned } from './decoders/utils';
 import { hexFormat } from "../utils";
-import { SymbolInformation, SymbolTable } from './symbols';
+import { SymbolType, SymbolScope, SymbolInformation } from '../../symbols';
 
 var RingBuffer = require('ringbufferjs');
 
@@ -175,13 +175,16 @@ export class SWOCore {
 	socketServer: SWOSocketServer;
 	connected: boolean = false;
 	itmDecoder: ITMDecoder;
-	symbolTable: SymbolTable;
+	private functionSymbols: SymbolInformation[];
 
 	constructor(private source: SWOSource, args: ConfigurationArguments, extensionPath: string) {
 		this.itmDecoder = new ITMDecoder();
-		this.symbolTable = new SymbolTable(args.executable);
-		this.symbolTable.loadSymbols();
-
+		vscode.debug.activeDebugSession.customRequest('load-function-symbols').then((result) => {
+			this.functionSymbols = result.functionSymbols;
+		}, (error) => {
+			this.functionSymbols = [];
+		});
+		
 		if(this.source.connected) { this.connected = true; }
 		else { this.source.on('connected', () => { this.connected = true; }); }
 		this.source.on('data', this.handleData.bind(this));
@@ -259,7 +262,7 @@ export class SWOCore {
 			this.processors.forEach(p => p.hardwareEvent(packet));
 			if(packet.port == 2) {
 				let pc = parseUnsigned(packet.data);
-				let symbol = this.symbolTable.getFunctionAtAddress(pc);
+				let symbol = this.getFunctionAtAddress(pc);
 
 				let message: WebsocketProgramCounterMessage = {
 					type: 'program-counter',
@@ -351,5 +354,12 @@ export class SWOCore {
 		this.processors.forEach(p => p.dispose());
 		this.processors = null;
 		this.connected = false;
+	}
+
+	getFunctionAtAddress(address: number): SymbolInformation {
+		let matches = this.functionSymbols.filter(s => s.address <= address && (s.address + s.length) > address);
+		if(!matches || matches.length == 0) { return undefined; }
+
+		return matches[0];
 	}
 }
