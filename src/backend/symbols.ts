@@ -92,7 +92,7 @@ export class SymbolTable {
 		if (matches.length !== 0) { return matches[0]; }
 		
 		// Fall back to global scope
-		matches = this.symbols.filter(s => s.type == SymbolType.Function && s.scope == SymbolScope.Global && s.name == name);
+		matches = this.symbols.filter(s => s.type == SymbolType.Function && s.scope != SymbolScope.Local && s.name == name);
 		return matches.length !== 0 ? matches[0] : null;
 	}
 }
