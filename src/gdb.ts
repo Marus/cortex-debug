@@ -85,6 +85,8 @@ export class GDBDebugSession extends DebugSession {
 	protected commandServer: net.Server;
 	protected forceDisassembly: boolean = false;
 
+	protected breakpointMap: Map<string, Breakpoint[]> = new Map();
+
 	private currentFile: string;
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
@@ -605,32 +607,66 @@ export class GDBDebugSession extends DebugSession {
 			this.miDebugger.once("debug-ready", cb);
 	}
 
-	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
-		let cb = (() => {
+	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments) {
+		let cb = (async () => {
 			this.debugReady = true;
-			this.miDebugger.clearBreakPoints().then(() => {
-				let path = args.source.path;
-				let all = [];
-				args.breakpoints.forEach(brk => {
-					all.push(this.miDebugger.addBreakPoint({ file: path, line: brk.line, condition: brk.condition, countCondition: brk.hitCondition }));
-				});
-				Promise.all(all).then(brkpoints => {
-					let finalBrks = [];
-					brkpoints.forEach(brkp => {
-						if (brkp[0])
-							finalBrks.push({ line: brkp[1].line, verified: true });
-					});
-					response.body = {
-						breakpoints: finalBrks
-					};
-					this.sendResponse(response);
+			let currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map(bp => bp.number);
+			
+			try {
+				await this.miDebugger.removeBreakpoints(currentBreakpoints);
+				this.breakpointMap.set(args.source.path, []);
+				
+				let all: Promise<Breakpoint>[] = [];
+				if (args.source.path.startsWith('disassembly:///')) {
+					let eidx = args.source.path.indexOf('?');
+					let path = args.source.path.substring(15, eidx - 6); // Account for protocol and extension
+					let parts = path.split('::');
+					let func: string;
+					let file: string;
+
+					if (parts.length == 2) {
+						func = parts[1];
+						file = parts[0];
+					}
+					else {
+						func = parts[0];
+					}
+
+					let symbol: SymbolInformation = await this.getDisassemblyForFunction(func, file);
 					
-				}, msg => {
-					this.sendErrorResponse(response, 9, msg.toString());
-				});
-			}, msg => {
+					args.breakpoints.forEach(brk => {
+						if (brk.line <= symbol.instructions.length) {
+							let line = symbol.instructions[brk.line - 1];
+							all.push(this.miDebugger.addBreakPoint({ file: args.source.path, line: brk.line, condition: brk.condition, countCondition: brk.hitCondition, raw: line.address }));
+						}						
+					});
+				}
+				else {
+					args.breakpoints.forEach(brk => {
+						all.push(this.miDebugger.addBreakPoint({ file: args.source.path, line: brk.line, condition: brk.condition, countCondition: brk.hitCondition }));
+					});
+				}
+
+				let brkpoints = await Promise.all(all);
+
+				let finalBrks: Breakpoint[] = brkpoints.filter(bp => bp !== null);
+
+				response.body = {
+					breakpoints: finalBrks.map(bp => {
+						return {
+							line: bp.line,
+							id: bp.number,
+							verified: true
+						};
+					})
+				};
+
+				this.breakpointMap.set(args.source.path, finalBrks);
+				this.sendResponse(response);
+			}
+			catch (msg) {
 				this.sendErrorResponse(response, 9, msg.toString());
-			});
+			};
 		}).bind(this);
 
 		if (this.debugReady)

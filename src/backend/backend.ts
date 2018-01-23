@@ -7,6 +7,7 @@ export interface Breakpoint {
 	raw?: string;
 	condition: string;
 	countCondition?: string;
+	number?: number;
 }
 
 export interface Stack {
@@ -35,10 +36,8 @@ export interface IBackend {
 	next(): Thenable<boolean>;
 	step(): Thenable<boolean>;
 	stepOut(): Thenable<boolean>;
-	loadBreakPoints(breakpoints: Breakpoint[]): Thenable<[boolean, Breakpoint][]>;
-	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]>;
-	removeBreakPoint(breakpoint: Breakpoint): Thenable<boolean>;
-	clearBreakPoints(): Thenable<any>;
+	addBreakPoint(breakpoint: Breakpoint): Promise<Breakpoint>;
+	removeBreakpoints(breakpoints: number[]): Promise<boolean>;
 	getStack(maxLevels: number): Thenable<Stack[]>;
 	getStackVariables(thread: number, frame: number): Thenable<Variable[]>;
 	evalExpression(name: string): Thenable<any>;

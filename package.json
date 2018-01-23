@@ -974,7 +974,8 @@
                         "c", 
                         "cpp", 
                         "asm",
-                        "arm"
+                        "arm",
+                        "cortex-debug.disassembly"
                     ]
                 },
                 "initialConfigurations": [

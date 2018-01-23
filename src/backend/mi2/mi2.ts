@@ -272,28 +272,16 @@ export class MI2 extends EventEmitter implements IBackend {
 		return this.sendCommand("gdb-set var " + name + "=" + rawValue);
 	}
 
-	loadBreakPoints(breakpoints: Breakpoint[]): Thenable<[boolean, Breakpoint][]> {
-		if (trace)
-			this.log("stderr", "loadBreakPoints");
-		let promisses = [];
-		breakpoints.forEach(breakpoint => {
-			promisses.push(this.addBreakPoint(breakpoint));
-		});
-		return Promise.all(promisses);
-	}
-
 	setBreakPointCondition(bkptNum, condition): Thenable<any> {
 		if (trace)
 			this.log("stderr", "setBreakPointCondition");
 		return this.sendCommand("break-condition " + bkptNum + " " + condition);
 	}
 
-	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]> {
+	addBreakPoint(breakpoint: Breakpoint): Promise<Breakpoint> {
 		if (trace)
 			this.log("stderr", "addBreakPoint");
 		return new Promise((resolve, reject) => {
-			if (this.breakpoints.has(breakpoint))
-				return resolve([false, undefined]);
 			let location = "";
 			if (breakpoint.countCondition) {
 				if (breakpoint.countCondition[0] == ">")
@@ -308,69 +296,50 @@ export class MI2 extends EventEmitter implements IBackend {
 						location += "-t -i " + parseInt(match) + " ";
 				}
 			}
+
 			if (breakpoint.raw)
-				location += '"' + escape(breakpoint.raw) + '"';
+				location += '*' + escape(breakpoint.raw);
 			else
 				location += '"' + escape(breakpoint.file) + ":" + breakpoint.line + '"';
-			this.sendCommand("break-insert -f " + location).then((result) => {
+			
+			this.sendCommand(`break-insert ${location}`).then((result) => {
 				if (result.resultRecords.resultClass == "done") {
 					let bkptNum = parseInt(result.result("bkpt.number"));
-					let newBrk = {
-						file: result.result("bkpt.file"),
-						line: parseInt(result.result("bkpt.line")),
-						condition: breakpoint.condition
-					};
+					breakpoint.number = bkptNum;
+
 					if (breakpoint.condition) {
 						this.setBreakPointCondition(bkptNum, breakpoint.condition).then((result) => {
 							if (result.resultRecords.resultClass == "done") {
-								this.breakpoints.set(newBrk, bkptNum);
-								resolve([true, newBrk]);
+								resolve(breakpoint);
 							} else {
-								resolve([false, null]);
+								resolve(null);
 							}
 						}, reject);
 					}
 					else {
-						this.breakpoints.set(newBrk, bkptNum);
-						resolve([true, newBrk]);
+						resolve(breakpoint);
 					}
 				}
 				else {
-					reject(result);
+					resolve(null);
 				}
 			}, reject);
 		});
 	}
 
-	removeBreakPoint(breakpoint: Breakpoint): Thenable<boolean> {
+	removeBreakpoints(breakpoints: number[]): Promise<boolean> {
 		if (trace)
 			this.log("stderr", "removeBreakPoint");
 		return new Promise((resolve, reject) => {
-			if (!this.breakpoints.has(breakpoint))
-				return resolve(false);
-			this.sendCommand("break-delete " + this.breakpoints.get(breakpoint)).then((result) => {
-				if (result.resultRecords.resultClass == "done") {
-					this.breakpoints.delete(breakpoint);
-					resolve(true);
-				}
-				else resolve(false);
-			});
-		});
-	}
-
-	clearBreakPoints(): Thenable<any> {
-		if (trace)
-			this.log("stderr", "clearBreakPoints");
-		return new Promise((resolve, reject) => {
-			this.sendCommand("break-delete").then((result) => {
-				if (result.resultRecords.resultClass == "done") {
-					this.breakpoints.clear();
-					resolve(true);
-				}
-				else resolve(false);
-			}, () => {
-				resolve(false);
-			});
+			if (breakpoints.length === 0) {
+				resolve(true);
+			}
+			else {
+				let cmd = 'break-delete ' + breakpoints.join(' ');
+				this.sendCommand(cmd).then((result) => {
+					resolve(result.resultRecords.resultClass == 'done');
+				}, reject);
+			}
 		});
 	}
 
@@ -563,7 +532,6 @@ export class MI2 extends EventEmitter implements IBackend {
 	public procEnv: any;
 	protected currentToken: number = 1;
 	protected handlers: { [index: number]: (info: MINode) => any } = {};
-	protected breakpoints: Map<Breakpoint, Number> = new Map();
 	protected buffer: string;
 	protected errbuf: string;
 	protected process: ChildProcess.ChildProcess;
