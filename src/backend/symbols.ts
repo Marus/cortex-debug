@@ -45,14 +45,18 @@ export class SymbolTable {
 					if (match[7] === 'd' && match[8] == 'f') {
 						current_file = match[11].trim()
 					}
+					let type = TYPE_MAP[match[8]];
+					let scope = SCOPE_MAP[match[2]];
+
 					this.symbols.push({
 						address: parseInt(match[1], 16),
-						type: TYPE_MAP[match[8]],
-						scope: SCOPE_MAP[match[2]],
+						type: type,
+						scope: scope,
 						section: match[9].trim(),
 						length: parseInt(match[10], 16),
 						name: match[11].trim(),
-						file: current_file
+						file: scope == SymbolScope.Local ? current_file : null,
+						instructions: null
 					});
 				}
 			}
@@ -80,5 +84,15 @@ export class SymbolTable {
 
 	getStaticVariables(file: string): SymbolInformation[] {
 		return this.symbols.filter(s => s.type == SymbolType.Object && s.scope == SymbolScope.Local && s.file == file);
+	}
+
+	getFunctionByName(name: string, file?: string): SymbolInformation {
+		// Try to find static function first
+		let matches = this.symbols.filter(s => s.type == SymbolType.Function && s.scope == SymbolScope.Local && s.name == name && s.file == file);
+		if (matches.length !== 0) { return matches[0]; }
+		
+		// Fall back to global scope
+		matches = this.symbols.filter(s => s.type == SymbolType.Function && s.scope == SymbolScope.Global && s.name == name);
+		return matches.length !== 0 ? matches[0] : null;
 	}
 }
