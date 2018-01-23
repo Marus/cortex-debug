@@ -124,6 +124,7 @@ export class GDBDebugSession extends DebugSession {
 		this.args = args;
 		this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
 		this.symbolTable.loadSymbols();
+		this.breakpointMap = new Map();
 		this.processLaunchAttachRequest(response, false);
 	}
 
@@ -132,6 +133,7 @@ export class GDBDebugSession extends DebugSession {
 		this.args = args;
 		this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
 		this.symbolTable.loadSymbols();
+		this.breakpointMap = new Map();
 		this.processLaunchAttachRequest(response, true);
 	}
 
