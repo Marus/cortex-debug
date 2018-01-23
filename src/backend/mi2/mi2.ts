@@ -217,21 +217,21 @@ export class MI2 extends EventEmitter implements IBackend {
 		});
 	}
 
-	next(): Thenable<boolean> {
+	next(instruction?: boolean): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "next");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-next").then((info) => {
+			this.sendCommand(instruction ? 'exec-next-instruction' : 'exec-next').then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	step(): Thenable<boolean> {
+	step(instruction?: boolean): Thenable<boolean> {
 		if (trace)
 			this.log("stderr", "step");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-step").then((info) => {
+			this.sendCommand(instruction ? 'exec-step-instruction' : 'exec-step').then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
