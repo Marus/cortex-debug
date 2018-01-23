@@ -624,7 +624,7 @@ export class GDBDebugSession extends DebugSession {
 			console.log('staticSymbols: ', staticSymbols);
 
 			for (let symbol of staticSymbols) {
-				let varObjName = `static_var_${symbol.name}`;
+				let varObjName = `${file}_static_var_${symbol.name}`;
 				let varObj: VariableObject;
 				try {
 					const changes = await this.miDebugger.varUpdate(varObjName);
