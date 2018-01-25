@@ -18,12 +18,7 @@ export class SerialSWOSource extends EventEmitter implements SWOSource {
 			SerialPort = require(modpath);
 		}
 		catch (e) {
-			if (os.platform() === 'win32') {
-				vscode.window.showErrorMessage('Serial Port SWO Data Source is not available on Windows');
-			}
-			else {
-				vscode.window.showErrorMessage('Unable to load Serial Port Module. A recent Visual Studio Code update has likely broken compatibility with the serial module. Please visit https://github.com/Marus/cortex-debug for more information.');
-			}
+			vscode.window.showErrorMessage('Unable to load Serial Port Module. A recent Visual Studio Code update has likely broken compatibility with the serial module. Please visit https://github.com/Marus/cortex-debug for more information.');
 			return;
 		}
 
