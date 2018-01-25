@@ -949,7 +949,6 @@
                             "executable": "${1:./bin/executable.elf}", 
                             "name": "${6:Debug Microcontroller}", 
                             "request": "launch", 
-                            "stutilpath": "${2:st-util}", 
                             "type": "cortex-debug",
                             "servertype": "stutil"
                         }, 
