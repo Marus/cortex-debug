@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from 'os';
 
 export class DeprecatedDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 	constructor(private context: vscode.ExtensionContext, private id: string) {}
@@ -79,6 +80,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 		config.toolchainPath = configuration.armToolchainPath;
 
 		config.extensionPath = this.context.extensionPath;
+		if (os.platform() == 'win32') {
+			config.extensionPath = config.extensionPath.replace(/\\/g, '/'); //GDB doesn't interpret the path correctly with backslashes.
+		}
 		
 		if (validationResponse) {
 			vscode.window.showErrorMessage(validationResponse);
