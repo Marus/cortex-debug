@@ -18,10 +18,8 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 				let offset = address - lineAddress;
 
 				let output = '';
-				output += 'Address   \t|\t00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F  \t|\tCharacter\n';
-				output += '-------------------------------------------------------------------------------------------------------\n';
-
-				output += hexFormat(lineAddress, 8) + '\t|\t';
+				output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 	\n';
+				output += hexFormat(lineAddress - 0x8000000, 8, false) + ': ';
 
 				let lineend = '';
 
@@ -29,20 +27,20 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
 				for (let i = 0; i < length; i++) {
 					let byte = bytes[i];
-					output += hexFormat(byte, 2, false) + ' ';
+					output += hexFormat(byte, 2, false).toUpperCase() + ' ';
 					if (byte <= 32 || (byte >= 127 && byte <= 159)) {
-						lineend += '. ';
+						lineend += '.';
 					}
 					else {
-						lineend	+= String.fromCharCode(bytes[i]) + ' ';
+						lineend	+= String.fromCharCode(bytes[i]);
 					}
 
 					if ((address + i) % 16 === 15 && i < length - 1) {
-						output += '\t|\t' + lineend;
+						output += '  ' + lineend;
 						lineend = '';
 						output += '\n';
 						lineAddress += 16;
-						output += hexFormat(lineAddress, 8) + '\t|\t';
+						output += hexFormat(lineAddress - 0x8000000, 8, false) + ': ';
 					}
 				}
 
@@ -50,8 +48,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 				let extra = (16 - (endaddress % 16)) % 16;
 
 				for (let i = 0; i < extra; i++) { output += '   '; }
-				output += '\t|\t' + lineend;
-
+				output += '  ' + lineend;
 				output += '\n';
 
 				resolve(output);
