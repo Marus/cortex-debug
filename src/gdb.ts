@@ -622,9 +622,14 @@ export class GDBDebugSession extends DebugSession {
 				this.breakpointMap.set(args.source.path, []);
 				
 				let all: Promise<Breakpoint>[] = [];
-				if (args.source.path.startsWith('disassembly:///')) {
-					let eidx = args.source.path.indexOf('?');
-					let path = args.source.path.substring(15, eidx - 6); // Account for protocol and extension
+				let sourcepath = decodeURIComponent(args.source.path);
+
+				if (sourcepath.startsWith('disassembly:/')) {
+					let sidx = 13;
+					if (args.source.path.startsWith('disassembly:///')) { sidx = 15; }
+
+					let eidx = sourcepath.indexOf('?');
+					let path = sourcepath.substring(sidx, eidx - 6); // Account for protocol and extension
 					let parts = path.split('::');
 					let func: string;
 					let file: string;
