@@ -84,7 +84,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
 
 	private SWOConfigurationCommands(): string[] {
-		let portMask = calculatePortMask(this.args.swoConfig.decoders).toString(16);
+		let portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
 		let swoFrequency = this.args.swoConfig.swoFrequency | 0;
 		let cpuFrequency = this.args.swoConfig.cpuFrequency | 0;
 		
