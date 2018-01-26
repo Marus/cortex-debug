@@ -4,7 +4,7 @@ import * as path from 'path';
 
 import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
 
-const SYMBOL_REGEX = /^([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s([^\s]+)\s([0-9a-f]+)\s(.*)$/;
+const SYMBOL_REGEX = /^([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s([^\s]+)\s([0-9a-f]+)\s(.*)\r?$/;
 
 const TYPE_MAP: { [id: string]: SymbolType } = {
 	'F': SymbolType.Function,
