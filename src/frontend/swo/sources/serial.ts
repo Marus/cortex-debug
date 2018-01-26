@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import * as net from 'net';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 export class SerialSWOSource extends EventEmitter implements SWOSource {
 	serialPort: any = null;
@@ -11,7 +12,7 @@ export class SerialSWOSource extends EventEmitter implements SWOSource {
 	constructor(private device: string, private baudRate: number, extensionPath: string) {
 		super();
 
-		let modpath = `${extensionPath}/binary_modules/${process.version}/${os.platform()}/${os.arch()}/serialport`;
+		let modpath = path.normalize(path.join(extensionPath, 'binary_modules', process.version, os.platform(), process.arch, 'serialport'));
 		let SerialPort;
 
 		try {
