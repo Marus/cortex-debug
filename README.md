@@ -5,7 +5,8 @@
 Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
 * Support J-Link, OpenOCD GDB Server
-* Partial support for PyOCD and textane/stlink (st-util) GDB Servers (SWO decoding is not supported with these GDB servers)
+* Partial support for PyOCD and textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
+* Initial support for the Black Magic Probe (This has not been as heavily tested; SWO can only be captured via a serial port)
 * Cortex Core Register Viewer
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
 * Peripheral Register Viewer (Defined through standard SVD file)
@@ -15,17 +16,16 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * Ability to define JavaScript modules to decode complex data formats streamed over a particular ITM port. Data can be printed to a output window, or sent to the graphing system.
 * Live graphing of decoded ITM data.
 * Raw Memory Viewer (From the command menu select Cortex-Debug: View Memory)
-* Initial support for PyOCD GDB Server (No SWO support for PyOCD)
+* Ability to view and step through the disassembled binary
+* Globals and Static scopes in the variables view
 
 ### In Progress Features
 * RTOS/Muti-Threaded Support (Dependant on GDB server support)
-* Improved SWO Decoding
 
 ### Planned Features
 
 * Additional Graphing Options
 * Enhanced SVD Auto-selection
-* Support for Black Magic Probe
 * Semihosting Support
 
 ## Installation

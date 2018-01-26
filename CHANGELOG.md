@@ -1,3 +1,23 @@
+#V0.1.10
+
+* The update has a significant refactoring of code to make supporting the expanding list of GDB Servers more feasible. From the user side this necessitates updating your launch.json files as all debug types have now been combined into one common *cortex-debug* type
+    * The typical changes needed are to replace *"type": "<server>-gdb" in your launch.json file with "type": "cortex-debug" and "servertype" : "<server>";
+	* The extension will attempt to map old configurations automatically - but this may not work in all cases; additionally there launch.json editor will not recognize the old types any more
+	* You no longer specify paths to the individual tools in your launch.json file; now there are settings you can set (either user level or workspace level) for paths to the individual GDB servers as well as the arm toolchain. For the arm toolchain path the setting should point to the toolchains bin directory - not an individual executable - as multiple tools from the toolchain are now used (current arm-none-eabi-gdb and arm-none-eabi-objdump; but possibly others in the future)
+* A globals and static scope has been added to the variables view
+* A disassembly view has been added. This can show up in three possible ways:
+    * You can manually view the disassembly for a particular function by selecting the "Cortex-Debug: View Disassembly (Function) command from the command palette and entering the function name. (While you can view the disassembly in this case, stepping will still be based upon source lines currently)
+	* If the source file cannot be located it will automatically disassemble and display the current function (In this case stepping is by instruction)
+	* You can force it to always disassembe through the "Cortex-Debug: Set Force Disassembly" command and selecting the "Forced" option.
+* SWO Decoding has been significantly overhauled
+	* It is now possible to use a serial port (such as a FTDI USB to UART) to capture SWO data, allowing the use of SWO output on probes that do not support it natively or have poor performance. To use this set the "source" key under "swoConfig" to the UART device (COM port on Windows).
+	* The ITM, DWT and TPIU registers needed to match the configuration in the launch.json file will be set automatically; avoiding the need for your firmware to make the configurations. SWO output will still need to be enabled in your firmware though, as this part of the configuration is microcontroller specific.
+	* A number of configuration options have changed; please edit your launch.json file
+* Inital support for the Black Magic Probe has been added; this server has not been tested extensively yet, so there may still be some issues. SWO output through the probe is not currently support when using the Black Magic Probe.
+* Fixed issue with Peripheral Register viewer not working after the first launch request
+* Fixed a bug with the variables and watches view incorrectly updating the value on a struct/array when a contained element changed
+* Updated the view memory output format to match the format used by the hexdump for VSCode extension (https://marketplace.visualstudio.com/items?itemName=slevesque.vscode-hexdump) - this will enable the syntax highlighting, and hopefully in the future the inspector, from that plugin.
+
 # V0.1.9
 
 * Added initial support for texane's stlink utilites st-util GDB server (https://github.com/texane/stlink) - this configuration does not support SWO output.
