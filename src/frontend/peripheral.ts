@@ -10,13 +10,22 @@ import { ProviderResult } from 'vscode';
 export enum RecordType {
 	Peripheral = 1,
 	Register,
-	Field
+	Field,
+	Cluster
 }
 
 export enum AccessType {
 	ReadOnly = 1,
 	ReadWrite,
 	WriteOnly
+}
+
+const ACCESS_TYPE_MAP = {
+	'read-only': AccessType.ReadOnly,
+	'write-only': AccessType.WriteOnly,
+	'read-write': AccessType.ReadWrite,
+	'writeOnce': AccessType.WriteOnly,
+	'read-writeOnce': AccessType.ReadWrite
 }
 
 export class TreeNode extends vscode.TreeItem {
@@ -118,17 +127,43 @@ interface EnumerationMap {
 }
 
 class EnumeratedValue {
-	constructor(public name: string, public description: string, public value: number) {
+	constructor(public name: string, public description: string, public value: number) {}
+}
 
-	}
+interface PeripheralOptions {
+	name: string;
+	baseAddress: number;
+	totalLength: number;
+	description: string;
+	groupName?: string;
+	accessType? : AccessType;
+	size?: number;
+	resetValue?: number;
 }
 
 export class PeripheralNode extends BaseNode {
-	public registers: RegisterNode[];
+	private children: Array<RegisterNode | ClusterNode>;
+	public readonly name: string;
+	public readonly baseAddress: number;
+	public readonly description: string;
+	public readonly groupName: string;
+	public readonly totalLength: number;
+	public readonly accessType: AccessType;
+	public readonly size: number;
+	public readonly resetValue: number;
+	
 	private currentValue: number[];
 
-	constructor(public name: string, public baseAddress: number, public size: number, public description: string, public offset: number) {
+	constructor(options: PeripheralOptions) {
 		super(RecordType.Peripheral);
+		this.name = options.name;
+		this.baseAddress = options.baseAddress;
+		this.totalLength = options.totalLength;
+		this.description = options.description;
+		this.groupName = options.groupName || "";
+		this.resetValue = options.resetValue || 0;
+		this.size = options.size || 32;
+		this.children = [];
 	}
 
 	getTreeNode() : TreeNode {
@@ -136,8 +171,18 @@ export class PeripheralNode extends BaseNode {
 		return new TreeNode(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed, 'peripheral', this);
 	}
 
-	getChildren(): RegisterNode[] {
-		return this.registers;
+	getChildren(): Array<RegisterNode | ClusterNode> {
+		return this.children;
+	}
+
+	setChildren(children: Array<RegisterNode | ClusterNode>) {
+		this.children = children;
+		this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
+	}
+
+	addChild(child: RegisterNode | ClusterNode) {
+		this.children.push(child);
+		this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
 	}
 
 	getBytes(offset: number, size: number): number[] {
@@ -149,14 +194,18 @@ export class PeripheralNode extends BaseNode {
 		}
 	}
 
+	getAddress(offset: number) {
+		return this.baseAddress + offset;
+	}
+
 	update(): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			if(!this.expanded) { resolve(false); return; }
 
-			vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress + this.offset, length: this.size }).then((data) => {
+			vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
 				this.currentValue = data.bytes;
 
-				this.registers.forEach(r => r.update());
+				this.children.forEach(r => r.update());
 
 				resolve(true);
 			}, error => {
@@ -170,25 +219,111 @@ export class PeripheralNode extends BaseNode {
 	}
 }
 
+
+interface ClusterOptions {
+	name: string;
+	addressOffset: number;
+	accessType?: AccessType;
+	size?: number;
+	resetValue?: number;
+}
+
+export class ClusterNode extends BaseNode {
+	private children: Array<RegisterNode>;
+	public readonly name: string;
+	public readonly offset: number;
+	public readonly size: number;
+	public readonly resetValue: number;
+	public readonly accessType: AccessType;
+
+	constructor(private parent: PeripheralNode, options: ClusterOptions) {
+		super(RecordType.Cluster)
+		this.name = options.name;
+		this.offset = options.addressOffset;
+		this.accessType = options.accessType || AccessType.ReadWrite;
+		this.size = options.size || parent.size;
+		this.resetValue = options.resetValue || parent.resetValue;
+		this.children = [];
+		this.parent.addChild(this);
+	}
+
+	getTreeNode() : TreeNode {
+		let label = `${this.name} [${hexFormat(this.offset, 0)}]`;
+		return new TreeNode(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed, 'cluster', this);
+	}
+
+	getChildren(): Array<RegisterNode> {
+		return this.children;
+	}
+
+	setChildren(children: Array<RegisterNode>) {
+		this.children = children.slice(0, children.length);
+		this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
+	}
+
+	addChild(child: RegisterNode) {
+		this.children.push(child);
+		this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
+	}
+
+	getBytes(offset: number, size: number): number[] {
+		return this.parent.getBytes(this.offset + offset, size);
+	}
+
+	getAddress(offset: number) {
+		return this.parent.getAddress(this.offset + offset);
+	}
+
+	update(): Thenable<boolean> {
+		return Promise.resolve(true);
+	}
+}
+
+
+interface RegisterOptions {
+	name: string;
+	addressOffset: number;
+	accessType?: AccessType;
+	size?: number;
+	resetValue?: number;
+}
+
 export class RegisterNode extends BaseNode {
-	public fields: FieldNode[];
-	protected currentValue: number;
-	private length: number;
+	public children: Array<FieldNode>;
+	public readonly name: string;
+	public readonly offset: number;
+	public readonly accessType: AccessType;
+	public readonly size: number;
+	public readonly resetValue: number;
+	
 	private maxValue: number;
+	private hexLength: number;
 	private hexRegex: RegExp;
 	private binaryRegex: RegExp;
-
-	constructor(public name: string, public offset: number, public size: number, public access: AccessType, public resetValue: number, public peripheral: PeripheralNode) {
+	private currentValue: number;
+	
+	constructor(public parent: PeripheralNode | ClusterNode, options: RegisterOptions) {
 		super(RecordType.Register);
+		
+		this.name = options.name;
+		this.offset = options.addressOffset;
+		this.accessType = options.accessType || parent.accessType;
+		this.size = options.size || parent.size;
+		this.resetValue = options.resetValue !== undefined ? options.resetValue : parent.resetValue;
 		this.currentValue = this.resetValue;
 
-		this.length = 2;
-		if(this.size == 16) this.length = 4;
-		else if(this.size == 32) this.length = 8;
-
-		this.maxValue = Math.pow(2, size);
+		this.hexLength = Math.ceil(this.size / 4);
+		
+		this.maxValue = Math.pow(2, this.size);
 		this.binaryRegex = new RegExp(`^0b[01]{1,${this.size}}$`, 'i');
-		this.hexRegex = new RegExp(`^0x[0-9a-f]{1,${this.length}}$`,'i');
+		this.hexRegex = new RegExp(`^0x[0-9a-f]{1,${this.hexLength}}$`,'i');
+		this.children = [];
+		if (this.parent instanceof PeripheralNode) {
+			(this.parent as PeripheralNode).addChild(this);
+		}
+		else {
+			(this.parent as ClusterNode).addChild(this);
+		}
 	}
 
 	reset() {
@@ -216,21 +351,38 @@ export class RegisterNode extends BaseNode {
 
 	getTreeNode() : TreeNode {
 		let cv = 'registerRW';
-		if(this.access == AccessType.ReadOnly) { cv = 'registerRO'; }
-		else if(this.access == AccessType.WriteOnly) { cv = 'registerWO'; }
+		if(this.accessType == AccessType.ReadOnly) { cv = 'registerRO'; }
+		else if(this.accessType == AccessType.WriteOnly) { cv = 'registerWO'; }
 
-		let label = this.name + ' [' + hexFormat(this.offset, 2) + '] = ' + hexFormat(this.currentValue, this.length);
-		let collapseState = this.fields && this.fields.length > 0 ? (this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed) : vscode.TreeItemCollapsibleState.None
+		let label: string;
+		if (this.accessType == AccessType.WriteOnly) {
+			label = `${this.name} [${hexFormat(this.offset, 0)}] - <Write Only>`;
+		}
+		else {
+			label = `${this.name} [${hexFormat(this.offset, 0)}] = ${hexFormat(this.currentValue, this.hexLength)}`;
+		}
+
+		let collapseState = this.children && this.children.length > 0 ? (this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed) : vscode.TreeItemCollapsibleState.None
 		
 		return new TreeNode(label, collapseState, cv, this);
 	}
 
-	getChildren(): FieldNode[] {
-		return this.fields || [];
+	getChildren(): Array<FieldNode> {
+		return this.children || [];
+	}
+
+	setChildren(children: Array<FieldNode>) {
+		this.children = children.slice(0, children.length);
+		this.children.sort((f1, f2) => f1.offset > f2.offset ? 1 : -1);
+	}
+
+	addChild(child: FieldNode) {
+		this.children.push(child);
+		this.children.sort((f1, f2) => f1.offset > f2.offset ? 1 : -1);
 	}
 
 	getCopyValue(): string {
-		return hexFormat(this.currentValue, this.length);
+		return hexFormat(this.currentValue, this.hexLength);
 	}
 
 	performUpdate() : Thenable<boolean> {
@@ -256,9 +408,9 @@ export class RegisterNode extends BaseNode {
 	}
 
 	private updateValueInternal(value: number) : Thenable<boolean> {
-		let address = this.peripheral.baseAddress + this.offset;
+		let address = this.parent.getAddress(this.offset);
 		let bytes = [];
-		let numbytes = this.length / 2;
+		let numbytes = this.size / 8;
 
 		for(var i = 0; i < numbytes; i++) {
 			let byte = value & 0xFF;
@@ -270,52 +422,89 @@ export class RegisterNode extends BaseNode {
 
 		return new Promise((resolve, reject) => {
 			vscode.debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') }).then(result => {
-				this.peripheral.update().then(() => {}, () => {});
+				this.parent.update().then(() => {}, () => {});
 				resolve(true);
 			}, reject)
-		});
-		
+		});		
 	}
-
 
 	update(): Thenable<boolean> {
 		let bc = this.size / 8;
-		let bytes = this.peripheral.getBytes(this.offset, bc).reverse();
+		let bytes = this.parent.getBytes(this.offset, bc).reverse();
 		let cv = 0;
 		for(var i = 0; i < bc; i++) {
 			cv = cv << 8;
 			cv |= bytes[i];
 		}
 		this.currentValue = cv;
-		this.fields.forEach(f => f.update());
+		this.children.forEach(f => f.update());
 
 		return Promise.resolve(true);
 	}
 }
 
-export class FieldNode extends BaseNode {
-	public enumerationValues : string[];
-	public enumerationMap : any;
+interface FieldOptions {
+	name: string;
+	description: string;
+	offset: number;
+	width: number;
+	enumeration?: EnumerationMap;
+	accessType?: AccessType;
+}
 
-	constructor(public name: string, public description: string, public offset: number, public width: number, public register: RegisterNode, public enumeration: EnumerationMap) {
+export class FieldNode extends BaseNode {
+	public readonly name: string;
+	public readonly description: string;
+	public readonly offset: number;
+	public readonly width: number;
+	public readonly accessType: AccessType;
+	
+	private enumeration: EnumerationMap;
+	private enumerationValues: string[];
+	private enumerationMap: any;
+
+	constructor(private parent: RegisterNode, options: FieldOptions) {
 		super(RecordType.Field);
 
-		if(this.enumeration) {
+		this.name = options.name;
+		this.description = options.description;
+		this.offset = options.offset;
+		this.width = options.width;
+		
+		if (!options.accessType) { this.accessType = parent.accessType; }
+		else {
+			if (parent.accessType == AccessType.ReadOnly && options.accessType !== AccessType.ReadOnly) {
+				console.log('Non-Read-Only Field in Read-Only Register.');
+				this.accessType = AccessType.ReadOnly;
+			}
+			else if (parent.accessType == AccessType.WriteOnly && options.accessType !== AccessType.WriteOnly) {
+				console.log('Non-Write-Only Field in Write-Only Register.');
+				this.accessType = AccessType.WriteOnly;
+			}
+			else {
+				this.accessType = options.accessType;
+			}
+		}
+
+		if (options.enumeration) {
+			this.enumeration = options.enumeration;
 			this.enumerationMap = {};
 			this.enumerationValues = [];
 
-			for(var key in this.enumeration) {
+			for(var key in options.enumeration) {
 				let val = key;
-				let name = this.enumeration[key].name;
+				let name = options.enumeration[key].name;
 
 				this.enumerationValues.push(name);
 				this.enumerationMap[name] = key;
 			}
 		}
+
+		this.parent.addChild(this);
 	}
 
 	getTreeNode() : TreeNode {
-		let value = this.register.extractBits(this.offset, this.width);
+		let value = this.parent.extractBits(this.offset, this.width);
 		let evalue = null;
 		let label = this.name;
 
@@ -323,21 +512,28 @@ export class FieldNode extends BaseNode {
 		let rangeend = this.offset + this.width - 1;
 		let context = 'field';
 
-		label += ' [' + rangeend + ':' + rangestart + ']';
+		label += `[${rangeend}:${rangestart}]`;
 		if(this.name.toLowerCase() === 'reserved')  {
 			context = 'field-res';
 		}
 		else {
-			if(this.enumeration) {
-				evalue = this.enumeration[value];
-				label += ' = ' + evalue.name + ' (' + binaryFormat(value, this.width) + ')';
+			if (this.accessType === AccessType.WriteOnly) {
+				label += ' - <Write Only>';
 			}
 			else {
-				label += ' = ' + binaryFormat(value, this.width);
+				let formattedValue = this.width >= 4 ? hexFormat(value, Math.ceil(this.width/4), true) : binaryFormat(value, this.width);
+				
+				if(this.enumeration && this.enumeration[value]) {
+					evalue = this.enumeration[value];
+					label += ` = ${evalue.name} (${formattedValue})`;
+				}
+				else {
+					label += ` = ${formattedValue}`;
+				}
 			}
 		}
 
-		if(this.register.access == AccessType.ReadOnly) {
+		if(this.parent.accessType == AccessType.ReadOnly) {
 			context = 'field-ro';
 		}
 
@@ -351,7 +547,7 @@ export class FieldNode extends BaseNode {
 					if(val === undefined) { return reject('Input not selected'); }
 					
 					let numval = this.enumerationMap[val];
-					this.register.updateBits(this.offset, this.width, numval).then(resolve, reject);
+					this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
 				});
 			}
 			else {
@@ -360,15 +556,15 @@ export class FieldNode extends BaseNode {
 					if (numval === undefined) {
 						return reject('Unable to parse input value.');
 					}
-					this.register.updateBits(this.offset, this.width, numval).then(resolve, reject);
+					this.parent.updateBits(this.offset, this.width, numval).then(resolve, reject);
 				});
 			}
 		});
 	}
 
 	getCopyValue() : string {
-		let value = this.register.extractBits(this.offset, this.width);
-		return binaryFormat(value, this.width);
+		let value = this.parent.extractBits(this.offset, this.width);
+		return this.width > 3 ? hexFormat(value, Math.ceil(this.width / 4)): binaryFormat(value, this.width);
 	}
 
 	update() {}
@@ -383,27 +579,44 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 	_loaded: boolean = false;
 	_SVDPath: string = '';
 
+	defaultResetValue: number = 0x00000000;
+	defaultSize: number = 32;
+
 	constructor() {
 
 	}
 
-	_parseFields(fields: any[], register: RegisterNode): FieldNode[] {
-		return fields.map(f => {
+	_parseFields(fieldInfo: any[], parent: RegisterNode): FieldNode[] {
+		let fields: FieldNode[] = [];
+
+		fieldInfo.map(f => {
 			let offset;
 			let width;
+			let description = f.description ? f.description[0] : '';
+
 			if(f.bitOffset && f.bitWidth) {
-				offset = parseInt(f.bitOffset[0]);
-				width = parseInt(f.bitWidth[0]);
+				offset = parseInteger(f.bitOffset[0]);
+				width = parseInteger(f.bitWidth[0]);
 			}
 			else if(f.bitRange) {
 				let range = f.bitRange[0];
 				range = range.substring(1,range.length - 1);
 				range = range.split(':');
-				let end = parseInt(range[0]);
-				let start = parseInt(range[1]);
+				let end = parseInteger(range[0]);
+				let start = parseInteger(range[1]);
 
 				width = end - start + 1;
 				offset = start;
+			}
+			else if (f.msb && f.lsb) {
+				let msb = parseInteger(f.msb[0]);
+				let lsb = parseInteger(f.lsb[0]);
+
+				width = msb - lsb + 1;
+				offset = lsb;
+			}
+			else {
+				throw new Error(`Unable to parse SVD file: field ${f.name[0]} must have either bitOffset and bitWidth elements, bitRange Element, or msb and lsb elements.`);
 			}
 
 			var value_map: EnumerationMap = null;
@@ -421,53 +634,88 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 				});
 			}
 
-			return new FieldNode(f.name[0], f.description[0], offset, width, register, value_map)
+			let baseOptions = {
+				name: f.name[0],
+				description: description,
+				offset: offset,
+				width: width,
+				enumeration: value_map
+			};
+
+			if (f.dim) {
+				if (!f.dimIncrement) { throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no dimIncrement element.`); }
+
+				let count = parseInteger(f.dim[0]);
+				let increment = parseInteger(f.dimIncrement[0]);
+				let index = [];
+				if (f.dimIndex) {
+					index = parseDimIndex(f.dimIndex[0], count);
+				}
+				else {
+					for (let i = 0; i < count; i++) { index.push(`${i}`); }
+				}
+
+				let namebase: string = f.name[0];
+				let offsetbase = offset;
+				
+				for (let i = 0; i < count; i++) {
+					let name = namebase.replace('%s', index[i]);
+					fields.push(new FieldNode(parent, { ...baseOptions, name: name, offset: offsetbase + (increment * i) }));
+				}
+			}
+			else {
+				fields.push(new FieldNode(parent, { ...baseOptions }));
+			}
 		});
+
+		return fields;
 	}
 
-	_parseRegisters(regInfo: any[], peripheral: PeripheralNode): RegisterNode[] {
+	_parseRegisters(regInfo: any[], parent: PeripheralNode | ClusterNode): RegisterNode[] {
 		let registers: RegisterNode[] = [];
 
 		regInfo.forEach(r => {
-			let accessType = AccessType.ReadWrite;
-			if(r.access && r.access.length == 1) {
-				let access = r.access[0];
-				if(access == 'read-only') { accessType = AccessType.ReadOnly; }
-				else if(access == 'write-only') { accessType = AccessType.WriteOnly; }
+			let baseOptions: any = {};
+			if (r.access) {
+				baseOptions.accessType = ACCESS_TYPE_MAP[r.access[0]];
 			}
-
-			let size = 32;
-			if(r.size && r.size.length == 1) {
-				size = parseInt(r.size[0]);
+			if (r.size) {
+				baseOptions.size = parseInteger(r.size[0]);
+			}
+			if (r.resetValue) {
+				baseOptions.resetValue = parseInteger(r.resetValue[0]);
 			}
 
 			if (r.dim) {
-				if (!r.dimIncrement) { throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimIncrement element`); }
+				if (!r.dimIncrement) { throw new Error(`Unable to parse SVD file: register ${r.name[0]} has dim element, with no dimIncrement element.`); }
 
 				let count = parseInteger(r.dim[0]);
 				let increment = parseInteger(r.dimIncrement[0]);
-				let index = parseDimIndex(r.dimIndex[0], count);
+				let index = [];
+				if (r.dimIndex) {
+					index = parseDimIndex(r.dimIndex[0], count);
+				}
+				else {
+					for (let i = 0; i < count; i++) { index.push(`${i}`); }
+				}
 
 				let namebase: string = r.name[0];
 				let offsetbase = parseInteger(r.addressOffset[0]);
-				let resetvalue = parseInteger(r.resetValue[0]);
 
 				for (let i = 0; i < count; i++) {
 					let name = namebase.replace('%s', index[i]);
 
-					let register = new RegisterNode(name, offsetbase + (increment * i), size, accessType, resetvalue, peripheral);
+					let register = new RegisterNode(parent, { ...baseOptions, name: name, addressOffset: offsetbase + (increment * i) });
 					if (r.fields && r.fields.length == 1) {
-						let fields = this._parseFields(r.fields[0].field, register);
-						register.fields = fields;
+						this._parseFields(r.fields[0].field, register);
 					}
 					registers.push(register);
 				}
 			}
 			else {
-				let register = new RegisterNode(r.name[0], parseInteger(r.addressOffset[0]), size, accessType, parseInteger(r.resetValue[0]), peripheral);
+				let register = new RegisterNode(parent, { ...baseOptions, name: r.name[0], addressOffset: parseInteger(r.addressOffset[0]) });
 				if (r.fields && r.fields.length == 1) {
-					let fields = this._parseFields(r.fields[0].field, register);
-					register.fields = fields;
+					this._parseFields(r.fields[0].field, register);
 				}
 				registers.push(register);
 			}
@@ -482,24 +730,110 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 		return registers;
 	}
 
-	_parsePeripheral(p: any): PeripheralNode {
-		let ab = p.addressBlock[0];
-		let size = ab.size[0];
-		let offset = ab.offset[0];
-		size = parseInt(size, 16) / 8;
-		offset = parseInt(offset, 16);
+	_parseClusters(clusterInfo: any, parent: PeripheralNode): ClusterNode[] {
+		let clusters: ClusterNode[] = [];
 
-		let peripheral = new PeripheralNode(p.name[0], parseInt(p.baseAddress[0], 16), size, p.description[0], offset);
+		if (!clusterInfo) { return []; }
+
+		clusterInfo.forEach(c => {
+			let baseOptions: any = {};
+			if (c.access) {
+				baseOptions.accessType = ACCESS_TYPE_MAP[c.access[0]];
+			}
+			if (c.size) {
+				baseOptions.size = parseInteger(c.size[0]);
+			}
+			if (c.resetValue) {
+				baseOptions.resetValue = parseInteger(c.resetValue);
+			}
+
+			if (c.dim) {
+				if (!c.dimIncrement) { throw new Error(`Unable to parse SVD file: cluster ${c.name[0]} has dim element, with no dimIncrement element.`); }
+
+				let count = parseInteger(c.dim[0]);
+				let increment = parseInteger(c.dimIncrement[0]);
+
+				let index = [];
+				if (c.dimIndex) {
+					index = parseDimIndex(c.dimIndex[0], count);
+				}
+				else {
+					for (let i = 0; i < count; i++) { index.push(`${i}`); }
+				}
+
+				let namebase: string = c.name[0];
+				let offsetbase = parseInteger(c.addressOffset[0]);
+
+				for (let i = 0; i < count; i++) {
+					let name = namebase.replace('%s', index[i]);
+
+					let cluster = new ClusterNode(parent, { ...baseOptions, name: name, addressOffset: offsetbase + (increment * i) });
+					if (c.register) {
+						this._parseRegisters(c.register, cluster);
+					}
+					clusters.push(cluster);
+				}
+
+			}
+			else {
+				let cluster = new ClusterNode(parent, { ...baseOptions, name: c.name[0], addressOffset: parseInteger(c.addressOffset[0]) });
+				if (c.register) {
+					this._parseRegisters(c.register, cluster);
+					clusters.push(cluster);
+				}
+			}
+
+		});
+
+		return clusters;
+	}
+
+	_parsePeripheral(p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
+		let ab = p.addressBlock[0];
+		let totalLength = parseInteger(ab.size[0]);
+		
+		let options: any = {
+			name: p.name[0],
+			baseAddress: parseInteger(p.baseAddress[0]),
+			description: p.description[0],
+			totalLength: totalLength
+		};
+
+		if (p.access) { options.accessType = ACCESS_TYPE_MAP[p.access[0]]; }
+		if (p.size) { options.size = parseInteger(p.size[0]); }
+		if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
+		if (p.groupName) { options.groupName = p.groupName[0]; }
+		
+		let peripheral = new PeripheralNode(options);
+
 		let registers = this._parseRegisters(p.registers[0].register, peripheral);
-		peripheral.registers = registers;
+		let clusters = this._parseClusters(p.registers[0].cluster, peripheral);
+
 		return peripheral;
 	}
 	
 	_loadSVD(SVDFile: string): Thenable<any> {
+		console.log('Loading SVD File: ', SVDFile);
 		return new Promise((resolve, reject) => {
 			fs.readFile(SVDFile, 'utf8', (err, data) => {
 				xml2js.parseString(data, (err, result) => {
 					var peripheralMap = {};
+					let defaultOptions = {
+						accessType: AccessType.ReadWrite,
+						size: 32,
+						resetValue: 0x0
+					};
+
+					if (result.device.resetValue) {
+						defaultOptions.resetValue = parseInteger(result.device.resetValue[0]);
+					}
+					if (result.device.size) {
+						defaultOptions.size = parseInteger(result.device.size[0]);
+					}
+					if (result.device.access) {
+						defaultOptions.accessType = ACCESS_TYPE_MAP[result.device.access[0]];
+					}
+
 					result.device.peripherals[0].peripheral.forEach(element => {
 						let name = element.name[0];
 						peripheralMap[name] = element;
@@ -515,8 +849,18 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 
 					this._peripherials = [];
 					for(var key in peripheralMap) {
-						this._peripherials.push(this._parsePeripheral(peripheralMap[key]));
+						this._peripherials.push(this._parsePeripheral(peripheralMap[key], defaultOptions));
 					}
+
+					this._peripherials.sort((p1, p2) => {
+						if (p1.groupName > p2.groupName) { return 1; }
+						else if (p1.groupName < p2.groupName) { return -1; }
+						else {
+							if (p1.name > p2.name) { return 1; }
+							else if(p1.name < p2.name) { return -1; }
+							else { return 0; }
+						}
+					});
 
 					this._loaded = true;
 
