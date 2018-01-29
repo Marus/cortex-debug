@@ -20,6 +20,7 @@ import { FifoSWOSource } from "./swo/sources/fifo";
 import { FileSWOSource } from "./swo/sources/file";
 import { SerialSWOSource } from "./swo/sources/serial";
 import { DisassemblyContentProvider } from "./disassembly_content_provider";
+import { SymbolInformation, SymbolScope } from "../symbols";
 
 interface SVDInfo {
 	expression: RegExp;
@@ -99,6 +100,7 @@ class CortexDebugExtension {
 	private registerProvider: RegisterTreeProvider;
 
 	private SVDDirectory: SVDInfo[] = [];
+	private functionSymbols: SymbolInformation[] = null;
 
 	constructor(private context: vscode.ExtensionContext) {
 		this.peripheralProvider = new PeripheralTreeProvider();
@@ -138,6 +140,7 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)));
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)));
 		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)));
+		context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)));
 
 		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('jlink-gdb', new DeprecatedDebugConfigurationProvider(context, 'jlink')));
 		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('openocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'openocd')));
@@ -151,10 +154,32 @@ class CortexDebugExtension {
 		return entry ? entry.path : null;
 	}
 
+	activeEditorChanged(editor: vscode.TextEditor) {
+		if (editor !== undefined && vscode.debug.activeDebugSession) {
+			let uri = editor.document.uri;
+			if (uri.scheme == 'file') {
+				vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: uri.path });
+			}
+			else {
+				vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: `${uri.scheme}://${uri.authority}${uri.path}` });
+			}
+		}
+	}
+
 	async showDisassembly() {
 		if (!vscode.debug.activeDebugSession) {
 			vscode.window.showErrorMessage('No debugging session available');
 			return;
+		}
+
+		if (!this.functionSymbols) {
+			try {
+				let resp = await vscode.debug.activeDebugSession.customRequest('load-function-symbols');
+				this.functionSymbols = resp.functionSymbols;
+			}
+			catch (e) {
+				vscode.window.showErrorMessage('Unable to load symbol table. Disassembly view unavailable.');
+			}
 		}
 
 		try {
@@ -164,10 +189,46 @@ class CortexDebugExtension {
 				prompt: 'Function Name to Disassemble'
 			});
 
-			vscode.window.showTextDocument(vscode.Uri.parse(`disassembly:///${funcname}.cdasm?function=${funcname}`));
+			let functions = this.functionSymbols.filter(s => s.name == funcname);
+
+			let url: string;
+
+			if (functions.length === 0) {
+				vscode.window.showErrorMessage(`No function with name ${funcname} found.`);
+			}
+			else if (functions.length === 1) {
+				if (functions[0].scope == SymbolScope.Global) {
+					url = `disassembly:///${functions[0].name}.cdasm`;
+				}
+				else {
+					url = `disassembly:///${functions[0].file}::${functions[0].name}.cdasm`;
+				}
+			}
+			else {
+				let selected = await vscode.window.showQuickPick(functions.map(f => {
+					return {
+						label: f.name,
+						name: f.name,
+						file: f.file,
+						scope: f.scope,
+						description: f.scope == SymbolScope.Global ? 'Global Scope' : `Static in ${f.file}`
+					};
+				}), {
+					ignoreFocusOut: true
+				});
+
+				if (selected.scope == SymbolScope.Global) {
+					url = `disassembly:///${selected.name}.cdasm`;
+				}
+				else {
+					url = `disassembly:///${selected.file}::${selected.name}.cdasm`;
+				}
+			}
+
+			vscode.window.showTextDocument(vscode.Uri.parse(url));
 		}
 		catch (e) {
-			vscode.window.showErrorMessage('Unable to get function name');
+			vscode.window.showErrorMessage('Unable to show disassembly.');
 		}
 	}
 
@@ -288,6 +349,8 @@ class CortexDebugExtension {
 			this.swo.dispose();
 			this.swo = null;
 		}
+
+		this.functionSymbols = null;
 
 		session.customRequest('get-arguments').then(args => {
 			let svdfile = args.svdFile;

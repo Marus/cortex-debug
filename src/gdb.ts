@@ -84,6 +84,10 @@ export class GDBDebugSession extends DebugSession {
 	protected threadID: number = 1;
 	protected commandServer: net.Server;
 	protected forceDisassembly: boolean = false;
+	protected activeEditorPath: string = null;
+	
+	private stopped: boolean = false;
+	private stoppedReason: string = '';
 
 	protected breakpointMap: Map<string, Breakpoint[]> = new Map();
 	protected fileExistsCache: Map<string, boolean> = new Map();
@@ -151,6 +155,7 @@ export class GDBDebugSession extends DebugSession {
 		this.started = false;
 		this.crashed = false;
 		this.debugReady = false;
+		this.stopped = false;
 		
 		portastic.find({ min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length }).then(ports => {
 			this.ports = {};
@@ -256,10 +261,23 @@ export class GDBDebugSession extends DebugSession {
 			case 'set-force-disassembly':
 				response.body = { success: true };
 				this.forceDisassembly = args.force;
+				if (this.stopped) {
+					this.activeEditorPath = null;
+					this.sendEvent(new ContinuedEvent(this.threadID, true));
+					this.sendEvent(new StoppedEvent(this.stoppedReason, this.threadID));
+				}
 				this.sendResponse(response);
 				break;
 			case 'load-function-symbols':
 				response.body = { functionSymbols: this.symbolTable.getFunctionSymbols() };
+				this.sendResponse(response);
+				break;
+			case 'set-active-editor':
+				this.activeEditorPath = args.path;
+				response.body = {};
+				if (this.stopped) {
+					this.sendEvent(new StoppedEvent(this.stoppedReason, this.threadID));
+				}
 				this.sendResponse(response);
 				break;
 			case 'get-arguments':
@@ -303,7 +321,7 @@ export class GDBDebugSession extends DebugSession {
 	protected async disassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {
 		if (args.function) {
 			try {
-				let funcInfo: SymbolInformation = await this.getDisassemblyForFunction(args.function);
+				let funcInfo: SymbolInformation = await this.getDisassemblyForFunction(args.function, args.file);
 				response.body = {
 					instructions: funcInfo.instructions,
 					name: funcInfo.name,
@@ -526,22 +544,28 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected handleRunning(info: MINode) {
+		this.stopped = false;
 		this.sendEvent(new ContinuedEvent(this.threadID, true));
 		this.sendEvent(new CustomContinuedEvent(this.threadID, true));
 	}
 
 	protected handleBreakpoint(info: MINode) {
-
+		this.stopped = true;
+		this.stoppedReason = 'breakpoint';
 		this.sendEvent(new StoppedEvent("breakpoint", this.threadID));
 		this.sendEvent(new CustomStoppedEvent("breakpoint", this.threadID));
 	}
 
 	protected handleBreak(info: MINode) {
+		this.stopped = true;
+		this.stoppedReason = 'step';
 		this.sendEvent(new StoppedEvent("step", this.threadID));
 		this.sendEvent(new CustomStoppedEvent("step", this.threadID));
 	}
 
 	protected handlePause(info: MINode) {
+		this.stopped = true;
+		this.stoppedReason = 'user request';
 		this.sendEvent(new StoppedEvent("user request", this.threadID));
 		this.sendEvent(new CustomStoppedEvent("user request", this.threadID));
 	}
@@ -550,6 +574,8 @@ export class GDBDebugSession extends DebugSession {
 		if (!this.started)
 			this.crashed = true;
 		if (!this.quit) {
+			this.stopped = true;
+			this.stoppedReason = 'exception';
 			this.sendEvent(new StoppedEvent("exception", this.threadID));
 			this.sendEvent(new CustomStoppedEvent("exception", this.threadID));
 		}
@@ -626,10 +652,8 @@ export class GDBDebugSession extends DebugSession {
 
 				if (sourcepath.startsWith('disassembly:/')) {
 					let sidx = 13;
-					if (args.source.path.startsWith('disassembly:///')) { sidx = 15; }
-
-					let eidx = sourcepath.indexOf('?');
-					let path = sourcepath.substring(sidx, eidx - 6); // Account for protocol and extension
+					if (sourcepath.startsWith('disassembly:///')) { sidx = 15; }
+					let path = sourcepath.substring(sidx, sourcepath.length - 6); // Account for protocol and extension
 					let parts = path.split('::');
 					let func: string;
 					let file: string;
@@ -701,8 +725,18 @@ export class GDBDebugSession extends DebugSession {
 			for (let element of stack) {
 				let file = element.file;
 				let disassemble = this.forceDisassembly || !file;
-				
 				if (!disassemble) { disassemble = !(await this.checkFileExists(file)); }
+				if (!disassemble && this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
+					let symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
+					let url: string;
+					if (symbolInfo.scope !== SymbolScope.Global) {
+						url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+					}
+					else {
+						url = `disassembly:///${symbolInfo.name}.cdasm`;
+					}
+					if (url == this.activeEditorPath) { disassemble = true; }
+				}
 				
 				try {
 					if (disassemble) {
@@ -714,13 +748,14 @@ export class GDBDebugSession extends DebugSession {
 
 						if (line !== -1) {
 							let fname: string;
-							if (element.fileName) {
-								fname = `${element.fileName}::${element.function}`;
+							let url: string;
+							if (symbolInfo.scope !== SymbolScope.Global) {
+								url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
 							}
 							else {
-								fname = element.function;
+								url = `disassembly:///${symbolInfo.name}.cdasm`;
 							}
-							let url = `disassembly:///${fname}.cdasm?function=${element.function}&file=${element.fileName}`;
+							
 							ret.push(new StackFrame(element.level, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
 						}
 						else {
@@ -1099,6 +1134,18 @@ export class GDBDebugSession extends DebugSession {
 			if (!assemblyMode) {
 				let frame = await this.miDebugger.getFrame(this.threadID, 0);
 				assemblyMode = !(await this.checkFileExists(frame.file));
+
+				if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
+					let symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
+					let url: string;
+					if (symbolInfo.scope !== SymbolScope.Global) {
+						url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+					}
+					else {
+						url = `disassembly:///${symbolInfo.name}.cdasm`;
+					}
+					if (url == this.activeEditorPath) { assemblyMode = true; }
+				}
 			}
 
 			let done = await this.miDebugger.step(assemblyMode);
@@ -1123,6 +1170,18 @@ export class GDBDebugSession extends DebugSession {
 			if (!assemblyMode) {
 				let frame = await this.miDebugger.getFrame(this.threadID, 0);
 				assemblyMode = !(await this.checkFileExists(frame.file));
+
+				if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
+					let symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
+					let url: string;
+					if (symbolInfo.scope !== SymbolScope.Global) {
+						url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+					}
+					else {
+						url = `disassembly:///${symbolInfo.name}.cdasm`;
+					}
+					if (url == this.activeEditorPath) { assemblyMode = true; }
+				}
 			}
 
 			let done = await this.miDebugger.next(assemblyMode);

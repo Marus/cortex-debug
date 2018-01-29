@@ -5,10 +5,21 @@ import { DisassemblyInstruction } from "../common";
 export class DisassemblyContentProvider implements vscode.TextDocumentContentProvider {
 	provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Thenable<string> {
 		return new Promise((resolve, reject) => {
-			let query = this.parseQuery(uri.query);
-			let funcname = query['function'];
+			let funcName: string;
+			let file: string;
+			let path = uri.path;
+			let pathParts = path.substring(1, path.length - 6).split('::');
 			
-			vscode.debug.activeDebugSession.customRequest('disassemble', { function: funcname }).then((data) => {
+			if (pathParts.length === 1) {
+				file = null;
+				funcName = pathParts[0];
+			}
+			else {
+				file = pathParts[0];
+				funcName = pathParts[1];
+			}
+			
+			vscode.debug.activeDebugSession.customRequest('disassemble', { function: funcName, file: file }).then((data) => {
 				let instructions: DisassemblyInstruction[] = data.instructions;
 
 				let output = '';
