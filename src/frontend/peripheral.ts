@@ -338,7 +338,7 @@ export class RegisterNode extends BaseNode {
 		return new Promise((resolve, reject) => {
 			var limit = Math.pow(2, width);
 			if(value > limit) {
-				return reject('Value entered is invalid. Maximum value for this field is ' + (limit - 1) + ' (0x' + hexFormat(limit-1, 0) + ')')
+				return reject(`Value entered is invalid. Maximum value for this field is ${limit - 1} (${hexFormat(limit-1, 0)})`);
 			}
 			else {
 				let mask = createMask(offset, width);
