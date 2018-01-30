@@ -50,7 +50,6 @@
                         "showOffset": true,
                         "showAddress": true,
                         "showAscii": true,
-                        "showInspector": true,
                         "charEncoding": "utf-8"
                     },
                     "properties": {
@@ -90,11 +89,6 @@
                           "type": "boolean",
                           "default": true,
                           "description": "Show ASCII section"
-                        },
-                        "showInspector": {
-                          "type": "boolean",
-                          "default": true,
-                          "description": "Display the Hex Inspector when hovering data"
                         },
                         "charEncoding": {
                           "type": "string",
