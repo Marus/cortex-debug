@@ -122,8 +122,8 @@ class CortexDebugExtension {
 		});
 
 		Reporting.activate(context);
-
-		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()));
+		let mem_provider = new MemoryContentProvider()
+		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('examinememory', mem_provider));
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()));
 
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
@@ -147,6 +147,14 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('stutil-gdb', new DeprecatedDebugConfigurationProvider(context, 'stutil')));
 		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('pyocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'pyocd')));
 		context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('cortex-debug', new CortexDebugConfigurationProvider(context)));
+
+		vscode.workspace.onDidChangeConfiguration(() => {	// allows updating memory view when configuration changes
+			for (let d of vscode.workspace.textDocuments) {
+				if (d.languageId === 'hexdump') {
+					mem_provider.update(d.uri);
+				}
+			}
+		});
 	}
 
 	getSVDFile(device: string): string {
@@ -289,9 +297,12 @@ class CortexDebugExtension {
 
 						Reporting.sendEvent('examine-memory', {}, {});
 						let timestamp = new Date().getTime();
-						vscode.workspace.openTextDocument(`examinememory:///Memory%20[${address}+${length}].hexdump?address=${address}&length=${length}&timestamp=${timestamp}`).then((doc) => {
-							vscode.window.showTextDocument(doc, { viewColumn: 2 })	;
-						})
+						vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}].hexdump?address=${address}&length=${length}&timestamp=${timestamp}`))
+										.then((doc) => {
+											vscode.window.showTextDocument(doc, { viewColumn: 2 })	;
+										}, (error) => {
+											vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
+										})
 					},
 					(error) => {
 
