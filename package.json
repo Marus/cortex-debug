@@ -8,7 +8,7 @@
     ],
     "categories": [
         "Debuggers"
-    ],
+    ], 
     "contributes": {
         "configuration": {
             "type": "object",
@@ -101,30 +101,30 @@
                           "default": "utf-8",
                           "description": "Identify the source character encoding"
                         }
-                      }
+                    }
                 }
             }
         },
         "commands": [
             {
-                "command": "cortex-debug.peripherals.updateNode",
+                "command": "cortex-debug.peripherals.updateNode", 
                 "title": "Update"
-            },
+            }, 
             {
-                "command": "cortex-debug.peripherals.selectedNode",
+                "command": "cortex-debug.peripherals.selectedNode", 
                 "title": "Selected"
-            },
+            }, 
             {
-                "command": "cortex-debug.peripherals.copyValue",
+                "command": "cortex-debug.peripherals.copyValue", 
                 "title": "Copy Value"
-            },
+            }, 
             {
-                "command": "cortex-debug.registers.copyValue",
+                "command": "cortex-debug.registers.copyValue", 
                 "title": "Copy Value"
-            },
+            }, 
             {
-                "category": "Cortex-Debug",
-                "command": "cortex-debug.examineMemory",
+                "category": "Cortex-Debug", 
+                "command": "cortex-debug.examineMemory", 
                 "title": "View Memory"
             },
             {
@@ -181,9 +181,9 @@
                                 "enum": ["jlink", "openocd", "pyocd", "stutil", "bmp"]
                             },
                             "cwd": {
-                                "description": "Path of project",
+                                "description": "Path of project", 
                                 "type": "string"
-                            },
+                            }, 
                             "debuggerArgs": {
                                 "default": [], 
                                 "description": "Additional arguments to pass to GDB command line", 
@@ -196,159 +196,159 @@
                                 "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
                             },
                             "device": {
-                                "default": "",
-                                "description": "Target Device Identifier",
+                                "default": "", 
+                                "description": "Target Device Identifier", 
                                 "type": "string"
-                            },
+                            }, 
                             "executable": {
-                                "description": "Path of executable",
+                                "description": "Path of executable", 
                                 "type": "string"
-                            },
+                            }, 
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [
                                         {
                                             "properties": {
                                                 "annotate": {
-                                                    "default": true,
-                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).",
+                                                    "default": true, 
+                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
                                                     "type": "boolean"
-                                                },
+                                                }, 
                                                 "label": {
-                                                    "description": "Label for Graph",
+                                                    "description": "Label for Graph", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "maximum": {
-                                                    "default": 65535,
-                                                    "description": "Maximum value for the X-Axis",
+                                                    "default": 65535, 
+                                                    "description": "Maximum value for the X-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "minimum": {
-                                                    "default": 0,
-                                                    "description": "Minimum value for the Y-Axis",
+                                                    "default": 0, 
+                                                    "description": "Minimum value for the Y-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "plots": {
-                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section",
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
-                                                                "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$",
+                                                                "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
                                                                 "type": "string"
-                                                            },
+                                                            }, 
                                                             "graphId": {
-                                                                "description": "Graph Data Source Id for the plot.",
+                                                                "description": "Graph Data Source Id for the plot.", 
                                                                 "type": "string"
-                                                            },
+                                                            }, 
                                                             "label": {
-                                                                "description": "A label for this data set",
+                                                                "description": "A label for this data set", 
                                                                 "type": "string"
                                                             }
-                                                        },
+                                                        }, 
                                                         "required": [
                                                             "graphId"
-                                                        ],
+                                                        ], 
                                                         "type": "object"
-                                                    },
+                                                    }, 
                                                     "type": "array"
-                                                },
+                                                }, 
                                                 "timespan": {
-                                                    "default": 30,
-                                                    "description": "Length of time (seconds) to be plotted on screen.",
+                                                    "default": 30, 
+                                                    "description": "Length of time (seconds) to be plotted on screen.", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "type": {
                                                     "enum": [
                                                         "realtime"
-                                                    ],
+                                                    ], 
                                                     "type": "string"
                                                 }
-                                            },
+                                            }, 
                                             "required": [
-                                                "label",
-                                                "plots",
-                                                "minimum",
+                                                "label", 
+                                                "plots", 
+                                                "minimum", 
                                                 "maximum"
-                                            ],
+                                            ], 
                                             "type": "object"
-                                        },
+                                        }, 
                                         {
                                             "properties": {
                                                 "label": {
-                                                    "description": "Label for graph",
+                                                    "description": "Label for graph", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "timespan": {
-                                                    "default": 10,
-                                                    "description": "The amount of time (seconds) that the XY Plot will show the trace for.",
+                                                    "default": 10, 
+                                                    "description": "The amount of time (seconds) that the XY Plot will show the trace for.", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "type": {
                                                     "enum": [
                                                         "x-y-plot"
-                                                    ],
+                                                    ], 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "xGraphId": {
-                                                    "description": "Graph Data Source Id for the X axis",
+                                                    "description": "Graph Data Source Id for the X axis", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "xMaximum": {
-                                                    "default": 65535,
-                                                    "description": "Maximum value on the X-Axis",
+                                                    "default": 65535, 
+                                                    "description": "Maximum value on the X-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "xMinimum": {
-                                                    "default": 0,
-                                                    "description": "Minimum value on the X-Axis",
+                                                    "default": 0, 
+                                                    "description": "Minimum value on the X-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "yGraphId": {
-                                                    "description": "Graph Data Source Id Port for the Y axis",
+                                                    "description": "Graph Data Source Id Port for the Y axis", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "yMaximum": {
-                                                    "default": 65535,
-                                                    "description": "Maximum value on the Y-Axis",
+                                                    "default": 65535, 
+                                                    "description": "Maximum value on the Y-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "yMinimum": {
-                                                    "default": 0,
-                                                    "description": "Minimum value on the Y-Axis",
+                                                    "default": 0, 
+                                                    "description": "Minimum value on the Y-Axis", 
                                                     "type": "number"
                                                 }
-                                            },
+                                            }, 
                                             "required": [
-                                                "xGraphId",
-                                                "yGraphId",
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
-                                            ],
+                                            ], 
                                             "type": "object"
                                         }
                                     ]
-                                },
+                                }, 
                                 "type": "array"
                             },
                             "showDevDebugOutput": {
-                                "default": false,
-                                "description": "Prints all GDB responses to the console",
+                                "default": false, 
+                                "description": "Prints all GDB responses to the console", 
                                 "type": "boolean"
-                            },
+                            }, 
                             "svdFile": {
-                                "default": null,
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "default": null, 
+                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
                                 "type": "string"
-                            },
+                            }, 
                             "swoConfig": {
                                 "properties": {
                                     "cpuFrequency": {
-                                        "default": 0,
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.",
+                                        "default": 0, 
+                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
-                                    },
+                                    }, 
                                     "enabled": {
-                                        "default": false,
-                                        "description": "Enable SWO decoding.",
+                                        "default": false, 
+                                        "description": "Enable SWO decoding.", 
                                         "type": "boolean"
                                     },
                                     "source": {
@@ -357,224 +357,224 @@
                                         "description": "Source for SWO data. Can either be \"probe\" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe."
                                     },
                                     "decoders": {
-                                        "description": "SWO Decoder Configuration",
+                                        "description": "SWO Decoder Configuration", 
                                         "items": {
                                             "anyOf": [
                                                 {
                                                     "properties": {
                                                         "label": {
-                                                            "description": "A label for the output window.",
+                                                            "description": "A label for the output window.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "port": {
-                                                            "description": "ITM Port Number",
-                                                            "maximum": 31,
-                                                            "minimum": 0,
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "console"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
                                                         "port"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
-                                                },
+                                                }, 
                                                 {
                                                     "properties": {
                                                         "encoding": {
-                                                            "default": "unsigned",
-                                                            "description": "This property is only used for binary and graph output formats.",
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
                                                             "enum": [
-                                                                "unsigned",
-                                                                "signed",
-                                                                "Q16.16",
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
                                                                 "float"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "label": {
-                                                            "description": "A label for the output window.",
+                                                            "description": "A label for the output window.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "port": {
-                                                            "description": "ITM Port Number",
-                                                            "maximum": 31,
-                                                            "minimum": 0,
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "scale": {
-                                                            "default": 1,
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "binary"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
                                                         "port"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
-                                                },
+                                                }, 
                                                 {
                                                     "properties": {
                                                         "encoding": {
-                                                            "default": "unsigned",
-                                                            "description": "This property is only used for binary and graph output formats.",
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
                                                             "enum": [
-                                                                "unsigned",
-                                                                "signed",
-                                                                "Q16.16",
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
                                                                 "float"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "graphId": {
-                                                            "description": "The identifier to use for this data in graph configurations.",
+                                                            "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "port": {
-                                                            "description": "ITM Port Number",
-                                                            "maximum": 31,
-                                                            "minimum": 0,
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
                                                             "type": "number"
                                                         },
                                                         "scale": {
-                                                            "default": 1,
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "graph"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
-                                                        "port",
+                                                        "port", 
                                                         "graphId"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
-                                                },
+                                                }, 
                                                 {
                                                     "properties": {
                                                         "config": {
-                                                            "additionalProperties": true,
+                                                            "additionalProperties": true, 
                                                             "type": "object"
-                                                        },
+                                                        }, 
                                                         "decoder": {
-                                                            "description": "Path to a javascript module to implement the decoding functionality.",
+                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "ports": {
                                                             "description": "ITM Port Numbers",
                                                             "type": "array",
                                                             "items": {
-                                                                "maximum": 31,
-                                                                "minimum": 0,
+                                                                "maximum": 31, 
+                                                                "minimum": 0, 
                                                                 "type": "number"
                                                             }
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "advanced"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
-                                                        "ports",
+                                                        "ports", 
                                                         "decoder"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
                                                 }
                                             ]
-                                        },
+                                        }, 
                                         "type": "array"
-                                    },
+                                    }, 
                                     "swoFrequency": {
-                                        "default": 0,
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.",
+                                        "default": 0, 
+                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }
-                                },
-                                "required": [],
+                                }, 
+                                "required": [], 
                                 "type": "object"
                             },
                             "ipAddress": {
-                                "default": null,
-                                "description": "IP Address for networked J-Link Adapter",
-                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
+                                "default": null, 
+                                "description": "IP Address for networked J-Link Adapter", 
+                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
                                 "type": "string"
-                            },
+                            }, 
                             "serialNumber": {
-                                "default": null,
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
+                                "default": null, 
+                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
                                 "type": "string"
-                            },
+                            }, 
                             "configFiles": {
-                                "description": "OpenOCD configuration file(s) to load",
+                                "description": "OpenOCD configuration file(s) to load", 
                                 "items": {
                                     "type": "string"
-                                },
+                                }, 
                                 "type": "array"
                             },
                             "v1": {
-                                "default": false,
-                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
+                                "default": false, 
+                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
                                 "type": "boolean"
                             },
                             "targetId": {
-                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.",
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
                                 "enum": [
-                                    "kl25z",
-                                    "kl26z",
-                                    "lpc824",
-                                    "k82f25615",
-                                    "lpc11xx_32",
-                                    "kinetis",
-                                    "lpc800",
-                                    "lpc4088qsb",
-                                    "maxwsnenv",
-                                    "kl05z",
-                                    "k64f",
-                                    "lpc1768",
-                                    "lpc4088",
-                                    "lpc4330",
-                                    "max32600mbed",
-                                    "k66f18",
-                                    "w7500",
-                                    "ke18f16",
-                                    "k22f",
-                                    "lpc4088dm",
-                                    "ke15z7",
-                                    "kv11z7",
-                                    "nrf51",
-                                    "nrf52",
-                                    "kv10z7",
-                                    "k20d50m",
-                                    "kl46z",
-                                    "stm32f103rc",
-                                    "kl27z4",
-                                    "kw40z4",
-                                    "cortex_m",
-                                    "lpc11u24",
-                                    "stm32f051",
-                                    "kl02z",
-                                    "ncs36510",
-                                    "kl28z",
-                                    "kl43z4",
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
                                     "kw01z4"
-                                ],
+                                ], 
                                 "type": "string"
                             },
                             "boardId": {
@@ -585,11 +585,11 @@
                                 "type": "string",
                                 "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
                             }
-                        },
+                        }, 
                         "required": [
                             "executable"
                         ]
-                    },
+                    }, 
                     "launch": {
                         "properties": {
                             "servertype": {
@@ -598,9 +598,9 @@
                                 "enum": ["jlink", "openocd", "pyocd", "stutil", "bmp"]
                             },
                             "cwd": {
-                                "description": "Path of project",
+                                "description": "Path of project", 
                                 "type": "string"
-                            },
+                            }, 
                             "debuggerArgs": {
                                 "default": [], 
                                 "description": "Additional arguments to pass to GDB command line", 
@@ -613,385 +613,385 @@
                                 "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
                             },
                             "device": {
-                                "default": "",
-                                "description": "Target Device Identifier",
+                                "default": "", 
+                                "description": "Target Device Identifier", 
                                 "type": "string"
-                            },
+                            }, 
                             "executable": {
-                                "description": "Path of executable",
+                                "description": "Path of executable", 
                                 "type": "string"
-                            },
+                            }, 
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [
                                         {
                                             "properties": {
                                                 "annotate": {
-                                                    "default": true,
-                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).",
+                                                    "default": true, 
+                                                    "description": "Create annotations on the graph for when the target processor starts and stops execution. (green line for starting execution, red line for stopping execution).", 
                                                     "type": "boolean"
-                                                },
+                                                }, 
                                                 "label": {
-                                                    "description": "Label for Graph",
+                                                    "description": "Label for Graph", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "maximum": {
-                                                    "default": 65535,
-                                                    "description": "Maximum value for the X-Axis",
+                                                    "default": 65535, 
+                                                    "description": "Maximum value for the X-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "minimum": {
-                                                    "default": 0,
-                                                    "description": "Minimum value for the Y-Axis",
+                                                    "default": 0, 
+                                                    "description": "Minimum value for the Y-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "plots": {
-                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section",
+                                                    "description": "Plot configurations. Data sources must be configured for \"graph\" (or \"advanced\" with a decoder that sends graph data) in the \"swoConfig\" section", 
                                                     "items": {
                                                         "properties": {
                                                             "color": {
-                                                                "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$",
+                                                                "pattern": "^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$", 
                                                                 "type": "string"
-                                                            },
+                                                            }, 
                                                             "graphId": {
-                                                                "description": "Graph Data Source Id for the plot.",
+                                                                "description": "Graph Data Source Id for the plot.", 
                                                                 "type": "string"
-                                                            },
+                                                            }, 
                                                             "label": {
-                                                                "description": "A label for this data set",
+                                                                "description": "A label for this data set", 
                                                                 "type": "string"
                                                             }
-                                                        },
+                                                        }, 
                                                         "required": [
                                                             "graphId"
-                                                        ],
+                                                        ], 
                                                         "type": "object"
-                                                    },
+                                                    }, 
                                                     "type": "array"
-                                                },
+                                                }, 
                                                 "timespan": {
-                                                    "default": 30,
-                                                    "description": "Length of time (seconds) to be plotted on screen.",
+                                                    "default": 30, 
+                                                    "description": "Length of time (seconds) to be plotted on screen.", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "type": {
                                                     "enum": [
                                                         "realtime"
-                                                    ],
+                                                    ], 
                                                     "type": "string"
                                                 }
-                                            },
+                                            }, 
                                             "required": [
-                                                "label",
-                                                "plots",
-                                                "minimum",
+                                                "label", 
+                                                "plots", 
+                                                "minimum", 
                                                 "maximum"
-                                            ],
+                                            ], 
                                             "type": "object"
-                                        },
+                                        }, 
                                         {
                                             "properties": {
                                                 "label": {
-                                                    "description": "Label for graph",
+                                                    "description": "Label for graph", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "timespan": {
-                                                    "default": 10,
-                                                    "description": "The amount of time (seconds) that the XY Plot will show the trace for.",
+                                                    "default": 10, 
+                                                    "description": "The amount of time (seconds) that the XY Plot will show the trace for.", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "type": {
                                                     "enum": [
                                                         "x-y-plot"
-                                                    ],
+                                                    ], 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "xGraphId": {
-                                                    "description": "Graph Data Source Id for the X axis",
+                                                    "description": "Graph Data Source Id for the X axis", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "xMaximum": {
-                                                    "default": 65535,
-                                                    "description": "Maximum value on the X-Axis",
+                                                    "default": 65535, 
+                                                    "description": "Maximum value on the X-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "xMinimum": {
-                                                    "default": 0,
-                                                    "description": "Minimum value on the X-Axis",
+                                                    "default": 0, 
+                                                    "description": "Minimum value on the X-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "yGraphId": {
-                                                    "description": "Graph Data Source Id Port for the Y axis",
+                                                    "description": "Graph Data Source Id Port for the Y axis", 
                                                     "type": "string"
-                                                },
+                                                }, 
                                                 "yMaximum": {
-                                                    "default": 65535,
-                                                    "description": "Maximum value on the Y-Axis",
+                                                    "default": 65535, 
+                                                    "description": "Maximum value on the Y-Axis", 
                                                     "type": "number"
-                                                },
+                                                }, 
                                                 "yMinimum": {
-                                                    "default": 0,
-                                                    "description": "Minimum value on the Y-Axis",
+                                                    "default": 0, 
+                                                    "description": "Minimum value on the Y-Axis", 
                                                     "type": "number"
                                                 }
-                                            },
+                                            }, 
                                             "required": [
-                                                "xGraphId",
-                                                "yGraphId",
+                                                "xGraphId", 
+                                                "yGraphId", 
                                                 "label"
-                                            ],
+                                            ], 
                                             "type": "object"
                                         }
                                     ]
-                                },
+                                }, 
                                 "type": "array"
-                            },
+                            }, 
                             "showDevDebugOutput": {
-                                "default": false,
-                                "description": "Prints all GDB responses to the console",
+                                "default": false, 
+                                "description": "Prints all GDB responses to the console", 
                                 "type": "boolean"
-                            },
+                            }, 
                             "svdFile": {
-                                "default": null,
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "default": null, 
+                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.", 
                                 "type": "string"
-                            },
+                            }, 
                             "swoConfig": {
                                 "properties": {
                                     "cpuFrequency": {
-                                        "default": 0,
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.",
+                                        "default": 0, 
+                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
-                                    },
+                                    }, 
                                     "enabled": {
-                                        "default": false,
-                                        "description": "Enable SWO decoding.",
+                                        "default": false, 
+                                        "description": "Enable SWO decoding.", 
                                         "type": "boolean"
-                                    },
+                                    }, 
                                     "source": {
                                         "type": "string",
                                         "default": "probe",
                                         "description": "Source for SWO data. Can either be \"probe\" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe."
                                     },
                                     "decoders": {
-                                        "description": "SWO Decoder Configuration",
+                                        "description": "SWO Decoder Configuration", 
                                         "items": {
                                             "anyOf": [
                                                 {
                                                     "properties": {
                                                         "label": {
-                                                            "description": "A label for the output window.",
+                                                            "description": "A label for the output window.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "port": {
-                                                            "description": "ITM Port Number",
-                                                            "maximum": 31,
-                                                            "minimum": 0,
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "console"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
                                                         "port"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
-                                                },
+                                                }, 
                                                 {
                                                     "properties": {
                                                         "encoding": {
-                                                            "default": "unsigned",
-                                                            "description": "This property is only used for binary and graph output formats.",
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
                                                             "enum": [
-                                                                "unsigned",
-                                                                "signed",
-                                                                "Q16.16",
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
                                                                 "float"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "label": {
-                                                            "description": "A label for the output window.",
+                                                            "description": "A label for the output window.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "port": {
-                                                            "description": "ITM Port Number",
-                                                            "maximum": 31,
-                                                            "minimum": 0,
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
                                                             "type": "number"
                                                         },
                                                         "scale": {
-                                                            "default": 1,
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "binary"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
                                                         "port"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
-                                                },
+                                                }, 
                                                 {
                                                     "properties": {
                                                         "encoding": {
-                                                            "default": "unsigned",
-                                                            "description": "This property is only used for binary and graph output formats.",
+                                                            "default": "unsigned", 
+                                                            "description": "This property is only used for binary and graph output formats.", 
                                                             "enum": [
-                                                                "unsigned",
-                                                                "signed",
-                                                                "Q16.16",
+                                                                "unsigned", 
+                                                                "signed", 
+                                                                "Q16.16", 
                                                                 "float"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "graphId": {
-                                                            "description": "The identifier to use for this data in graph configurations.",
+                                                            "description": "The identifier to use for this data in graph configurations.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "port": {
-                                                            "description": "ITM Port Number",
-                                                            "maximum": 31,
-                                                            "minimum": 0,
+                                                            "description": "ITM Port Number", 
+                                                            "maximum": 31, 
+                                                            "minimum": 0, 
                                                             "type": "number"
                                                         },
                                                         "scale": {
-                                                            "default": 1,
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "default": 1, 
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625", 
                                                             "type": "number"
-                                                        },
+                                                        }, 
                                                         "type": {
                                                             "enum": [
                                                                 "graph"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
-                                                        "port",
+                                                        "port", 
                                                         "graphId"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
-                                                },
+                                                }, 
                                                 {
                                                     "properties": {
                                                         "config": {
-                                                            "additionalProperties": true,
+                                                            "additionalProperties": true, 
                                                             "type": "object"
-                                                        },
+                                                        }, 
                                                         "decoder": {
-                                                            "description": "Path to a javascript module to implement the decoding functionality.",
+                                                            "description": "Path to a javascript module to implement the decoding functionality.", 
                                                             "type": "string"
-                                                        },
+                                                        }, 
                                                         "ports": {
                                                             "description": "ITM Port Numbers",
                                                             "type": "array",
                                                             "items": {
                                                                 "type": "number",
-                                                                "maximum": 31,
+                                                                "maximum": 31, 
                                                                 "minimum": 0
                                                             }
                                                         },
                                                         "type": {
                                                             "enum": [
                                                                 "advanced"
-                                                            ],
+                                                            ], 
                                                             "type": "string"
                                                         }
-                                                    },
+                                                    }, 
                                                     "required": [
-                                                        "ports",
+                                                        "ports", 
                                                         "decoder"
-                                                    ],
+                                                    ], 
                                                     "type": "object"
                                                 }
                                             ]
-                                        },
+                                        }, 
                                         "type": "array"
-                                    },
+                                    }, 
                                     "swoFrequency": {
-                                        "default": 0,
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.",
+                                        "default": 0, 
+                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.", 
                                         "type": "number"
                                     }
-                                },
-                                "required": [],
+                                }, 
+                                "required": [], 
                                 "type": "object"
                             },
                             "ipAddress": {
-                                "default": null,
-                                "description": "IP Address for networked J-Link Adapter",
-                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
+                                "default": null, 
+                                "description": "IP Address for networked J-Link Adapter", 
+                                "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", 
                                 "type": "string"
-                            },
+                            }, 
                             "serialNumber": {
-                                "default": null,
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
+                                "default": null, 
+                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
                                 "type": "string"
-                            },
+                            }, 
                             "configFiles": {
-                                "description": "OpenOCD configuration file(s) to load",
+                                "description": "OpenOCD configuration file(s) to load", 
                                 "items": {
                                     "type": "string"
-                                },
+                                }, 
                                 "type": "array"
                             },
                             "v1": {
-                                "default": false,
-                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
+                                "default": false, 
+                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.", 
                                 "type": "boolean"
                             },
                             "targetId": {
-                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.",
+                                "description": "PyOCD Target identifier. Needed if debugging custom hardware; not needed for official MBed boards.", 
                                 "enum": [
-                                    "kl25z",
-                                    "kl26z",
-                                    "lpc824",
-                                    "k82f25615",
-                                    "lpc11xx_32",
-                                    "kinetis",
-                                    "lpc800",
-                                    "lpc4088qsb",
-                                    "maxwsnenv",
-                                    "kl05z",
-                                    "k64f",
-                                    "lpc1768",
-                                    "lpc4088",
-                                    "lpc4330",
-                                    "max32600mbed",
-                                    "k66f18",
-                                    "w7500",
-                                    "ke18f16",
-                                    "k22f",
-                                    "lpc4088dm",
-                                    "ke15z7",
-                                    "kv11z7",
-                                    "nrf51",
-                                    "nrf52",
-                                    "kv10z7",
-                                    "k20d50m",
-                                    "kl46z",
-                                    "stm32f103rc",
-                                    "kl27z4",
-                                    "kw40z4",
-                                    "cortex_m",
-                                    "lpc11u24",
-                                    "stm32f051",
-                                    "kl02z",
-                                    "ncs36510",
-                                    "kl28z",
-                                    "kl43z4",
+                                    "kl25z", 
+                                    "kl26z", 
+                                    "lpc824", 
+                                    "k82f25615", 
+                                    "lpc11xx_32", 
+                                    "kinetis", 
+                                    "lpc800", 
+                                    "lpc4088qsb", 
+                                    "maxwsnenv", 
+                                    "kl05z", 
+                                    "k64f", 
+                                    "lpc1768", 
+                                    "lpc4088", 
+                                    "lpc4330", 
+                                    "max32600mbed", 
+                                    "k66f18", 
+                                    "w7500", 
+                                    "ke18f16", 
+                                    "k22f", 
+                                    "lpc4088dm", 
+                                    "ke15z7", 
+                                    "kv11z7", 
+                                    "nrf51", 
+                                    "nrf52", 
+                                    "kv10z7", 
+                                    "k20d50m", 
+                                    "kl46z", 
+                                    "stm32f103rc", 
+                                    "kl27z4", 
+                                    "kw40z4", 
+                                    "cortex_m", 
+                                    "lpc11u24", 
+                                    "stm32f051", 
+                                    "kl02z", 
+                                    "ncs36510", 
+                                    "kl28z", 
+                                    "kl43z4", 
                                     "kw01z4"
-                                ],
+                                ], 
                                 "type": "string"
                             },
                             "boardId": {
@@ -1002,66 +1002,66 @@
                                 "type": "string",
                                 "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
                             }
-                        },
+                        }, 
                         "required": [
                             "executable"
                         ]
                     }
-                },
+                }, 
                 "configurationSnippets": [
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
-                            "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
-                            "request": "launch",
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
                             "type": "cortex-debug",
                             "servertype": "jlink"
-                        },
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink",
+                        }, 
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink", 
                         "label": "Cortex Debug: JLink"
                     },
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
-                            "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
-                            "request": "launch",
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
                             "type": "cortex-debug",
                             "servertype": "openocd"
-                        },
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
+                        }, 
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD", 
                         "label": "Cortex Debug: OpenOCD"
                     },
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
-                            "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
-                            "request": "launch",
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
                             "type": "cortex-debug",
                             "servertype": "stutil"
-                        },
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)",
+                        }, 
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)", 
                         "label": "Cortex Debug: ST-Util"
                     },
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
-                            "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
-                            "request": "launch",
+                            "cwd": "^\"\\${workspaceRoot}\"", 
+                            "executable": "${1:./bin/executable.elf}", 
+                            "name": "${6:Debug Microcontroller}", 
+                            "request": "launch", 
                             "type": "cortex-debug",
                             "servertype": "pyocd"
-                        },
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD",
+                        }, 
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD", 
                         "label": "Cortex Debug: PyOCD"
                     }
-                ],
+                ], 
                 "enableBreakpointsFor": {
                     "languageIds": [
-                        "c",
-                        "cpp",
+                        "c", 
+                        "cpp", 
                         "asm",
                         "arm",
                         "cortex-debug.disassembly"
@@ -1069,21 +1069,47 @@
                 },
                 "initialConfigurations": [
                     {
-                        "name": "Cortex Debug",
-                        "cwd": "${workspaceRoot}",
-                        "executable": "./bin/executable.elf",
-                        "request": "launch",
+                        "name": "Cortex Debug", 
+                        "cwd": "${workspaceRoot}", 
+                        "executable": "./bin/executable.elf", 
+                        "request": "launch", 
                         "type": "cortex-debug",
                         "servertype": "jlink"
                     }
                 ],
-                "extensions": [],
-                "label": "Cortex Debug",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "cortex-debug",
+                "extensions": [], 
+                "label": "Cortex Debug", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "cortex-debug", 
                 "variables": {}
             },
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {},
+                        "required": []
+                    }, 
+                    "launch": {
+                        "properties": {},
+                        "required": []
+                    }
+                }, 
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c", 
+                        "cpp", 
+                        "asm",
+                        "arm"
+                    ]
+                },
+                "extensions": [], 
+                "label": "Cortex Debug: OpenOCD (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "openocd-gdb", 
+                "variables": {}
+            }, 
             {
                 "configurationAttributes": {
                     "attach": {
@@ -1094,20 +1120,20 @@
                         "properties": {},
                         "required": []
                     }
-                },
+                }, 
                 "enableBreakpointsFor": {
                     "languageIds": [
-                        "c",
-                        "cpp",
+                        "c", 
+                        "cpp", 
                         "asm",
                         "arm"
                     ]
                 },
-                "extensions": [],
-                "label": "Cortex Debug: OpenOCD (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "openocd-gdb",
+                "extensions": [], 
+                "label": "Cortex Debug: JLink (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "jlink-gdb", 
                 "variables": {}
             },
             {
@@ -1115,33 +1141,34 @@
                     "attach": {
                         "properties": {},
                         "required": []
-                    },
+                    }, 
                     "launch": {
                         "properties": {},
                         "required": []
                     }
-                },
+                }, 
                 "enableBreakpointsFor": {
                     "languageIds": [
-                        "c",
-                        "cpp",
+                        "c", 
+                        "cpp", 
                         "asm",
                         "arm"
                     ]
                 },
-                "extensions": [],
-                "label": "Cortex Debug: JLink (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "jlink-gdb",
+                "extensions": [], 
+                "initialConfigurations": [], 
+                "label": "Cortex Debug: ST-Util (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "stutil-gdb", 
                 "variables": {}
-            },
+            }, 
             {
                 "configurationAttributes": {
                     "attach": {
                         "properties": {},
                         "required": []
-                    },
+                    }, 
                     "launch": {
                         "properties": {},
                         "required": []
@@ -1149,67 +1176,40 @@
                 },
                 "enableBreakpointsFor": {
                     "languageIds": [
-                        "c",
-                        "cpp",
+                        "c", 
+                        "cpp", 
                         "asm",
                         "arm"
                     ]
                 },
-                "extensions": [],
-                "initialConfigurations": [],
-                "label": "Cortex Debug: ST-Util (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "stutil-gdb",
-                "variables": {}
-            },
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {},
-                        "required": []
-                    },
-                    "launch": {
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm"
-                    ]
-                },
-                "extensions": [],
-                "label": "Cortex Debug: PyOCD (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "pyocd-gdb",
+                "extensions": [], 
+                "label": "Cortex Debug: PyOCD (Deprecated)", 
+                "program": "./out/src/gdb.js", 
+                "runtime": "node", 
+                "type": "pyocd-gdb", 
                 "variables": {}
             }
-        ],
+        ], 
         "menus": {
             "commandPalette": [
                 {
-                    "command": "cortex-debug.peripherals.updateNode",
+                    "command": "cortex-debug.peripherals.updateNode", 
                     "when": "false"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.selectedNode",
+                    "command": "cortex-debug.peripherals.selectedNode", 
                     "when": "false"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.copyValue",
+                    "command": "cortex-debug.peripherals.copyValue", 
                     "when": "false"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.registers.copyValue",
+                    "command": "cortex-debug.registers.copyValue", 
                     "when": "false"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.examineMemory",
+                    "command": "cortex-debug.examineMemory", 
                     "when": "debugType == cortex-debug"
                 },
                 {
@@ -1220,58 +1220,58 @@
                     "command": "cortex-debug.setForceDisassembly",
                     "when": "debugType == cortex-debug"
                 }
-            ],
+            ], 
             "view/item/context": [
                 {
-                    "command": "cortex-debug.peripherals.updateNode",
+                    "command": "cortex-debug.peripherals.updateNode", 
                     "when": "view == cortex-debug.peripherals && viewItem == field"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.updateNode",
+                    "command": "cortex-debug.peripherals.updateNode", 
                     "when": "view == cortex-debug.peripherals && viewItem == registerRW"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.updateNode",
+                    "command": "cortex-debug.peripherals.updateNode", 
                     "when": "view == cortex-debug.peripherals && viewItem == registerWO"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.copyValue",
+                    "command": "cortex-debug.peripherals.copyValue", 
                     "when": "view == cortex-debug.peripherals && viewItem == field"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.copyValue",
+                    "command": "cortex-debug.peripherals.copyValue", 
                     "when": "view == cortex-debug.peripherals && viewItem == registerRW"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.peripherals.copyValue",
+                    "command": "cortex-debug.peripherals.copyValue", 
                     "when": "view == cortex-debug.peripherals && viewItem == registerRO"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.registers.copyValue",
+                    "command": "cortex-debug.registers.copyValue", 
                     "when": "view == cortex-debug.registers && viewItem == register"
-                },
+                }, 
                 {
-                    "command": "cortex-debug.registers.copyValue",
+                    "command": "cortex-debug.registers.copyValue", 
                     "when": "view == cortex-debug.registers && viewItem == field"
                 }
-            ],
+            ], 
             "view/title": []
-        },
+        }, 
         "views": {
             "debug": [
                 {
-                    "id": "cortex-debug.peripherals",
-                    "name": "Cortex Peripherals",
+                    "id": "cortex-debug.peripherals", 
+                    "name": "Cortex Peripherals", 
                     "when": "debugType == cortex-debug"
-                },
+                }, 
                 {
-                    "id": "cortex-debug.registers",
-                    "name": "Cortex Registers",
+                    "id": "cortex-debug.registers", 
+                    "name": "Cortex Registers", 
                     "when": "debugType == cortex-debug"
                 }
             ]
         }
-    },
+    }, 
     "dependencies": {
         "binary-parser": "^1.3.0",
         "bindings": "^1.3.0",
@@ -1293,38 +1293,38 @@
         "hexy": "^0.2.10",
         "sprintf-js": "^1.0.3",
         "encoding": "^0.1.12"
-    },
-    "description": "ARM Cortex-M GDB Debugger support for VSCode",
+    }, 
+    "description": "ARM Cortex-M GDB Debugger support for VSCode", 
     "devDependencies": {
         "@types/mocha": "^2.2.39",
         "@types/node": "^7.0.5",
         "mocha": "^3.2.0",
         "typescript": "^2.1.6",
         "vscode": "^1.0.0"
-    },
-    "displayName": "Cortex-Debug",
+    }, 
+    "displayName": "Cortex-Debug", 
     "engines": {
         "vscode": "^1.18.0"
-    },
-    "icon": "images/icon.png",
+    }, 
+    "icon": "images/icon.png", 
     "keywords": [
-        "cortex-m",
-        "gdb",
-        "debug",
+        "cortex-m", 
+        "gdb", 
+        "debug", 
         "embedded"
-    ],
-    "main": "./out/src/frontend/extension",
-    "name": "cortex-debug",
-    "preview": true,
-    "publisher": "marus25",
+    ], 
+    "main": "./out/src/frontend/extension", 
+    "name": "cortex-debug", 
+    "preview": true, 
+    "publisher": "marus25", 
     "repository": {
-        "type": "git",
+        "type": "git", 
         "url": "https://github.com/Marus/cortex-debug.git"
-    },
+    }, 
     "scripts": {
-        "compile": "tsc -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
-        "vscode:prepublish": "tsc -p ./",
+        "compile": "tsc -p ./", 
+        "postinstall": "node ./node_modules/vscode/bin/install", 
+        "vscode:prepublish": "tsc -p ./", 
         "watch": "tsc -watch -p ./"
     }, 
     "version": "0.1.11"
