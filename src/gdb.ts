@@ -213,6 +213,8 @@ export class GDBDebugSession extends DebugSession {
 
 				let commands = attach ? this.serverController.attachCommands() : this.serverController.launchCommands();
 
+				commands = commands.concat(this.args.postLaunchCommands.map(c => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c}"`));
+
 				this.serverController.debuggerLaunchStarted();
 				this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
 					setTimeout(() => {

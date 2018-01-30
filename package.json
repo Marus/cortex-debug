@@ -108,9 +108,15 @@
                             }, 
                             "debuggerArgs": {
                                 "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
+                                "description": "Additional arguments to pass to GDB command line", 
                                 "type": "array"
-                            }, 
+                            },
+                            "postLaunchCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
+                            },
                             "device": {
                                 "default": "", 
                                 "description": "Target Device Identifier", 
@@ -519,9 +525,15 @@
                             }, 
                             "debuggerArgs": {
                                 "default": [], 
-                                "description": "Additional arguments to pass to GDB", 
+                                "description": "Additional arguments to pass to GDB command line", 
                                 "type": "array"
-                            }, 
+                            },
+                            "postLaunchCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
+                            },
                             "device": {
                                 "default": "", 
                                 "description": "Target Device Identifier", 
