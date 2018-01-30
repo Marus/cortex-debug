@@ -11,12 +11,17 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
 * Peripheral Register Viewer (Defined through standard SVD file)
 * SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single percision floating point values)
-    * Currently decoding of ITM Timestamp and Synchronization packets are not supported; these features will need to be disabled in the code for the microcontroller.
+    * The registers that are part of the DWT, TPIU, and ITM debug components will automatically be configured and do not need to be set in firmware.
+    * Firmware will still need to enable the SWO output pin (if necessary) - as this part of the setup is microcontroller dependant.
+    * Decoding ETM data over the SWO pin is not currently supported.
 * Support for Custom ITM Data Decoders:
     * Ability to define JavaScript modules to decode complex data formats streamed over a particular ITM port. Data can be printed to a output window, or sent to the graphing system.
 * Live graphing of decoded ITM data.
-* Raw Memory Viewer (From the command menu select Cortex-Debug: View Memory)
-* Ability to view and step through the disassembled binary
+* Raw Memory Viewer ("Cortex-Debug: View Memory" command)
+* Ability to view and step through the disassembled binary. There are three ways that disassembled code will be shown:
+    * Disassembly code will automatically be shown if it cannot locate the corresponding source code.
+    * You can manually see the disassembly for a particular function ("Cortex-Debug: View Disassembly (Function)" command)
+    * You can set the debugger to always show show disassembly ("Cortex-Debug: Set Force Disassembly" command)
 * Globals and Static scopes in the variables view
 
 ### In Progress Features
