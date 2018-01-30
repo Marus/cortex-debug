@@ -185,12 +185,12 @@ export class PeripheralNode extends BaseNode {
 		this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
 	}
 
-	getBytes(offset: number, size: number): number[] {
+	getBytes(offset: number, size: number): Uint8Array {
 		try {
-			return this.currentValue.slice(offset, offset + size);
+			return new Uint8Array(this.currentValue.slice(offset, offset + size));
 		}
 		catch(e) {
-			return [];
+			return new Uint8Array(0);
 		}
 	}
 
@@ -266,7 +266,7 @@ export class ClusterNode extends BaseNode {
 		this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
 	}
 
-	getBytes(offset: number, size: number): number[] {
+	getBytes(offset: number, size: number): Uint8Array {
 		return this.parent.getBytes(this.offset + offset, size);
 	}
 
@@ -430,13 +430,22 @@ export class RegisterNode extends BaseNode {
 
 	update(): Thenable<boolean> {
 		let bc = this.size / 8;
-		let bytes = this.parent.getBytes(this.offset, bc).reverse();
-		let cv = 0;
-		for(var i = 0; i < bc; i++) {
-			cv = cv << 8;
-			cv |= bytes[i];
+		let bytes = this.parent.getBytes(this.offset, bc);
+		let buffer = new Buffer(bytes);
+		switch (bc) {
+			case 1:
+				this.currentValue = buffer.readUInt8(0);
+				break;
+			case 2:
+				this.currentValue = buffer.readUInt16LE(0);
+				break;
+			case 4:
+				this.currentValue = buffer.readUInt32LE(0);
+				break;
+			default:
+				vscode.window.showErrorMessage(`Register ${this.name} has invalid size: ${this.size}. Should be 8, 16 or 32.`);
+				break;
 		}
-		this.currentValue = cv;
 		this.children.forEach(f => f.update());
 
 		return Promise.resolve(true);
