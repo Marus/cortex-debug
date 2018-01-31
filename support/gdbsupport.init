@@ -1,41 +1,56 @@
 
 define EnableITMAccess
+	set language c
 	set *0xE000EDFC |= 0x1000000
 	set *0xE0000FB0 = 0xC5ACCE55
+	set language auto
 end
 
 define BaseSWOSetup
+	set language c
 	set *0xE0040304 = 0x100
 	set *0xE00400F0 = 2
 	set *0xE0040010 = $arg0
 	set *0xE0001000 &= ~(0x8000)
 	set *0xE0001000 |= 0xBFF
+	set language auto
 end
 
 define SetITMTimestampFrequency
+	set language c
 	set *0xE0000E80 &= ~(0x3 << 10)
 	set *0xE0000E80 |= ($arg0 << 10)
+	set language auto
 end
 
 define SetITMTimestampPrescale
+	set language c
 	set *0xE0000E80 &= ~(0x3 << 8)
 	set *0xE0000E80 |= ($arg0 << 8)
+	set language auto
 end
 
 define EnableITMPorts
+	set language c
 	set *0xE0000E00 |= $arg0
+	set language auto
 end
 
 define DisableITMPorts
+	set language c
 	set *0xE0000E00 &= ~($arg0)
+	set language auto
 end
 
 define SetITMId
+	set language c
 	set *0xE0000E80 &= ~(0x7F << 16)
 	set *0xE0000E80 |= ($arg0 << 16)
+	set language auto
 end
 
 define ITMGlobalEnable
+	set language c
 	set $busy = ((*0xE0000E80 & 0x800000))
 	while ($busy)
 		set $busy = ((*0xE0000E80 & 0x800000))
@@ -47,9 +62,11 @@ define ITMGlobalEnable
 	while ($busy)
 		set $busy = ((*0xE0000E80 & 0x800000))
 	end
+	set language auto
 end
 
 define ITMGlobalDisable
+	set language c
 	set $busy = ((*0xE0000E80 & 0x800000))
 	while ($busy)
 		set $busy = ((*0xE0000E80 & 0x800000))
@@ -61,101 +78,148 @@ define ITMGlobalDisable
 	while ($busy)
 		set $busy = ((*0xE0000E80 & 0x800000))
 	end
+	set language auto
 end
 
 define ITMTimestampEnable
+	set language c
 	set *0xE0000E80 |= 0x302
+	set language auto
 end
 
 define ITMTimestampDisable
+	set language c
 	set *0xE0000E80 &= ~(0x2)
+	set language auto
 end
 
 define ITMSyncEnable
+	set language c
 	set *0xE0000E80 |= 0x4
+	set language auto
 end
 
 define ITMSyncDisable
+	set language c
 	set *0xE0000E80 &= ~(0x4)
+	set language auto
 end
 
 define ITMDWTTransferEnable
+	set language c
 	set *0xE0000E80 |= 0x8
+	set language auto
 end
 
 define ITMDWTTransferDisable
+	set language c
 	set *0xE0000E80 &= (~0x8)
+	set language auto
 end
 
 def EnableDWTSync
+	set language c
 	set *0xE0001000 |= 0x800
+	set language auto
 end
 
 def DisableDWTSync
+	set language c
 	set *0xE0001000 &= ~(0x800)
+	set language auto
 end
 
 def EnablePCSample
+	set language c
 	set *0xE0001004 = 0x0
 	set *0xE0001000 |= 0x1201
+	set language auto
 end
 
 def DisablePCSample
+	set language c
 	set *0xE0001000 &= ~(0x1000)
+	set language auto
 end
 
 def EnableCycleCountEvent
+	set language c
 	set *0xE0001000 |= 0x400000
+	set language auto
 end
 
 def DisableCycleCountEvent
+	set language c
 	set *0xE0001000 &= ~(0x400000)
+	set language auto
 end
 
 def EnableFoldedEvent
+	set language c
 	set *0xE0001000 |= 0x200000
+	set language auto
 end
 
 def DisableFoldedEvent
+	set language c
 	set *0xE0001000 &= ~(0x200000)
+	set language auto
 end
 
 def EnableLSUCountEvent
+	set language c
 	set *0xE0001000 |= 0x100000
+	set language auto
 end
 
 def DisableLSUCountEvent
+	set language c
 	set *0xE0001000 &= ~(0x100000)
+	set language auto
 end
 
 def EnableSleepCountEvent
+	set language c
 	set *0xE0001000 |= 0x80000
+	set language auto
 end
 
 def DisableSleepCountEvent
+	set language c
 	set *0xE0001000 &= ~(0x80000)
+	set language auto
 end
 
 def EnableInterruptOverheadEvent
+	set language c
 	set *0xE0001000 |= 0x40000
+	set language auto
 end
 
 def DisableInterruptOverheadEvent
+	set language c
 	set *0xE0001000 &= ~(0x40000)
+	set language auto
 end
 
 def EnableCPICountEvent
+	set language c
 	set *0xE0001000 |= 0x20000
+	set language auto
 end
 
 def EnableCPICountEvent
+	set language c
 	set *0xE0001000 &= ~(0x20000)
+	set language auto
 end
 
 def SoftwareReset
+	set language c
 	set *0xE000ED0C = 0x05FA0004
 	set $busy = (*0xE000ED0C & 0x4)
 	while ($busy)
 		set $busy = (*0xE000ED0C & 0x4)
 	end
+	set language auto
 end
