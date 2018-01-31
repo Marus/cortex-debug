@@ -23,6 +23,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * You can manually see the disassembly for a particular function ("Cortex-Debug: View Disassembly (Function)" command)
     * You can set the debugger to always show show disassembly ("Cortex-Debug: Set Force Disassembly" command)
 * Globals and Static scopes in the variables view
+* Initial support for Rust code (most functionality is working; disassembly views and variables view may still have some glitches)
 
 ### In Progress Features
 * RTOS/Muti-Threaded Support (Dependant on GDB server support)

@@ -1,6 +1,13 @@
+V0.1.13
+
+* Enabled setting breakpoints in rust code
+* Improved ITM console decoder
+* Fixed ITM configuration GDB macros to work properly with rust code
+
 # V0.1.12
 
 * Fixed issues with parsing dimIndex elements in some SVD files.
+
 # V0.1.11
 
 * Improved SVD parsing:
