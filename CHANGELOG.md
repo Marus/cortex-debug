@@ -1,3 +1,6 @@
+# V0.1.12
+
+* Fixed issues with parsing dimIndex elements in some SVD files.
 # V0.1.11
 
 * Improved SVD parsing:
