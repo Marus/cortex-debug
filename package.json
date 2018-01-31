@@ -299,6 +299,16 @@
                                                                 "console"
                                                             ], 
                                                             "type": "string"
+                                                        },
+                                                        "encoding": {
+                                                            "type": "string",
+                                                            "default": "utf8",
+                                                            "enum": [
+                                                                "ascii",
+                                                                "utf8",
+                                                                "ucs2",
+                                                                "utf16le"
+                                                            ]
                                                         }
                                                     }, 
                                                     "required": [
@@ -716,6 +726,16 @@
                                                                 "console"
                                                             ], 
                                                             "type": "string"
+                                                        },
+                                                        "encoding": {
+                                                            "type": "string",
+                                                            "default": "utf8",
+                                                            "enum": [
+                                                                "ascii",
+                                                                "utf8",
+                                                                "ucs2",
+                                                                "utf16le"
+                                                            ]
                                                         }
                                                     }, 
                                                     "required": [

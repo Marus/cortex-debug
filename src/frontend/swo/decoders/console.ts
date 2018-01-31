@@ -12,45 +12,49 @@ export class SWOConsoleProcessor implements SWODecoder {
 	timeout: any = null;
 	format: string = 'console';
 	port: number;
+	encoding: string;
+	
 	
 	constructor(config: SWOConsoleDecoderConfig) {
 		this.port = config.port;
+		this.encoding = config.encoding || 'utf8';
 		this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, type: console]`);
 	}
 
 	softwareEvent(packet: Packet) {
 		if (packet.port != this.port) { return; }
 
-		if(this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
+		let letters = packet.data.toString(this.encoding);
 
-		var data = parseUnsigned(packet.data);
+		for (let letter of letters) {
+			if(this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
 
-		let letter = String.fromCharCode(data);
-		if(letter == '\n') {
-			this.output.append('\n');
-			this.position = 0;
-			return;
-		}
-
-		if(this.position == 0) {
-			let date = new Date();
-			let header = `[${date.toISOString()}]   `;
-			this.output.append(header);
-		}
-
-		this.output.append(letter);
-		this.position += 1;
-
-		if(this.position >= 80) {
-			this.output.append('\n');
-			this.position = 0;
-		}
-		else {
-			this.timeout = setTimeout(() => {
+			if(letter == '\n') {
 				this.output.append('\n');
 				this.position = 0;
-				this.timeout = null;
-			}, 5000);
+				return;
+			}
+
+			if(this.position == 0) {
+				let date = new Date();
+				let header = `[${date.toISOString()}]   `;
+				this.output.append(header);
+			}
+
+			this.output.append(letter);
+			this.position += 1;
+
+			if(this.position >= 80) {
+				this.output.append('\n');
+				this.position = 0;
+			}
+			else {
+				this.timeout = setTimeout(() => {
+					this.output.append('\n');
+					this.position = 0;
+					this.timeout = null;
+				}, 5000);
+			}
 		}
 	}
 

@@ -8,6 +8,7 @@ export interface SWOBasicDecoderConfig extends SWODecoderConfig {
 
 export interface SWOConsoleDecoderConfig extends SWOBasicDecoderConfig {
 	label: string;
+	encoding: string;
 }
 
 export interface SWOBinaryDecoderConfig extends SWOBasicDecoderConfig {
