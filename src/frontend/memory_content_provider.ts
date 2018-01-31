@@ -1,65 +1,87 @@
-import * as vscode from "vscode";
+/**
+ * A significant portion of this module is taken from 
+ * [hexdump](https://github.com/stef-levesque/vscode-hexdump/),
+ * which has the following copyright:
+ * 
+ * Copyright © 2016 Stef Levesque
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the “Software”), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+'use strict';
+
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+
+import { sprintf } from 'sprintf-js';
+import * as hexy from 'hexy';
 import { hexFormat } from './utils';
 
 export class MemoryContentProvider implements vscode.TextDocumentContentProvider {
-	provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Thenable<string> {
-		return new Promise((resolve, reject) => {
-			let highlightAt = -1;
-			let query = this.parseQuery(uri.query);
+	private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+
+    public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Thenable<string> {
+        const config = vscode.workspace.getConfiguration('cortex-debug').memoryDump;
+        const hexLineLength = config['width'] * 2;
+        const firstByteOffset = config['showAddress'] ? 10 : 0;
+        const lastByteOffset = firstByteOffset + hexLineLength + hexLineLength / config['nibbles'] - 1;
+        const firstAsciiOffset = lastByteOffset + (config['nibbles'] == 2 ? 4 : 2);
+        const lastAsciiOffset = firstAsciiOffset + config['width'];
+        const charPerLine = lastAsciiOffset + 1;
+        const sizeWarning = config['sizeWarning'];
+        const sizeDisplay = config['sizeDisplay'];
+
+        return new Promise( (resolve, reject)=> {
+            let query = this.parseQuery(uri.query);
 			
-			let address: number = query['address'].startsWith('0x') ? parseInt(query['address'].substring(2), 16) : parseInt(query['address'], 10);
-			let length: number = query['length'].startsWith('0x') ? parseInt(query['length'].substring(2), 16) : parseInt(query['length'], 10);
-			
-			vscode.debug.activeDebugSession.customRequest('read-memory', { address: address, length: length || 32 }).then((data) => {
-				let bytes = data.bytes;
-				
-				let lineAddress = address - (address % 16);
-				let lineLength = 16;
-				let offset = address - lineAddress;
+            let address: number = query['address'].startsWith('0x') ? 
+                                    parseInt(query['address'].substring(2), 16) : 
+                                    parseInt(query['address'], 10);
+            let length: number = query['length'].startsWith('0x') ? 
+                                    parseInt(query['length'].substring(2), 16) : 
+                                    parseInt(query['length'], 10);
 
-				let output = '';
-				output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 	\n';
-				output += hexFormat(lineAddress - 0x8000000, 8, false) + ': ';
+            let hexyFmt = {
+                format      : config['nibbles'] == 8 ? 'eights' : 
+                            config['nibbles'] == 4 ? 'fours' : 
+                            'twos',
+                width       : config['width'],
+                caps        : config['uppercase'] ? 'upper' : 'lower',
+                numbering   : config['showAddress'] ? "hex_digits" : "none",
+                annotate    : config['showAscii'] ? "ascii" : "none",
+                length      : sizeDisplay,
+                display_offset: address
+            };
+            let header = config['showOffset'] ? this.getHeader(config['showAddress'], config['width'], config['nibbles']) : "";
 
-				let lineend = '';
+            vscode.debug.activeDebugSession
+                .customRequest('read-memory', { address: address, length: length || 32 })
+                .then((data) => {
+                    let buffer = new Buffer(data.bytes)
+                    let hexString = header;
+                    hexString += hexy.hexy(buffer, hexyFmt).toString();
+                    resolve(hexString);
+                }, (error) => {
+                    vscode.window.showErrorMessage(`Unable to read memory from ${hexFormat(address, 8)} to ${hexFormat(address + length, 8)}`);
+                    reject(error.toString());
+                })
+        });
+    }
 
-				for (let i = 0; i < offset; i++) { output += '   '; lineend += '  '; }
-
-				for (let i = 0; i < length; i++) {
-					let byte = bytes[i];
-					output += hexFormat(byte, 2, false).toUpperCase() + ' ';
-					if (byte <= 32 || (byte >= 127 && byte <= 159)) {
-						lineend += '.';
-					}
-					else {
-						lineend	+= String.fromCharCode(bytes[i]);
-					}
-
-					if ((address + i) % 16 === 15 && i < length - 1) {
-						output += '  ' + lineend;
-						lineend = '';
-						output += '\n';
-						lineAddress += 16;
-						output += hexFormat(lineAddress - 0x8000000, 8, false) + ': ';
-					}
-				}
-
-				let endaddress = address + length;
-				let extra = (16 - (endaddress % 16)) % 16;
-
-				for (let i = 0; i < extra; i++) { output += '   '; }
-				output += '  ' + lineend;
-				output += '\n';
-
-				resolve(output);
-			}, (error) => {
-				vscode.window.showErrorMessage(`Unable to read memory from ${hexFormat(address, 8)} to ${hexFormat(address + length, 8)}`);
-				reject(error.toString());
-			});
-		});
-	}
-
-	private parseQuery(queryString) {
+    private parseQuery(queryString) {
 		var query = {};
 		var pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
 		for (var i = 0; i < pairs.length; i++) {
@@ -68,4 +90,27 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 		}
 		return query;
 	}
+
+    private getHeader(showAddress: boolean, width: number, nibbles: number): string {
+        const config = vscode.workspace.getConfiguration('cortex-debug').memoryDump;
+        let header = showAddress ? "  Offset: " : "";
+
+        for (var i = 0; i < config['width']; ++i) {
+            header += sprintf('%02X', i);
+            if ((i+1) % (config['nibbles'] / 2) == 0) {
+                header += ' ';
+            }
+        }
+
+        header += "\t\n";
+        return header;
+	}
+	
+	get onDidChange(): vscode.Event<vscode.Uri> {
+        return this._onDidChange.event;
+    }
+    
+    public update(uri: vscode.Uri) {
+        this._onDidChange.fire(uri);
+    }
 }

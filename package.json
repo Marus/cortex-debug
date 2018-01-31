@@ -38,6 +38,64 @@
                     "type": ["string", "null"],
                     "default": null,
                     "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
+                },
+                "cortex-debug.memoryDump": {
+                    "type": "object",
+                    "description": "Hexdump memory view configuration",
+                    "default": {
+                        "littleEndian": true,
+                        "nibbles": 2,
+                        "uppercase": true,
+                        "width": 16,
+                        "showOffset": true,
+                        "showAddress": true,
+                        "showAscii": true,
+                        "charEncoding": "utf-8"
+                    },
+                    "properties": {
+                        "littleEndian": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Set default endianness (true for little endian, false for big endian)"
+                        },
+                        "nibbles": {
+                          "type": "number",
+                          "enum": [2, 4, 8],
+                          "default": 2,
+                          "description": "How many nibbles per group"
+                        },
+                        "uppercase": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Display hex digits in uppercase"
+                        },
+                        "width": {
+                          "type": "number",
+                          "enum": [8, 16, 32],
+                          "default": 16,
+                          "description": "Number of bytes per line"
+                        },
+                        "showOffset": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Show offset on first line"
+                        },
+                        "showAddress": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Show address on each line"
+                        },
+                        "showAscii": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "Show ASCII section"
+                        },
+                        "charEncoding": {
+                          "type": "string",
+                          "default": "utf-8",
+                          "description": "Identify the source character encoding"
+                        }
+                    }
                 }
             }
         },
@@ -83,6 +141,15 @@
                 "extensions": [
                     ".cdasm"
                 ]
+            },
+            {
+                "id": "cortex-debug.memdump",
+                "aliases": [
+                    "Cortex-Debug Memory Dump"
+                ],
+                "extensions": [
+                    ".hexdump"
+                ]
             }
         ],
         "grammars": [
@@ -90,6 +157,11 @@
                 "language": "cortex-debug.disassembly",
                 "scopeName": "source.cortex-debug-disassembly",
                 "path": "./syntaxes/cortex-debug-disassembly.json"
+            },
+            {
+                "language": "cortex-debug.memdump",
+                "scopeName": "source.hexdump",
+                "path": "./syntaxes/hexdump.tmLanguage"
             }
         ],
         "debuggers": [
@@ -1236,7 +1308,10 @@
         "vscode-debugprotocol": "^1.16.0",
         "vscode-extension-telemetry": "0.0.10",
         "ws": "^3.3.2",
-        "xml2js": "^0.4.19"
+        "xml2js": "^0.4.19",
+        "hexy": "^0.2.10",
+        "sprintf-js": "^1.0.3",
+        "encoding": "^0.1.12"
     }, 
     "description": "ARM Cortex-M GDB Debugger support for VSCode", 
     "devDependencies": {
