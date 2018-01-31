@@ -1006,7 +1006,8 @@
                         "cpp", 
                         "asm",
                         "arm",
-                        "cortex-debug.disassembly"
+                        "cortex-debug.disassembly",
+                        "rust"
                     ]
                 },
                 "initialConfigurations": [
@@ -1042,7 +1043,8 @@
                         "c", 
                         "cpp", 
                         "asm",
-                        "arm"
+                        "arm",
+                        "rust"
                     ]
                 },
                 "extensions": [], 
@@ -1068,7 +1070,8 @@
                         "c", 
                         "cpp", 
                         "asm",
-                        "arm"
+                        "arm",
+                        "rust"
                     ]
                 },
                 "extensions": [], 
@@ -1094,7 +1097,8 @@
                         "c", 
                         "cpp", 
                         "asm",
-                        "arm"
+                        "arm",
+                        "rust"
                     ]
                 },
                 "extensions": [], 
@@ -1121,7 +1125,8 @@
                         "c", 
                         "cpp", 
                         "asm",
-                        "arm"
+                        "arm",
+                        "rust"
                     ]
                 },
                 "extensions": [], 
