@@ -88,8 +88,8 @@ function parseDimIndex(spec: string, count: number) : string[] {
 		let start = parts[0];
 		let end = parts[1];
 
-		let diff = end - start;
-		if (diff < count) {
+		let numElements = end - start + 1;
+		if (numElements < count) {
 			throw new Error(`dimIndex Element has invalid specification.`);
 		}
 
@@ -105,8 +105,8 @@ function parseDimIndex(spec: string, count: number) : string[] {
 		let start = spec.charCodeAt(0);
 		let end = spec.charCodeAt(2);
 
-		let diff = end - start;
-		if (diff < count) {
+		let numElements = end - start + 1;
+		if (numElements < count) {
 			throw new Error(`dimIndex Element has invalid specification.`);
 		}
 
