@@ -23,7 +23,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
 				let lineend = '';
 
-				for (let i = 0; i < offset; i++) { output += '   '; lineend += '  '; }
+				for (let i = 0; i < offset; i++) { output += '   '; lineend += ' '; }
 
 				for (let i = 0; i < length; i++) {
 					let byte = bytes[i];
