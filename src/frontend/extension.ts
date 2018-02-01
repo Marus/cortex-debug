@@ -289,9 +289,12 @@ class CortexDebugExtension {
 
 						Reporting.sendEvent('examine-memory', {}, {});
 						let timestamp = new Date().getTime();
-						vscode.workspace.openTextDocument(`examinememory:///Memory%20[${address}+${length}].hexdump?address=${address}&length=${length}&timestamp=${timestamp}`).then((doc) => {
-							vscode.window.showTextDocument(doc, { viewColumn: 2 })	;
-						})
+						vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}].hexdump?address=${address}&length=${length}&timestamp=${timestamp}`))
+										.then((doc) => {
+											vscode.window.showTextDocument(doc, { viewColumn: 2 })	;
+										}, (error) => {
+											vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
+										})
 					},
 					(error) => {
 
