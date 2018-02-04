@@ -83,6 +83,15 @@
                 "extensions": [
                     ".cdasm"
                 ]
+            },
+            {
+                "id": "cortex-debug.memoryview",
+                "aliases": [
+                    "Cortex-Debug Memory View"
+                ],
+                "extensions": [
+                    ".cdmem"
+                ]
             }
         ],
         "grammars": [
@@ -90,6 +99,11 @@
                 "language": "cortex-debug.disassembly",
                 "scopeName": "source.cortex-debug-disassembly",
                 "path": "./syntaxes/cortex-debug-disassembly.json"
+            },
+            {
+                "language": "cortex-debug.memoryview",
+                "scopeName": "source.cortex-debug-memoryview",
+                "path": "./syntaxes/cortex-debug-memoryview.json"
             }
         ],
         "debuggers": [
