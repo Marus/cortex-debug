@@ -26,9 +26,8 @@ export class GDBServer extends EventEmitter {
 				this.process.on('exit', this.onExit.bind(this));
 				this.process.on('error', this.onError.bind(this));
 			}
-			else { // For servers like BMP that are always running directly on the probe
-				resolve();
-			}
+			resolve();
+			// For servers like BMP that are always running directly on the probe
 		});
 	}
 
