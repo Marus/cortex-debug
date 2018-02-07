@@ -647,10 +647,10 @@ export class FieldNode extends BaseNode {
 						formattedValue = binaryFormat(value, this.width);
 						break;
 					case NumberFormat.Hexidecimal:
-						formattedValue = hexFormat(value, Math.ceil(this.width/4), true);
+						formattedValue = hexFormat(value, Math.ceil(this.width / 4), true);
 						break;
 					default:
-						formattedValue = this.width >= 4 ? hexFormat(value, Math.ceil(this.width/4), true) : binaryFormat(value, this.width);
+						formattedValue = this.width >= 4 ? hexFormat(value, Math.ceil(this.width / 4), true) : binaryFormat(value, this.width);
 						break;
 				}
 				
@@ -701,9 +701,9 @@ export class FieldNode extends BaseNode {
 			case NumberFormat.Binary:
 				return binaryFormat(value, this.width);
 			case NumberFormat.Hexidecimal:
-				return hexFormat(value, Math.ceil(this.width/4), true);
+				return hexFormat(value, Math.ceil(this.width / 4), true);
 			default:
-				return this.width >= 4 ? hexFormat(value, Math.ceil(this.width/4), true) : binaryFormat(value, this.width);
+				return this.width >= 4 ? hexFormat(value, Math.ceil(this.width / 4), true) : binaryFormat(value, this.width);
 		}
 	}
 
