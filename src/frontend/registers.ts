@@ -126,6 +126,17 @@ export class RegisterNode extends BaseNode {
 		return this.format;
 	}
 
+	_saveState(): NodeSetting[] {
+		let settings: NodeSetting[] = [];
+		if (this.expanded || this.format !== NumberFormat.Auto) {
+			settings.push({ node: this.name, format: this.format, expanded: this.expanded });
+		}
+
+		if (this.fields) {
+			settings.push(...this.fields.map((c) => c._saveState()).filter((c) => c !== null));
+		}
+
+		return settings;
 	}
 }
 
@@ -173,6 +184,14 @@ export class FieldNode extends BaseNode {
 		if (this.format === NumberFormat.Auto) { return this.register.getFormat(); }
 		else { return this.format; }
 	}
+
+	_saveState(): NodeSetting {
+		return this.format !== NumberFormat.Auto 
+			? {
+				node: `${this.register.name}.${this.name}`,
+				format: this.format
+			}
+			: null;
 	}
 }
 
@@ -232,6 +251,36 @@ export class RegisterTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 		});
 
 		this._loaded = true;
+
+		vscode.workspace.findFiles('.vscode/.cortex-debug.registers.state.json', null, 1).then((value) => {
+			if (value.length > 0) {
+				let fspath = value[0].fsPath;
+				let data = fs.readFileSync(fspath, 'utf8');
+				let settings = JSON.parse(data);
+				
+				settings.forEach((s: NodeSetting) => {
+					if (s.node.indexOf('.') == -1) {
+						let register = this._registers.find((r) => r.name == s.node);
+						if (register) {
+							if (s.expanded) { register.expanded = s.expanded; }
+							if (s.format) { register.setFormat(s.format); }
+						}
+					}
+					else {
+						let [regname, fieldname] = s.node.split('.');
+						let register = this._registers.find((r) => r.name == regname);
+						if (register) {
+							let field = register.getChildren().find((f) => f.name == fieldname);
+							if (field && s.format) { field.setFormat(s.format); }
+						}
+					}
+				});
+				this._onDidChangeTreeData.fire();		
+			}
+		}, error => {
+
+		});
+
 		this._onDidChangeTreeData.fire();
 	}
 
@@ -261,7 +310,21 @@ export class RegisterTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 		}
 	}
 
+	_saveState(fspath: string) {
+		let state: NodeSetting[] = [];
+		this._registers.forEach((r) => {
+			state.push(...r._saveState());
+		});
+
+		fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+	}
+
 	debugSessionTerminated() {
+		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+			let fspath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.vscode', '.cortex-debug.registers.state.json');
+			this._saveState(fspath);
+		}
+
 		this._loaded = false;
 		this._registers = [];
 		this._registerMap = {};
