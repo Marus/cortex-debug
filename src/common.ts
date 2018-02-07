@@ -8,6 +8,13 @@ export enum NumberFormat {
 	Decimal,
 	Binary
 }
+
+export interface NodeSetting {
+	node: string;
+	expanded?: boolean,
+	format?: NumberFormat
+}
+
 export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
 	body: {
 		type: string,

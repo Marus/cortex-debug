@@ -6,7 +6,7 @@ import * as xml2js from 'xml2js';
 
 import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
 import { ProviderResult } from 'vscode';
-import { NumberFormat } from '../common';
+import { NumberFormat, NodeSetting } from '../common';
 
 export enum RecordType {
 	Peripheral = 1,
@@ -19,12 +19,6 @@ export enum AccessType {
 	ReadOnly = 1,
 	ReadWrite,
 	WriteOnly
-}
-
-interface NodeSetting {
-	node: string;
-	expanded?: boolean,
-	format?: NumberFormat
 }
 
 const ACCESS_TYPE_MAP = {
