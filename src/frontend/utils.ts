@@ -9,10 +9,12 @@ export function binaryFormat(value: number, padding: number = 0, includePrefix: 
 	while(base.length < padding) { base = '0' + base; }
 
 	if (group) {
-		let nibRem = base.length % 4;
+		let nibRem = 4 - (base.length % 4);
 		for (let i = 0; i < nibRem; i++) { base = '0' + base; }
 		let groups = base.match(/[01]{4}/g);
 		base = groups.join(' ');
+
+		base = base.substring(nibRem);
 	}
 
 	return includePrefix ? '0b' + base : base;;
