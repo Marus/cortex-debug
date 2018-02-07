@@ -258,7 +258,7 @@ class CortexDebugExtension {
 	}
 
 	peripheralsSelectedNode(node: BaseNode): void {
-		if (node.recordType != RecordType.Field) { node.expanded = !node.expanded }
+		if (node.recordType != RecordType.Field) { node.expanded = !node.expanded; }
 
 		node.selected().then((updated) => {
 			if (updated) {
