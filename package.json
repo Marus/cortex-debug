@@ -49,7 +49,11 @@
             {
                 "command": "cortex-debug.peripherals.selectedNode", 
                 "title": "Selected"
-            }, 
+            },
+            {
+                "command": "cortex-debug.registers.selectedNode",
+                "title": "Selected"
+            },
             {
                 "command": "cortex-debug.peripherals.copyValue", 
                 "title": "Copy Value"
@@ -60,6 +64,10 @@
             },
             {
                 "command": "cortex-debug.peripherals.setFormat",
+                "title": "Set Value Format"
+            },
+            {
+                "command": "cortex-debug.registers.setFormat",
                 "title": "Set Value Format"
             },
             {
@@ -1222,6 +1230,10 @@
                 {
                     "command": "cortex-debug.peripherals.setFormat",
                     "when": "view == cortex-debug.peripherals"
+                },
+                {
+                    "command": "cortex-debug.registers.setFormat",
+                    "when": "view == cortex-debug.registers"
                 }
             ], 
             "view/title": []

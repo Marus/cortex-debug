@@ -66,6 +66,7 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.selectedNode', this.registersSelectedNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.setFormat', this.registersSetFormat.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)));
@@ -288,6 +289,10 @@ class CortexDebugExtension {
 	}
 
 	// Registers
+	registersSelectedNode(node: BaseNode): void {
+		if (node.recordType != RRecordType.Field) { node.expanded = !node.expanded; }
+	}
+
 	registersCopyValue(tn: RTreeNode): void {
 		let cv = tn.node.getCopyValue();
 		if (cv) {
@@ -303,7 +308,8 @@ class CortexDebugExtension {
 			{ label: "Binary", description: "Format value in binary", value: NumberFormat.Binary }
 		]);
 		
-
+		tn.node.setFormat(result.value);
+		this.registerProvider.refresh();
 	}
 
 	// Debug Events
