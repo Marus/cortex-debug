@@ -67,6 +67,7 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.setFormat', this.registersSetFormat.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)));
@@ -292,6 +293,17 @@ class CortexDebugExtension {
 		if (cv) {
 			CopyPaste.copy(cv);
 		}
+	}
+
+	async registersSetFormat(tn: RTreeNode): Promise<void> {
+		let result = await vscode.window.showQuickPick([
+			{ label: "Auto", description: "Automatically choose format (Inherits from parent otherwise binary for fields that are 3 bits or less, hexidecimal otherwise)", value: NumberFormat.Auto },
+			{ label: "Hex", description: "Format value in hexidecimal", value: NumberFormat.Hexidecimal },
+			{ label: "Decimal", description: "Format value in decimal", value: NumberFormat.Decimal },
+			{ label: "Binary", description: "Format value in binary", value: NumberFormat.Binary }
+		]);
+		
+
 	}
 
 	// Debug Events

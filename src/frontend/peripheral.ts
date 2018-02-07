@@ -21,6 +21,12 @@ export enum AccessType {
 	WriteOnly
 }
 
+interface NodeSetting {
+	node: string;
+	expanded?: boolean,
+	format?: NumberFormat
+}
+
 const ACCESS_TYPE_MAP = {
 	'read-only': AccessType.ReadOnly,
 	'write-only': AccessType.WriteOnly,
@@ -227,6 +233,29 @@ export class PeripheralNode extends BaseNode {
 	selected(): Thenable<boolean> {
 		return this.update();
 	}
+
+	public _saveState(): NodeSetting[] {
+		let results: NodeSetting[] = [];
+
+		if (this.format !== NumberFormat.Auto || this.expanded) {
+			results.push({ node: `${this.name}`, expanded: this.expanded, format: this.format });
+		}
+
+		this.children.forEach((c) => {
+			results.push(...c._saveState(`${this.name}`));
+		});
+
+		return results;
+	}
+
+	public _findByPath(path: string[]): BaseNode {
+		if (path.length === 0) { return this; }
+		else {
+			let child = this.children.find((c) => c.name === path[0]);
+			if (child) { return child._findByPath(path.slice(1)); }
+			else { return null; }
+		}
+	}
 }
 
 
@@ -291,6 +320,29 @@ export class ClusterNode extends BaseNode {
 
 	update(): Thenable<boolean> {
 		return Promise.resolve(true);
+	}
+
+	public _saveState(path: string): NodeSetting[] {
+		let results: NodeSetting[] = [];
+
+		if (this.format !== NumberFormat.Auto || this.expanded) {
+			results.push({ node: `${path}.${this.name}`, expanded: this.expanded, format: this.format });
+		}
+
+		this.children.forEach((c) => {
+			results.push(...c._saveState(`${path}.${this.name}`));
+		});
+
+		return results;
+	}
+
+	public _findByPath(path: string[]): BaseNode {
+		if (path.length === 0) { return this; }
+		else {
+			let child = this.children.find((c) => c.name === path[0]);
+			if (child) { return child._findByPath(path.slice(1)); }
+			else { return null; }
+		}
 	}
 }
 
@@ -488,6 +540,29 @@ export class RegisterNode extends BaseNode {
 
 		return Promise.resolve(true);
 	}
+
+	public _saveState(path: string): NodeSetting[] {
+		let results: NodeSetting[] = [];
+
+		if (this.format !== NumberFormat.Auto || this.expanded) {
+			results.push({ node: `${path}.${this.name}`, expanded: this.expanded, format: this.format });
+		}
+
+		this.children.forEach((c) => {
+			results.push(...c._saveState(`${path}.${this.name}`));
+		});
+
+		return results;
+	}
+
+	public _findByPath(path: string[]): BaseNode {
+		if (path.length === 0) { return this; }
+		else if(path.length === 1) {
+			let child = this.children.find((c) => c.name == path[0]);
+			return child;
+		}
+		else { return null; }
+	}
 }
 
 interface FieldOptions {
@@ -644,6 +719,20 @@ export class FieldNode extends BaseNode {
 	}
 
 	update() {}
+
+	public _saveState(path: string): NodeSetting[] {
+		if (this.format !== NumberFormat.Auto) {
+			return [ {node: `${path}.${this.name}`, format: this.format }];
+		}
+		else {
+			return [];
+		}
+	}
+
+	public _findByPath(path: string[]): BaseNode {
+		if (path.length == 0) { return this; }
+		else { return null; }
+	}
 }
 
 
@@ -660,6 +749,15 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 
 	constructor() {
 
+	}
+
+	private _saveState(path: string): void {
+		let state: NodeSetting[] = [];
+		this._peripherials.forEach((p) => {
+			state.push(... p._saveState());
+		});
+		
+		fs.writeFileSync(path, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
 	}
 
 	_parseFields(fieldInfo: any[], parent: RegisterNode): FieldNode[] {
@@ -946,6 +1044,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 		});
 	}
 
+	private _findNodeByPath(path: string): BaseNode {
+		let pathParts = path.split('.');
+		let peripheral = this._peripherials.find((p) => p.name == pathParts[0]);
+		if (!peripheral) { return null; }
+		
+		return peripheral._findByPath(pathParts.slice(1));
+	}
+
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
 	}
@@ -981,6 +1087,24 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 				setTimeout(() => {
 					this._loadSVD(svdfile).then(
 						() => {
+							vscode.workspace.findFiles('.vscode/.cortex-debug.peripherals.state.json', null, 1).then((value) => {
+								if (value.length > 0) {
+									let fspath = value[0].fsPath;
+									let data = fs.readFileSync(fspath, 'utf8');
+									let settings = JSON.parse(data);
+									console.log('Settings to restore: ', settings);
+									settings.forEach((s: NodeSetting) => {
+										let node = this._findNodeByPath(s.node);
+										if (node) {
+											node.expanded = s.expanded || false;
+											node.format = s.format;
+										}
+									});
+									this._onDidChangeTreeData.fire();		
+								}
+							}, error => {
+
+							});
 							this._onDidChangeTreeData.fire();
 							resolve();
 						},
@@ -989,6 +1113,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 							this._loaded = false;
 							this._onDidChangeTreeData.fire();
 							vscode.window.showErrorMessage(`Unable to parse SVD file: ${e.toString()}`);
+							resolve();
 						}
 					);
 				}, 150);
@@ -1000,6 +1125,11 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 	}
 
 	debugSessionTerminated(): Thenable<any> {
+		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+			let fspath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.vscode', '.cortex-debug.peripherals.state.json');
+			this._saveState(fspath);
+		}
+		
 		this._peripherials = [];
 		this._loaded = false;
 		this._onDidChangeTreeData.fire();
