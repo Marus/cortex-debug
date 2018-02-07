@@ -4,10 +4,18 @@ export function hexFormat(value: number, padding: number = 8, includePrefix: boo
 	return includePrefix ? '0x' + base : base;
 }
 
-export function binaryFormat(value: number, padding: number = 0) : string {
+export function binaryFormat(value: number, padding: number = 0, includePrefix: boolean = true, group: boolean = false) : string {
 	let base = (value >>> 0).toString(2);
 	while(base.length < padding) { base = '0' + base; }
-	return '0b' + base;
+
+	if (group) {
+		let nibRem = base.length % 4;
+		for (let i = 0; i < nibRem; i++) { base = '0' + base; }
+		let groups = base.match(/[01]{4}/g);
+		base = groups.join(' ');
+	}
+
+	return includePrefix ? '0b' + base : base;;
 }
 
 export function createMask(offset: number, width: number) {
