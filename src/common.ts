@@ -2,6 +2,12 @@ import { Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { EventEmitter } from 'events';
 
+export enum NumberFormat {
+	Auto = 0,
+	Hexidecimal,
+	Decimal,
+	Binary
+}
 export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
 	body: {
 		type: string,

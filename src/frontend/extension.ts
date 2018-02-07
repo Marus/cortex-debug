@@ -9,7 +9,7 @@ import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType,
 import { setTimeout } from "timers";
 import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
-import { SWOConfigureEvent } from "../common";
+import { SWOConfigureEvent, NumberFormat } from "../common";
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -65,6 +65,7 @@ class CortexDebugExtension {
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.selectedNode', this.peripheralsSelectedNode.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)));
+		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)));
 		context.subscriptions.push(vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)));
@@ -271,6 +272,18 @@ class CortexDebugExtension {
 		if (cv) {
 			CopyPaste.copy(cv);
 		}
+	}
+
+	async peripheralsSetFormat(tn: TreeNode): Promise<void> {
+		let result = await vscode.window.showQuickPick([
+			{ label: "Auto", description: "Automatically choose format (Inherits from parent otherwise binary for fields that are 3 bits or less, hexidecimal otherwise)", value: NumberFormat.Auto },
+			{ label: "Hex", description: "Format value in hexidecimal", value: NumberFormat.Hexidecimal },
+			{ label: "Decimal", description: "Format value in decimal", value: NumberFormat.Decimal },
+			{ label: "Binary", description: "Format value in binary", value: NumberFormat.Binary }
+		]);
+
+		tn.node.setFormat(result.value);
+		this.peripheralProvider.refresh();
 	}
 
 	// Registers

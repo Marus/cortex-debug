@@ -6,6 +6,7 @@ import * as xml2js from 'xml2js';
 
 import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
 import { ProviderResult } from 'vscode';
+import { NumberFormat } from '../common';
 
 export enum RecordType {
 	Peripheral = 1,
@@ -41,9 +42,11 @@ export class TreeNode extends vscode.TreeItem {
 
 export class BaseNode {
 	public expanded: boolean;
+	public format: NumberFormat;
 
 	constructor(public recordType: RecordType) {
 		this.expanded = false;
+		this.format = NumberFormat.Auto;
 	}
 
 	selected(): Thenable<boolean> { return Promise.resolve(false); }
@@ -55,6 +58,9 @@ export class BaseNode {
 	getChildren(): BaseNode[] { return []; }
 	getTreeNode(): TreeNode { return null; }
 	getCopyValue(): string { return null; }
+	setFormat(format: NumberFormat): void {
+		this.format = format;
+	}
 }
 
 
@@ -198,6 +204,10 @@ export class PeripheralNode extends BaseNode {
 		return this.baseAddress + offset;
 	}
 
+	getFormat(): NumberFormat {
+		return this.format;
+	}
+
 	update(): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			if(!this.expanded) { resolve(false); return; }
@@ -272,6 +282,11 @@ export class ClusterNode extends BaseNode {
 
 	getAddress(offset: number) {
 		return this.parent.getAddress(this.offset + offset);
+	}
+
+	getFormat(): NumberFormat {
+		if (this.format !== NumberFormat.Auto) { return this.format; }
+		else { return this.parent.getFormat(); }
 	}
 
 	update(): Thenable<boolean> {
@@ -354,12 +369,23 @@ export class RegisterNode extends BaseNode {
 		if(this.accessType == AccessType.ReadOnly) { cv = 'registerRO'; }
 		else if(this.accessType == AccessType.WriteOnly) { cv = 'registerWO'; }
 
-		let label: string;
+		let label: string = `${this.name} [${hexFormat(this.offset, 0)}]`;
 		if (this.accessType == AccessType.WriteOnly) {
-			label = `${this.name} [${hexFormat(this.offset, 0)}] - <Write Only>`;
+			label += ' - <Write Only>';
 		}
 		else {
-			label = `${this.name} [${hexFormat(this.offset, 0)}] = ${hexFormat(this.currentValue, this.hexLength)}`;
+			switch (this.getFormat()) {
+				case NumberFormat.Decimal:
+					label += ` = ${this.currentValue.toString()}`;
+					break;
+				case NumberFormat.Binary:
+					label += ` = ${binaryFormat(this.currentValue, this.hexLength * 4, false, true)}`;
+					break;
+				default:
+					label += ` = ${hexFormat(this.currentValue, this.hexLength)}`;
+					break;
+			}
+			
 		}
 
 		let collapseState = this.children && this.children.length > 0 ? (this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed) : vscode.TreeItemCollapsibleState.None
@@ -381,8 +407,20 @@ export class RegisterNode extends BaseNode {
 		this.children.sort((f1, f2) => f1.offset > f2.offset ? 1 : -1);
 	}
 
+	getFormat(): NumberFormat {
+		if (this.format !== NumberFormat.Auto) { return this.format; }
+		else { return this.parent.getFormat(); }
+	}
+
 	getCopyValue(): string {
-		return hexFormat(this.currentValue, this.hexLength);
+		switch (this.getFormat()) {
+			case NumberFormat.Decimal:
+				return this.currentValue.toString();
+			case NumberFormat.Binary:
+				return binaryFormat(this.currentValue, this.hexLength * 4);
+			default:
+				return hexFormat(this.currentValue, this.hexLength);
+		}
 	}
 
 	performUpdate() : Thenable<boolean> {
@@ -530,7 +568,22 @@ export class FieldNode extends BaseNode {
 				label += ' - <Write Only>';
 			}
 			else {
-				let formattedValue = this.width >= 4 ? hexFormat(value, Math.ceil(this.width/4), true) : binaryFormat(value, this.width);
+				let formattedValue: string = "";
+
+				switch (this.getFormat()) {
+					case NumberFormat.Decimal:
+						formattedValue = value.toString();
+						break;
+					case NumberFormat.Binary:
+						formattedValue = binaryFormat(value, this.width);
+						break;
+					case NumberFormat.Hexidecimal:
+						formattedValue = hexFormat(value, Math.ceil(this.width/4), true);
+						break;
+					default:
+						formattedValue = this.width >= 4 ? hexFormat(value, Math.ceil(this.width/4), true) : binaryFormat(value, this.width);
+						break;
+				}
 				
 				if(this.enumeration && this.enumeration[value]) {
 					evalue = this.enumeration[value];
@@ -573,7 +626,21 @@ export class FieldNode extends BaseNode {
 
 	getCopyValue() : string {
 		let value = this.parent.extractBits(this.offset, this.width);
-		return this.width > 3 ? hexFormat(value, Math.ceil(this.width / 4)): binaryFormat(value, this.width);
+		switch (this.getFormat()) {
+			case NumberFormat.Decimal:
+				return value.toString();
+			case NumberFormat.Binary:
+				return binaryFormat(value, this.width);
+			case NumberFormat.Hexidecimal:
+				return hexFormat(value, Math.ceil(this.width/4), true);
+			default:
+				return this.width >= 4 ? hexFormat(value, Math.ceil(this.width/4), true) : binaryFormat(value, this.width);
+		}
+	}
+
+	getFormat(): NumberFormat {
+		if (this.format !== NumberFormat.Auto) { return this.format; }
+		else { return this.parent.getFormat(); }
 	}
 
 	update() {}

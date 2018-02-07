@@ -44,7 +44,7 @@
         "commands": [
             {
                 "command": "cortex-debug.peripherals.updateNode", 
-                "title": "Update"
+                "title": "Update Value"
             }, 
             {
                 "command": "cortex-debug.peripherals.selectedNode", 
@@ -57,7 +57,11 @@
             {
                 "command": "cortex-debug.registers.copyValue", 
                 "title": "Copy Value"
-            }, 
+            },
+            {
+                "command": "cortex-debug.peripherals.setFormat",
+                "title": "Set Value Format"
+            },
             {
                 "category": "Cortex-Debug", 
                 "command": "cortex-debug.examineMemory", 
@@ -1214,6 +1218,10 @@
                 {
                     "command": "cortex-debug.registers.copyValue", 
                     "when": "view == cortex-debug.registers && viewItem == field"
+                },
+                {
+                    "command": "cortex-debug.peripherals.setFormat",
+                    "when": "view == cortex-debug.peripherals"
                 }
             ], 
             "view/title": []
