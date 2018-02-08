@@ -113,7 +113,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 		let swoport = this.ports['swoPort'];
 		let consoleport = this.ports['consolePort'];
 
-		let cmdargs = ['-if', 'swd', '-port', gdbport.toString(), '-swoport', swoport.toString(), '-telnetport', consoleport.toString(), '-device', this.args.device];
+		let cmdargs = ['-if', this.args.jlinkInterface, '-port', gdbport.toString(), '-swoport', swoport.toString(), '-telnetport', consoleport.toString(), '-device', this.args.device];
 		if(this.args.serialNumber) {
 			cmdargs.push('-select');
 			cmdargs.push(`usb=${this.args.serialNumber}`);

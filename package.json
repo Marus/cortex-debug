@@ -478,7 +478,13 @@
                                 "default": null, 
                                 "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
                                 "type": "string"
-                            }, 
+                            },
+                            "jlinkInterface": {
+                                "default": "swd",
+                                "description": "Debug Interface type to use for J-Link connections (defaults to SWD)",
+                                "type": "string",
+                                "enum": [ "swd", "jtag" ]
+                            },
                             "configFiles": {
                                 "description": "OpenOCD configuration file(s) to load", 
                                 "items": {
@@ -905,7 +911,13 @@
                                 "default": null, 
                                 "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer", 
                                 "type": "string"
-                            }, 
+                            },
+                            "jlinkInterface": {
+                                "default": "swd",
+                                "description": "Debug Interface type to use for J-Link connections (defaults to SWD)",
+                                "type": "string",
+                                "enum": [ "swd", "jtag" ]
+                            },
                             "configFiles": {
                                 "description": "OpenOCD configuration file(s) to load", 
                                 "items": {

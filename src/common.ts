@@ -82,6 +82,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 	// J-Link Specific
 	ipAddress: string;
 	serialNumber: string;
+	jlinkInterface: string;
 
 	// OpenOCD Specific
 	configFiles: string[]

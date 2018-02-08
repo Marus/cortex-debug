@@ -112,6 +112,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 	verifyJLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
 		if (config.jlinkpath && !config.serverpath) { config.serverpath = config.jlinkpath; }
+		if (!config.jlinkInterface) { config.jlinkInterface = 'swd'; }
+		if (config.jlinkInterface !== 'jtag' && config.jlinkInterface !== 'swd') {
+			vscode.window.showWarningMessage(`jlinkInterface parameter ${config.jlinkInterface} is not valid (swd or jtag). Defaulting to SWD mode.`);
+			config.jlinkInterface = 'swd';
+		}
 		if (!config.serverpath) {
 			let configuration = vscode.workspace.getConfiguration('cortex-debug');
 			config.serverpath = configuration.JLinkGDBServerPath;
@@ -119,6 +124,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
 		if (!config.device) {
 			return 'Device Identifier is required for J-Link configurations. Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
+		}
+
+		if (config.jlinkInterface === 'jtag' && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+			return 'SWO Decoding cannot be performed through the J-Link Probe in JTAG mode.';
 		}
 
 		return null;
