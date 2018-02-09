@@ -104,7 +104,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 	public serverExecutable() {
 		if (this.args.serverpath) { return this.args.serverpath; }
 		else {
-			return os.platform() == 'win32' ? 'JLinkGDBServer.exe' : 'JLinkGDBServer';
+			return os.platform() == 'win32' ? 'JLinkGDBServerCL.exe' : 'JLinkGDBServer';
 		}
 	}
 	
