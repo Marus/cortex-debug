@@ -1,6 +1,6 @@
 import * as ChildProcess from 'child_process';
+import * as os from 'os';
 import { EventEmitter } from 'events';
-import * as portastic from 'portastic';
 import { setTimeout } from 'timers';
 
 export class GDBServer extends EventEmitter {
@@ -25,6 +25,18 @@ export class GDBServer extends EventEmitter {
 				this.process.stderr.on('data', this.onStderr.bind(this));
 				this.process.on('exit', this.onExit.bind(this));
 				this.process.on('error', this.onError.bind(this));
+
+				if(this.application.indexOf('st-util') !== -1 && os.platform() == 'win32') {
+					// For some reason we are not able to capture the st-util output on Windows
+					// For now assume that it will launch properly within 1/2 second and resolve the init
+					setTimeout(() => {
+						if (this.initResolve) {
+							this.initResolve(true);
+							this.initReject = null;
+							this.initResolve = null;
+						}
+					}, 500);
+				}
 			}
 			else { // For servers like BMP that are always running directly on the probe
 				resolve();
