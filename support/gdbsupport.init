@@ -208,7 +208,7 @@ def EnableCPICountEvent
 	set language auto
 end
 
-def EnableCPICountEvent
+def DisableCPICountEvent
 	set language c
 	set *0xE0001000 &= ~(0x20000)
 	set language auto
