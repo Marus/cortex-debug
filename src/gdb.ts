@@ -731,13 +731,15 @@ export class GDBDebugSession extends DebugSession {
 				if (!disassemble && this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
 					let symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
 					let url: string;
-					if (symbolInfo.scope !== SymbolScope.Global) {
-						url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+					if (symbolInfo) {
+						if (symbolInfo.scope !== SymbolScope.Global) {
+							url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+						}
+						else {
+							url = `disassembly:///${symbolInfo.name}.cdasm`;
+						}
+						if (url == this.activeEditorPath) { disassemble = true; }
 					}
-					else {
-						url = `disassembly:///${symbolInfo.name}.cdasm`;
-					}
-					if (url == this.activeEditorPath) { disassemble = true; }
 				}
 				
 				try {
