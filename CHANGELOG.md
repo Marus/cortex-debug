@@ -1,4 +1,11 @@
-V0.1.13
+#V0.1.14
+
+* Workaround for issues with st-util GDB server on Windows environment
+* Added ability to select value for matting in the Core and Preipheral Register Views (Right click and Select "Set Value Format")
+* Perserve state for Core and Peripheral Register Views (Set format and expanded) from one debug session to the next.
+* Syntax highlighting for the raw memory view.
+
+#V0.1.13
 
 * Enabled setting breakpoints in rust code
 * Improved ITM console decoder
