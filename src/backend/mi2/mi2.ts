@@ -219,56 +219,58 @@ export class MI2 extends EventEmitter implements IBackend {
         this.sendRaw('-target-detach');
     }
 
-    public interrupt(): Thenable<boolean> {
+    public interrupt(threadId: number): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'interrupt');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand('exec-interrupt').then((info) => {
+            this.sendCommand(`exec-interrupt --thread ${threadId}`).then((info) => {
                 resolve(info.resultRecords.resultClass === 'done');
             }, reject);
         });
     }
 
-    public continue(): Thenable<boolean> {
+    public continue(threadId: number): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'continue');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand('exec-continue').then((info) => {
+            this.sendCommand(`exec-continue --thread ${threadId}`).then((info) => {
                 resolve(info.resultRecords.resultClass === 'running');
             }, reject);
         });
     }
 
-    public next(instruction?: boolean): Thenable<boolean> {
+    public next(threadId: number, instruction?: boolean): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'next');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand(instruction ? 'exec-next-instruction' : 'exec-next').then((info) => {
+            const baseCmd = instruction ? 'exec-next-instruction' : 'exec-next';
+            this.sendCommand(`${baseCmd} --thread ${threadId}`).then((info) => {
                 resolve(info.resultRecords.resultClass === 'running');
             }, reject);
         });
     }
 
-    public step(instruction?: boolean): Thenable<boolean> {
+    public step(threadId: number, instruction?: boolean): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'step');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand(instruction ? 'exec-step-instruction' : 'exec-step').then((info) => {
+            const baseCmd = instruction ? 'exec-step-instruction' : 'exec-step';
+            this.sendCommand(`${baseCmd} --thread ${threadId}`).then((info) => {
                 resolve(info.resultRecords.resultClass === 'running');
             }, reject);
         });
     }
 
-    public stepOut(): Thenable<boolean> {
+    public stepOut(threadId: number): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'stepOut');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand('exec-finish').then((info) => {
+            this.sendCommand(`exec-finish --thread ${threadId}`).then((info) => {
                 resolve(info.resultRecords.resultClass === 'running');
             }, reject);
         });

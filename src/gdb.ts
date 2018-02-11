@@ -1,9 +1,9 @@
-import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, ContinuedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
+import { DebugSession, InitializedEvent, TerminatedEvent, ContinuedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, GDBServerController, AdapterOutputEvent, SWOConfigureEvent, DisassemblyInstruction } from './common';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, SWOConfigureEvent, DisassemblyInstruction } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -81,10 +81,10 @@ export class GDBDebugSession extends DebugSession {
     protected crashed: boolean;
     protected debugReady: boolean;
     protected miDebugger: MI2;
-    protected threadID: number = 1;
     protected commandServer: net.Server;
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
+    protected currentThreadId: number = 0;
     
     private stopped: boolean = false;
     private stoppedReason: string = '';
@@ -96,7 +96,6 @@ export class GDBDebugSession extends DebugSession {
 
     public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
         super(debuggerLinesStartAt1, isServer);
-        this.threadID = threadID;
     }
 
     protected initDebugger() {
@@ -277,8 +276,8 @@ export class GDBDebugSession extends DebugSession {
                 this.forceDisassembly = args.force;
                 if (this.stopped) {
                     this.activeEditorPath = null;
-                    this.sendEvent(new ContinuedEvent(this.threadID, true));
-                    this.sendEvent(new StoppedEvent(this.stoppedReason, this.threadID));
+                    this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
+                    this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
                 }
                 this.sendResponse(response);
                 break;
@@ -290,7 +289,7 @@ export class GDBDebugSession extends DebugSession {
                 this.activeEditorPath = args.path;
                 response.body = {};
                 if (this.stopped) {
-                    this.sendEvent(new StoppedEvent(this.stoppedReason, this.threadID));
+                    this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
                 }
                 this.sendResponse(response);
                 break;
@@ -558,29 +557,29 @@ export class GDBDebugSession extends DebugSession {
 
     protected handleRunning(info: MINode) {
         this.stopped = false;
-        this.sendEvent(new ContinuedEvent(this.threadID, true));
-        this.sendEvent(new CustomContinuedEvent(this.threadID, true));
+        this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
+        this.sendEvent(new CustomContinuedEvent(this.currentThreadId, true));
     }
 
     protected handleBreakpoint(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
-        this.sendEvent(new StoppedEvent('breakpoint', this.threadID));
-        this.sendEvent(new CustomStoppedEvent('breakpoint', this.threadID));
+        this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
+        this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
     }
 
     protected handleBreak(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'step';
-        this.sendEvent(new StoppedEvent('step', this.threadID));
-        this.sendEvent(new CustomStoppedEvent('step', this.threadID));
+        this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
+        this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
     }
 
     protected handlePause(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'user request';
-        this.sendEvent(new StoppedEvent('user request', this.threadID));
-        this.sendEvent(new CustomStoppedEvent('user request', this.threadID));
+        this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
+        this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
     }
 
     protected stopEvent(info: MINode) {
@@ -588,8 +587,8 @@ export class GDBDebugSession extends DebugSession {
         if (!this.quit) {
             this.stopped = true;
             this.stoppedReason = 'exception';
-            this.sendEvent(new StoppedEvent('exception', this.threadID));
-            this.sendEvent(new CustomStoppedEvent('exception', this.threadID));
+            this.sendEvent(new StoppedEvent('exception', this.currentThreadId, true));
+            this.sendEvent(new CustomStoppedEvent('exception', this.currentThreadId));
         }
     }
 
@@ -733,7 +732,7 @@ export class GDBDebugSession extends DebugSession {
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
         response.body = {
             threads: [
-                new Thread(this.threadID, 'Thread 1')
+                new Thread(this.currentThreadId, 'Thread 1')
             ]
         };
         this.sendResponse(response);
@@ -872,7 +871,7 @@ export class GDBDebugSession extends DebugSession {
         const statics: DebugProtocol.Variable[] = [];
 
         try {
-            const frame = await this.miDebugger.getFrame(this.threadID, frameId);
+            const frame = await this.miDebugger.getFrame(this.currentThreadId, frameId);
             const file = frame.fileName;
             const staticSymbols = this.symbolTable.getStaticVariables(file);
             
@@ -939,7 +938,7 @@ export class GDBDebugSession extends DebugSession {
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
-            stack = await this.miDebugger.getStackVariables(this.threadID, frameId);
+            stack = await this.miDebugger.getStackVariables(this.currentThreadId, frameId);
             for (const variable of stack) {
                 try {
                     const varObjName = `var_${variable.name}`;
@@ -1142,7 +1141,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.ContinueArguments): void {
-        this.miDebugger.interrupt().then((done) => {
+        this.miDebugger.interrupt(args.threadId).then((done) => {
             this.sendResponse(response);
         }, (msg) => {
             this.sendErrorResponse(response, 3, `Could not pause: ${msg}`);
@@ -1150,7 +1149,8 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-        this.miDebugger.continue().then((done) => {
+        this.miDebugger.continue(args.threadId).then((done) => {
+            response.body = { allThreadsContinued: true };
             this.sendResponse(response);
         }, (msg) => {
             this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
@@ -1161,7 +1161,7 @@ export class GDBDebugSession extends DebugSession {
         try {
             let assemblyMode = this.forceDisassembly;
             if (!assemblyMode) {
-                const frame = await this.miDebugger.getFrame(this.threadID, 0);
+                const frame = await this.miDebugger.getFrame(args.threadId, 0);
                 assemblyMode = !(await this.checkFileExists(frame.file));
 
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
@@ -1177,7 +1177,7 @@ export class GDBDebugSession extends DebugSession {
                 }
             }
 
-            const done = await this.miDebugger.step(assemblyMode);
+            const done = await this.miDebugger.step(args.threadId, assemblyMode);
             this.sendResponse(response);
         }
         catch (msg) {
@@ -1186,7 +1186,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected stepOutRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-        this.miDebugger.stepOut().then((done) => {
+        this.miDebugger.stepOut(args.threadId).then((done) => {
             this.sendResponse(response);
         }, (msg) => {
             this.sendErrorResponse(response, 5, `Could not step out: ${msg}`);
@@ -1197,7 +1197,7 @@ export class GDBDebugSession extends DebugSession {
         try {
             let assemblyMode = this.forceDisassembly;
             if (!assemblyMode) {
-                const frame = await this.miDebugger.getFrame(this.threadID, 0);
+                const frame = await this.miDebugger.getFrame(args.threadId, 0);
                 assemblyMode = !(await this.checkFileExists(frame.file));
 
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
@@ -1213,7 +1213,7 @@ export class GDBDebugSession extends DebugSession {
                 }
             }
 
-            const done = await this.miDebugger.next(assemblyMode);
+            const done = await this.miDebugger.next(args.threadId, assemblyMode);
             this.sendResponse(response);
         }
         catch (msg) {

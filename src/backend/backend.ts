@@ -31,11 +31,11 @@ export interface IBackend {
     start(): Thenable<boolean>;
     stop();
     detach();
-    interrupt(): Thenable<boolean>;
-    continue(): Thenable<boolean>;
-    next(): Thenable<boolean>;
-    step(): Thenable<boolean>;
-    stepOut(): Thenable<boolean>;
+    interrupt(threadId: number): Thenable<boolean>;
+    continue(threadId: number): Thenable<boolean>;
+    next(threadId: number, instruction: boolean): Thenable<boolean>;
+    step(threadId: number, instruction: boolean): Thenable<boolean>;
+    stepOut(threadId: number): Thenable<boolean>;
     addBreakPoint(breakpoint: Breakpoint): Promise<Breakpoint>;
     removeBreakpoints(breakpoints: number[]): Promise<boolean>;
     getStack(maxLevels: number): Thenable<Stack[]>;

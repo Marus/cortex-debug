@@ -27,6 +27,24 @@ export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+export class StoppedEvent extends Event implements DebugProtocol.Event {
+    public readonly body: {
+        reason: string;
+        description?: string;
+        threadId?: number;
+        text?: string;
+        allThreadsStopped?: boolean;
+    };
+
+    constructor(reason: string, threadId: number, allThreadsStopped: boolean) {
+        super('stopped', {
+            reason: reason,
+            threadId: threadId,
+            allThreadsStopped: allThreadsStopped
+        });
+    }
+}
+
 export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,
