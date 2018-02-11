@@ -3,18 +3,18 @@ import { EventEmitter } from 'events';
 import { SWOSource } from './common';
 
 export class FifoSWOSource extends EventEmitter implements SWOSource  {
-	stream: fs.ReadStream;
-	connected: boolean = false;
+    private stream: fs.ReadStream;
+    public connected: boolean = false;
 
-	constructor(private SWOPath: string) {
-		super();
-		this.stream = fs.createReadStream(this.SWOPath, { highWaterMark: 128, encoding: null, autoClose: false })
-		this.stream.on('data', (buffer) => { this.emit('data', buffer); });
-		this.stream.on('close', (buffer) => { this.emit('disconnected'); });
-		this.connected = true;
-	}
+    constructor(private SWOPath: string) {
+        super();
+        this.stream = fs.createReadStream(this.SWOPath, { highWaterMark: 128, encoding: null, autoClose: false });
+        this.stream.on('data', (buffer) => { this.emit('data', buffer); });
+        this.stream.on('close', (buffer) => { this.emit('disconnected'); });
+        this.connected = true;
+    }
 
-	dispose() {
-		this.stream.close();
-	}
+    public dispose() {
+        this.stream.close();
+    }
 }

@@ -17,73 +17,75 @@ let uuid: string = null;
 let sessionStart: Date = null;
 
 interface UserSettings {
-	uuid: string;
+    uuid: string;
 }
 
 function getUUID(): string {
-	if (!uuid) {
-		let settingspath = path.join(os.homedir(), '.cortex-debug');
-		if (fs.existsSync(settingspath)) {
-			let data = fs.readFileSync(settingspath, 'utf8');
-			let settings: UserSettings = JSON.parse(data);
-			uuid = settings.uuid;
-		}
-		else {
-			uuid = uuidv4();
-			let settings: UserSettings = { uuid: uuid };
-			fs.writeFileSync(settingspath, JSON.stringify(settings), 'utf8');
-		}
-	}
+    if (!uuid) {
+        const settingspath = path.join(os.homedir(), '.cortex-debug');
+        if (fs.existsSync(settingspath)) {
+            const data = fs.readFileSync(settingspath, 'utf8');
+            const settings: UserSettings = JSON.parse(data);
+            uuid = settings.uuid;
+        }
+        else {
+            uuid = uuidv4();
+            const settings: UserSettings = { uuid: uuid };
+            fs.writeFileSync(settingspath, JSON.stringify(settings), 'utf8');
+        }
+    }
 
-	return uuid;
+    return uuid;
 }
 
 function telemetryEnabled(): boolean {
-	let telemetry = vscode.workspace.getConfiguration('telemetry');
-	let cortexDebug = vscode.workspace.getConfiguration('cortex-debug');
+    const telemetry = vscode.workspace.getConfiguration('telemetry');
+    const cortexDebug = vscode.workspace.getConfiguration('cortex-debug');
 
-	return (telemetry.enableTelemetry && cortexDebug.enableTelemetry);
+    return (telemetry.enableTelemetry && cortexDebug.enableTelemetry);
 }
 
 function activate(context: vscode.ExtensionContext) {
-	if (!telemetryEnabled()) { return; }
+    if (!telemetryEnabled()) { return; }
 
-	analytics = ua(trackingId, getUUID());
-	analytics.set('extensionId', extensionId);
-	analytics.set('extensionVersion', extensionVersion);
+    analytics = ua(trackingId, getUUID());
+    analytics.set('extensionId', extensionId);
+    analytics.set('extensionVersion', extensionVersion);
 }
 
 function deactivate() {
-	if (!telemetryEnabled()) { return; }
+    if (!telemetryEnabled()) { return; }
 }
 
-function sendEvent(category, action, label, options: {[key:string]: string} = {}) {
-	if (!telemetryEnabled()) { return; }
+function sendEvent(category, action, label, options: { [key: string]: string } = {}) {
+    if (!telemetryEnabled()) { return; }
 
-	analytics.event(category, action, label, options).send();
+    analytics.event(category, action, label, options).send();
 }
 
 function beginSession() {
-	if (!telemetryEnabled()) { return; }
-	
-	sessionStart = new Date();
-	analytics.screenview('Debug Session', 'Cortex-Debug', extensionVersion, extensionId).event('Session', 'Started', '', 0, { sessionControl: 'start' }).send();
+    if (!telemetryEnabled()) { return; }
+    
+    sessionStart = new Date();
+    analytics.screenview('Debug Session', 'Cortex-Debug', extensionVersion, extensionId)
+        .event('Session', 'Started', '', 0, { sessionControl: 'start' })
+        .send();
 }
 
 function endSession() {
-	if (!telemetryEnabled()) { return; }
+    if (!telemetryEnabled()) { return; }
 
-	let endTime = new Date();
-	let time = (endTime.getTime() - sessionStart.getTime()) / 1000;
-	sessionStart = null;
+    const endTime = new Date();
+    const time = (endTime.getTime() - sessionStart.getTime()) / 1000;
+    sessionStart = null;
 
-	analytics.timing('Session', 'Length', time).event('Session', 'Completed', '', time, { sessionControl: 'end' }).send();
+    analytics.timing('Session', 'Length', time).event('Session', 'Completed', '', time, { sessionControl: 'end' }).send();
 }
 
 export default {
-	beginSession: beginSession,
-	endSession: endSession,
-	activate: activate,
-	deactivate: deactivate,
-	sendEvent: sendEvent
+    beginSession: beginSession,
+    endSession: endSession,
+    activate: activate,
+    deactivate: deactivate,
+    sendEvent: sendEvent
 };
