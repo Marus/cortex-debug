@@ -729,13 +729,45 @@ export class GDBDebugSession extends DebugSession {
         else { this.miDebugger.once('debug-ready', cb); }
     }
 
-    protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
-        response.body = {
-            threads: [
-                new Thread(this.currentThreadId, 'Thread 1')
-            ]
-        };
-        this.sendResponse(response);
+    protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
+        try {
+            const threadIdNode = await this.miDebugger.sendCommand('thread-list-ids');
+            const threadIds: number[] = threadIdNode.result('thread-ids').map((ti) => parseInt(ti[1]));
+            const currentThread = threadIdNode.result('current-thread-id');
+
+            if (!currentThread) {
+                await this.miDebugger.sendCommand(`thread-select ${threadIds[0]}`);
+                this.currentThreadId = threadIds[0];
+            }
+            else {
+                this.currentThreadId = parseInt(currentThread);
+            }
+
+            const nodes = await Promise.all(threadIds.map((id) => this.miDebugger.sendCommand(`thread-info ${id}`)));
+
+            const threads = nodes.map((node: MINode) => {
+                let th = node.result('threads');
+                if (th.length === 1) {
+                    th = th[0];
+                    const id = parseInt(MINode.valueOf(th, 'id'));
+                    const tid = MINode.valueOf(th, 'target-id');
+                    const details = MINode.valueOf(th, 'details');
+
+                    return new Thread(id, details || tid);
+                }
+                else {
+                    return null;
+                }
+            }).filter((t) => t !== null);
+
+            response.body = {
+                threads: threads
+            };
+            this.sendResponse(response);
+        }
+        catch (e) {
+            this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
+        }
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
