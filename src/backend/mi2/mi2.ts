@@ -148,7 +148,8 @@ export class MI2 extends EventEmitter implements IBackend {
                     parsed.outOfBandRecord.forEach((record) => {
                         if (record.isStream) {
                             this.log(record.type, record.content);
-                        } else {
+                        }
+                        else {
                             if (record.type === 'exec') {
                                 this.emit('exec-async-output', parsed);
                                 if (record.asyncClass === 'running') {
@@ -185,6 +186,22 @@ export class MI2 extends EventEmitter implements IBackend {
                                 }
                                 else {
                                     this.log('log', JSON.stringify(parsed));
+                                }
+                            }
+                            else if (record.type === 'notify') {
+                                if (record.asyncClass === 'thread-created') {
+                                    const tid = parsed.result('id');
+                                    const gid = parsed.result('group-id');
+                                    this.emit('thread-created', { threadId: tid, threadGroupId: gid });
+                                }
+                                else if (record.asyncClass === 'thread-exited') {
+                                    const tid = parsed.result('id');
+                                    const gid = parsed.result('group-id');
+                                    this.emit('thread-exited', { threadId: tid, threadGroupId: gid });
+                                }
+                                else if (record.asyncClass === 'thread-selected') {
+                                    const tid = parsed.result('id');
+                                    this.emit('thread-selected', { threadId: tid });
                                 }
                             }
                         }

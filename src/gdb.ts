@@ -1,4 +1,4 @@
-import { DebugSession, InitializedEvent, TerminatedEvent, ContinuedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
+import { DebugSession, InitializedEvent, TerminatedEvent, ContinuedEvent, OutputEvent, Thread, ThreadEvent, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
@@ -109,6 +109,9 @@ export class GDBDebugSession extends DebugSession {
         this.miDebugger.on('step-out-end', this.handleBreak.bind(this));
         this.miDebugger.on('signal-stop', this.handlePause.bind(this));
         this.miDebugger.on('running', this.handleRunning.bind(this));
+        this.miDebugger.on('thread-created', this.handleThreadCreated.bind(this));
+        this.miDebugger.on('thread-exited', this.handleThreadExited.bind(this));
+        this.miDebugger.on('thread-selected', this.handleThreadSelected.bind(this));
         this.sendEvent(new InitializedEvent());
     }
 
@@ -580,6 +583,19 @@ export class GDBDebugSession extends DebugSession {
         this.stoppedReason = 'user request';
         this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
         this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
+    }
+
+    protected handleThreadCreated(info: { threadId: number, threadGroupId: number }) {
+        this.sendEvent(new ThreadEvent('started', info.threadId));
+    }
+
+    protected handleThreadExited(info: { threadId: number, threadGroupId: number }) {
+        this.sendEvent(new ThreadEvent('exited', info.threadId));
+    }
+
+    protected handleThreadSelected(info: { threadId: number }) {
+        this.currentThreadId = info.threadId;
+        this.sendEvent(new ThreadEvent('selected', info.threadId));
     }
 
     protected stopEvent(info: MINode) {
