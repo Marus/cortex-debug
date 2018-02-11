@@ -210,7 +210,7 @@ class CortexDebugExtension {
 			address => {
 				if (!validateValue(address)) {
 					vscode.window.showErrorMessage('Invalid memory address entered');
-					Reporting.sendEvent('examine-memory-invalid-address', { address: address }, {});
+					Reporting.sendEvent('Examine Memory', 'Invalid Address', address);
 					return;
 				}
 
@@ -222,11 +222,11 @@ class CortexDebugExtension {
 					(length) => {
 						if (!validateValue(length)) {
 							vscode.window.showErrorMessage('Invalid length entered');
-							Reporting.sendEvent('examine-memory-invalid-length', { length: length }, {});
+							Reporting.sendEvent('Examine Memory', 'Invalid Length', length);
 							return;
 						}
 
-						Reporting.sendEvent('examine-memory', {}, {});
+						Reporting.sendEvent('Examine Memory', 'Valid', `${address}-${length}`);
 						let timestamp = new Date().getTime();
 						vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}].cdmem?address=${address}&length=${length}&timestamp=${timestamp}`))
 										.then((doc) => {
@@ -341,7 +341,7 @@ class CortexDebugExtension {
 				info['device'] = args.device;
 			}
 
-			Reporting.sendEvent('debug-session-started', info, {});
+			Reporting.beginSession();
 			
 			this.registerProvider.debugSessionStarted();
 			this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
@@ -353,7 +353,7 @@ class CortexDebugExtension {
 	}
 
 	debugSessionTerminated(session: vscode.DebugSession) {
-		Reporting.sendEvent('debug-session-terminated', {}, {});
+		Reporting.endSession();
 
 		this.registerProvider.debugSessionTerminated();
 		this.peripheralProvider.debugSessionTerminated();
@@ -380,8 +380,8 @@ class CortexDebugExtension {
 			case 'adapter-output':
 				this.receivedAdapterOutput(e);
 				break;
-			case 'record-telemetry-event':
-				this.receivedTelemetryEvent(e);
+			case 'record-event':
+				this.receivedEvent(e);
 				break;
 			default:
 				break;
@@ -401,8 +401,8 @@ class CortexDebugExtension {
 		if (this.swo) { this.swo.debugContinued(); }
 	}
 
-	receivedTelemetryEvent(e) {
-		Reporting.sendEvent(e.body.event, e.body.properties || {}, e.body.measures || {});
+	receivedEvent(e) {
+		Reporting.sendEvent(e.body.category, e.body.action, e.body.label, e.body.parameters);
 	}
 
 	receivedSWOConfigureEvent(e) {

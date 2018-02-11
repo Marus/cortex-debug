@@ -189,7 +189,7 @@ export class GDBDebugSession extends DebugSession {
 
 			let timeout = setTimeout(() => {
 				this.server.exit();
-				this.sendEvent(new TelemetryEvent('error-launching', { error: `Failed to launch ${this.serverController.name} GDB Server: Timeout.` }, {}));
+				this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to launch ${this.serverController.name} GDB Server: Timeout.`));
 				this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
 			}, 10000);
 
@@ -231,11 +231,11 @@ export class GDBDebugSession extends DebugSession {
 							this.handlePause(undefined);
 					}, err => {
 						this.sendErrorResponse(response, 100, `Failed to launch GDB: ${err.toString()}`);
-						this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
+						this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
 					});
 				}, (err) => {
 					this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
-					this.sendEvent(new TelemetryEvent('error-launching-gdb', { error: err.toString() }, {}));
+					this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
 				});
 
 			}, (error) => {
@@ -243,12 +243,12 @@ export class GDBDebugSession extends DebugSession {
 					clearTimeout(timeout);
 					timeout = null;
 				}
-				this.sendEvent(new TelemetryEvent('error-launching', { error: error.toString() }, {}));
+				this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`));
 				this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
 			});
 			
 		}, err => {
-			this.sendEvent(new TelemetryEvent('error-launching', { error: err.toString() }, {}));
+			this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
 			this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
 		});
 	}
@@ -439,7 +439,7 @@ export class GDBDebugSession extends DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
-			this.sendEvent(new TelemetryEvent('error-reading-memory', { address: startAddress.toString(), length: length.toString() }, {}));
+			this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', `${startAddress.toString(16)}-${length.toString(16)}`));
 		});
 	}
 
@@ -450,7 +450,7 @@ export class GDBDebugSession extends DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 114, `Unable to write memory: ${error.toString()}`);
-			this.sendEvent(new TelemetryEvent('error-writing-memory', { address: startAddress.toString(), length: data.length.toString() }, {}));
+			this.sendEvent(new TelemetryEvent('Error', 'Writing Memory', `${startAddress.toString(16)}-${data.length.toString(16)}`));
 		});
 	}
 
@@ -475,7 +475,7 @@ export class GDBDebugSession extends DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
-			this.sendEvent(new TelemetryEvent('error-reading-registers', {}, {}));
+			this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
 		});
 	}
 
@@ -497,7 +497,7 @@ export class GDBDebugSession extends DebugSession {
 		}, error => {
 			response.body = { 'error': error };
 			this.sendErrorResponse(response, 116, `Unable to read register list: ${error.toString()}`);
-			this.sendEvent(new TelemetryEvent('error-reading-register-list', {}, {}));
+			this.sendEvent(new TelemetryEvent('Error', 'Reading Register List', ''));
 		});
 	}
 

@@ -43,15 +43,16 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
 
 export class TelemetryEvent extends Event implements DebugProtocol.Event {
 	body: {
-		event: string,
-		parameters: { [key: string]: string },
-		measures: { [key: string]: number }
+		category: string,
+		action: string,
+		label: string,
+		parameters: { [key: string]: string }
 	};
 	event: string;
 
-	constructor(event: string, parameters: { [key: string]: string }, measures: { [key: string]: number }) {
-		let body = { event: event, parameters: parameters, measures: measures };
-		super('record-telemetry-event', body);
+	constructor(category: string, action: string, label: string, parameters: { [key: string]: string } = {}) {
+		let body = { category: category, action: action, label: label, parameters: parameters };
+		super('record-event', body);
 	}
 }
 
