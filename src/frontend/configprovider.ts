@@ -22,6 +22,9 @@ export class DeprecatedDebugConfigurationProvider implements vscode.DebugConfigu
     }
 }
 
+const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III'];
+const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];
+
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private context: vscode.ExtensionContext) {}
 
@@ -129,6 +132,17 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             const configuration = vscode.workspace.getConfiguration('cortex-debug');
             config.serverpath = configuration.JLinkGDBServerPath;
         }
+        if (config.rtos) {
+            if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
+                if (!fs.existsSync(config.rtos)) {
+                    // tslint:disable-next-line:max-line-length
+                    return 'The following RTOS values are supported by J-Link: FreeRTOS or embOS. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
+                }
+            }
+            else {
+                config.rtos = `GDBServer/RTOSPlugin_${config.rtos}`;
+            }
+        }
 
         if (!config.device) {
             // tslint:disable-next-line:max-line-length
@@ -149,6 +163,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.serverpath = configuration.openocdPath;
         }
 
+        if (config.rtos && OPENOCD_VALID_RTOS.indexOf(config.rtos) === -1) {
+            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}`;
+        }
+
         if (!config.configFiles || config.configFiles.length === 0) {
             return 'At least one OpenOCD Configuration File must be specified.';
         }
@@ -161,6 +179,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.serverpath) {
             const configuration = vscode.workspace.getConfiguration('cortex-debug');
             config.serverpath = configuration.stutilPath;
+        }
+
+        if (config.rtos) {
+            return 'The st-util GDB Server does not have support for the rtos option.';
         }
 
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
@@ -179,6 +201,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.serverpath = configuration.pyocdPath;
         }
 
+        if (config.rtos) {
+            return 'The PyOCD GDB Server does not have support for the rtos option.';
+        }
+
         if (config.board && !config.boardId) { config.boardId = config.board; }
         if (config.target && !config.targetId) { config.targetId = config.target; }
 
@@ -193,6 +219,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
     private verifyBMPConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
         if (!config.BMPGDBSerialPort) { return 'A Serial Port for the Black Magic Probe GDB server is required.'; }
+
+        if (config.rtos) {
+            return 'The Black Magic Probe GDB Server does not have support for the rtos option.';
+        }
 
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             vscode.window.showWarningMessage('SWO support is not available from the probe when using the BMP GDB server. Disabling SWO.');

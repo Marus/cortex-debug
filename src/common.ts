@@ -79,6 +79,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     showDevDebugOutput: boolean;
     cwd: string;
     extensionPath: string;
+    rtos: string;
 
     // J-Link Specific
     ipAddress: string;
