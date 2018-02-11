@@ -35,10 +35,12 @@ class ExtendedVariable {
     }
 }
 
-const GLOBAL_HANDLE_ID = 10;
-const STACK_HANDLES_START = 1000;
-const STATIC_HANDLES_START = 2000;
-const VAR_HANDLES_START = 10000;
+const GLOBAL_HANDLE_ID = 0xFE;
+const STACK_HANDLES_START = 0x100;
+const STACK_HANDLES_FINISH = 0xFFFF;
+const STATIC_HANDLES_START = 0x010000;
+const STATIC_HANDLES_FINISH = 0x01FFFF;
+const VAR_HANDLES_START = 0x020000;
 
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
@@ -863,9 +865,9 @@ export class GDBDebugSession extends DebugSession {
 
     protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
         const scopes = new Array<Scope>();
-        scopes.push(new Scope('Local', STACK_HANDLES_START + (parseInt(args.frameId as any) || 0), false));
+        scopes.push(new Scope('Local', parseInt(args.frameId as any), false));
         scopes.push(new Scope('Global', GLOBAL_HANDLE_ID, false));
-        scopes.push(new Scope('Static', STATIC_HANDLES_START + (parseInt(args.frameId as any) || 0), false));
+        scopes.push(new Scope('Static', STATIC_HANDLES_START + parseInt(args.frameId as any), false));
 
         response.body = {
             scopes: scopes
@@ -916,11 +918,16 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private async staticVariablesRequest(frameId: number, response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+    private async staticVariablesRequest(
+        threadId: number,
+        frameId: number,
+        response: DebugProtocol.VariablesResponse,
+        args: DebugProtocol.VariablesArguments
+    ): Promise<void> {
         const statics: DebugProtocol.Variable[] = [];
 
         try {
-            const frame = await this.miDebugger.getFrame(this.currentThreadId, frameId);
+            const frame = await this.miDebugger.getFrame(threadId, frameId);
             const file = frame.fileName;
             const staticSymbols = this.symbolTable.getStaticVariables(file);
             
@@ -983,11 +990,16 @@ export class GDBDebugSession extends DebugSession {
         return varObj.isCompound() ? id : 0;
     }
 
-    private async stackVariablesRequest(frameId: number, response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+    private async stackVariablesRequest(
+        threadId: number,
+        frameId: number,
+        response: DebugProtocol.VariablesResponse,
+        args: DebugProtocol.VariablesArguments
+    ): Promise<void> {
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
-            stack = await this.miDebugger.getStackVariables(this.currentThreadId, frameId);
+            stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
                 try {
                     const varObjName = `var_${variable.name}`;
@@ -1076,11 +1088,15 @@ export class GDBDebugSession extends DebugSession {
         if (args.variablesReference === GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
         }
-        else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference < VAR_HANDLES_START) {
-            return this.staticVariablesRequest(args.variablesReference - STATIC_HANDLES_START, response, args);
+        else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference <= STATIC_HANDLES_FINISH) {
+            const frameId = args.variablesReference & 0xFF;
+            const threadId = (args.variablesReference & 0xFF00) >>> 8;
+            return this.staticVariablesRequest(threadId, frameId, response, args);
         }
         else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STATIC_HANDLES_START) {
-            return this.stackVariablesRequest(args.variablesReference - STACK_HANDLES_START, response, args);
+            const frameId = args.variablesReference & 0xFF;
+            const threadId = (args.variablesReference & 0xFF00) >>> 8;
+            return this.stackVariablesRequest(threadId, frameId, response, args);
         }
         else {
             id = this.variableHandles.get(args.variablesReference);
