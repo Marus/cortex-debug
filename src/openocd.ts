@@ -2,6 +2,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
+import * as fs from 'fs';
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 
@@ -119,9 +120,14 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const serverargs = [];
 
         this.args.configFiles.forEach((cf, idx) => {
-            serverargs.push('-f');
-            serverargs.push(cf);
+            serverargs.push('-f', cf);
         });
+
+        if (this.args.rtos) {
+            const tmpCfgPath = tmp.tmpNameSync();
+            fs.writeFileSync(tmpCfgPath, `$_TARGETNAME configure -rtos ${this.args.rtos}\n`, 'utf8');
+            serverargs.push('-f', tmpCfgPath);
+        }
 
         const commands = [`gdb_port ${gdbport}`];
 
@@ -130,8 +136,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             commands.push(`tpiu config internal ${this.swoPath} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
         }
 
-        serverargs.push('-c');
-        serverargs.push(commands.join('; '));
+        serverargs.push('-c', commands.join('; '));
 
         return serverargs;
     }

@@ -120,12 +120,14 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         ];
 
         if (this.args.serialNumber) {
-            cmdargs.push('-select');
-            cmdargs.push(`usb=${this.args.serialNumber}`);
+            cmdargs.push('-select', `usb=${this.args.serialNumber}`);
         }
         else if (this.args.ipAddress) {
-            cmdargs.push('-select');
-            cmdargs.push(`ip=${this.args.ipAddress}`);
+            cmdargs.push('-select', `ip=${this.args.ipAddress}`);
+        }
+
+        if (this.args.rtos) {
+            cmdargs.push('-rtos', this.args.rtos);
         }
 
         return cmdargs;
