@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { TelemetryEvent, GDBServerController, ConfigurationArguments, calculatePortMask, SWOConfigureEvent } from './common';
+import { GDBServerController, ConfigurationArguments, calculatePortMask, SWOConfigureEvent } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
