@@ -788,9 +788,10 @@ export class GDBDebugSession extends DebugSession {
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
         try {
-            const stack = await this.miDebugger.getStack(args.levels);
+            const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
             const ret: StackFrame[] = [];
             for (const element of stack) {
+                const stackId = (args.threadId << 8 | (element.level & 0xFF)) & 0xFFFF;
                 const file = element.file;
                 let disassemble = this.forceDisassembly || !file;
                 if (!disassemble) { disassemble = !(await this.checkFileExists(file)); }
@@ -828,18 +829,18 @@ export class GDBDebugSession extends DebugSession {
                                 url = `disassembly:///${symbolInfo.name}.cdasm`;
                             }
                             
-                            ret.push(new StackFrame(element.level, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
+                            ret.push(new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
                         }
                         else {
-                            ret.push(new StackFrame(element.level, element.function + '@' + element.address, null, element.line, 0));
+                            ret.push(new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0));
                         }
                     }
                     else {
-                        ret.push(new StackFrame(element.level, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0));
+                        ret.push(new StackFrame(stackId, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0));
                     }
                 }
                 catch (e) {
-                    ret.push(new StackFrame(element.level, element.function + '@' + element.address, null, element.line, 0));
+                    ret.push(new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0));
                 }
             }
 
