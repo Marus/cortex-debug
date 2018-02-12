@@ -47,6 +47,13 @@ export class SymbolTable {
                     }
                     const type = TYPE_MAP[match[8]];
                     const scope = SCOPE_MAP[match[2]];
+                    let name = match[11].trim();
+                    let hidden = false;
+
+                    if (name.startsWith('.hidden')) {
+                        name = name.substring(7).trim();
+                        hidden = true;
+                    }
 
                     this.symbols.push({
                         address: parseInt(match[1], 16),
@@ -54,9 +61,10 @@ export class SymbolTable {
                         scope: scope,
                         section: match[9].trim(),
                         length: parseInt(match[10], 16),
-                        name: match[11].trim(),
+                        name: name,
                         file: scope === SymbolScope.Local ? currentFile : null,
-                        instructions: null
+                        instructions: null,
+                        hidden: hidden
                     });
                 }
             }

@@ -23,4 +23,5 @@ export interface SymbolInformation {
     scope: SymbolScope;
     file: string;
     instructions: DisassemblyInstruction[];
+    hidden: boolean;
 }
