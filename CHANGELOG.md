@@ -1,3 +1,29 @@
+#V0.1.15
+
+* RTOS Support (configured through the rtos property in your launch.json file)
+    * Depends on support from GDB Server - currently only J-Link and OpenOCD provide support for RTOS (supported RTOS varies)
+	* In general if you have RTOS support enabled you should not perform stepping operations before the RTOSs data structures/scheduler have been initialized. Doing so tends to either crash the GDB server or leave it in an inconsistent state which will prevent proper functionality. If you need to debug startup code before the RTOS has been completely initialized then you should disable RTOS support.
+* Some basic telemetry has been added
+    * This telemetry has been added to help me determine what/how features are being used to help me better determine future feature development/improvements.
+	* No information about your projects source code is collected - only information directly related to the use of cortex-debug is collected. For example the following is collected:
+	    * Number/length of debugging sessions
+		* Specific features used (peripheral register view, disassembly view, rtos support, memory view, SWO decoding, Graphing, etc.)
+		* Certain errors within the extension are reported
+		* GDB Server Used
+		* Target device (if entered in launch.json)
+		* Extension Version
+		* Visual Studio Code Version
+		* Visual Studio Code Platform
+	* The information collected is not user-identifiable.
+	* You can disable all telemetry reporting through the following user/workspace settings:
+		* setting **telemetry.enableTelemetry** to false (this will disable telemetry for VS Code and other extensions that respect this setting)
+		* setting **cortex-debug.enableTelemetry** to false (this will disable telemetry just for Cortex-Debug)
+* Improved support for customizing the launch, attach and restart processes. In most cases these parameters can simply be ignored - but for added flexibility the following settings in your launch.json file can be provided
+	* preLaunchCommands/preAttachCommands - these are executed near the start of the main launch/attach sequence (immediately after attaching to the target)
+	* postLaunchCommands/postAttachCommands - these are executed at the end of the main launch/attachSequence
+	* preRestartCommands - these are executed at the start of the restart sequence (immediately following interrupting the processor)
+	* postRestartCommands - these are executed at the end of the restart sequence
+
 #V0.1.14
 
 * Workaround for issues with st-util GDB server on Windows environment

@@ -24,9 +24,9 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * You can set the debugger to always show show disassembly ("Cortex-Debug: Set Force Disassembly" command)
 * Globals and Static scopes in the variables view
 * Initial support for Rust code (most functionality is working; disassembly views and variables view may still have some glitches)
+* RTOS Support (J-Link and OpenOCD - RTOS supported depends on GDB server support)
+    * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 
-### In Progress Features
-* RTOS/Muti-Threaded Support (Dependant on GDB server support)
 
 ### Planned Features
 
