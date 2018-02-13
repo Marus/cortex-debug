@@ -26,14 +26,16 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         return false;
     }
 
-    public launchCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
-
-        const commands = [
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
+    public initCommands(): string[] {
+        return [
             `target-select extended-remote ${this.args.BMPGDBSerialPort}`,
             'interpreter-exec console "monitor swdp_scan"',
-            'interpreter-exec console "attach 1"',
+            'interpreter-exec console "attach 1"'
+        ];
+    }
+
+    public launchCommands(): string[] {
+        const commands = [
             'interpreter-exec console "set mem inaccessible-by-default off"',
             'target-download',
             'interpreter-exec console "SoftwareReset"',
@@ -50,10 +52,6 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
     public attachCommands(): string[] {
         const commands = [
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `target-select extended-remote ${this.args.BMPGDBSerialPort}`,
-            'interpreter-exec console "monitor swdp_scan"',
-            'interpreter-exec console "attach 1"',
             'interpreter-exec console "set mem inaccessible-by-default off"',
             'enable-pretty-printing'
         ];

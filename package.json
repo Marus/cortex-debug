@@ -163,7 +163,18 @@
                                 "description": "Additional arguments to pass to GDB command line",
                                 "type": "array"
                             },
-                            "postLaunchCommands": {
+                            "preAttachCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the start of the main attach sequence (immediately after attaching to target)."
+                            },
+                            "postAttachCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed after the main attach sequence has finished."
+                            },
                             "preRestartCommands": {
                                 "default": [],
                                 "type": "array",
@@ -617,11 +628,18 @@
                                 "description": "Additional arguments to pass to GDB command line",
                                 "type": "array"
                             },
+                            "preLaunchCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the start of the main launch sequence (immediately after attaching to target)."
+                            },
                             "postLaunchCommands": {
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
+                                "description": "Additional GDB Commands to be executed after the main launch sequence has finished."
+                            },
                             "preRestartCommands": {
                                 "default": [],
                                 "type": "array",

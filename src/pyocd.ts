@@ -26,12 +26,16 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         return false;
     }
 
-    public launchCommands(): string[] {
+    public initCommands(): string[] {
         const gdbport = this.ports['gdbPort'];
 
+        return [
+            `target-select extended-remote localhost:${gdbport}`
+        ];
+    }
+
+    public launchCommands(): string[] {
         const commands = [
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `target-select extended-remote localhost:${gdbport}`,
             'interpreter-exec console "monitor reset halt"',
             'target-download',
             'interpreter-exec console "monitor reset halt"',
@@ -50,8 +54,6 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const gdbport = this.ports['gdbPort'];
 
         const commands = [
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `target-select extended-remote localhost:${gdbport}`,
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];

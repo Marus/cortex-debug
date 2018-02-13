@@ -26,12 +26,16 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
         return false;
     }
 
-    public launchCommands(): string[] {
+    public initCommands(): string[] {
         const gdbport = this.ports['gdbPort'];
 
+        return [
+            `target-select extended-remote localhost:${gdbport}`
+        ];
+    }
+
+    public launchCommands(): string[] {
         const commands = [
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `target-select extended-remote localhost:${gdbport}`,
             'interpreter-exec console "monitor halt"',
             'interpreter-exec console "monitor reset"',
             'target-download',
@@ -48,11 +52,7 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
     }
 
     public attachCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
-
         const commands = [
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `target-select extended-remote localhost:${gdbport}`,
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];

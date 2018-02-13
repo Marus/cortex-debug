@@ -65,7 +65,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             });
         }
         if (!config.graphConfig) { config.graphConfig = []; }
+        if (!config.preLaunchCommands) { config.preLaunchCommands = []; }
         if (!config.postLaunchCommands) { config.postLaunchCommands = []; }
+        if (!config.preAttachCommands) { config.preAttachCommands = []; }
+        if (!config.postAttachCommands) { config.postAttachCommands = []; }
         if (!config.preRestartCommands) { config.preRestartCommands = []; }
         if (!config.postRestartCommands) { config.postRestartCommands = []; }
 

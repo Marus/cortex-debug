@@ -90,7 +90,10 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     serverpath: string;
     device: string;
     debuggerArgs: string[];
+    preLaunchCommands: string[];
     postLaunchCommands: string[];
+    preAttachCommands: string[];
+    postAttachCommands: string[];
     preRestartCommands: string[];
     postRestartCommands: string[];
     svdFile: string;
@@ -136,6 +139,7 @@ export interface GDBServerController extends EventEmitter {
     setArguments(args: ConfigurationArguments): void;
 
     customRequest(command: string, response: DebugProtocol.Response, args: any): boolean;
+    initCommands(): string[];
     launchCommands(): string[];
     attachCommands(): string[];
     restartCommands(): string[];

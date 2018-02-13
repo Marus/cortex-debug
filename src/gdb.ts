@@ -225,11 +225,20 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.printCalls = !!this.args.showDevDebugOutput;
                 this.miDebugger.debugOutput = !!this.args.showDevDebugOutput;
 
-                let commands = attach ? this.serverController.attachCommands() : this.serverController.launchCommands();
-
-                const plc = this.args.postLaunchCommands.map((c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c}"`);
-                commands = commands.concat(plc);
-
+                const commands = [`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`];
+                commands.push(...this.serverController.initCommands());
+                
+                if (attach) {
+                    commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
+                    commands.push(...this.serverController.attachCommands());
+                    commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
+                }
+                else {
+                    commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
+                    commands.push(...this.serverController.launchCommands());
+                    commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
+                }
+                
                 this.serverController.debuggerLaunchStarted();
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     setTimeout(() => {
