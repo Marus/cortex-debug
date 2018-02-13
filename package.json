@@ -164,10 +164,17 @@
                                 "type": "array"
                             },
                             "postLaunchCommands": {
+                            "preRestartCommands": {
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
+                                "description": "Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution)."
+                            },
+                            "postRestartCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the end of the restart sequence."
                             },
                             "device": {
                                 "default": "",
@@ -615,6 +622,17 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed after the main attach sequequnce has finished. (Machine interface commands should include - prefix)."
+                            "preRestartCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution)."
+                            },
+                            "postRestartCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the end of the restart sequence."
                             },
                             "device": {
                                 "default": "",

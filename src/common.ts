@@ -91,6 +91,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     device: string;
     debuggerArgs: string[];
     postLaunchCommands: string[];
+    preRestartCommands: string[];
+    postRestartCommands: string[];
     svdFile: string;
     swoConfig: SWOConfiguration;
     graphConfig: any[];

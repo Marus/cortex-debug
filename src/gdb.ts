@@ -539,7 +539,10 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
-        const commands = this.serverController.restartCommands();
+        const commands = ['exec-interrupt'];
+        commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
+        commands.push(...this.serverController.restartCommands());
+        commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
 
         this.miDebugger.restart(commands).then((done) => {
             this.sendResponse(response);

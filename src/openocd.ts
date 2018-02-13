@@ -70,7 +70,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public restartCommands(): string[] {
         const commands: string[] = [
-            'exec-interrupt',
             'interpreter-exec console "monitor reset halt"',
             'exec-step-instruction'
         ];

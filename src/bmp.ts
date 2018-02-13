@@ -68,7 +68,6 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
     public restartCommands(): string[] {
         const commands: string[] = [
-            'exec-interrupt',
             'interpreter-exec console "SoftwareReset"',
             'exec-step-instruction'
         ];

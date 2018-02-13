@@ -67,7 +67,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
     public restartCommands(): string[] {
         const commands: string[] = [
-            'exec-interrupt',
             'interpreter-exec console "monitor halt"',
             'interpreter-exec console "monitor reset"',
             'exec-step-instruction'

@@ -66,6 +66,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
         if (!config.graphConfig) { config.graphConfig = []; }
         if (!config.postLaunchCommands) { config.postLaunchCommands = []; }
+        if (!config.preRestartCommands) { config.preRestartCommands = []; }
+        if (!config.postRestartCommands) { config.postRestartCommands = []; }
 
         switch (type) {
             case 'jlink':
