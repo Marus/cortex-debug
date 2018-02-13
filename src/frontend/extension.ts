@@ -9,7 +9,7 @@ import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType,
 import { setTimeout } from 'timers';
 import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
-import { SWOConfigureEvent, NumberFormat } from '../common';
+import { SWOConfigureEvent, NumberFormat, ConfigurationArguments } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -92,7 +92,7 @@ class CortexDebugExtension {
     }
 
     private activeEditorChanged(editor: vscode.TextEditor) {
-        if (editor !== undefined && vscode.debug.activeDebugSession) {
+        if (editor !== undefined && vscode.debug.activeDebugSession && vscode.debug.activeDebugSession.type === 'cortex-debug') {
             const uri = editor.document.uri;
             if (uri.scheme === 'file') {
                 vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: uri.path });
@@ -179,6 +179,7 @@ class CortexDebugExtension {
         ).then((result) => {
             const force = result.label === 'Forced';
             vscode.debug.activeDebugSession.customRequest('set-force-disassembly', { force: force });
+            Reporting.sendEvent('Force Disassembly', 'Set', force ? 'Forced' : 'Auto');
         }, (error) => {});
     }
 
@@ -229,9 +230,11 @@ class CortexDebugExtension {
                         // tslint:disable-next-line:max-line-length
                         vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}].cdmem?address=${address}&length=${length}&timestamp=${timestamp}`))
                                         .then((doc) => {
-                                            vscode.window.showTextDocument(doc, { viewColumn: 2 })	;
+                                            vscode.window.showTextDocument(doc, { viewColumn: 2 });
+                                            Reporting.sendEvent('Examine Memory', 'Used');
                                         }, (error) => {
                                             vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
+                                            Reporting.sendEvent('Examine Memory', 'Error', error.toString());
                                         });
                     },
                     (error) => {
@@ -250,6 +253,7 @@ class CortexDebugExtension {
         node.node.performUpdate().then((result) => {
             if (result) {
                 this.peripheralProvider.refresh();
+                Reporting.sendEvent('Peripheral View', 'Update Node');
             }
         }, (error) => {
             vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
@@ -270,6 +274,7 @@ class CortexDebugExtension {
         const cv = tn.node.getCopyValue();
         if (cv) {
             CopyPaste.copy(cv);
+            Reporting.sendEvent('Peripheral View', 'Copy Value');
         }
     }
 
@@ -283,6 +288,7 @@ class CortexDebugExtension {
 
         tn.node.setFormat(result.value);
         this.peripheralProvider.refresh();
+        Reporting.sendEvent('Peripheral View', 'Set Format', result.label);
     }
 
     // Registers
@@ -294,6 +300,7 @@ class CortexDebugExtension {
         const cv = tn.node.getCopyValue();
         if (cv) {
             CopyPaste.copy(cv);
+            Reporting.sendEvent('Register View', 'Update Node');
         }
     }
 
@@ -307,10 +314,13 @@ class CortexDebugExtension {
         
         tn.node.setFormat(result.value);
         this.registerProvider.refresh();
+        Reporting.sendEvent('Register View', 'Set Format', result.label);
     }
 
     // Debug Events
     private debugSessionStarted(session: vscode.DebugSession) {
+        if (session.type !== 'cortex-debug') { return; }
+
         // Clean-up Old output channels
         if (this.swo) {
             this.swo.dispose();
@@ -328,17 +338,7 @@ class CortexDebugExtension {
                 }
             }
 
-            const info = {
-                type: args.servertype,
-                swo: args.swoConfig.enabled ? 'enabled' : 'disabled',
-                graphing: (args.graphConfig && args.graphConfig.length > 0) ? 'enabled' : 'disabled'
-            };
-
-            if (args.type === 'jlink-gdb' || (args.type === 'stutil-gdb' && args.device)) {
-                info['device'] = args.device;
-            }
-
-            Reporting.beginSession();
+            Reporting.beginSession(args as ConfigurationArguments);
             
             this.registerProvider.debugSessionStarted();
             this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
@@ -350,6 +350,8 @@ class CortexDebugExtension {
     }
 
     private debugSessionTerminated(session: vscode.DebugSession) {
+        if (session.type !== 'cortex-debug') { return; }
+
         Reporting.endSession();
 
         this.registerProvider.debugSessionTerminated();
@@ -364,6 +366,7 @@ class CortexDebugExtension {
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
+        if (!vscode.debug.activeDebugSession || vscode.debug.activeDebugSession.type !== 'cortex-debug') { return; }
         switch (e.event) {
             case 'custom-stop':
                 this.receivedStopEvent(e);
@@ -405,15 +408,19 @@ class CortexDebugExtension {
     private receivedSWOConfigureEvent(e) {
         if (e.body.type === 'socket') {
             this.swosource = new SocketSWOSource(e.body.port);
+            Reporting.sendEvent('SWO', 'Source', 'Socket');
         }
         else if (e.body.type === 'fifo') {
             this.swosource = new FifoSWOSource(e.body.path);
+            Reporting.sendEvent('SWO', 'Source', 'FIFO');
         }
         else if (e.body.type === 'file') {
             this.swosource = new FileSWOSource(e.body.path);
+            Reporting.sendEvent('SWO', 'Source', 'File');
         }
         else if (e.body.type === 'serial') {
             this.swosource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
+            Reporting.sendEvent('SWO', 'Source', 'Serial');
         }
 
         if (vscode.debug.activeDebugSession) {
@@ -446,3 +453,5 @@ class CortexDebugExtension {
 export function activate(context: vscode.ExtensionContext) {
     const extension = new CortexDebugExtension(context);
 }
+
+export function deactivate() {}

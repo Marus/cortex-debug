@@ -7,6 +7,7 @@ import * as xml2js from 'xml2js';
 import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
 import { ProviderResult } from 'vscode';
 import { NumberFormat, NodeSetting } from '../common';
+import reporting from '../reporting';
 
 export enum RecordType {
     Peripheral = 1,
@@ -1104,6 +1105,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
                             });
                             this._onDidChangeTreeData.fire();
                             resolve();
+                            reporting.sendEvent('Peripheral View', 'Used', svdfile);
                         },
                         (e) => {
                             this.peripherials = [];
@@ -1111,12 +1113,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
                             this._onDidChangeTreeData.fire();
                             vscode.window.showErrorMessage(`Unable to parse SVD file: ${e.toString()}`);
                             resolve();
+                            reporting.sendEvent('Peripheral View', 'Error', e.toString());
                         }
                     );
                 }, 150);
             }
             else {
                 resolve();
+                reporting.sendEvent('Peripheral View', 'No SVD');
             }
         });
     }
