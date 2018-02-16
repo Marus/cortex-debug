@@ -103,19 +103,19 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cwd: string;
     extensionPath: string;
     rtos: string;
+    interface: string;
+    targetId: string | number;
 
     // J-Link Specific
     ipAddress: string;
     serialNumber: string;
-    jlinkInterface: string;
-
+    
     // OpenOCD Specific
     configFiles: string[];
 
     // PyOCD Specific
     boardId: string;
-    targetId: string;
-
+    
     // StUtil Specific
     v1: boolean;
 

@@ -27,16 +27,27 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
     }
 
     public initCommands(): string[] {
-        return [
-            `target-select extended-remote ${this.args.BMPGDBSerialPort}`,
-            'interpreter-exec console "monitor swdp_scan"',
-            'interpreter-exec console "attach 1"'
+        const commands: string[] = [
+            `target-select extended-remote ${this.args.BMPGDBSerialPort}`
         ];
+
+        if (this.args.interface === 'jtag') {
+            commands.push('interpreter-exec console "monitor jtag_scan"');
+        }
+        else {
+            commands.push('interpreter-exec console "monitor swdp_scan"');
+        }
+
+        commands.push(
+            `interpreter-exec console "attach ${this.args.targetId}"`,
+            'interpreter-exec console "set mem inaccessible-by-default off"'
+        );
+
+        return commands;
     }
 
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "set mem inaccessible-by-default off"',
             'target-download',
             'interpreter-exec console "SoftwareReset"',
             'enable-pretty-printing'
@@ -52,7 +63,6 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
     public attachCommands(): string[] {
         const commands = [
-            'interpreter-exec console "set mem inaccessible-by-default off"',
             'enable-pretty-printing'
         ];
 

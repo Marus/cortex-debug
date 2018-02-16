@@ -128,11 +128,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
     private verifyJLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
         if (config.jlinkpath && !config.serverpath) { config.serverpath = config.jlinkpath; }
-        if (!config.jlinkInterface) { config.jlinkInterface = 'swd'; }
-        if (config.jlinkInterface !== 'jtag' && config.jlinkInterface !== 'swd') {
-            vscode.window.showWarningMessage(`jlinkInterface parameter ${config.jlinkInterface} is not valid (swd or jtag). Defaulting to SWD mode.`);
-            config.jlinkInterface = 'swd';
-        }
+        if (!config.interface && config.jlinkInterface) { config.interface = config.jlinkInterface; }
+        if (!config.interface) { config.interface = 'swd'; }
+
         if (!config.serverpath) {
             const configuration = vscode.workspace.getConfiguration('cortex-debug');
             config.serverpath = configuration.JLinkGDBServerPath;
@@ -154,7 +152,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'Device Identifier is required for J-Link configurations. Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
         }
 
-        if (config.jlinkInterface === 'jtag' && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+        if (config.interface === 'jtag' && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             return 'SWO Decoding cannot be performed through the J-Link Probe in JTAG mode.';
         }
 
@@ -224,7 +222,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
     private verifyBMPConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
         if (!config.BMPGDBSerialPort) { return 'A Serial Port for the Black Magic Probe GDB server is required.'; }
-
+        if (!config.interface) { config.interface = 'swd'; }
+        if (!config.targetId) { config.targetId = 1; }
+        
         if (config.rtos) {
             return 'The Black Magic Probe GDB Server does not have support for the rtos option.';
         }
