@@ -2,7 +2,10 @@ import * as vscode from "vscode";
 import { hexFormat } from './utils';
 
 export class MemoryContentProvider implements vscode.TextDocumentContentProvider {
-	provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Thenable<string> {
+	private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+	readonly onDidChange = this._onDidChange.event;
+
+	provideTextDocumentContent(uri: vscode.Uri): Thenable<string> {
 		return new Promise((resolve, reject) => {
 			let highlightAt = -1;
 			let query = this.parseQuery(uri.query);
@@ -57,6 +60,10 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 				reject(error.toString());
 			});
 		});
+	}
+
+	update(doc: vscode.TextDocument) {
+		this._onDidChange.fire(doc.uri);
 	}
 
 	private parseQuery(queryString) {
