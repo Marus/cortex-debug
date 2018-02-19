@@ -99,7 +99,7 @@ class CortexDebugExtension {
             if (uri.scheme === 'file') {
                 vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: uri.path });
             }
-            else {
+            else if (uri.scheme === 'disassembly') {
                 vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: `${uri.scheme}://${uri.authority}${uri.path}` });
             }
         }
