@@ -120,7 +120,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 
         if (this.args.targetId) {
             serverargs.push('--target');
-            serverargs.push(this.args.targetId);
+            serverargs.push(this.args.targetId.toString());
         }
 
         return serverargs;
