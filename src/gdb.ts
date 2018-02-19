@@ -241,21 +241,16 @@ export class GDBDebugSession extends DebugSession {
                 
                 this.serverController.debuggerLaunchStarted();
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
-                    setTimeout(() => {
-                        this.miDebugger.emit('ui-break-done');
-                    }, 50);
-
                     this.serverController.debuggerLaunchCompleted();
+                    this.started = true;
+                    this.sendResponse(response);
 
-                    this.miDebugger.start().then(() => {
-                        this.started = true;
-                        this.sendResponse(response);
-                        
-                        if (this.crashed) { this.handlePause(undefined); }
-                    }, (err) => {
-                        this.sendErrorResponse(response, 100, `Failed to launch GDB: ${err.toString()}`);
-                        this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
-                    });
+                    setTimeout(() => {
+                        this.stopped = true;
+                        this.stoppedReason = 'start';
+                        this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
+                        this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
+                    }, 50);
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));

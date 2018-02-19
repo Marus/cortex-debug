@@ -218,10 +218,6 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public start(): Thenable<boolean> {
-        return Promise.resolve(true);
-    }
-
     public stop() {
         const proc = this.process;
         const to = setTimeout(() => { process.kill(-proc.pid); }, 1000);
