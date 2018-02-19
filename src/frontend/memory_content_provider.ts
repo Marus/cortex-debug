@@ -2,7 +2,11 @@ import * as vscode from 'vscode';
 import { hexFormat } from './utils';
 
 export class MemoryContentProvider implements vscode.TextDocumentContentProvider {
-    public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Thenable<string> {
+    // tslint:disable-next-line:variable-name
+    private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+    public readonly onDidChange = this._onDidChange.event;
+
+    public provideTextDocumentContent(uri: vscode.Uri): Thenable<string> {
         return new Promise((resolve, reject) => {
             const highlightAt = -1;
             const query = this.parseQuery(uri.query);
@@ -59,11 +63,15 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         });
     }
 
+    public update(doc: vscode.TextDocument) {
+        this._onDidChange.fire(doc.uri);
+    }
+
     private parseQuery(queryString) {
         const query = {};
         const pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
-        for (const pairstr of pairs) {
-            const pair = pairstr.split('=');
+        for (const pairstring of pairs) {
+            const pair = pairstring.split('=');
             query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
         }
         return query;

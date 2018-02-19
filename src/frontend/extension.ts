@@ -34,13 +34,16 @@ class CortexDebugExtension {
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
+    private memoryProvider: MemoryContentProvider;
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
+    private memdocs: vscode.TextDocument[] = [];
 
     constructor(private context: vscode.ExtensionContext) {
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
+        this.memoryProvider = new MemoryContentProvider();
 
         let tmp = [];
         try {
@@ -60,7 +63,7 @@ class CortexDebugExtension {
         Reporting.activate(context);
 
         context.subscriptions.push(
-            vscode.workspace.registerTextDocumentContentProvider('examinememory', new MemoryContentProvider()),
+            vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
             vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
             vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.selectedNode', this.peripheralsSelectedNode.bind(this)),
@@ -78,6 +81,7 @@ class CortexDebugExtension {
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)),
+            vscode.workspace.onDidCloseTextDocument(this.closeDoc.bind(this)),
             vscode.debug.registerDebugConfigurationProvider('jlink-gdb', new DeprecatedDebugConfigurationProvider(context, 'jlink')),
             vscode.debug.registerDebugConfigurationProvider('openocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'openocd')),
             vscode.debug.registerDebugConfigurationProvider('stutil-gdb', new DeprecatedDebugConfigurationProvider(context, 'stutil')),
@@ -100,6 +104,14 @@ class CortexDebugExtension {
             else {
                 vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: `${uri.scheme}://${uri.authority}${uri.path}` });
             }
+        }
+    }
+
+    private closeDoc(doc: vscode.TextDocument) {
+        if (doc.fileName.endsWith('.cdmem')) {
+            // remove this doc from this.memdocs array
+            const idx = this.memdocs.findIndex((val) => val === doc);
+            this.memdocs.splice(idx, 1);
         }
     }
 
@@ -231,6 +243,7 @@ class CortexDebugExtension {
                         vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}].cdmem?address=${address}&length=${length}&timestamp=${timestamp}`))
                                         .then((doc) => {
                                             vscode.window.showTextDocument(doc, { viewColumn: 2 });
+                                            this.memdocs.push(doc);
                                             Reporting.sendEvent('Examine Memory', 'Used');
                                         }, (error) => {
                                             vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
@@ -392,6 +405,7 @@ class CortexDebugExtension {
     private receivedStopEvent(e) {
         this.peripheralProvider.debugStopped();
         this.registerProvider.debugStopped();
+        this.memdocs.forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
     }
 
