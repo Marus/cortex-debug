@@ -68,8 +68,7 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
     public restartCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor halt"',
-            'interpreter-exec console "monitor reset"',
-            'exec-step-instruction'
+            'interpreter-exec console "monitor reset"'
         ];
 
         if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {

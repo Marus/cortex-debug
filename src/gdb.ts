@@ -552,6 +552,12 @@ export class GDBDebugSession extends DebugSession {
 
         this.miDebugger.restart(commands).then((done) => {
             this.sendResponse(response);
+            setTimeout(() => {
+                this.stopped = true;
+                this.stoppedReason = 'restart';
+                this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
+                this.sendEvent(new StoppedEvent('restart', this.currentThreadId, true));
+            }, 50);
         }, (msg) => {
             this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
         });
