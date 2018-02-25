@@ -12,10 +12,10 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Peripheral Register Viewer (Defined through standard SVD file)
 * SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single percision floating point values)
     * The registers that are part of the DWT, TPIU, and ITM debug components will automatically be configured and do not need to be set in firmware.
-    * Firmware will still need to enable the SWO output pin (if necessary) - as this part of the setup is microcontroller dependant.
+    * Firmware may still need to enable the SWO output pin - as this part of the setup is microcontroller dependant.
     * Decoding ETM data over the SWO pin is not currently supported.
 * Support for Custom ITM Data Decoders:
-    * Ability to define JavaScript modules to decode complex data formats streamed over a particular ITM port. Data can be printed to a output window, or sent to the graphing system.
+    * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system.
 * Live graphing of decoded ITM data.
 * Raw Memory Viewer ("Cortex-Debug: View Memory" command)
 * Ability to view and step through the disassembled binary. There are three ways that disassembled code will be shown:
@@ -23,7 +23,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * You can manually see the disassembly for a particular function ("Cortex-Debug: View Disassembly (Function)" command)
     * You can set the debugger to always show show disassembly ("Cortex-Debug: Set Force Disassembly" command)
 * Globals and Static scopes in the variables view
-* Initial support for Rust code (most functionality is working; disassembly views and variables view may still have some glitches)
+* Initial support for Rust code (most functionality is working; disassembly views and variables view may still have issues)
 * RTOS Support (J-Link and OpenOCD - RTOS supported depends on GDB server support)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 
