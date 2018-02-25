@@ -368,7 +368,7 @@ class CortexDebugExtension {
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
-        if (!vscode.debug.activeDebugSession || vscode.debug.activeDebugSession.type !== 'cortex-debug') { return; }
+        if (vscode.debug.activeDebugSession && vscode.debug.activeDebugSession.type !== 'cortex-debug') { return; }
         switch (e.event) {
             case 'custom-stop':
                 this.receivedStopEvent(e);
@@ -387,7 +387,6 @@ class CortexDebugExtension {
                 break;
             default:
                 break;
-
         }
     }
 
