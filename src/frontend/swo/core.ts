@@ -227,10 +227,15 @@ export class SWOCore {
                         this.processors.push(processor);
                         break;
                     case 'advanced':
-                        processor = new SWOAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
-                        this.socketServer.registerProcessor(processor);
-                        this.processors.push(processor);
-                        break;
+                        try {
+                            processor = new SWOAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
+                            this.socketServer.registerProcessor(processor);
+                            this.processors.push(processor);
+                            break;
+                        }
+                        catch (e) {
+                            vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
+                        }
                     default:
                         break;
                 }

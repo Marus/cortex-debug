@@ -74,10 +74,16 @@ export interface WebsocketStatusMessage extends WebsocketMessage {
 }
 
 export interface AdvancedDecoder {
-    name: string;
-
-    processData(buffer: Buffer): void;
+    init(
+        config: SWOAdvancedDecoderConfig,
+        outputData: (output: string) => void,
+        graphData: (data: number, id: string) => void
+    );
+    typeName(): string;
     outputLabel(): string;
+    softwareEvent(port: number, data: Buffer);
+    synchronized();
+    lostSynchronization();
 }
 
 export enum PacketType {
