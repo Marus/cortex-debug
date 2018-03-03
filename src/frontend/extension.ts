@@ -80,6 +80,9 @@ class CortexDebugExtension {
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)),
+            vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
+                if (e && e.textEditor.document.fileName.endsWith(".cdmem")) { this.memoryProvider.handleSelection(e) }
+            }),
             vscode.debug.registerDebugConfigurationProvider('jlink-gdb', new DeprecatedDebugConfigurationProvider(context, 'jlink')),
             vscode.debug.registerDebugConfigurationProvider('openocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'openocd')),
             vscode.debug.registerDebugConfigurationProvider('stutil-gdb', new DeprecatedDebugConfigurationProvider(context, 'stutil')),
