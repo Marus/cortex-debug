@@ -76,4 +76,96 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         }
         return query;
     }
+
+    /**
+     * The code below took significant portions with small modification 
+     * from the HexDump extension, which has the following license and copyright:
+     * The MIT License (MIT)
+     * **Copyright © 2016 Stef Levesque**
+     */
+    firstBytePos = 10;
+    lastBytePos: number = this.firstBytePos + 3 * 16 - 1;
+    firstAsciiPos: number = this.lastBytePos + 3;
+    lastAsciiPos: number = this.firstAsciiPos + 16;
+
+    private getOffset(pos: vscode.Position) : number {    
+        // check if within a valid section
+        if (pos.line < 1 || pos.character < this.firstBytePos) {
+            return;
+        }
+    
+        var offset = (pos.line - 1) * 16;
+        var s = pos.character - this.firstBytePos;
+        if (pos.character >= this.firstBytePos && pos.character <= this.lastBytePos) {
+            // byte section
+            offset += Math.floor(s / 3);
+        } else if (pos.character >= this.firstAsciiPos) {
+            // ascii section
+            offset += (pos.character - this.firstAsciiPos);
+        }
+        return offset;
+    }
+
+    private getPosition(offset: number, ascii: Boolean = false) : vscode.Position {
+        let row = 1 + Math.floor(offset / 16);
+        let column = offset % 16;
+    
+        if (ascii) {
+            column += this.firstAsciiPos;
+        } else {
+            column = this.firstBytePos + column * 3;
+        }
+    
+        return new vscode.Position(row, column);
+    }
+
+    private getRanges(startOffset: number, endOffset: number, ascii: boolean): vscode.Range[] {    
+        var startPos = this.getPosition(startOffset, ascii);
+        var endPos = this.getPosition(endOffset, ascii);
+        endPos = new vscode.Position(endPos.line, endPos.character + (ascii ? 1 : 2));
+    
+        var ranges = [];
+        var firstOffset = ascii ? this.firstAsciiPos : this.firstBytePos;
+        var lastOffset = ascii ? this.lastAsciiPos : this.lastBytePos;
+        for (var i=startPos.line; i<=endPos.line; ++i) {
+            var start = new vscode.Position(i, (i == startPos.line ? startPos.character : firstOffset));
+            var end = new vscode.Position(i, (i == endPos.line ? endPos.character : lastOffset));
+            ranges.push(new vscode.Range(start, end));
+        }
+
+        return ranges;
+    }
+    
+    private smallDecorationType = vscode.window.createTextEditorDecorationType({
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        overviewRulerColor: 'blue',
+        overviewRulerLane: vscode.OverviewRulerLane.Right,
+        light: { // this color will be used in light color themes
+            borderColor: 'darkblue'
+        },
+        dark: { // this color will be used in dark color themes
+            borderColor: 'lightblue'
+        }
+    });
+
+    public handleSelection(e: vscode.TextEditorSelectionChangeEvent) {
+        let numLine = e.textEditor.document.lineCount
+        if (e.selections[0].start.line + 1 == numLine ||
+            e.selections[0].end.line + 1 == numLine) {
+            e.textEditor.setDecorations(this.smallDecorationType, []);
+            return;
+        }
+        let startOffset = this.getOffset(e.selections[0].start);
+        let endOffset = this.getOffset(e.selections[0].end);
+        if (typeof startOffset == 'undefined' ||
+            typeof endOffset == 'undefined') {
+            e.textEditor.setDecorations(this.smallDecorationType, []);
+            return;
+        }
+        
+        var ranges = this.getRanges(startOffset, endOffset, false);
+            ranges = ranges.concat(this.getRanges(startOffset, endOffset, true));
+        e.textEditor.setDecorations(this.smallDecorationType, ranges);
+    }
 }
