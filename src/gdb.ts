@@ -163,7 +163,7 @@ export class GDBDebugSession extends DebugSession {
         this.debugReady = false;
         this.stopped = false;
         
-        portastic.find({ min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length }).then((ports) => {
+        portastic.find({ min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length }, '0.0.0.0').then((ports) => {
             this.ports = {};
             this.serverController.portsNeeded.forEach((val, idx) => {
                 this.ports[val] = ports[idx];

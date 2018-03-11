@@ -1,3 +1,7 @@
+# V0.1.16
+
+* Fixed a bug where it may not detect that a port is in use and get a port conflict when starting the GDB server.
+
 # V0.1.15
 
 * RTOS Support (configured through the rtos property in your launch.json file)

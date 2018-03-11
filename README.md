@@ -38,10 +38,13 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
 Requirements:
 
-* ARM GCC Toolchain (https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads) - provides arm-none-eabi-gdb
+* ARM GCC Toolchain (https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads) - provides arm-none-eabi-gdb and related tools
 * At least one of:
     * J-Link Software Tools - provides the J-Link GDB Server for J-Link based debuggers (https://www.segger.com/downloads/jlink)
     * OpenOCD - provides a GDB Server that can be used with a number of debuggers (http://openocd.org)
+    * Texane's st-util GDB server - Only supports ST-Link Debug Probes (https://github.com/texane/stlink)
+    * pyOCD GDB Server - GDB server that supports the CMSIS-DAP debugger on a number of mbed boards (https://github.com/mbedmicro/pyOCD)
+    * Black Magic Probe
 
 ## Usage
 
