@@ -797,12 +797,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
 
                 const ev = f.enumeratedValues[0];
                 ev.enumeratedValue.map((ev) => {
-                    const evname = ev.name[0];
-                    const evdesc = ev.description[0];
-                    const val = ev.value[0].toLowerCase();
-                    const evvalue = parseInteger(val);
-                    
-                    valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
+                    if (ev.value && ev.value.length > 0) {
+                        const evname = ev.name[0];
+                        const evdesc = ev.description[0];
+                        const val = ev.value[0].toLowerCase();
+                        const evvalue = parseInteger(val);
+                        
+                        valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
+                    }
                 });
             }
 
