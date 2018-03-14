@@ -544,6 +544,13 @@
                                 },
                                 "type": "array"
                             },
+                            "searchDir": {
+                                "description": "OpenOCD dir to search for config files and scripts",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
                             "v1": {
                                 "default": false,
                                 "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
@@ -1012,6 +1019,13 @@
                             },
                             "configFiles": {
                                 "description": "OpenOCD configuration file(s) to load",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            "searchDir": {
+                                "description": "OpenOCD dir to search for config files and scripts",
                                 "items": {
                                     "type": "string"
                                 },
