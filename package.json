@@ -545,6 +545,7 @@
                                 "type": "array"
                             },
                             "searchDir": {
+                                "default": [],
                                 "description": "OpenOCD dir to search for config files and scripts",
                                 "items": {
                                     "type": "string"
