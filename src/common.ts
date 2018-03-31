@@ -112,6 +112,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     
     // OpenOCD Specific
     configFiles: string[];
+    searchDir: string[];
 
     // PyOCD Specific
     boardId: string;

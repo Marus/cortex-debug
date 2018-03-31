@@ -174,6 +174,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'At least one OpenOCD Configuration File must be specified.';
         }
 
+        if(!config.searchDir || config.searchDir.length === 0) {config.searchDir = []}
+        
         return null;
     }
 
