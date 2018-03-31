@@ -71,6 +71,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.postAttachCommands) { config.postAttachCommands = []; }
         if (!config.preRestartCommands) { config.preRestartCommands = []; }
         if (!config.postRestartCommands) { config.postRestartCommands = []; }
+        if (config.request !== 'launch') { config.runToMain = false; }
 
         switch (type) {
             case 'jlink':
@@ -174,7 +175,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'At least one OpenOCD Configuration File must be specified.';
         }
 
-        if(!config.searchDir || config.searchDir.length === 0) {config.searchDir = []}
+        if (!config.searchDir || config.searchDir.length === 0) {
+            config.searchDir = [];
+        }
         
         return null;
     }
