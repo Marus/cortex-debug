@@ -1,7 +1,13 @@
+# V0.1.18
+
+* Fixed bug with the restart command if the target was currently in a running state.
+* Added add a runToMain setting to launch debug requests (not applicable to attach requests).
+* Added a searchDir setting for OpenOCD GDB server that allows specifying what directories to search for OpenOCD configuration files. Thanks https://github.com/KaDw
+
 # V0.1.17
 
 * Improved highlighting in the raw memory view
-* Workaround for an issue with <enumeratedValue> having <isDefault> instead of a <value>
+* Workaround for an issue with *enumeratedValue* having *isDefault* instead of a *value*
 
 # V0.1.16
 
