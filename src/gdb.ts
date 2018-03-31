@@ -545,22 +545,33 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
-        const commands = ['exec-interrupt'];
-        commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
-        commands.push(...this.serverController.restartCommands());
-        commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
+        const restartProcessing = () => {
+            const commands = [];
 
-        this.miDebugger.restart(commands).then((done) => {
-            this.sendResponse(response);
-            setTimeout(() => {
-                this.stopped = true;
-                this.stoppedReason = 'restart';
-                this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
-                this.sendEvent(new StoppedEvent('restart', this.currentThreadId, true));
-            }, 50);
-        }, (msg) => {
-            this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
-        });
+            commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
+            commands.push(...this.serverController.restartCommands());
+            commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
+
+            this.miDebugger.restart(commands).then((done) => {
+                this.sendResponse(response);
+                setTimeout(() => {
+                    this.stopped = true;
+                    this.stoppedReason = 'restart';
+                    this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
+                    this.sendEvent(new StoppedEvent('restart', this.currentThreadId, true));
+                }, 50);
+            }, (msg) => {
+                this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
+            });
+        };
+
+        if (this.stopped) {
+            restartProcessing();
+        }
+        else {
+            this.miDebugger.once('generic-stopped', restartProcessing);
+            this.miDebugger.sendCommand('exec-interrupt');
+        }
     }
 
     protected handleAdapterOutput(output) {
