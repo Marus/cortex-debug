@@ -241,16 +241,29 @@ export class GDBDebugSession extends DebugSession {
                 
                 this.serverController.debuggerLaunchStarted();
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
-                    this.serverController.debuggerLaunchCompleted();
                     this.started = true;
+                    this.serverController.debuggerLaunchCompleted();
                     this.sendResponse(response);
 
-                    setTimeout(() => {
-                        this.stopped = true;
-                        this.stoppedReason = 'start';
-                        this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
-                        this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
-                    }, 50);
+                    const launchComplete = () => {
+                        setTimeout(() => {
+                            this.stopped = true;
+                            this.stoppedReason = 'start';
+                            this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
+                            this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
+                        }, 50);
+                    };
+
+                    if (this.args.runToMain) {
+                        this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
+                            this.miDebugger.once('generic-stopped', launchComplete);
+                            this.miDebugger.sendCommand('exec-continue');
+                        });
+                    }
+                    else {
+                        launchComplete();
+                    }
+                    
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
@@ -776,6 +789,10 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
+        if (!this.stopped) {
+            response.body = { threads: [] };
+            this.sendResponse(response);
+        }
         try {
             const threadIdNode = await this.miDebugger.sendCommand('thread-list-ids');
             const threadIds: number[] = threadIdNode.result('thread-ids').map((ti) => parseInt(ti[1]));

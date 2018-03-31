@@ -682,6 +682,11 @@
                                 "description": "Path of executable",
                                 "type": "string"
                             },
+                            "runToMain": {
+                                "description": "If enabled the debugger will run until it the start of the main function.",
+                                "type": "boolean",
+                                "default": false
+                            },
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [
@@ -1436,5 +1441,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.1.17"
+    "version": "0.1.18-pre2"
 }

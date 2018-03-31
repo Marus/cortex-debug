@@ -331,15 +331,19 @@ export class SWOCore {
     }
 
     public debugStopped() {
-        const message: WebsocketStatusMessage = { type: 'status', status: 'stopped' };
-        this.socketServer.broadcastMessage(message);
-        this.socketServer.currentStatus = 'stopped';
+        if (this.socketServer) {
+            const message: WebsocketStatusMessage = { type: 'status', status: 'stopped' };
+            this.socketServer.broadcastMessage(message);
+            this.socketServer.currentStatus = 'stopped';
+        }
     }
 
     public debugContinued() {
-        const message: WebsocketStatusMessage = { type: 'status', status: 'continued' };
-        this.socketServer.broadcastMessage(message);
-        this.socketServer.currentStatus = 'continued';
+        if (this.socketServer) {
+            const message: WebsocketStatusMessage = { type: 'status', status: 'continued' };
+            this.socketServer.broadcastMessage(message);
+            this.socketServer.currentStatus = 'continued';
+        }
     }
     
     public dispose() {
