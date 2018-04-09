@@ -1425,7 +1425,13 @@
         "cortex-m",
         "gdb",
         "debug",
-        "embedded"
+        "embedded",
+        "jlink",
+        "j-link",
+        "st-link",
+        "openocd",
+        "black magic probe",
+        "bmp"
     ],
     "main": "./out/src/frontend/extension",
     "name": "cortex-debug",
