@@ -3,6 +3,9 @@ import { GDBServerController, ConfigurationArguments, calculatePortMask, SWOConf
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
+const commandExistsSync = require('command-exists').sync;
+const EXECUTABLE_NAMES = ['JLinkGDBServerCLExe', 'JLinkGDBServerCL', 'JLinkGDBServer'];
+
 export class JLinkServerController extends EventEmitter implements GDBServerController {
     public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort'];
     public name: 'J-Link';
@@ -100,7 +103,15 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public serverExecutable() {
         if (this.args.serverpath) { return this.args.serverpath; }
         else {
-            return os.platform() === 'win32' ? 'JLinkGDBServerCL.exe' : 'JLinkGDBServer';
+            if (os.platform() === 'win32') {
+                return 'JLinkGDBServerCL.exe';
+            }
+            else {
+                for (const name in EXECUTABLE_NAMES) {
+                    if (commandExistsSync(name)) { return name; }
+                }
+                return 'JLinkGDBServer';
+            }
         }
     }
     
