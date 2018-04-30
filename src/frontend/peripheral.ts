@@ -799,7 +799,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
                 ev.enumeratedValue.map((ev) => {
                     if (ev.value && ev.value.length > 0) {
                         const evname = ev.name[0];
-                        const evdesc = ev.description[0];
+                        const evdesc = ev.description ? ev.description[0] : evname;
                         const val = ev.value[0].toLowerCase();
                         const evvalue = parseInteger(val);
                         
@@ -980,8 +980,12 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
         
         const peripheral = new PeripheralNode(options);
 
-        const registers = this._parseRegisters(p.registers[0].register, peripheral);
-        const clusters = this._parseClusters(p.registers[0].cluster, peripheral);
+        if (p.registers[0].register) {
+            this._parseRegisters(p.registers[0].register, peripheral);
+        }
+        if (p.registers[0].cluster) {
+            this._parseClusters(p.registers[0].cluster, peripheral);
+        }
 
         return peripheral;
     }
