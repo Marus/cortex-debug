@@ -123,6 +123,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
     // BMP Specific
     BMPGDBSerialPort: string;
+
+    // Hidden settings - These settings are for advanced configuration and are not exposed in the package.json file
+    gdbpath: string;
 }
 
 export interface DisassemblyInstruction {

@@ -178,6 +178,9 @@ export class GDBDebugSession extends DebugSession {
             if (this.args.toolchainPath) {
                 gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
             }
+            if (this.args.gdbpath) {
+                gdbExePath = this.args.gdbpath;
+            }
 
             this.server = new GDBServer(executable, args, this.serverController.initMatch());
             this.server.on('output', this.handleAdapterOutput.bind(this));
