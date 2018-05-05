@@ -89,6 +89,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'bmp':
                 validationResponse = this.verifyBMPConfiguration(folder, config);
                 break;
+            case 'external':
+                validationResponse = this.verifyExternalConfiguration(folder, config);
+                break;
             default:
                 validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp"';
                 break;
@@ -236,6 +239,16 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             vscode.window.showWarningMessage('SWO support is not available from the probe when using the BMP GDB server. Disabling SWO.');
+            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
+            config.graphConfig = [];
+        }
+
+        return null;
+    }
+
+    private verifyExternalConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+        if (config.swoConfig.enabled) {
+            vscode.window.showWarningMessage('SWO support is not available for external GDB servers. Disabling SWO support.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
         }
