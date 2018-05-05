@@ -826,7 +826,7 @@
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0,
-                                        "description": "Target CPU frequency in Hz; 0 will attempt to automatically calculate.",
+                                        "description": "Target CPU frequency in Hz.",
                                         "type": "number"
                                     },
                                     "enabled": {
@@ -996,7 +996,7 @@
                                     },
                                     "swoFrequency": {
                                         "default": 0,
-                                        "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.",
+                                        "description": "SWO frequency in Hz.",
                                         "type": "number"
                                     }
                                 },
