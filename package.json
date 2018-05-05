@@ -28,7 +28,7 @@
                         "null"
                     ],
                     "default": null,
-                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServer.exe on Windows) must be on the system path."
+                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCL.exe on Windows) must be on the system path."
                 },
                 "cortex-debug.openocdPath": {
                     "type": [
