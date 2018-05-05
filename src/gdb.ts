@@ -688,13 +688,14 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.SetFunctionBreakpointsResponse,
         args: DebugProtocol.SetFunctionBreakpointsArguments
     ): void {
-        const cb = (() => {
-            this.debugReady = true;
+        const createBreakpoints = async (shouldContinue) => {
             const all = [];
             args.breakpoints.forEach((brk) => {
                 all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
             });
-            Promise.all(all).then((brkpoints) => {
+            
+            try {
+                let brkpoints = await Promise.all(all);
                 const finalBrks = [];
                 brkpoints.forEach((brkp) => {
                     if (brkp[0]) { finalBrks.push({ line: brkp[1].line }); }
@@ -703,16 +704,29 @@ export class GDBDebugSession extends DebugSession {
                     breakpoints: finalBrks
                 };
                 this.sendResponse(response);
-            }, (msg) => {
+            }
+            catch(msg) {
                 this.sendErrorResponse(response, 10, msg.toString());
-            });
-        }).bind(this);
-        if (this.debugReady) { cb(); }
-        else { this.miDebugger.once('debug-ready', cb); }
+            }
+            if (shouldContinue) {
+                await this.miDebugger.sendCommand('exec-continue');
+            }
+        };
+
+        const process = async () => {
+            if (this.stopped) { await createBreakpoints(false); }
+            else {
+                this.miDebugger.sendCommand('exec-interrupt');
+                this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+            }
+        };
+
+        if (this.debugReady) { process(); }
+        else { this.miDebugger.once('debug-ready', process); }
     }
 
     protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments) {
-        const cb = (async () => {
+        const createBreakpoints = async (shouldContinue) => {
             this.debugReady = true;
             const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
             
@@ -785,10 +799,24 @@ export class GDBDebugSession extends DebugSession {
             catch (msg) {
                 this.sendErrorResponse(response, 9, msg.toString());
             }
-        }).bind(this);
 
-        if (this.debugReady) { cb(); }
-        else { this.miDebugger.once('debug-ready', cb); }
+            if (shouldContinue) {
+                await this.miDebugger.sendCommand('exec-continue');
+            }
+        };
+
+        const process = async () => {
+            if (this.stopped) {
+                await createBreakpoints(false);
+            }
+            else {
+                await this.miDebugger.sendCommand('exec-interrupt');
+                this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+            }
+        };
+
+        if (this.debugReady) { process(); }
+        else { this.miDebugger.once('debug-ready', process); }
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
