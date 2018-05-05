@@ -1154,6 +1154,7 @@ export class GDBDebugSession extends DebugSession {
             }
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
+                    let pvar = id as VariableObject;
                     const variables: DebugProtocol.Variable[] = [];
 
                     // Variable members
@@ -1163,6 +1164,12 @@ export class GDBDebugSession extends DebugSession {
                         const vars = children.map((child) => {
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
+                            if (/^\d+$/.test(child.exp)) {
+                                child.fullExp = `${pvar.fullExp || pvar.exp}[${child.exp}]`;
+                            }
+                            else {
+                                child.fullExp = `${pvar.fullExp || pvar.exp}.${child.exp}`;
+                            }
                             return child.toProtocolVariable();
                         });
 
@@ -1374,7 +1381,7 @@ export class GDBDebugSession extends DebugSession {
         if (args.context === 'watch') {
             try {
                 const exp = args.expression;
-                const varObjName = `watch_${exp}`;
+                const varObjName = `watch_${exp.replace(/\./g, '__').replace(/\[/g, '_').replace(/\]/g, '_')}`;
                 let varObj: VariableObject;
                 try {
                     const changes = await this.miDebugger.varUpdate(varObjName);

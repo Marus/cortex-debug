@@ -57,6 +57,7 @@ export class VariableObject {
     public displayhint: string;
     public hasMore: boolean;
     public id: number;
+    public fullExp: string;
     constructor(node: any) {
         this.name = MINode.valueOf(node, 'name');
         this.exp = MINode.valueOf(node, 'exp');
@@ -90,10 +91,12 @@ export class VariableObject {
     public toProtocolVariable(): DebugProtocol.Variable {
         const res: DebugProtocol.Variable = {
             name: this.exp,
-            evaluateName: this.name,
+            evaluateName: this.fullExp || this.exp,
             value: (this.value === void 0) ? '<unknown>' : this.value,
             type: this.type,
-            // kind: this.displayhint,
+            presentationHint: {
+                kind: this.displayhint
+            },
             variablesReference: this.id
         };
         if (this.displayhint) {
