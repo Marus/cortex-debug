@@ -83,19 +83,19 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
      * The MIT License (MIT)
      * **Copyright © 2016 Stef Levesque**
      */
-    firstBytePos = 10;
-    lastBytePos: number = this.firstBytePos + 3 * 16 - 1;
-    firstAsciiPos: number = this.lastBytePos + 3;
-    lastAsciiPos: number = this.firstAsciiPos + 16;
+    public firstBytePos = 10;
+    public lastBytePos: number = this.firstBytePos + 3 * 16 - 1;
+    public firstAsciiPos: number = this.lastBytePos + 3;
+    public lastAsciiPos: number = this.firstAsciiPos + 16;
 
-    private getOffset(pos: vscode.Position) : number {    
+    private getOffset(pos: vscode.Position): number {
         // check if within a valid section
         if (pos.line < 1 || pos.character < this.firstBytePos) {
             return;
         }
     
-        var offset = (pos.line - 1) * 16;
-        var s = pos.character - this.firstBytePos;
+        let offset = (pos.line - 1) * 16;
+        const s = pos.character - this.firstBytePos;
         if (pos.character >= this.firstBytePos && pos.character <= this.lastBytePos) {
             // byte section
             offset += Math.floor(s / 3);
@@ -106,8 +106,8 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         return offset;
     }
 
-    private getPosition(offset: number, ascii: Boolean = false) : vscode.Position {
-        let row = 1 + Math.floor(offset / 16);
+    private getPosition(offset: number, ascii: boolean = false): vscode.Position {
+        const row = 1 + Math.floor(offset / 16);
         let column = offset % 16;
     
         if (ascii) {
@@ -119,17 +119,17 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         return new vscode.Position(row, column);
     }
 
-    private getRanges(startOffset: number, endOffset: number, ascii: boolean): vscode.Range[] {    
-        var startPos = this.getPosition(startOffset, ascii);
-        var endPos = this.getPosition(endOffset, ascii);
+    private getRanges(startOffset: number, endOffset: number, ascii: boolean): vscode.Range[] {
+        const startPos = this.getPosition(startOffset, ascii);
+        let endPos = this.getPosition(endOffset, ascii);
         endPos = new vscode.Position(endPos.line, endPos.character + (ascii ? 1 : 2));
     
-        var ranges = [];
-        var firstOffset = ascii ? this.firstAsciiPos : this.firstBytePos;
-        var lastOffset = ascii ? this.lastAsciiPos : this.lastBytePos;
-        for (var i=startPos.line; i<=endPos.line; ++i) {
-            var start = new vscode.Position(i, (i == startPos.line ? startPos.character : firstOffset));
-            var end = new vscode.Position(i, (i == endPos.line ? endPos.character : lastOffset));
+        const ranges = [];
+        const firstOffset = ascii ? this.firstAsciiPos : this.firstBytePos;
+        const lastOffset = ascii ? this.lastAsciiPos : this.lastBytePos;
+        for (let i =startPos.line; i <= endPos.line; ++i) {
+            const start = new vscode.Position(i, (i === startPos.line ? startPos.character : firstOffset));
+            const end = new vscode.Position(i, (i === endPos.line ? endPos.character : lastOffset));
             ranges.push(new vscode.Range(start, end));
         }
 
@@ -150,22 +150,22 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
     });
 
     public handleSelection(e: vscode.TextEditorSelectionChangeEvent) {
-        let numLine = e.textEditor.document.lineCount
-        if (e.selections[0].start.line + 1 == numLine ||
-            e.selections[0].end.line + 1 == numLine) {
+        const numLine = e.textEditor.document.lineCount
+        if (e.selections[0].start.line + 1 === numLine ||
+            e.selections[0].end.line + 1 === numLine) {
             e.textEditor.setDecorations(this.smallDecorationType, []);
             return;
         }
-        let startOffset = this.getOffset(e.selections[0].start);
-        let endOffset = this.getOffset(e.selections[0].end);
-        if (typeof startOffset == 'undefined' ||
-            typeof endOffset == 'undefined') {
+        const startOffset = this.getOffset(e.selections[0].start);
+        const endOffset = this.getOffset(e.selections[0].end);
+        if (typeof startOffset === 'undefined' ||
+            typeof endOffset === 'undefined') {
             e.textEditor.setDecorations(this.smallDecorationType, []);
             return;
         }
         
-        var ranges = this.getRanges(startOffset, endOffset, false);
-            ranges = ranges.concat(this.getRanges(startOffset, endOffset, true));
+        let ranges = this.getRanges(startOffset, endOffset, false);
+        ranges = ranges.concat(this.getRanges(startOffset, endOffset, true));
         e.textEditor.setDecorations(this.smallDecorationType, ranges);
     }
 }
