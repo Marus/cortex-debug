@@ -117,12 +117,16 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         const serverargs = [];
 
-        this.args.configFiles.forEach((cf, idx) => {
-            serverargs.push('-f', cf);
-        });
-
         this.args.searchDir.forEach((cs, idx) => {
             serverargs.push('-s', cs);
+        });
+
+        if (this.args.searchDir.length === 0) {
+            serverargs.push('-s', this.args.cwd);
+        }
+
+        this.args.configFiles.forEach((cf, idx) => {
+            serverargs.push('-f', cf);
         });
 
         if (this.args.rtos) {
