@@ -138,6 +138,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [`gdb_port ${gdbport}`];
 
         if (this.args.swoConfig.enabled) {
+            if (os.platform() == 'win32') {
+                this.swoPath = this.swoPath.replace(/\\/g, '/');
+            }
             // tslint:disable-next-line:max-line-length
             commands.push(`tpiu config internal ${this.swoPath} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
         }
