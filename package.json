@@ -197,6 +197,11 @@
                                 "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
                                 "type": "string"
                             },
+                            "armToolchainPath": {
+                                "default": null,
+                                "description": "This setting can be used to override the armToolchainPath user setting for a particular launch configuration. This should be the path where arm-none-eabi-gdb and arm-none-eabi-objdump are located.",
+                                "type": "string"
+                            },
                             "executable": {
                                 "description": "Path of executable",
                                 "type": "string"
@@ -676,6 +681,11 @@
                             "rtos": {
                                 "default": null,
                                 "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "type": "string"
+                            },
+                            "armToolchainPath": {
+                                "default": null,
+                                "description": "This setting can be used to override the armToolchainPath user setting for a particular launch configuration. This should be the path where arm-none-eabi-gdb and arm-none-eabi-objdump are located.",
                                 "type": "string"
                             },
                             "executable": {

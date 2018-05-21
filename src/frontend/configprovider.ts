@@ -98,8 +98,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
-        config.toolchainPath = configuration.armToolchainPath;
-
+        if (config.armToolchainPath) { config.toolchainPath = config.armToolchainPath; }
+        if (!config.toolchainPath) {
+            config.toolchainPath = configuration.armToolchainPath;
+        }
+        
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.
