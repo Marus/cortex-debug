@@ -1,3 +1,14 @@
+# V0.1.20
+
+* Fixed issue with setting breakpoints while the target is running
+* Fixed issues with the 'Add to Watch' and 'Copy Expression' options in the variable view
+* Fixed issues with parsing some Atmel SVD files (Thanks to https://github.com/ivankravets for your PR)
+* Allow overriding the armToolchainPath setting on a per lunch configuration basis
+
+# V0.1.19
+
+* Updated command names for JLink - newer versions of JLink rename the GDB server on Linux and macOS to JLinkGDBServerCLExe - this update searches for both the new JLinkGDBServerCLExe name and, if not found, falls back to the old JLinkGDBServer name.
+
 # V0.1.18
 
 * Fixed bug with the restart command if the target was currently in a running state.
