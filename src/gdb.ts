@@ -243,6 +243,9 @@ export class GDBDebugSession extends DebugSession {
                 }
                 
                 this.serverController.debuggerLaunchStarted();
+                this.miDebugger.once('debug-ready', () => {
+                    this.debugReady = true;
+                });
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
