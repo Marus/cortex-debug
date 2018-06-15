@@ -1,3 +1,7 @@
+# V.1.21
+
+* Fixed issue with people sometimes not being able to set new breakpoints after launching. Special thanks to @xiaoyongdong for his fix and @microwavesafe for his help in testing.
+
 # V0.1.20
 
 * Fixed issue with setting breakpoints while the target is running
