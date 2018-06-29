@@ -145,6 +145,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             commands.push(`tpiu config internal ${this.swoPath} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
         }
 
+        // Append additional commands
+        if(this.args.openOCDLaunchCommands) {
+            this.args.openOCDLaunchCommands.forEach((cmd) => {
+                commands.push(cmd)
+            });
+        }
+        
         serverargs.push('-c', commands.join('; '));
 
         return serverargs;
