@@ -1033,6 +1033,12 @@
                                     "jtag"
                                 ]
                             },
+                            "jlinkscript":
+                            {
+                                "default": null,
+                                "description": "J-Link script file - optional input file for customizing J-Link actions.",
+                                "type": "string"
+                            },
                             "configFiles": {
                                 "description": "OpenOCD configuration file(s) to load",
                                 "items": {
