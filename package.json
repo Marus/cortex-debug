@@ -621,6 +621,10 @@
                             "BMPGDBSerialPort": {
                                 "type": "string",
                                 "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
+                            },
+                            "powerOverBMP": {
+                                "type": "string",
+                                "description": "Power up the board over Black Magic Probe. \"powerOverBMP\" : \"enable\" or \"powerOverBMP\" : \"disable\". If not set it will use the last power state."
                             }
                         },
                         "required": [
@@ -1112,6 +1116,10 @@
                             "BMPGDBSerialPort": {
                                 "type": "string",
                                 "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
+                            },
+                            "powerOverBMP": {
+                                "type": "string",
+                                "description": "Power up the board over Black Magic Probe. \"powerOverBMP\" : \"enable\" or \"powerOverBMP\" : \"disable\". If not set it will use the last power state."
                             }
                         },
                         "required": [
