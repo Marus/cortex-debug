@@ -4,6 +4,7 @@
         "onDebugResolve:jlink-gdb",
         "onDebugResolve:openocd-gdb",
         "onDebugResolve:pyocd-gdb",
+        "onDebugResolve:pe-gdb",
         "onDebugResolve:stutil-gdb"
     ],
     "categories": [
@@ -45,6 +46,14 @@
                     ],
                     "default": null,
                     "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
+                },
+                "cortex-debug.PEGDBServerPath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
                 },
                 "cortex-debug.stutilPath": {
                     "type": [
@@ -145,13 +154,14 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd and stutil",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe and stutil",
                                 "enum": [
                                     "jlink",
                                     "openocd",
                                     "pyocd",
                                     "stutil",
-                                    "bmp"
+                                    "bmp",
+                                    "pe"
                                 ]
                             },
                             "cwd": {
@@ -631,13 +641,14 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd and stutil",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe and stutil",
                                 "enum": [
                                     "jlink",
                                     "openocd",
                                     "pyocd",
                                     "stutil",
-                                    "bmp"
+                                    "bmp",
+                                    "pe"
                                 ]
                             },
                             "cwd": {
@@ -1248,6 +1259,33 @@
                 "program": "./out/src/gdb.js",
                 "runtime": "node",
                 "type": "jlink-gdb",
+                "variables": {}
+            },
+            {
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {},
+                        "required": []
+                    },
+                    "launch": {
+                        "properties": {},
+                        "required": []
+                    }
+                },
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "c",
+                        "cpp",
+                        "asm",
+                        "arm",
+                        "rust"
+                    ]
+                },
+                "extensions": [],
+                "label": "Cortex Debug: PEMicro (Deprecated)",
+                "program": "./out/src/gdb.js",
+                "runtime": "node",
+                "type": "pe-gdb",
                 "variables": {}
             },
             {

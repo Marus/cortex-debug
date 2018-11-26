@@ -87,6 +87,7 @@ class CortexDebugExtension {
             vscode.debug.registerDebugConfigurationProvider('openocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'openocd')),
             vscode.debug.registerDebugConfigurationProvider('stutil-gdb', new DeprecatedDebugConfigurationProvider(context, 'stutil')),
             vscode.debug.registerDebugConfigurationProvider('pyocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'pyocd')),
+            vscode.debug.registerDebugConfigurationProvider('pe-gdb', new DeprecatedDebugConfigurationProvider(context, 'pe')),
             vscode.debug.registerDebugConfigurationProvider('cortex-debug', new CortexDebugConfigurationProvider(context))
         );
     }

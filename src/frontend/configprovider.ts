@@ -89,11 +89,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'bmp':
                 validationResponse = this.verifyBMPConfiguration(folder, config);
                 break;
+            case 'pe':
+                validationResponse = this.verifyPEConfiguration(folder, config);
+                break;
             case 'external':
                 validationResponse = this.verifyExternalConfiguration(folder, config);
                 break;
             default:
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp"';
+                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe"';
                 break;
         }
 
@@ -244,6 +247,27 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             vscode.window.showWarningMessage('SWO support is not available from the probe when using the BMP GDB server. Disabling SWO.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
+        }
+
+        return null;
+    }
+
+    private verifyPEConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+        if (!config.serverpath) {
+            const configuration = vscode.workspace.getConfiguration('cortex-debug');
+            config.serverpath = configuration.PEGDBServerPath;
+        }
+        
+        if (config.rtos) {
+            return 'The PE GDB Server does not have support for the rtos option.';
+        }
+
+        if (!config.device) {
+            return 'Device Identifier is required for PE configurations. Please run `pegdbserver_console.exe -devicelist` for supported devices';
+        }
+
+        if (config.swoConfig.enabled) {
+            return 'The PE GDB Server does not have support for SWO';
         }
 
         return null;
