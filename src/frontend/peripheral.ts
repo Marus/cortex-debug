@@ -64,6 +64,7 @@ export class BaseNode {
     public getChildren(): BaseNode[] { return []; }
     public getTreeNode(): TreeNode { return null; }
     public getCopyValue(): string { return null; }
+    public getPeripheralNode(): PeripheralNode { return null; }
     public setFormat(format: NumberFormat): void {
         this.format = format;
     }
@@ -218,14 +219,22 @@ export class PeripheralNode extends BaseNode {
 
             vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
                 this.currentValue = data.bytes;
+                
+                let promises = this.children.map((r) => r.update());
+                Promise.all(promises).then((updated) => {
+                    resolve(true);
+                }).catch((e) => {
+                    reject("Failed");
+                });
 
-                this.children.forEach((r) => r.update());
-
-                resolve(true);
             }, (error) => {
                 reject(error);
             });
         });
+    }
+
+    public getPeripheralNode(): PeripheralNode {
+        return this;
     }
 
     public selected(): Thenable<boolean> {
@@ -272,7 +281,7 @@ export class ClusterNode extends BaseNode {
     public readonly resetValue: number;
     public readonly accessType: AccessType;
 
-    constructor(private parent: PeripheralNode, options: ClusterOptions) {
+    constructor(public parent: PeripheralNode, options: ClusterOptions) {
         super(RecordType.Cluster);
         this.name = options.name;
         this.offset = options.addressOffset;
@@ -316,7 +325,14 @@ export class ClusterNode extends BaseNode {
     }
 
     public update(): Thenable<boolean> {
-        return Promise.resolve(true);
+        return new Promise((resolve, reject) => {
+            let promises = this.children.map((r) => r.update());
+            Promise.all(promises).then((updated) => {
+                resolve(true);
+            }).catch((e) => {
+                reject("Failed");
+            });
+        });
     }
 
     public _saveState(path: string): NodeSetting[] {
@@ -340,6 +356,10 @@ export class ClusterNode extends BaseNode {
             if (child) { return child._findByPath(path.slice(1)); }
             else { return null; }
         }
+    }
+
+    public getPeripheralNode(): PeripheralNode {
+        return this.parent;
     }
 }
 
@@ -561,6 +581,10 @@ export class RegisterNode extends BaseNode {
         }
         else { return null; }
     }
+
+    public getPeripheralNode(): PeripheralNode {
+        return this.parent.getPeripheralNode();
+    }
 }
 
 interface FieldOptions {
@@ -583,7 +607,7 @@ export class FieldNode extends BaseNode {
     private enumerationValues: string[];
     private enumerationMap: any;
 
-    constructor(private parent: RegisterNode, options: FieldOptions) {
+    constructor(public parent: RegisterNode, options: FieldOptions) {
         super(RecordType.Field);
 
         this.name = options.name;
@@ -715,7 +739,9 @@ export class FieldNode extends BaseNode {
         else { return this.parent.getFormat(); }
     }
 
-    public update() {}
+    public update() {
+
+    }
 
     public _saveState(path: string): NodeSetting[] {
         if (this.format !== NumberFormat.Auto) {
@@ -729,6 +755,10 @@ export class FieldNode extends BaseNode {
     public _findByPath(path: string[]): BaseNode {
         if (path.length === 0) { return this; }
         else { return null; }
+    }
+
+    public getPeripheralNode(): PeripheralNode {
+        return this.parent.getPeripheralNode();
     }
 }
 
