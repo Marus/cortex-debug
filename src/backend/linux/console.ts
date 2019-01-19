@@ -10,7 +10,9 @@ export function spawnTerminalEmulator(preferedEmulator: string): Thenable<string
             if (fs.existsSync(ttyFileOutput)) {
                 clearInterval(interval);
                 const tty = fs.readFileSync(ttyFileOutput).toString('utf8');
-                fs.unlink(ttyFileOutput);
+                fs.unlink(ttyFileOutput, (err) => {
+                    console.log('Error unlinking terminal session');
+                });
                 return resolve(tty);
             }
             it++;
