@@ -139,6 +139,10 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             cmdargs.push('-rtos', this.args.rtos);
         }
 
+        if (this.args.jlinkscript) {
+            cmdargs.push('-jlinkscriptfile', this.args.jlinkscript);
+        }
+
         return cmdargs;
     }
 
