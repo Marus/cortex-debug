@@ -21,12 +21,14 @@ import { PyOCDServerController } from './pyocd';
 import { BMPServerController } from './bmp';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
+import { PEServerController } from './pemicro';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
     openocd: OpenOCDServerController,
     stutil: STUtilServerController,
     pyocd: PyOCDServerController,
+    pe: PEServerController,
     bmp: BMPServerController
 };
 
