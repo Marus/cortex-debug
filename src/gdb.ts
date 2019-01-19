@@ -329,9 +329,9 @@ export class GDBDebugSession extends DebugSession {
             case 'set-active-editor':
                 if (args.path !== this.activeEditorPath) {
                     this.activeEditorPath = args.path;
-                    if (this.stopped) {
-                        this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
-                    }
+                    // if (this.stopped) {
+                    //     this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+                    // }
                 }
                 response.body = {};
                 this.sendResponse(response);
