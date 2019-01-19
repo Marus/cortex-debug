@@ -184,6 +184,15 @@ export class GDBDebugSession extends DebugSession {
                 gdbExePath = this.args.gdbpath;
             }
 
+            // Check to see if gdb exists.
+            if (fs.existsSync(gdbExePath) === false) {
+                this.sendErrorResponse(
+                    response,
+                    103,
+                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly`
+                );
+            }
+
             this.server = new GDBServer(executable, args, this.serverController.initMatch());
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
