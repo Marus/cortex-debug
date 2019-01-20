@@ -1,4 +1,14 @@
-# V0.1.22
+# V0.2.2
+
+* Fixed issues with serial port source for SWO data (Currently only working on macOS and Linux; Windows support will be restored soon)
+* Extension now requires VS Code 1.29 or newer
+
+# V0.2.1
+
+* Fixed issues with variable substitution
+* Fixed issues with blocking run if executable doesn't exist and may be created by the preLaunchTask
+
+# V0.2.0
 
 * Work around for some issues introduced with VSCode 1.29
 * Added initial support for PE Micro Debug Interfaces (Special thanks to https://github.com/danebou for your PR)

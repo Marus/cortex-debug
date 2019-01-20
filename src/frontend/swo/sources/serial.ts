@@ -12,11 +12,15 @@ export class SerialSWOSource extends EventEmitter implements SWOSource {
     constructor(private device: string, private baudRate: number, extensionPath: string) {
         super();
 
-        const modpath = path.normalize(path.join(extensionPath, 'binary_modules', process.version, os.platform(), process.arch, 'serialport'));
-        let SerialPort;
+        const binarypath = path.normalize(path.join(extensionPath, 'binary_modules', process.version, os.platform(), process.arch, 'node_modules'));
 
+        if (module.paths.indexOf(binarypath) == -1) {
+            module.paths.splice(0, 0, binarypath);
+        }
+
+        let SerialPort;
         try {
-            SerialPort = require(modpath);
+            SerialPort = module.require('serialport');
         }
         catch (e) {
             // tslint:disable-next-line:max-line-length

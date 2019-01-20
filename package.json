@@ -1505,7 +1505,7 @@
     },
     "displayName": "Cortex-Debug",
     "engines": {
-        "vscode": "^1.28.0"
+        "vscode": "^1.29.0"
     },
     "icon": "images/icon.png",
     "keywords": [
