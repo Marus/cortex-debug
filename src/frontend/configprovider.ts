@@ -116,29 +116,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return undefined;
         }
         
-        let executable: string = (config.executable || '');
-        executable = executable.replace(/\$\{\s*workspaceRoot\s*\}/, folder.uri.fsPath);
-        let cwd = config.cwd || '${workspaceRoot}';
-        cwd = cwd.replace(/\$\{\s*workspaceRoot\s*\}/, folder.uri.fsPath);
-
-        if (!path.isAbsolute(executable)) {
-            executable = path.normalize(path.join(cwd, executable));
-        }
-
-        if (fs.existsSync(executable)) {
-            config.executable = executable;
-        }
-        else {
-            if(config.preLaunchTask == "") {
-                vscode.window.showErrorMessage(`Invalid executable: ${executable} not found and preLaunchTask is not set.`);
-                return undefined;
-            }
-            else {
-                vscode.window.showInformationMessage(`Executable ${executable} not found, looking for preLaunchTask.`);
-                config.executable = executable;
-            }
-        }
-        
         return config;
     }
 

@@ -134,8 +134,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
-        args.graphConfig = args.graphConfig || [];
-        this.args = args;
+        this.args = this.normalizeArguments(args);
         this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
@@ -144,8 +143,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
-        args.graphConfig = args.graphConfig || [];
-        this.args = args;
+        this.args = this.normalizeArguments(args);
         this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
@@ -153,7 +151,45 @@ export class GDBDebugSession extends DebugSession {
         this.processLaunchAttachRequest(response, true);
     }
 
+    private normalizeArguments(args: ConfigurationArguments): ConfigurationArguments {
+        args.graphConfig = args.graphConfig || [];
+        
+        if (!path.isAbsolute(args.executable)) {
+            args.executable = path.normalize(path.join(args.cwd, args.executable));
+        }
+
+        if (!path.isAbsolute(args.svdFile)) {
+            args.svdFile = path.normalize(path.join(args.cwd, args.svdFile));
+        }
+
+        if (args.configFiles) {
+            args.configFiles = args.configFiles.map((f) => {
+                return path.isAbsolute(f) ? f : path.normalize(path.join(args.cwd, f));
+            });
+        }
+
+        if (args.swoConfig && args.swoConfig.decoders) {
+            args.swoConfig.decoders = args.swoConfig.decoders.map((dec) => {
+                if (dec.type == "advanced" && dec.decoder && !path.isAbsolute(dec.decoder)) {
+                    dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
+                }
+                return dec;
+            });
+        }
+
+        return args;
+    }
+
     private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, attach: boolean) {
+        if (!fs.existsSync(this.args.executable)) {
+            this.sendErrorResponse(
+                response,
+                103,
+                `Unable to find executable file at ${this.args.executable}.`
+            );
+            return;
+        }
+        
         const ControllerClass = SERVER_TYPE_MAP[this.args.servertype];
         this.serverController = new ControllerClass();
         this.serverController.setArguments(this.args);
