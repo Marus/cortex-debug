@@ -102,8 +102,6 @@ class CortexDebugExtension {
             this.peripheralTreeView
         );
 
-        console.log('Setting up peripherals events', this.peripheralTreeView);
-
         this.peripheralTreeView.onDidExpandElement((e) => {
             e.element.node.expanded = true;
             e.element.node.getPeripheralNode().update();
