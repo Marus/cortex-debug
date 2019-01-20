@@ -1,4 +1,10 @@
-# V.1.21
+# V0.1.22
+
+* Work around for some issues introduced with VSCode 1.29
+* Added initial support for PE Micro Debug Interfaces (Special thanks to https://github.com/danebou for your PR)
+* Fixed a number of bugs with the peripheral view - hopefully registers will be updating properly now (note that you can no longer just select a node to expand, you must click on the expand/collapse arrow)
+
+# V0.1.21
 
 * Fixed issue with people sometimes not being able to set new breakpoints after launching. Special thanks to @xiaoyongdong for his fix and @microwavesafe for his help in testing.
 
