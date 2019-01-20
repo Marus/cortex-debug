@@ -1021,6 +1021,11 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
     }
     
     private _loadSVD(SVDFile: string): Thenable<any> {
+        if(!path.isAbsolute(SVDFile)) {
+            let fullpath = path.normalize(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, SVDFile));
+            SVDFile = fullpath;
+        }
+
         return new Promise((resolve, reject) => {
             fs.readFile(SVDFile, 'utf8', (err, data) => {
                 xml2js.parseString(data, (err, result) => {
