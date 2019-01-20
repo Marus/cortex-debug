@@ -12,6 +12,7 @@ import * as os from 'os';
 import * as net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as hasbin from 'hasbin';
 import { setTimeout } from 'timers';
 
 import { JLinkServerController } from './jlink';
@@ -185,12 +186,25 @@ export class GDBDebugSession extends DebugSession {
             }
 
             // Check to see if gdb exists.
-            if (fs.existsSync(gdbExePath) === false) {
-                this.sendErrorResponse(
-                    response,
-                    103,
-                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly`
-                );
+            if (path.isAbsolute(gdbExePath)) {
+                if (fs.existsSync(gdbExePath) === false) {
+                    this.sendErrorResponse(
+                        response,
+                        103,
+                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
+                    );
+                    return;
+                }
+            }
+            else {
+                if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
+                    this.sendErrorResponse(
+                        response,
+                        103,
+                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
+                    );
+                    return;
+                }
             }
 
             this.server = new GDBServer(executable, args, this.serverController.initMatch());
