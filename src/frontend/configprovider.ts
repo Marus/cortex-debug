@@ -129,8 +129,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.executable = executable;
         }
         else {
-            vscode.window.showErrorMessage(`Invalid executable: ${executable} not found.`);
-            return undefined;
+            if(config.preLaunchTask == "") {
+                vscode.window.showErrorMessage(`Invalid executable: ${executable} not found and preLaunchTask is not set.`);
+                return undefined;
+            }
+            else {
+                vscode.window.showInformationMessage(`Executable ${executable} not found, looking for preLaunchTask.`);
+                config.executable = executable;
+            }
         }
         
         return config;
