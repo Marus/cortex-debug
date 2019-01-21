@@ -18,6 +18,10 @@ export class SWOConsoleProcessor implements SWODecoder {
         this.port = config.port;
         this.encoding = config.encoding || 'utf8';
         this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, type: console]`);
+
+        if (config.showOnStartup) {
+            this.output.show(true);
+        }
     }
 
     public softwareEvent(packet: Packet) {
