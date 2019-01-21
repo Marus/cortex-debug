@@ -162,12 +162,6 @@ export class GDBDebugSession extends DebugSession {
             args.svdFile = path.normalize(path.join(args.cwd, args.svdFile));
         }
 
-        if (args.configFiles) {
-            args.configFiles = args.configFiles.map((f) => {
-                return path.isAbsolute(f) ? f : path.normalize(path.join(args.cwd, f));
-            });
-        }
-
         if (args.swoConfig && args.swoConfig.decoders) {
             args.swoConfig.decoders = args.swoConfig.decoders.map((dec) => {
                 if (dec.type == "advanced" && dec.decoder && !path.isAbsolute(dec.decoder)) {
