@@ -1528,5 +1528,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.2.2"
+    "version": "0.2.3"
 }
