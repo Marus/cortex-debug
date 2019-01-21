@@ -154,11 +154,11 @@ export class GDBDebugSession extends DebugSession {
     private normalizeArguments(args: ConfigurationArguments): ConfigurationArguments {
         args.graphConfig = args.graphConfig || [];
         
-        if (!path.isAbsolute(args.executable)) {
+        if (args.executable && !path.isAbsolute(args.executable)) {
             args.executable = path.normalize(path.join(args.cwd, args.executable));
         }
 
-        if (!path.isAbsolute(args.svdFile)) {
+        if (args.svdFile && !path.isAbsolute(args.svdFile)) {
             args.svdFile = path.normalize(path.join(args.cwd, args.svdFile));
         }
 
