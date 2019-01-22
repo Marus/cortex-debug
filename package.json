@@ -401,6 +401,10 @@
                                                             "description": "A label for the output window.",
                                                             "type": "string"
                                                         },
+                                                        "showOnStartup": {
+                                                            "description": "If true, switches to this output when starting a debug session.",
+                                                            "type": "boolean"
+                                                        },
                                                         "port": {
                                                             "description": "ITM Port Number",
                                                             "maximum": 31,
