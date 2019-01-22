@@ -95,8 +95,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'external':
                 validationResponse = this.verifyExternalConfiguration(folder, config);
                 break;
+            case 'qemu':
+                validationResponse = this.verifyQEMUConfiguration(folder, config);
+                break;
             default:
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe"';
+                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe", "qemu"';
                 break;
         }
 
@@ -117,6 +120,25 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
         
         return config;
+    }
+
+    private verifyQEMUConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+        if (config.qemupath && !config.serverpath) { config.serverpath = config.qemupath; }
+
+        if (!config.cpu) { config.cpu = "cortex-m3"; }
+        if (!config.machine) { config.machine = "lm3s6965evb"; }
+
+        if (config.swoConfig.enabled) {
+            vscode.window.showWarningMessage('SWO support is not available when using QEMU.');
+            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
+            config.graphConfig = [];
+        }
+
+        if (config.rtos) {
+            return 'RTOS support is not available when using QEMU';
+        }
+        
+        return null;
     }
 
     private verifyJLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {

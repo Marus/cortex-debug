@@ -20,9 +20,11 @@ import { OpenOCDServerController } from './openocd';
 import { STUtilServerController } from './stutil';
 import { PyOCDServerController } from './pyocd';
 import { BMPServerController } from './bmp';
+import { PEServerController } from './pemicro';
+import { QEMUServerController } from './qemu';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
-import { PEServerController } from './pemicro';
+
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -30,7 +32,8 @@ const SERVER_TYPE_MAP = {
     stutil: STUtilServerController,
     pyocd: PyOCDServerController,
     pe: PEServerController,
-    bmp: BMPServerController
+    bmp: BMPServerController,
+    qemu: QEMUServerController
 };
 
 class ExtendedVariable {

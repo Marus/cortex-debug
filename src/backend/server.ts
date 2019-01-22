@@ -37,6 +37,16 @@ export class GDBServer extends EventEmitter {
                         }
                     }, 500);
                 }
+                if (this.initMatch == null) {
+                    // If there is no init match string (e.g. QEMU) assume launch in 1/2 second and resolve
+                    setTimeout(() => {
+                        if (this.initResolve) {
+                            this.initResolve(true);
+                            this.initReject = null;
+                            this.initResolve = null;
+                        }
+                    }, 1000);
+                }
             }
             else { // For servers like BMP that are always running directly on the probe
                 resolve();

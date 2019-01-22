@@ -127,6 +127,10 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     BMPGDBSerialPort: string;
     powerOverBMP: string;
 
+    // QEMU Specific
+    cpu: string;
+    machine: string;
+
     // Hidden settings - These settings are for advanced configuration and are not exposed in the package.json file
     gdbpath: string;
 }

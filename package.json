@@ -165,7 +165,8 @@
                                     "pyocd",
                                     "stutil",
                                     "bmp",
-                                    "pe"
+                                    "pe",
+                                    "qemu"
                                 ]
                             },
                             "cwd": {
@@ -200,6 +201,24 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
+                            },
+                            "cpu": {
+                                "default": "cortex-m3",
+                                "type": "string",
+                                "description": "CPU Type Selection - used for QEMU server type",
+                                "enum": [
+                                    "cortex-m3",
+                                    "cortex-m4"
+                                ]
+                            },
+                            "machine": {
+                                "default": "lm3s811evb",
+                                "type": "string",
+                                "description": "Machine Type Selection - used for QEMU server type",
+                                "enum": [
+                                    "lm3s811evb",
+                                    "lm3s6965evb"
+                                ]
                             },
                             "device": {
                                 "default": "",
@@ -656,7 +675,8 @@
                                     "pyocd",
                                     "stutil",
                                     "bmp",
-                                    "pe"
+                                    "pe",
+                                    "qemu"
                                 ]
                             },
                             "cwd": {
@@ -691,6 +711,24 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
+                            },
+                            "cpu": {
+                                "default": "cortex-m3",
+                                "type": "string",
+                                "description": "CPU Type Selection - used for QEMU server type",
+                                "enum": [
+                                    "cortex-m3",
+                                    "cortex-m4"
+                                ]
+                            },
+                            "machine": {
+                                "default": "lm3s811evb",
+                                "type": "string",
+                                "description": "Machine Type Selection - used for QEMU server type",
+                                "enum": [
+                                    "lm3s811evb",
+                                    "lm3s6965evb"
+                                ]
                             },
                             "device": {
                                 "default": "",
@@ -1528,5 +1566,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.2.3"
+    "version": "0.2.4a"
 }
