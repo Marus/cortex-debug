@@ -81,6 +81,7 @@ class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.registers.setFormat', this.registersSetFormat.bind(this)),
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.examineMemory2', this.examineMemory2.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
 
@@ -208,6 +209,38 @@ class CortexDebugExtension {
             vscode.debug.activeDebugSession.customRequest('set-force-disassembly', { force: force });
             Reporting.sendEvent('Force Disassembly', 'Set', force ? 'Forced' : 'Auto');
         }, (error) => {});
+    }
+
+    private examineMemory2() {
+        const panel = vscode.window.createWebviewPanel(
+            'memoryView',
+            'Memory View',
+            vscode.ViewColumn.Two,
+            {
+                enableScripts: true
+            }
+        );
+        
+        const dirPath = path.join(this.context.extensionPath, 'memoryview', 'index.html');
+        panel.webview.html = fs.readFileSync(dirPath, 'utf8');
+
+        // Handle messages from the webview
+        panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'readMemory':
+                        vscode.debug.activeDebugSession.customRequest('read-memory', { address: parseInt(message.text), length: 2048 }).then((data) => {
+                            panel.webview.postMessage({data: data.bytes});
+                        }, (error) => {
+                            vscode.window.showErrorMessage(`Unable to read memory from ` + message.text + ' size = 2048');
+                        });
+                        return;
+                }
+            },
+            undefined,
+            this.context.subscriptions
+        );
+        
     }
 
     private examineMemory() {

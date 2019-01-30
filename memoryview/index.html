@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Memory View</title>
+	<style>
+	body {
+		font-family: 'Droid Sans Mono', 'monospace', monospace, 'Droid Sans Fallback';
+	}
+
+	#memoryView div {
+		float: left;
+		padding: 0 5px 0 0;
+		margin: 0;
+	}
+	</style>
+</head>
+<body>
+	<div id="input"> 
+		<form>
+			<input id="addressInput" type="text" name="address" width="100"/>
+			<select id="dataFormatInput">
+				<option value="ascii">Ascii</option>
+				<option value="uint8" selected>Uint8</option>
+				<option value="uint16">Uint16</option>
+				<option value="uint32">Uint32</option>
+				<!--option value="int8">Int8</option>
+				<option value="int16">Int16</option>
+				<option value="int32">Int32</option-->
+			</select>
+		</form>
+	</div>
+
+	<div id="memoryView" style="width: 42em;">
+	</div>
+
+	<script>
+
+	// Global states
+	let g_address = 0x0;
+	let g_vscode = undefined;
+	let g_memoryData = [];
+	let g_readInProgress = false;
+	let DataFormatEnum = {
+		"ascii" : 0,
+		"uint8" : 1,
+		"uint16" : 2,
+		"uint32" : 3,
+		"int8" : 4,
+		"int16" : 5,
+		"int32" : 6
+	}
+
+	function hexFormat(value, padding = 8, includePrefix = false) {
+		let base = (value>>>0).toString(16);
+		while (base.length < padding) { base = '0' + base; }
+		return includePrefix ? '0x' + base : base;
+	}
+
+	function validateValue(address) {
+		if (/^0x[0-9a-f]{1,8}$/i.test(address)) {
+			return address;
+		}
+		else if (/^[0-9]+$/i.test(address)) {
+			return address;
+		}
+		else {
+			return null;
+		}
+	}
+
+	function getDataFormat() {
+		const dataFormatInput = document.getElementById('dataFormatInput');
+		var strFormat = dataFormatInput.options[dataFormatInput.selectedIndex].value;
+		console.log('strFormat: ' + strFormat);
+
+		if (strFormat in DataFormatEnum) {
+			return DataFormatEnum[strFormat];
+		} else {
+			return DataFormatEnum.uint8;
+		}
+	}
+
+	// Get printable ascii characters, otherwise return dot.
+	function getAsciiChar(value) {
+		if (0x20 < value && value < 0x7f ) {
+			return String.fromCharCode(value);
+		}
+		return '.';
+	}
+
+	function updateView() {
+		const elementsPerLine = 16;
+		dataFormat = getDataFormat();
+		console.log('Data format: ' + dataFormat);
+
+		// Using primitive string to add content to memoryView
+		// Maybe it's more efficient to use document.createElement ?
+		// Displaying uint16 and uint32 in little endian
+		memoryStr = '';		
+		switch (dataFormat) {
+			case DataFormatEnum.ascii:
+				for (var j=0; j < g_memoryData.length/elementsPerLine; j++) {
+					memoryStr += 	'<div>' + 
+										hexFormat(g_address + j*elementsPerLine, 8, true) + 
+									': </div>';
+					for (var i=0; i < elementsPerLine; i++) {
+						memoryStr += '<div>' + 
+										getAsciiChar(parseInt(g_memoryData[i + j*elementsPerLine] )) + 
+									 '</div>';
+					}
+					memoryStr += '<br />';
+				}
+				break;
+
+			case DataFormatEnum.uint8:
+				for (var j=0; j < g_memoryData.length/elementsPerLine; j++) {
+					memoryStr += 	'<div>' + 
+										hexFormat(g_address + j*elementsPerLine, 8, true) + 
+									': </div>';
+					for (var i=0; i < elementsPerLine; i++) {
+						memoryStr += '<div>' + 
+										hexFormat(parseInt(g_memoryData[i + j*elementsPerLine] ), 2) + 
+									 '</div>';
+					}
+					memoryStr += '<br />';
+				}
+				break;
+			
+			case DataFormatEnum.uint16:
+				for (var j=0; j < g_memoryData.length/elementsPerLine; j++) {
+					memoryStr += 	'<div>' + 
+										hexFormat(g_address + j*elementsPerLine, 8, true) + 
+									': </div>';
+					for (var i=0; i < elementsPerLine; i += 2) {
+						memoryStr += '<div>' + 
+										hexFormat(parseInt(	g_memoryData[i + j*elementsPerLine] | 
+															g_memoryData[i+1 + j*elementsPerLine] << 8 ), 4) + 
+									 '</div>';
+					}
+					memoryStr += '<br />';
+				}
+				break;
+			
+			case DataFormatEnum.uint32:
+			for (var j=0; j < g_memoryData.length/elementsPerLine; j++) {
+					memoryStr += 	'<div>' + 
+										hexFormat(g_address + j*elementsPerLine, 8, true) + 
+									': </div>';
+					for (var i=0; i < elementsPerLine; i += 4) {
+						memoryStr += '<div>' + 
+										hexFormat(parseInt(	g_memoryData[i + j*elementsPerLine] |
+															g_memoryData[i+1 + j*elementsPerLine] << 8 |
+															g_memoryData[i+2 + j*elementsPerLine] << 16 |
+															g_memoryData[i+3 + j*elementsPerLine] << 24), 8) + 
+									 '</div>';
+					}
+					memoryStr += '<br />';
+				}
+				break;
+			default:
+				memoryStr = 'Invalid data format';
+				break;
+		}
+		const memoryView = document.getElementById('memoryView');
+		memoryView.innerHTML = memoryStr;
+	}
+
+	function readMemory(address = 0x0) {
+		g_vscode.postMessage({
+			command: 'readMemory',
+			text: address
+		});
+	}
+
+	(function() {
+		const addressInput = document.getElementById('addressInput');
+		const dataFormatInput = document.getElementById('dataFormatInput');
+		g_vscode = acquireVsCodeApi();
+		
+		// Handle address changes when input to the textbox and pressing 'enter'
+		addressInput.addEventListener("keyup", function(event) {
+			event.preventDefault();
+
+			if (!validateValue(addressInput.value)) {
+				return;
+			}
+			if (event.keyCode === 13) {
+				// Clear all memory content when entering a new address
+				g_memoryData = []
+				g_address = parseInt(addressInput.value)
+				readMemory(g_address);
+			}
+		});
+
+		// Update entire view when data format is changing 
+		dataFormatInput.addEventListener('change', function(event) {
+			updateView();
+		});
+
+		// Handle the message inside the webview
+		// This currently only handles new memory data
+		window.addEventListener('message', event => {
+			const message = event.data; // The JSON data our extension sent
+			memory = message.data;
+			g_memoryData = g_memoryData.concat(memory);
+			updateView();		
+			g_readInProgress = false;	
+		});
+
+		// When scrolling to the end of the window (with some margin)
+		// Read more from memory (which will append to the current view)
+		window.addEventListener('scroll', event => {
+			if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 100))
+			{
+				// Guard the reading, multiple scroll events may occur before the view is updated
+				// causing jittery feeling.
+				if (!g_readInProgress) {
+					readMemory(g_address + g_memoryData.length);
+					g_readInProgress = true;
+				}
+			}
+		});
+
+		// Initial memory read from address 0
+		readMemory(0x0);
+	}())
+	</script>
+</body>
+</html>

@@ -110,6 +110,11 @@
             },
             {
                 "category": "Cortex-Debug",
+                "command": "cortex-debug.examineMemory2",
+                "title": "View Memory2"
+            },
+            {
+                "category": "Cortex-Debug",
                 "command": "cortex-debug.viewDisassembly",
                 "title": "View Disassembly (Function)"
             },
