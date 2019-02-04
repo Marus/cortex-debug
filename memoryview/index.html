@@ -42,6 +42,7 @@
 	let g_vscode = undefined;
 	let g_memoryData = [];
 	let g_readInProgress = false;
+	let g_scrollY = 0;
 	let DataFormatEnum = {
 		"ascii" : 0,
 		"uint8" : 1,
@@ -79,6 +80,15 @@
 			return DataFormatEnum[strFormat];
 		} else {
 			return DataFormatEnum.uint8;
+		}
+	}
+
+	function setDataFormat(format) {
+		let dataFormatInput = document.getElementById('dataFormatInput');
+		for (var key in DataFormatEnum) {
+			if (DataFormatEnum[key] == format) {
+				dataFormatInput.value = key;
+			}
 		}
 	}
 
@@ -207,6 +217,8 @@
 			g_memoryData = g_memoryData.concat(memory);
 			updateView();		
 			g_readInProgress = false;	
+
+			g_vscode.setState({memoryData: g_memoryData, address: g_address, scrollY: window.scrollY, dataFormat: getDataFormat()});
 		});
 
 		// When scrolling to the end of the window (with some margin)
@@ -221,10 +233,23 @@
 					g_readInProgress = true;
 				}
 			}
+			g_vscode.setState({memoryData: g_memoryData, address: g_address, scrollY: window.scrollY, dataFormat: getDataFormat()});
 		});
 
-		// Initial memory read from address 0
-		readMemory(0x0);
+		/* Fetch previous state */
+		const previousState = g_vscode.getState();
+		if (previousState) {
+			console.log('Fetching previous state: ' + previousState);
+			g_memoryData = previousState.memoryData;
+			g_address = previousState.address;
+			g_scrollY = previousState.scrollY;
+			setDataFormat(previousState.dataFormat);
+			updateView();
+			window.scrollTo(0, g_scrollY);
+		} else {
+			// Initial memory read 
+			readMemory(g_address);
+		}
 	}())
 	</script>
 </body>
