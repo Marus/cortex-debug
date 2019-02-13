@@ -4,3 +4,4 @@ out
 .vscode-test
 .DS_Store
 .sass-cache
+node_modules/
