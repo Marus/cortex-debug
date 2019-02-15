@@ -225,16 +225,6 @@
                                 "description": "Target Device Identifier",
                                 "type": "string"
                             },
-                            "portRangeStart": {
-                                "default": null,
-                                "description": "Start range for GDB port scan. Optional.",
-                                "type": "string"
-                            },
-                            "portRangeEnd": {
-                                "default": null,
-                                "description": "End range for GDB port scan. Optional.",
-                                "type": "string"
-                            },
                             "rtos": {
                                 "default": null,
                                 "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
@@ -569,6 +559,16 @@
                                 "required": [],
                                 "type": "object"
                             },
+                            "portRangeStart": {
+                                "default": null,
+                                "description": "Start range for GDB port scan. Optional.",
+                                "type": "string"
+                            },
+                            "portRangeEnd": {
+                                "default": null,
+                                "description": "End range for GDB port scan. Optional.",
+                                "type": "string"
+                            },
                             "ipAddress": {
                                 "default": null,
                                 "description": "IP Address for networked J-Link Adapter",
@@ -892,7 +892,7 @@
                                     ]
                                 },
                                 "type": "array"
-                            },
+                            }, 
                             "showDevDebugOutput": {
                                 "default": false,
                                 "description": "Prints all GDB responses to the console",
@@ -1088,6 +1088,16 @@
                                 "default": null,
                                 "description": "IP Address for networked J-Link Adapter",
                                 "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
+                                "type": "string"
+                            },
+                            "portRangeStart": {
+                                "default": null,
+                                "description": "Start range for GDB port scan. Optional.",
+                                "type": "string"
+                            },
+                            "portRangeEnd": {
+                                "default": null,
+                                "description": "End range for GDB port scan. Optional.",
                                 "type": "string"
                             },
                             "serialNumber": {
