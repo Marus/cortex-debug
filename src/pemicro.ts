@@ -93,6 +93,9 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         if (this.args.ipAddress)
             serverargs.push(`-serverip=${this.args.ipAddress}`);
 
+        if (this.args.rtos)
+            serverargs.push(`-kernal=${this.args.rtos}`);
+
         if (this.args.interface) {
             serverargs.push(`-interface=${this.args.interface}`);
         }
