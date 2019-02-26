@@ -49,6 +49,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
     public attachCommands(): string[] {
         const commands = [
+            'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
         
@@ -96,6 +97,10 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         if (this.args.interface) {
             serverargs.push(`-interface=${this.args.interface}`);
         }
+
+        if (this.args.configFiles) {
+            serverargs.push(`-configfile=${this.args.configFiles[0]}`);
+        };
         
         console.log(`ServerArgs:${serverargs}`)
 
