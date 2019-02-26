@@ -82,12 +82,9 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
         const serverargs = [];
 
-        if (this.args.device) {
-            serverargs.push(`-device=${this.args.device}`);
-		}
-		
 		serverargs.push('-startserver');
 		serverargs.push('-singlesession');
+        serverargs.push(`-device=${this.args.device}`);
         serverargs.push(`-serverport=${gdbport}`);
         
         if (this.args.ipAddress)
