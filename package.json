@@ -1080,6 +1080,16 @@
                                 "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
                                 "type": "string"
                             },
+                            "portRangeStart": {
+                                "default": 50000,
+                                "description": "Start value for the port scan",
+                                "type": "number"
+                            },
+                            "portRangeEnd": {
+                                "default": null,
+                                "description": "End value for the port scan (will default to start + 2000)",
+                                "type": "number"
+                            },
                             "serialNumber": {
                                 "default": null,
                                 "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
