@@ -117,6 +117,8 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         const serverargs = [];
 
+        serverargs.push('-c', `gdb_port ${gdbport}`);
+
         this.args.searchDir.forEach((cs, idx) => {
             serverargs.push('-s', cs);
         });
@@ -135,7 +137,8 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             serverargs.push('-f', tmpCfgPath);
         }
 
-        const commands = [`gdb_port ${gdbport}`];
+        //const commands = [`gdb_port ${gdbport}`];
+        const commands = [];
 
         if (this.args.swoConfig.enabled) {
             if (os.platform() == 'win32') {
@@ -152,13 +155,21 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             });
         }
         
-        serverargs.push('-c', commands.join('; '));
+        if (commands.length > 0) {
+            serverargs.push('-c', commands.join('; '));
+        }
 
         return serverargs;
     }
 
     public initMatch(): RegExp {
-        return /Info\s:\s([^\n\.]*)\.cpu([^\n]*)/i;
+        //return /Info\s:\s([^\n\.]*)\.cpu([^\n]*)/i;
+        /*
+        // Following will work with or without the -d flag to openocd or using the tcl
+        // command `debug_level 3`; and we are looking specifically for gdb port(s) opening up
+        // When debug is enabled, you get too many matches looking for the cpu
+        */
+        return /Info\s:[^\n]*Listening on port [0-9]+ for gdb connection/i;
     }
 
     public serverLaunchStarted(): void {

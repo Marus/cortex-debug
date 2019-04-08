@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as hasbin from 'hasbin';
 import { setTimeout } from 'timers';
+import { EventEmitter } from 'events';
 
 import { JLinkServerController } from './jlink';
 import { OpenOCDServerController } from './openocd';
@@ -24,7 +25,6 @@ import { PEServerController } from './pemicro';
 import { QEMUServerController } from './qemu';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
-
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -103,6 +103,7 @@ export class GDBDebugSession extends DebugSession {
     protected fileExistsCache: Map<string, boolean> = new Map();
 
     private currentFile: string;
+    protected onConfigDone: EventEmitter = new EventEmitter();
 
     public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
         super(debuggerLinesStartAt1, isServer);
@@ -240,6 +241,12 @@ export class GDBDebugSession extends DebugSession {
                 }
             }
 
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('log', `Please check OUTPUT tab (Adapter Output) for log of ${executable}` + '\n');
+                const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => { return `"${s}"`; }).join(' ') + '\n';
+                this.handleMsg('log', dbgMsg);
+            }
+
             this.server = new GDBServer(executable, args, this.serverController.initMatch());
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
@@ -321,13 +328,17 @@ export class GDBDebugSession extends DebugSession {
                     if (this.args.runToMain) {
                         this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
                             this.miDebugger.once('generic-stopped', launchComplete);
-                            this.miDebugger.sendCommand('exec-continue');
+                            // To avoid race conditions between finishing configuration, we should stay
+                            // in stopped mode. Or, we end up clobbering the stopped event that might come
+                            // during setting of any additional breakpoints.
+                            this.onConfigDone.once('done', () => {
+                                this.miDebugger.sendCommand('exec-continue');
+                            });
                         });
                     }
                     else {
                         launchComplete();
                     }
-                    
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
@@ -998,6 +1009,7 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.ConfigurationDoneArguments
     ): void {
         this.sendResponse(response);
+        this.onConfigDone.emit('done');
     }
 
     protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
