@@ -88,8 +88,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     executable: string;
     servertype: string;
     serverpath: string;
-    portRangeStart: string;
-    portRangeEnd: string;
+    fixedPortRangeStart: number;
+    portScanRangeStart: number;
+    portScanRangeLength: number;
     device: string;
     debuggerArgs: string[];
     preLaunchCommands: string[];

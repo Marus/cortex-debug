@@ -198,168 +198,167 @@ export class GDBDebugSession extends DebugSession {
         this.crashed = false;
         this.debugReady = false;
         this.stopped = false;
-        
-        var IntPortRangeStart = 50000;
-        if (this.args.portRangeStart != null)
-        {
-            IntPortRangeStart = parseInt(this.args.portRangeStart, 10);
-        }
-        var IntPortRangeEnd = IntPortRangeStart + 2000;
-        if (this.args.portRangeEnd != null)
-        {
-            IntPortRangeEnd = parseInt(this.args.portRangeEnd, 10);
-        }
 
-        portastic.find({ min: IntPortRangeStart, max: IntPortRangeEnd, retrieve: this.serverController.portsNeeded.length }, '0.0.0.0').then((ports) => {
-            this.ports = {};
+        this.ports = {};
+        if (this.args.fixedPortRangeStart != -1)
+        {
+            var currentPort = this.args.fixedPortRangeStart;
             this.serverController.portsNeeded.forEach((val, idx) => {
-                this.ports[val] = ports[idx];
+                this.ports[val] = currentPort++;
             });
+        }
+        else
+        {
+            portastic.find({ min: this.args.portScanRangeStart, max: this.args.portScanRangeStart + this.args.portScanRangeLength, retrieve: this.serverController.portsNeeded.length }, '0.0.0.0').then(
+                (ports) => {
+                    this.serverController.portsNeeded.forEach((val, idx) => {
+                        this.ports[val] = ports[idx];
+                    });
+                }, 
+                (err) => {
+                    this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
+                    this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
+                });
+        }
+        this.serverController.setPorts(this.ports);
 
-            this.serverController.setPorts(this.ports);
+        const executable = this.serverController.serverExecutable();
+        const args = this.serverController.serverArguments();
 
-            const executable = this.serverController.serverExecutable();
-            const args = this.serverController.serverArguments();
+        let gdbExePath = os.platform() !== 'win32' ? 'arm-none-eabi-gdb' : 'arm-none-eabi-gdb.exe';
+        if (this.args.toolchainPath) {
+            gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
+        }
+        if (this.args.gdbpath) {
+            gdbExePath = this.args.gdbpath;
+        }
 
-            let gdbExePath = os.platform() !== 'win32' ? 'arm-none-eabi-gdb' : 'arm-none-eabi-gdb.exe';
-            if (this.args.toolchainPath) {
-                gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
+        // Check to see if gdb exists.
+        if (path.isAbsolute(gdbExePath)) {
+            if (fs.existsSync(gdbExePath) === false) {
+                this.sendErrorResponse(
+                    response,
+                    103,
+                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
+                );
+                return;
             }
-            if (this.args.gdbpath) {
-                gdbExePath = this.args.gdbpath;
+        }
+        else {
+            if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
+                this.sendErrorResponse(
+                    response,
+                    103,
+                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
+                );
+                return;
             }
+        }
 
-            // Check to see if gdb exists.
-            if (path.isAbsolute(gdbExePath)) {
-                if (fs.existsSync(gdbExePath) === false) {
-                    this.sendErrorResponse(
-                        response,
-                        103,
-                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
-                    );
-                    return;
-                }
+        this.server = new GDBServer(executable, args, this.serverController.initMatch());
+        this.server.on('output', this.handleAdapterOutput.bind(this));
+        this.server.on('quit', () => {
+            if (this.started) {
+                this.quitEvent();
             }
             else {
-                if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
-                    this.sendErrorResponse(
-                        response,
-                        103,
-                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
-                    );
-                    return;
-                }
+                this.sendErrorResponse(
+                    response,
+                    103,
+                    `${this.serverController.name} GDB Server Quit Unexpectedly. See Adapter Output for more details.`
+                );
+            }
+        });
+        this.server.on('launcherror', (err) => {
+            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
+        });
+
+        let timeout = setTimeout(() => {
+            this.server.exit();
+            this.sendEvent(new TelemetryEvent(
+                'Error',
+                'Launching Server',
+                `Failed to launch ${this.serverController.name} GDB Server: Timeout.`
+            ));
+            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
+        }, 10000);
+
+        this.serverController.serverLaunchStarted();
+        this.server.init().then((started) => {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
             }
 
-            this.server = new GDBServer(executable, args, this.serverController.initMatch());
-            this.server.on('output', this.handleAdapterOutput.bind(this));
-            this.server.on('quit', () => {
-                if (this.started) {
-                    this.quitEvent();
-                }
-                else {
-                    this.sendErrorResponse(
-                        response,
-                        103,
-                        `${this.serverController.name} GDB Server Quit Unexpectedly. See Adapter Output for more details.`
-                    );
-                }
-            });
-            this.server.on('launcherror', (err) => {
-                this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
-            });
-
-            let timeout = setTimeout(() => {
-                this.server.exit();
-                this.sendEvent(new TelemetryEvent(
-                    'Error',
-                    'Launching Server',
-                    `Failed to launch ${this.serverController.name} GDB Server: Timeout.`
-                ));
-                this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
-            }, 10000);
-
-            this.serverController.serverLaunchStarted();
-            this.server.init().then((started) => {
-                if (timeout) {
-                    clearTimeout(timeout);
-                    timeout = null;
-                }
-
-                this.serverController.serverLaunchCompleted();
-                
-                let gdbargs = ['-q', '--interpreter=mi2'];
-                gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
-
-                this.miDebugger = new MI2(gdbExePath, gdbargs);
-                this.initDebugger();
-
-                this.miDebugger.printCalls = !!this.args.showDevDebugOutput;
-                this.miDebugger.debugOutput = !!this.args.showDevDebugOutput;
-
-                const commands = [`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`];
-                commands.push(...this.serverController.initCommands());
-                
-                if (attach) {
-                    commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.attachCommands());
-                    commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
-                }
-                else {
-                    commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.launchCommands());
-                    commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
-                }
-                
-                this.serverController.debuggerLaunchStarted();
-                this.miDebugger.once('debug-ready', () => {
-                    this.debugReady = true;
-                });
-                this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
-                    this.started = true;
-                    this.serverController.debuggerLaunchCompleted();
-                    this.sendResponse(response);
-
-                    const launchComplete = () => {
-                        setTimeout(() => {
-                            this.stopped = true;
-                            this.stoppedReason = 'start';
-                            this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
-                            this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
-                        }, 50);
-                    };
-
-                    if (this.args.runToMain) {
-                        this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
-                            this.miDebugger.once('generic-stopped', launchComplete);
-                            this.miDebugger.sendCommand('exec-continue');
-                        });
-                    }
-                    else {
-                        launchComplete();
-                    }
-                    
-                }, (err) => {
-                    this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
-                    this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
-                });
-
-            }, (error) => {
-                if (timeout) {
-                    clearTimeout(timeout);
-                    timeout = null;
-                }
-                this.sendEvent(new TelemetryEvent(
-                    'Error',
-                    'Launching Server',
-                    `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
-                ));
-                this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
-            });
+            this.serverController.serverLaunchCompleted();
             
-        }, (err) => {
-            this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
-            this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
+            let gdbargs = ['-q', '--interpreter=mi2'];
+            gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
+
+            this.miDebugger = new MI2(gdbExePath, gdbargs);
+            this.initDebugger();
+
+            this.miDebugger.printCalls = !!this.args.showDevDebugOutput;
+            this.miDebugger.debugOutput = !!this.args.showDevDebugOutput;
+
+            const commands = [`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`];
+            commands.push(...this.serverController.initCommands());
+            
+            if (attach) {
+                commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
+                commands.push(...this.serverController.attachCommands());
+                commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
+            }
+            else {
+                commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
+                commands.push(...this.serverController.launchCommands());
+                commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
+            }
+            
+            this.serverController.debuggerLaunchStarted();
+            this.miDebugger.once('debug-ready', () => {
+                this.debugReady = true;
+            });
+            this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
+                this.started = true;
+                this.serverController.debuggerLaunchCompleted();
+                this.sendResponse(response);
+
+                const launchComplete = () => {
+                    setTimeout(() => {
+                        this.stopped = true;
+                        this.stoppedReason = 'start';
+                        this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
+                        this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
+                    }, 50);
+                };
+
+                if (this.args.runToMain) {
+                    this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
+                        this.miDebugger.once('generic-stopped', launchComplete);
+                        this.miDebugger.sendCommand('exec-continue');
+                    });
+                }
+                else {
+                    launchComplete();
+                }
+                
+            }, (err) => {
+                this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
+                this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
+            });
+
+        }, (error) => {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+            }
+            this.sendEvent(new TelemetryEvent(
+                'Error',
+                'Launching Server',
+                `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
+            ));
+            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
         });
     }
 

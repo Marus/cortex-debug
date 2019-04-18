@@ -559,15 +559,26 @@
                                 "required": [],
                                 "type": "object"
                             },
-                            "portRangeStart": {
-                                "default": null,
-                                "description": "Start range for GDB port scan. Optional.",
-                                "type": "string"
+                            "fixedPortRangeStart": {
+                                "type": "integer",
+                                "default": -1,
+                                "minimum": -1,
+                                "maximum": 65535,
+                                "description": "Fixed port for GDB port"
                             },
-                            "portRangeEnd": {
-                                "default": null,
-                                "description": "End range for GDB port scan. Optional.",
-                                "type": "string"
+                            "portScanRangeStart": {
+                                "type": "integer",
+                                "default": 50000,
+                                "minimum": 1024,
+                                "maximum": 65535,
+                                "description": "Start range for GDB port scan"
+                            },
+                            "portScanRangeLength": {
+                                "type": "integer",
+                                "default": 2000,
+                                "minimum": 0,
+                                "maximum": 65535,
+                                "description": "Start range for GDB port scan"
                             },
                             "ipAddress": {
                                 "default": null,
@@ -1590,5 +1601,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.2.4"
+    "version": "0.2.6"
 }
