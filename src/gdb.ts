@@ -200,7 +200,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = false;
 
         this.ports = {};
-        if (this.args.fixedPortRangeStart != -1)
+        if (this.args.fixedPortRangeStart != null)
         {
             var currentPort = this.args.fixedPortRangeStart;
             this.serverController.portsNeeded.forEach((val, idx) => {
@@ -270,7 +270,7 @@ export class GDBDebugSession extends DebugSession {
             }
         });
         this.server.on('launcherror', (err) => {
-            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
+            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server 1: ${err.toString()}`);
         });
 
         let timeout = setTimeout(() => {
@@ -356,9 +356,9 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent(
                 'Error',
                 'Launching Server',
-                `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
+                `Failed to launch ${this.serverController.name} GDB Server 2: ${error.toString()}`
             ));
-            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
+            this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server 3: ${error.toString()}`);
         });
     }
 

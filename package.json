@@ -560,9 +560,9 @@
                                 "type": "object"
                             },
                             "fixedPortRangeStart": {
-                                "type": "integer",
-                                "default": -1,
-                                "minimum": -1,
+                                "type": ["integer", "null"],
+                                "default": null,
+                                "minimum": 1024,
                                 "maximum": 65535,
                                 "description": "Fixed port for GDB port"
                             },
@@ -1101,15 +1101,26 @@
                                 "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
                                 "type": "string"
                             },
-                            "portRangeStart": {
+                            "fixedPortRangeStart": {
+                                "type": ["integer", "null"],
                                 "default": null,
-                                "description": "Start range for GDB port scan. Optional.",
-                                "type": "string"
+                                "minimum": 1024,
+                                "maximum": 65535,
+                                "description": "Fixed port for GDB port"
                             },
-                            "portRangeEnd": {
-                                "default": null,
-                                "description": "End range for GDB port scan. Optional.",
-                                "type": "string"
+                            "portScanRangeStart": {
+                                "type": "integer",
+                                "default": 50000,
+                                "minimum": 1024,
+                                "maximum": 65535,
+                                "description": "Start range for GDB port scan"
+                            },
+                            "portScanRangeLength": {
+                                "type": "integer",
+                                "default": 2000,
+                                "minimum": 0,
+                                "maximum": 65535,
+                                "description": "Start range for GDB port scan"
                             },
                             "serialNumber": {
                                 "default": null,
@@ -1601,5 +1612,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.2.6"
+    "version": "0.2.7"
 }
