@@ -263,9 +263,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             const configuration = vscode.workspace.getConfiguration('cortex-debug');
             config.serverpath = configuration.PEGDBServerPath;
         }
-        
-        if (config.rtos) {
-            return 'The PE GDB Server does not have support for the rtos option.';
+
+        if (config.configFiles && config.configFiles.length > 1) {
+            return 'Only one pegdbserver Configuration File is allowed.';
         }
 
         if (!config.device) {
