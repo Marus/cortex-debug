@@ -49,6 +49,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
     public attachCommands(): string[] {
         const commands = [
+            'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
         
@@ -82,17 +83,24 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
         const serverargs = [];
 
-        if (this.args.device) {
-            serverargs.push(`-device=${this.args.device}`);
-		}
-		
-		serverargs.push('-startserver')
-		serverargs.push('-singlesession')
-		serverargs.push(`-serverport=${gdbport}`)
+		serverargs.push('-startserver');
+		serverargs.push('-singlesession');
+        serverargs.push(`-device=${this.args.device}`);
+        serverargs.push(`-serverport=${gdbport}`);
+        
+        if (this.args.ipAddress)
+            serverargs.push(`-serverip=${this.args.ipAddress}`);
+
+        if (this.args.rtos)
+            serverargs.push(`-kernal=${this.args.rtos}`);
 
         if (this.args.interface) {
             serverargs.push(`-interface=${this.args.interface}`);
         }
+
+        if (this.args.configFiles) {
+            serverargs.push(`-configfile=${this.args.configFiles[0]}`);
+        };
         
         console.log(`ServerArgs:${serverargs}`)
 
