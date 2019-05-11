@@ -8,6 +8,8 @@ import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
 import { ProviderResult } from 'vscode';
 import { NumberFormat, NodeSetting } from '../common';
 import reporting from '../reporting';
+import {AddrRange, AddressRangesInUse} from './addrranges';
+import { throws, rejects } from 'assert';
 
 export enum RecordType {
     Peripheral = 1,
@@ -68,6 +70,7 @@ export class BaseNode {
     public setFormat(format: NumberFormat): void {
         this.format = format;
     }
+    public markAddresses(_a: AddressRangesInUse):void {}
 }
 
 function parseInteger(value: string): number {
@@ -162,6 +165,7 @@ export class PeripheralNode extends BaseNode {
     public readonly accessType: AccessType;
     public readonly size: number;
     public readonly resetValue: number;
+    protected addrRanges: AddrRange[];
     
     private currentValue: number[];
 
@@ -175,6 +179,7 @@ export class PeripheralNode extends BaseNode {
         this.resetValue = options.resetValue || 0;
         this.size = options.size || 32;
         this.children = [];
+        this.addrRanges = [];
     }
 
     public getTreeNode(): TreeNode {
@@ -209,6 +214,10 @@ export class PeripheralNode extends BaseNode {
         return this.baseAddress + offset;
     }
 
+    public getOffset(offset:number) {
+        return offset;
+    }
+
     public getFormat(): NumberFormat {
         return this.format;
     }
@@ -217,20 +226,73 @@ export class PeripheralNode extends BaseNode {
         return new Promise((resolve, reject) => {
             if (!this.expanded) { resolve(false); return; }
 
-            vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
-                this.currentValue = data.bytes;
-                
+            this.readMemory().then((data) => {
+                //console.log(`Updating registers for ${this.name}\n`);
                 let promises = this.children.map((r) => r.update());
                 Promise.all(promises).then((updated) => {
                     resolve(true);
                 }).catch((e) => {
                     reject("Failed");
                 });
-
             }, (error) => {
                 reject(error);
             });
         });
+    }
+
+    protected async readMemory(): Promise<boolean> {
+        if (false) {
+            return new Promise((resolve, reject) => {
+                vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
+                    this.currentValue = data.bytes;
+                    resolve(true);
+                }, (e) => {
+                    reject(e);
+                });
+            });
+        }
+        let err = null;
+        const values = new Array<number>(this.totalLength);
+        this.currentValue = values;
+        for (let ix = 0; ix < this.addrRanges.length; ix++) {
+            let range = this.addrRanges[ix];
+            let data = await vscode.debug.activeDebugSession.customRequest('read-memory', { address: range.base, length: range.length });
+            if (data && data.bytes) {
+                const bytes: number[] = data.bytes;
+                const ix = range.base - this.baseAddress;
+                bytes.map((v,i) => {values[ix+i]=v;});
+                //console.log(`Read completed 0x${range.base.toString(16)},${range.length} = ${bytes}\n`);
+            } else {
+                err = `Read failed 0x${range.base.toString(16)},${range.length}, Err=${data}`;
+                //console.log(err + '\n');
+                break;
+            }
+        }
+        return new Promise((resolve, reject) => {
+            if (!err) {
+                resolve(true);
+            } else {
+                reject(err);
+            }
+        });
+    }
+
+    public markAddresses(): void {
+        let ranges = [new AddrRange(this.baseAddress, this.totalLength)];
+        if (true) {
+            // Split the entire range into a set of smaller ranges. Some svd files specify
+            // a very large address space but may use very little of it.
+            const addresses = new AddressRangesInUse(this.totalLength);
+            this.children.map((child) => child.markAddresses(addresses));
+            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, 16);
+        }
+
+        // OpenOCD has a issue where the max number of bytes readable are 8191 (instead of 8192)
+        // which causes unaligned reads (via gdb) and silent failures. There is patch for this in OpenOCD
+        // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
+        const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
+        this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes);
+        //AddressRangesInUse.consoleLog(`-- Peripheral ${this.name} Final addresses `, this.baseAddress, this.totalLength, this.addrRanges);
     }
 
     public getPeripheralNode(): PeripheralNode {
@@ -319,6 +381,10 @@ export class ClusterNode extends BaseNode {
         return this.parent.getAddress(this.offset + offset);
     }
 
+    public getOffset(offset:number) {
+        return this.parent.getOffset(this.offset + offset);
+    }
+    
     public getFormat(): NumberFormat {
         if (this.format !== NumberFormat.Auto) { return this.format; }
         else { return this.parent.getFormat(); }
@@ -360,6 +426,10 @@ export class ClusterNode extends BaseNode {
 
     public getPeripheralNode(): PeripheralNode {
         return this.parent;
+    }
+
+    public markAddresses(addrs: AddressRangesInUse):void {
+        this.children.map((r) => {r.markAddresses(addrs);});
     }
 }
 
@@ -539,7 +609,7 @@ export class RegisterNode extends BaseNode {
     public update(): Thenable<boolean> {
         const bc = this.size / 8;
         const bytes = this.parent.getBytes(this.offset, bc);
-        const buffer = new Buffer(bytes);
+        const buffer = Buffer.from(bytes);
         switch (bc) {
             case 1:
                 this.currentValue = buffer.readUInt8(0);
@@ -584,6 +654,12 @@ export class RegisterNode extends BaseNode {
 
     public getPeripheralNode(): PeripheralNode {
         return this.parent.getPeripheralNode();
+    }
+
+    public markAddresses(addrs: AddressRangesInUse):void {
+        let finalOffset = this.parent.getOffset(this.offset);
+        //console.log(`Mark ${this.name} = ${finalOffset.toString(16)},${this.size/8}`);
+        addrs.setAddrRange(finalOffset, this.size/8);
     }
 }
 
@@ -999,7 +1075,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
         const options: any = {
             name: p.name[0],
             baseAddress: parseInteger(p.baseAddress[0]),
-            description: p.description[0],
+            description: p.description ? p.description[0] : 'none',
             totalLength: totalLength
         };
 
@@ -1075,6 +1151,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
                             else { return 0; }
                         }
                     });
+
+                    this.peripherials.map((p) => {p.markAddresses();});
 
                     this.loaded = true;
 

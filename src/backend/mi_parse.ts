@@ -6,7 +6,7 @@ export interface MIInfo {
 
 const octalMatch = /^[0-7]{3}/;
 function parseString(str: string): string {
-    const ret = new Buffer(str.length * 4);
+    const ret = Buffer.alloc(str.length * 4);
     let bufIndex = 0;
 
     if (str[0] !== '"' || str[str.length - 1] !== '"') {

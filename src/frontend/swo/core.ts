@@ -58,8 +58,7 @@ class ITMDecoder extends EventEmitter {
     }
 
     private resetRxPacket(port: number, length: number, type: PacketType) {
-        this.rxBuffer = new Buffer(length);
-        this.rxBuffer.fill(0);
+        this.rxBuffer = Buffer.alloc(length, 0);
 
         this.rxTargetLength = length;
         this.rxPacketType = type;
