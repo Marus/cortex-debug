@@ -1,31 +1,23 @@
-import {FixedBitSet} from './fixedbitset';
+// Author to Blame: haneefdm on github
+
+import {BitSetConsts, FixedBitSet} from './fixedbitset';
 
 /*
  * This file contains classes to create address ranges that are in use in an address space.
- * We use a bitset implementation to handle large spaces. We could also have used an interval 
- * tree (Red-Black) but too much work and even if the space is large, we are not expecting
- * millions/billions of registers/addresses and short lifespan wrt. updates.
+ * We use a bitset implementation to handle spaces in the range of small megabytes. We could
+ * also have used an interval tree (Red-Black) but too much work.
  * 
- * With a bit set, it is a mark and scan method. Mark each byte used O(1), then scan the
- * space O(N) where N is [size of address space] but we can skip in 32/8/4 byte chunks of
- * emptyness. Hence a bitset.
+ * With a bit-set, it is a mark and scan method. Each bit in the bitset represents a byte.
+ * Mark each byte used which is O(1), then scan the space O(N) where N is [size of address space]
+ * but we can skip in 32/8/4 byte chunks of emptyness. Hence a bitset.
  * 
- * A tree implementation would have been more efficient for super large address spaces
- * in the range of 100's of megabytes.
+ * Use case here is to calculate used addr-ranges. As a user you can decide what 1-bit represents
  * 
- * Use case here is to calculate used addr-ranges once and cache them; actual data used
- * to caculate is likely transient. Since we are semi-tight on memory (1-bit per byte) you
- * can keep it. As a user you can decide 1-bit represents an arbitrary amount of bytes.
- * 
- * LIMITATION: Do not use beyond a 32-bit address span. It is okay for the base address to be more
- * than that. Javascript has limits beyond 53 bits for precise integers and even that is iffy
- * because this module has not been written/tested for more than 32 bits as shift and mask operators
- * are used abundantly.
+ * LIMITATION: Do not use beyond a 32-bit address span. It is okay for the base address
+ * to be more than that.
  */
 
- /**
-  * Represents a single address-range
-  */
+ /** Represents a single address-range */
 export class AddrRange {
     constructor(public base: number, public length: number) {
     }
@@ -41,29 +33,36 @@ export class AddrRange {
     }
 }
 
-/**
- * This is a bit set where each bit represents a byte of address used or unused.
- */
-export class AddressRangesInUse extends FixedBitSet {
-    constructor(len:number, doAsserts: boolean=false) {
-        super(len, doAsserts);
+/** This is a bit set where each bit represents a byte of address used or unused. */
+export class AddressRangesInUse {
+    // We could have derived from bitSet but want to be able to change the implementation
+    protected bitSet : FixedBitSet;
+
+    constructor(len:number) {
+        this.bitSet = new FixedBitSet(len);
+    }
+
+    public get maxLen() : number {
+        return this.bitSet.maxLen;
     }
 
     public setAddrRange(offset:number, length:number=4) : void {
         if ((offset & 0x3) || (length & 0x3)) {
             // either offset or length not a multiple of 4
             for(let ix = 0; ix < length; ix++) {
-                this.setBit(ix+offset);
+                this.bitSet.setBit(ix+offset);
             }
         } else {
-            for (let n=0; n < length; n += 4) {
-                this.setWord(n+offset);
+            while (length > 0) {
+                this.setWord(offset);
+                offset += 4;
+                length -= 4;
             }
         }
     }
 
     public setWord(offset: number) : void {
-        this.bitArray[offset >>> FixedBitSet.shft] |= (0xf << (offset & FixedBitSet.mask)) ;
+        this.bitSet.setNibble(offset);
     }
 
     /**
@@ -76,30 +75,65 @@ export class AddressRangesInUse extends FixedBitSet {
     public getAddressRangesExact(base:number, aligned:boolean=false) : AddrRange[] {
         const retVal: AddrRange[] = [];
         let range: AddrRange | null = null;
+        const itor = aligned ? this.bitSet.findNibbleItor : this.bitSet.findBitItor;
+        const inc = aligned ? 4 : 1;
+
+        {
+            let nxtIx = -2;
+            function cb(ix:number): boolean {
+                if (!range || (nxtIx !== ix)) {
+                    range = new AddrRange(base + ix, inc);
+                    retVal.push(range);
+                } else {                    // continuation of prev. range
+                    range.length += inc; 
+                }
+                nxtIx = ix + inc;
+                return true;                
+            }
+            if (aligned) {
+                this.bitSet.findNibbleItor(cb);
+            } else {
+                this.bitSet.findBitItor(cb);
+            }
+            return retVal;
+        }
 
         if (!aligned) {
-            let lastIx = -2;                // This init value is intentional
-            this.findBitItor((ix) : boolean => {
-                // ix will always be >= 0
-                if (++lastIx === ix) {
-                    range!.length++;        // We KNOW range will not be null
-                } else {
+            let lastIx = -2;
+            this.bitSet.findBitItor((ix) : boolean => {
+                if (!range || ((lastIx + 1) !== ix)) {
                     range = new AddrRange(base + ix, 1);
                     retVal.push(range);
-                    lastIx = ix;
+                } else {                    // continuation of prev. range
+                    range.length++; 
                 }
+                lastIx = ix;
                 return true;
             });
             return retVal;
+        } else {
+            let lastIx = -2;
+            this.bitSet.findNibbleItor((ix) : boolean => {
+                if (!range || ((lastIx + 4) !== ix)) {
+                    range = new AddrRange(base + ix, 4);
+                    retVal.push(range);
+                } else {                    // continuation of prev. range
+                    range.length += 4; 
+                }
+                lastIx = ix;
+                return true;
+            });
+            return retVal;            
         }
 
         let addr = 0;
         const mask = 0xf;
         const incr = 4;
-        for (let ix = 0; ix < this.bitArray.length; ix++) {
-            let val = this.bitArray[ix];
+        const bitAry = this.bitSet.bitArray;
+        for (let ix = 0; ix < bitAry.length; ix++) {
+            let val = bitAry[ix];
             if (val !== 0) {                
-                for (let bits = 0; bits < FixedBitSet.nBits ; bits += incr ) {
+                for (let bits = 0; bits < BitSetConsts.NBITS ; bits += incr ) {
                     if ((mask & val) !== 0) {       // got something
                         if (range) {                // consecutive words
                             range.length += incr;   // just increase previous ranges length
@@ -115,7 +149,7 @@ export class AddressRangesInUse extends FixedBitSet {
                 }                
             } else {
                 range = null;
-                addr += FixedBitSet.nBits;
+                addr += BitSetConsts.NBITS;
             }
         }
         return retVal;
@@ -128,7 +162,7 @@ export class AddressRangesInUse extends FixedBitSet {
      * @param base all the return values will havd this base address added to them
      * @param aligned if true, we look for 4 byte chunks or it is byte at a time
      * @param minGap gaps less than specified number of bytes will be merged
-     * @returns an array of ordered compressed address ranges containing. Can be an empty array
+     * @returns an array of ordered compressed address ranges. Can be an empty array
      */
     public getAddressRangesOptimized(base:number, aligned:boolean=false, minGap:number = 8) : AddrRange[] {
         const exactVals = this.getAddressRangesExact(base, aligned);
@@ -139,10 +173,9 @@ export class AddressRangesInUse extends FixedBitSet {
         const retVal = [];
         let lastRange : AddrRange | null = null;
         if (aligned) {
-            minGap = (minGap + 3) & ~3;     // Make it a multiple of 4 rounding up
+            minGap = (minGap + 7) & ~7;     // Make it a multiple of 8 rounding up
         }
-        for (let ix = 0; ix < exactVals.length; ix++) {
-            const range = exactVals[ix];
+        for (let range of exactVals) {
             if (lastRange && ((lastRange.base + lastRange.length + minGap) >= range.base)) {
                 lastRange.length = range.base - lastRange.base + range.length;
             } else {
@@ -157,8 +190,7 @@ export class AddressRangesInUse extends FixedBitSet {
     /** Returns new set of address ranges that have length > 0 && <= maxBytes */
     public static splitIntoChunks(ranges: AddrRange[], maxBytes:number) : AddrRange[] {
         let newRanges = new Array<AddrRange>();
-        for (let ix = 0; ix < ranges.length; ix++) {
-            let r = ranges[ix];
+        for (let r of ranges) {
             while (r.length > maxBytes) {
                 newRanges.push(new AddrRange(r.base, maxBytes));
                 r.base += maxBytes;
@@ -169,6 +201,14 @@ export class AddressRangesInUse extends FixedBitSet {
             }
         }
         return newRanges;
+    }
+
+    public toHexString() : string {
+        return this.bitSet.toHexString(); 
+    }
+
+    public clearAll() : void {
+        this.bitSet.clearAll();
     }
 
     public static consoleLog(prefix:string, base:number, len:number, ranges: AddrRange[]) : void {

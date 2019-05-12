@@ -240,10 +240,12 @@ export class PeripheralNode extends BaseNode {
         });
     }
 
-    protected async readMemory(): Promise<boolean> {
-        if (false) {
+    protected async readMemory(optimize:boolean = true): Promise<boolean> {
+        if (!optimize) {
+            // This is the original way, lets keep it for now for verification
             return new Promise((resolve, reject) => {
-                vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
+                vscode.debug.activeDebugSession.customRequest(
+                    'read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
                     this.currentValue = data.bytes;
                     resolve(true);
                 }, (e) => {
@@ -251,22 +253,41 @@ export class PeripheralNode extends BaseNode {
                 });
             });
         }
+
+        const logReads = false;
+        if (logReads) {
+            console.log(`**** Reading peripheral ${this.name}, ` +
+                `addr=0x${this.baseAddress.toString(16)}, totalLen=${this.totalLength}\n`)
+        }
+
         let err = null;
         const values = new Array<number>(this.totalLength);
         this.currentValue = values;
-        for (let ix = 0; ix < this.addrRanges.length; ix++) {
-            let range = this.addrRanges[ix];
-            let data = await vscode.debug.activeDebugSession.customRequest('read-memory', { address: range.base, length: range.length });
+        let actualRead = 0;
+        for (let range of this.addrRanges) {
+            let data = await vscode.debug.activeDebugSession.customRequest(
+                'read-memory', { address: range.base, length: range.length });
             if (data && data.bytes) {
                 const bytes: number[] = data.bytes;
-                const ix = range.base - this.baseAddress;
-                bytes.map((v,i) => {values[ix+i]=v;});
-                //console.log(`Read completed 0x${range.base.toString(16)},${range.length} = ${bytes}\n`);
+                let ix = range.base - this.baseAddress;
+                for (let i = 0; i < bytes.length; i++) {
+                    values[ix++] = bytes[i];        // Yes, map is too slow
+                }
+                if (logReads) {
+                    console.log(`  Read:0x${range.base.toString(16)},${range.length} = ${bytes}\n`);
+                }
+                actualRead += range.length;
             } else {
-                err = `Read failed 0x${range.base.toString(16)},${range.length}, Err=${data}`;
-                //console.log(err + '\n');
+                err = `Read(failed):0x${range.base.toString(16)},${range.length}, Err=${data}`;
+                if (logReads) {
+                    console.log('  ' + err + '\n');
+                }
                 break;
             }
+        }
+        if (logReads && !err) {
+            console.log(`**** Read peripheral ${this.name}, addr=0x${this.baseAddress.toString(16)}, ` +
+                `totalLen=${this.totalLength}, actual=${actualRead}\n`)
         }
         return new Promise((resolve, reject) => {
             if (!err) {
@@ -278,21 +299,25 @@ export class PeripheralNode extends BaseNode {
     }
 
     public markAddresses(): void {
-        let ranges = [new AddrRange(this.baseAddress, this.totalLength)];
-        if (true) {
+        let ranges = [new AddrRange(this.baseAddress, this.totalLength)];   // Default range
+        const skipAddressGaps = true;
+        if (skipAddressGaps) {
             // Split the entire range into a set of smaller ranges. Some svd files specify
             // a very large address space but may use very little of it.
+            const gapThreshold = 16;    // Merge gaps less than this many bytes, avoid too many gdb requests
             const addresses = new AddressRangesInUse(this.totalLength);
             this.children.map((child) => child.markAddresses(addresses));
-            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, 16);
+            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, gapThreshold);
         }
 
-        // OpenOCD has a issue where the max number of bytes readable are 8191 (instead of 8192)
+        // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)
         // which causes unaligned reads (via gdb) and silent failures. There is patch for this in OpenOCD
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
+        // Anothr benefit, we can minimize gdb timoeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
         this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes);
-        //AddressRangesInUse.consoleLog(`-- Peripheral ${this.name} Final addresses `, this.baseAddress, this.totalLength, this.addrRanges);
+        //AddressRangesInUse.consoleLog(`-- Peripheral ${this.name} Final addresses `,
+        //    this.baseAddress, this.totalLength, this.addrRanges);
     }
 
     public getPeripheralNode(): PeripheralNode {

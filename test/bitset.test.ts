@@ -1,10 +1,12 @@
 import * as assert from 'assert';
 import {FixedBitSet} from "../src/frontend/fixedbitset";
-import {AddressRangesInUse, AddrRange} from "../src/frontend/addrranges";
+import {AddrRange, AddressRangesInUse} from "../src/frontend/addrranges";
+
+FixedBitSet.doAsserts = true;
 
 suite("FixedBitSet and Address Range Tests", () => {
     test("FixedBitSet creation set/clr/inv", () => {
-        const bs = new FixedBitSet(1, true);
+        const bs = new FixedBitSet(1);
         assert.strictEqual(bs.maxLen, 1);
         assert.strictEqual(!!bs.getBit(0), false);
         bs.setBit(0);
@@ -16,7 +18,7 @@ suite("FixedBitSet and Address Range Tests", () => {
     });
     test("FixedBitSet creation set/clr/inv/itor. various sizes", () => {
         for (let sz = 0; sz < 100; sz++) {
-            const bs = new FixedBitSet(sz, true);
+            const bs = new FixedBitSet(sz);
             if (sz > 1) {
                 const last = sz-1, mid = sz >>> 1;
                 bs.setBit(last);
@@ -49,7 +51,7 @@ suite("FixedBitSet and Address Range Tests", () => {
     });
     test("AddressRangesInUse creation/methods. various sizes", () => {
         const len = 64;
-        let bs = new AddressRangesInUse(len, true);
+        let bs = new AddressRangesInUse(len);
 
         for (let ix = 0; ix < (len-4); ix += 4) {   // 4 bits represents a word
             bs.setWord(ix);
@@ -105,7 +107,7 @@ suite("FixedBitSet and Address Range Tests", () => {
         for (let alignIter = 0; alignIter < 2 ; alignIter++) {
             const isAligned = (alignIter !== 0) ? true : false;
             const len = 63;
-            let bs = new AddressRangesInUse(len, true);
+            let bs = new AddressRangesInUse(len);
 
             bs.setAddrRange(8, 3);
             const ranges1 = bs.getAddressRangesExact(16, isAligned);
