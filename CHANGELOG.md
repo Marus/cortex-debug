@@ -1,3 +1,10 @@
+# V0.2.4
+
+* Updated some embedded SVD files (Thanks https://github.com/clementperon for your PR)
+* Fixed parsing of some SVD files (Issue #126 - Thanks https://github.com/mryndzionek for your PR)
+* Fixed issues with race condition on start up and improved OpenOCD support; Should fix issues 147, 149 and 150. A huge thanks to https://github.com/haneefdm for this PR, and his ongoing support on the project.
+* Ability to specify port ranges used (Thanks https://github.com/blckmn for your PR)
+
 # V0.2.2
 
 * Fixed issues with serial port source for SWO data (Currently only working on macOS and Linux; Windows support will be restored soon)
