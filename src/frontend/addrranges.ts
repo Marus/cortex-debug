@@ -45,7 +45,7 @@ export class AddressRangesInUse {
         this.bitSet = new FixedBitSet(len);
     }
 
-    public get maxLen() : number {
+    public get length() : number {
         return this.bitSet.numBits;
     }
 
