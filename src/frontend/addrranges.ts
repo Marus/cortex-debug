@@ -4,17 +4,16 @@ import {FixedBitSet} from './fixedbitset';
 
 /*
  * This file contains classes to create address ranges that are in use in an address space.
+ *
+ * Implementation: (can change at a later date)
  * We use a bitset implementation to handle spaces in the range of small megabytes. We could
  * also have used an interval tree (Red-Black) but too much work.
  * 
  * With a bit-set, it is a mark and scan method. Each bit in the bitset represents a byte.
  * Mark each byte used which is O(1), then scan the space O(N) where N is [size of address space]
- * but we can skip in 32/8/4 byte chunks of emptyness. Hence a bitset.
+ * but we can skip in 32/8/4 byte chunks of emptyness easily. Hence a bitset.
  * 
  * Use case here is to calculate used addr-ranges. As a user you can decide what 1-bit represents
- * 
- * LIMITATION: Do not use beyond a 32-bit address span. It is okay for the base address
- * to be more than that.
  */
 
  /** Represents a single address-range */
