@@ -160,7 +160,7 @@ export class AddressRangesInUse {
                 newRanges.push(r);
             }
         }
-        const logIt = true;
+        const logIt = false;
         if (newRanges.length && logIt) {
             AddressRangesInUse.consoleLog(dbgMsg, newRanges[0].base, dbgLen, newRanges);
         }
