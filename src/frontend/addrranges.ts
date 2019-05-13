@@ -1,6 +1,6 @@
 // Author to Blame: haneefdm on github
 
-import {BitSetConsts, FixedBitSet} from './fixedbitset';
+import {FixedBitSet} from './fixedbitset';
 
 /*
  * This file contains classes to create address ranges that are in use in an address space.
@@ -74,83 +74,25 @@ export class AddressRangesInUse {
      */
     public getAddressRangesExact(base:number, aligned:boolean=false) : AddrRange[] {
         const retVal: AddrRange[] = [];
+        const incr = aligned ? 4 : 1;
+        let nxtIx = -1;                 // init to an impossible value
         let range: AddrRange | null = null;
-        const itor = aligned ? this.bitSet.findNibbleItor : this.bitSet.findBitItor;
-        const inc = aligned ? 4 : 1;
 
-        {
-            let nxtIx = -2;
-            function cb(ix:number): boolean {
-                if (!range || (nxtIx !== ix)) {
-                    range = new AddrRange(base + ix, inc);
-                    retVal.push(range);
-                } else {                    // continuation of prev. range
-                    range.length += inc; 
-                }
-                nxtIx = ix + inc;
-                return true;                
+        function gotOne(ix:number) : boolean {
+            if (nxtIx !== ix) {
+                range = new AddrRange(base + ix, incr);
+                retVal.push(range);
+            } else {                    // continuation of prev. range
+                range!.length += incr;  // range! because it can't be null, lint will complain
             }
-            if (aligned) {
-                this.bitSet.findNibbleItor(cb);
-            } else {
-                this.bitSet.findBitItor(cb);
-            }
-            return retVal;
+            nxtIx = ix + incr;          // Got a hit, start watching for adjacents
+            return true;                
         }
 
-        if (!aligned) {
-            let lastIx = -2;
-            this.bitSet.findBitItor((ix) : boolean => {
-                if (!range || ((lastIx + 1) !== ix)) {
-                    range = new AddrRange(base + ix, 1);
-                    retVal.push(range);
-                } else {                    // continuation of prev. range
-                    range.length++; 
-                }
-                lastIx = ix;
-                return true;
-            });
-            return retVal;
+        if (aligned) {
+            this.bitSet.findNibbleItor(gotOne);
         } else {
-            let lastIx = -2;
-            this.bitSet.findNibbleItor((ix) : boolean => {
-                if (!range || ((lastIx + 4) !== ix)) {
-                    range = new AddrRange(base + ix, 4);
-                    retVal.push(range);
-                } else {                    // continuation of prev. range
-                    range.length += 4; 
-                }
-                lastIx = ix;
-                return true;
-            });
-            return retVal;            
-        }
-
-        let addr = 0;
-        const mask = 0xf;
-        const incr = 4;
-        const bitAry = this.bitSet.bitArray;
-        for (let ix = 0; ix < bitAry.length; ix++) {
-            let val = bitAry[ix];
-            if (val !== 0) {                
-                for (let bits = 0; bits < BitSetConsts.NBITS ; bits += incr ) {
-                    if ((mask & val) !== 0) {       // got something
-                        if (range) {                // consecutive words
-                            range.length += incr;   // just increase previous ranges length
-                        } else {
-                            range = new AddrRange(base + addr, incr);
-                            retVal.push(range);
-                        }
-                    } else {
-                        range = null;
-                    }
-                    addr += incr;
-                    val = val >>> incr;
-                }                
-            } else {
-                range = null;
-                addr += BitSetConsts.NBITS;
-            }
+            this.bitSet.findBitItor(gotOne);
         }
         return retVal;
     }
@@ -161,7 +103,7 @@ export class AddressRangesInUse {
      * 
      * @param base all the return values will havd this base address added to them
      * @param aligned if true, we look for 4 byte chunks or it is byte at a time
-     * @param minGap gaps less than specified number of bytes will be merged
+     * @param minGap gaps less than specified number of bytes will be merged in multiple of 8
      * @returns an array of ordered compressed address ranges. Can be an empty array
      */
     public getAddressRangesOptimized(base:number, aligned:boolean=false, minGap:number = 8) : AddrRange[] {
@@ -175,12 +117,12 @@ export class AddressRangesInUse {
         if (aligned) {
             minGap = (minGap + 7) & ~7;     // Make it a multiple of 8 rounding up
         }
-        for (let range of exactVals) {
-            if (lastRange && ((lastRange.base + lastRange.length + minGap) >= range.base)) {
-                lastRange.length = range.base - lastRange.base + range.length;
+        for (let nxtRange of exactVals) {
+            if (lastRange && ((lastRange.base + lastRange.length + minGap) >= nxtRange.base)) {
+                lastRange.length = nxtRange.base - lastRange.base + nxtRange.length;
             } else {
-                retVal.push(range);
-                lastRange = range;                
+                retVal.push(nxtRange);
+                lastRange = nxtRange;                
             }
         }
 
