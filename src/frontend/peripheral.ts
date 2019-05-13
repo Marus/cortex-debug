@@ -227,7 +227,7 @@ export class PeripheralNode extends BaseNode {
         return new Promise((resolve, reject) => {
             if (!this.expanded) { resolve(false); return; }
 
-            this.readMemory().then((data) => {
+            this.readMemory().then((unused) => {
                 let promises = this.children.map((r) => r.update());
                 Promise.all(promises).then((updated) => {
                     resolve(true);
@@ -241,15 +241,28 @@ export class PeripheralNode extends BaseNode {
     }
 
     protected readMemory(optimize:boolean = true): Promise<boolean> {
-        const values = new Array<number>(this.totalLength);
-        this.currentValue = values;
-        const promises = this.addrRanges.map((r) => {
+        if (!this.currentValue) {
+            this.currentValue = new Array<number>(this.totalLength);;
+        }
+        return PeripheralNode.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
+    }
+    
+    /**
+     * Make one or more memeory reads and update values. For the caller, it should look like a single
+     * memory read but, if one read fails, all reads are considered as failed.
+     * 
+     * @param startAddr The start address of the memory region. Everything else is relative to `startAddr`
+     * @param specs The chunks of memory to read and and update. Addresses should be >= `startAddr`
+     * @param storeTo This is where read-results go. The first element represents item at `startAddr`
+     */
+    public static readMemoryChunks(startAddr:number, specs: AddrRange[], storeTo: number[]) : Promise<boolean> {
+        const promises = specs.map((r) => {
             return new Promise((resolve,reject) => {
                 vscode.debug.activeDebugSession.customRequest('read-memory', { address: r.base, length: r.length }).then((data) => {
-                    let ix = r.base - this.baseAddress;
+                    let dst = r.base - startAddr;
                     const bytes: number[] = data.bytes;
                     for (let i = 0; i < bytes.length; i++) {
-                        values[ix++] = bytes[i];        // Yes, map is way too slow
+                        storeTo[dst++] = bytes[i];        // Yes, map is way too slow, where is my memcpy?
                     }
                     resolve(true);
                 }, (e) => {
@@ -264,7 +277,7 @@ export class PeripheralNode extends BaseNode {
             }).catch((e) => {
                 reject(`read-failed ${e}`);
             });
-        });
+        });        
     }
 
     public markAddresses(): void {
