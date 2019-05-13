@@ -43,7 +43,7 @@ export class AddressRangesInUse {
     }
 
     public get maxLen() : number {
-        return this.bitSet.maxLen;
+        return this.bitSet.numBits;
     }
 
     public setAddrRange(offset:number, length:number=4) : void {

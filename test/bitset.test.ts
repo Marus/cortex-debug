@@ -7,7 +7,7 @@ FixedBitSet.doAsserts = true;
 suite("FixedBitSet and Address Range Tests", () => {
     test("FixedBitSet creation set/clr/inv", () => {
         const bs = new FixedBitSet(1);
-        assert.strictEqual(bs.maxLen, 1);
+        assert.strictEqual(bs.numBits, 1);
         assert.strictEqual(!!bs.getBit(0), false);
         bs.setBit(0);
         assert.strictEqual(!!bs.getBit(0), true);
@@ -46,6 +46,9 @@ suite("FixedBitSet and Address Range Tests", () => {
                     cmp.push(last);
                 }
                 assert.deepStrictEqual(cmp, indices, `cmp=${cmp},indices=${indices},sz=${sz}`);
+
+                const cpy = bs.dup();
+                assert.deepStrictEqual(bs, cpy, `dup of bitset failed ${bs}`);
             }
         }
     });

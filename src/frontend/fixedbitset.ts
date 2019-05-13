@@ -25,16 +25,14 @@ export const enum BitSetConsts {
  * 
  * Get/Set is O(1)
  * Traversal is O(N) => N = length of the array, but able to skip large empty spaces
+ *
+ * It is also a very efficient way of doing unions/intersections using bitwise operations.
  */
 export class FixedBitSet {
-    protected _bitArray : Uint32Array ;
-    public get bitArray() : Uint32Array {
-        return this._bitArray;
-    }
-    
-    protected _maxLen: number;
-    public get maxLen(): number {
-        return this._maxLen;
+    protected bitArray : Uint32Array ;
+    protected _numBits: number;
+    public get numBits(): number {
+        return this._numBits;
     }
 
     // Enable this to do error checking. Maybe there is a better waay, to remove assert overhead
@@ -44,12 +42,18 @@ export class FixedBitSet {
         if (FixedBitSet.doAsserts) {
             console.assert(Number.isInteger(len) && (len >= 0));
         }
-        this._maxLen = len;
-        this._bitArray = new Uint32Array(FixedBitSet.calcAryLen(len));
+        this._numBits = len;
+        this.bitArray = new Uint32Array(FixedBitSet.calcAryLen(len));
+    }
+
+    public dup() : FixedBitSet {
+        const ret = new FixedBitSet(this.numBits);
+        ret.bitArray.set(this.bitArray)
+        return ret;
     }
 
     private ixRangeCheck(ix: number) : boolean {
-        return Number.isInteger(ix) && (ix >= 0) && (ix < this.maxLen);
+        return Number.isInteger(ix) && (ix >= 0) && (ix < this.numBits);
     }
     /**
      * Get bit at specified index
@@ -59,33 +63,33 @@ export class FixedBitSet {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
         }
-        return this._bitArray[ix >>> BitSetConsts.SHFT] & (1 << (ix & BitSetConsts.MASK)) ;
+        return this.bitArray[ix >>> BitSetConsts.SHFT] & (1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Sets the bit at index 'ix' to 1 */
     public setBit(ix:number) : void {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
         }
-        this._bitArray[ix >>> BitSetConsts.SHFT] |= (1 << (ix & BitSetConsts.MASK)) ;
+        this.bitArray[ix >>> BitSetConsts.SHFT] |= (1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Sets the bit at index 'ix' to 0 */
     public clrBit(ix:number) : void {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
         }
-        this._bitArray[ix >>> BitSetConsts.SHFT] &= ~(1 << (ix & BitSetConsts.MASK)) ;
+        this.bitArray[ix >>> BitSetConsts.SHFT] &= ~(1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Inverts the bit at index 'ix' to 0 */
     public invBit(ix:number) : void {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
         }
-        this._bitArray[ix >>> BitSetConsts.SHFT] ^= (1 << (ix & BitSetConsts.MASK)) ;
+        this.bitArray[ix >>> BitSetConsts.SHFT] ^= (1 << (ix & BitSetConsts.MASK)) ;
     }
 
     /** clears all bits */
     public clearAll() : void {
-        this._bitArray.fill(0);
+        this.bitArray.fill(0);
     }
 
     /** Sets a set of four consecutive bits
@@ -96,11 +100,11 @@ export class FixedBitSet {
             console.assert(this.ixRangeCheck(ix+3), 'invalid index ', ix, this);
 			console.assert((ix & 0x3) == 0, 'offet must be >= 0 & multiple of 4');
 		}
-        this._bitArray[ix >>> BitSetConsts.SHFT] |= ((0xf << (ix & BitSetConsts.MASK)) >>> 0);
+        this.bitArray[ix >>> BitSetConsts.SHFT] |= ((0xf << (ix & BitSetConsts.MASK)) >>> 0);
     }
 
     public toString() : string {
-        return this._bitArray.toString();
+        return this.bitArray.toString();
     }
 
     /**
@@ -115,13 +119,13 @@ export class FixedBitSet {
         // state to make a next() work properly.   
         let bitIx = 0;
         let aryIx = 0;
-        while (bitIx < this._maxLen) {
-            let elem = this._bitArray[aryIx++];
+        while (bitIx < this._numBits) {
+            let elem = this.bitArray[aryIx++];
             if (elem === 0) {
                 bitIx += BitSetConsts.NBITS;
                 continue;
             }
-            for (let byteIx = 0; (byteIx < (BitSetConsts.NBITS/8)) && (bitIx < this.maxLen); byteIx++) {
+            for (let byteIx = 0; (byteIx < (BitSetConsts.NBITS/8)) && (bitIx < this.numBits); byteIx++) {
                 const byteVal = elem & 0xff;
                 elem >>>= 8;
                 if (byteVal === 0) {    // Try to skip byte at a time
@@ -129,7 +133,7 @@ export class FixedBitSet {
                     continue;
                 }
                 // We do not bail early or skip bits to keep bitIx updated
-                for(let bitPos = 1; (bitPos < (1<<8)) && (bitIx < this.maxLen); bitPos <<= 1) {
+                for(let bitPos = 1; (bitPos < (1<<8)) && (bitIx < this.numBits); bitPos <<= 1) {
                     if (byteVal & bitPos) {
                         if (!cb(bitIx)) { return; }
                     }
@@ -159,13 +163,13 @@ export class FixedBitSet {
      */
     public findNibbleItor(cb: (ix: number) => boolean): void {
         let addr = 0;
-        const stop = this._bitArray.length;
+        const stop = this.bitArray.length;
         for (let ix = 0; ix < stop; ix++) {
-            let val = this._bitArray[ix];
+            let val = this.bitArray[ix];
             if (val !== 0) {
                 for (let bits = 0; bits < BitSetConsts.NBITS; bits += 4) {
                     if ((0xf & val) !== 0) {       // got something
-                        if (addr < this.maxLen) {
+                        if (addr < this.numBits) {
                             if (!cb(addr)) { return; }
                         } else {
                             console.assert(false, 'Defect in FixedBitset. Not expecting a value in trailing bits');
@@ -186,7 +190,7 @@ export class FixedBitSet {
      * are also backards in each byte. One char represents a nibble.
      */
     public toHexString() : string {  
-        const buf = Buffer.from(this._bitArray.buffer);
+        const buf = Buffer.from(this.bitArray.buffer);
         const str = buf.toString('hex');
         return str;
     }
@@ -197,16 +201,16 @@ export class FixedBitSet {
             console.assert(Number.isInteger(len) && (len >= 0));
         }
         if (len <= 0) {
-            this._maxLen = 0;
-            this._bitArray = new Uint32Array(0);            
-        } else if (len != this._maxLen) {
+            this._numBits = 0;
+            this.bitArray = new Uint32Array(0);            
+        } else if (len != this._numBits) {
             const numUnits = FixedBitSet.calcAryLen(len);
             let newAry : Uint32Array;
-            if (numUnits <= this._bitArray.length) {
-                newAry = this._bitArray.subarray(0, numUnits);
+            if (numUnits <= this.bitArray.length) {
+                newAry = this.bitArray.subarray(0, numUnits);
             } else {
                 newAry = new Uint32Array(numUnits);
-                newAry.set(this._bitArray);
+                newAry.set(this.bitArray);
             }
             let diff = (numUnits * BitSetConsts.NBITS) - len;
             if (diff > 0) {             // clear any traiiing bits in most sig. portion
@@ -214,8 +218,8 @@ export class FixedBitSet {
                 const mask = (0xffffffff << (BitSetConsts.NBITS - diff)) >>> 0;
                 newAry[numUnits - 1] &= mask;
             }
-            this._maxLen = len;
-            this._bitArray = newAry;
+            this._numBits = len;
+            this.bitArray = newAry;
         }
     }
 
