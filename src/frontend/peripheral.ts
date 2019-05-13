@@ -9,8 +9,7 @@ import { ProviderResult } from 'vscode';
 import { NumberFormat, NodeSetting } from '../common';
 import reporting from '../reporting';
 import {AddrRange, AddressRangesInUse} from './addrranges';
-import { throws, rejects } from 'assert';
-import { resolve } from 'url';
+import {MemReadUtils} from './memreadutils'
 
 export enum RecordType {
     Peripheral = 1,
@@ -229,7 +228,7 @@ export class PeripheralNode extends BaseNode {
 
             this.readMemory().then((unused) => {
                 let promises = this.children.map((r) => r.update());
-                Promise.all(promises).then((updated) => {
+                Promise.all(promises).then((_updated) => {
                     resolve(true);
                 }).catch((e) => {
                     reject("Failed");
@@ -240,44 +239,11 @@ export class PeripheralNode extends BaseNode {
         });
     }
 
-    protected readMemory(optimize:boolean = true): Promise<boolean> {
+    protected readMemory(): Promise<boolean> {
         if (!this.currentValue) {
             this.currentValue = new Array<number>(this.totalLength);;
         }
-        return PeripheralNode.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
-    }
-    
-    /**
-     * Make one or more memeory reads and update values. For the caller, it should look like a single
-     * memory read but, if one read fails, all reads are considered as failed.
-     * 
-     * @param startAddr The start address of the memory region. Everything else is relative to `startAddr`
-     * @param specs The chunks of memory to read and and update. Addresses should be >= `startAddr`
-     * @param storeTo This is where read-results go. The first element represents item at `startAddr`
-     */
-    public static readMemoryChunks(startAddr:number, specs: AddrRange[], storeTo: number[]) : Promise<boolean> {
-        const promises = specs.map((r) => {
-            return new Promise((resolve,reject) => {
-                vscode.debug.activeDebugSession.customRequest('read-memory', { address: r.base, length: r.length }).then((data) => {
-                    let dst = r.base - startAddr;
-                    const bytes: number[] = data.bytes;
-                    for (let i = 0; i < bytes.length; i++) {
-                        storeTo[dst++] = bytes[i];        // Yes, map is way too slow, where is my memcpy?
-                    }
-                    resolve(true);
-                }, (e) => {
-                    reject(e);
-                });
-            });
-        });
-    
-        return new Promise((resolve,reject) => {
-            Promise.all(promises).then((x) => {
-                resolve(true);
-            }).catch((e) => {
-                reject(`read-failed ${e}`);
-            });
-        });        
+        return MemReadUtils.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
     }
 
     public markAddresses(): void {
@@ -297,7 +263,7 @@ export class PeripheralNode extends BaseNode {
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
         // Anothr benefit, we can minimize gdb timoeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
-        this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes);
+        this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
     }
 
     public getPeripheralNode(): PeripheralNode {

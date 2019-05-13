@@ -17,7 +17,7 @@ suite("FixedBitSet and Address Range Tests", () => {
         assert.strictEqual(!!bs.getBit(0), true);
     });
     test("FixedBitSet creation set/clr/inv/itor. various sizes", () => {
-        for (let sz = 0; sz < 100; sz++) {
+        for (let sz = 0; sz < 200; sz++) {
             const bs = new FixedBitSet(sz);
             if (sz > 1) {
                 const last = sz-1, mid = sz >>> 1;

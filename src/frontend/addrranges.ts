@@ -1,6 +1,7 @@
 // Author to Blame: haneefdm on github
 
 import {FixedBitSet} from './fixedbitset';
+import { totalmem } from 'os';
 
 /*
  * This file contains classes to create address ranges that are in use in an address space.
@@ -32,9 +33,12 @@ export class AddrRange {
     }
 }
 
-/** This is a bit set where each bit represents a byte of address used or unused. */
+/**
+ * Register each byte of an address used, this class can calculate a set of
+ * address ranges that are in use
+ */
 export class AddressRangesInUse {
-    // We could have derived from bitSet but want to be able to change the implementation
+    // We could have derived from bitSet but want to be able to change implementation
     protected bitSet : FixedBitSet;
 
     constructor(len:number) {
@@ -128,22 +132,6 @@ export class AddressRangesInUse {
         return retVal;
     }
 
-    /** Returns new set of address ranges that have length > 0 && <= maxBytes */
-    public static splitIntoChunks(ranges: AddrRange[], maxBytes:number) : AddrRange[] {
-        let newRanges = new Array<AddrRange>();
-        for (let r of ranges) {
-            while (r.length > maxBytes) {
-                newRanges.push(new AddrRange(r.base, maxBytes));
-                r.base += maxBytes;
-                r.length -= maxBytes;
-            }
-            if (r.length > 0) {
-                newRanges.push(r);
-            }
-        }
-        return newRanges;
-    }
-
     public toHexString() : string {
         return this.bitSet.toHexString(); 
     }
@@ -152,12 +140,44 @@ export class AddressRangesInUse {
         this.bitSet.clearAll();
     }
 
+    /**
+     * Returns a set of address ranges that have 0 < length <= maxBytes
+     * 
+     * @param ranges array of ranges to check an split
+     * @param maxBytes limit of each range
+     * @param dbgMsg To output debug messages -- name of address space
+     * @param dbgLen To output debug messages -- total length of addr space
+     */
+    public static splitIntoChunks(ranges: AddrRange[], maxBytes:number, dbgMsg:string = '', dbgLen:number=0) : AddrRange[] {
+        let newRanges = new Array<AddrRange>();
+        for (let r of ranges) {
+            while (r.length > maxBytes) {
+                newRanges.push(new AddrRange(r.base, maxBytes));
+                r.base += maxBytes;
+                r.length -= maxBytes;
+            }
+            if (r.length > 0) {     // Watch out, can be negative
+                newRanges.push(r);
+            }
+        }
+        const logIt = false;
+        if (newRanges.length && logIt) {
+            AddressRangesInUse.consoleLog(dbgMsg, newRanges[0].base, dbgLen, newRanges);
+        }
+        return newRanges;
+    }
+
     public static consoleLog(prefix:string, base:number, len:number, ranges: AddrRange[]) : void {
-        console.log(prefix + `base=0x${base.toString(16)}, totalLen=${len}, #ranges=${ranges.length}\n`);
+        console.log(prefix + ` base=0x${base.toString(16)}, totalLen=${len}, #ranges=${ranges.length}\n`);
         let bc = 0;
-        ranges.forEach((range,i,a) => {
+        for (let range of ranges) {
             bc += range.length;
-            console.log(`**** 0x${range.base.toString(16)}, len=${range.length}, bytes=${bc}\n`);
-        });
+            console.log(`**** 0x${range.base.toString(16)}, len=${range.length}, cum-bytes=${bc}\n`);
+        }
+        const diff = len - bc;
+        if ((bc > 0) && (len > 0)) {
+            const percent = (diff / len) * 100;
+            console.log(prefix + ` totalLen=${len}, savings=${diff} ${percent.toFixed(2)}%`);
+        }
     }
 }

@@ -61,28 +61,28 @@ export class FixedBitSet {
      */
     public getBit(ix:number) : number {
         if (FixedBitSet.doAsserts) {
-            console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
+            console.assert(this.ixRangeCheck(ix), 'getBit: invalid index ', ix, this);
         }
         return this.bitArray[ix >>> BitSetConsts.SHFT] & (1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Sets the bit at index 'ix' to 1 */
     public setBit(ix:number) : void {
         if (FixedBitSet.doAsserts) {
-            console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
+            console.assert(this.ixRangeCheck(ix), 'setBit: invalid index ', ix, this);
         }
         this.bitArray[ix >>> BitSetConsts.SHFT] |= (1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Sets the bit at index 'ix' to 0 */
     public clrBit(ix:number) : void {
         if (FixedBitSet.doAsserts) {
-            console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
+            console.assert(this.ixRangeCheck(ix), 'clrBit: invalid index ', ix, this);
         }
         this.bitArray[ix >>> BitSetConsts.SHFT] &= ~(1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Inverts the bit at index 'ix' to 0 */
     public invBit(ix:number) : void {
         if (FixedBitSet.doAsserts) {
-            console.assert(this.ixRangeCheck(ix), 'invalid index ', ix, this);
+            console.assert(this.ixRangeCheck(ix), 'invBit: invalid index ', ix, this);
         }
         this.bitArray[ix >>> BitSetConsts.SHFT] ^= (1 << (ix & BitSetConsts.MASK)) ;
     }
@@ -97,8 +97,8 @@ export class FixedBitSet {
      */
     public setNibble(ix: number) : void {
 		if (FixedBitSet.doAsserts) {
-            console.assert(this.ixRangeCheck(ix+3), 'invalid index ', ix, this);
-			console.assert((ix & 0x3) == 0, 'offet must be >= 0 & multiple of 4');
+            console.assert(this.ixRangeCheck(ix+3), 'setNibble: invalid index ', ix, this);
+			console.assert((ix & 0x3) == 0, 'setNibble: ix must be >= 0 & multiple of 4');
 		}
         this.bitArray[ix >>> BitSetConsts.SHFT] |= ((0xf << (ix & BitSetConsts.MASK)) >>> 0);
     }
@@ -208,15 +208,15 @@ export class FixedBitSet {
             let newAry : Uint32Array;
             if (numUnits <= this.bitArray.length) {
                 newAry = this.bitArray.subarray(0, numUnits);
+                let diff = (numUnits * BitSetConsts.NBITS) - len;
+                if (diff > 0) {             // clear any traiiing bits in most sig. portion
+                    // We HAVE to clear trailing bits in case the nibble iterator is being used
+                    const mask = (0xffffffff << (BitSetConsts.NBITS - diff)) >>> 0;
+                    newAry[numUnits - 1] &= mask;
+                }
             } else {
                 newAry = new Uint32Array(numUnits);
                 newAry.set(this.bitArray);
-            }
-            let diff = (numUnits * BitSetConsts.NBITS) - len;
-            if (diff > 0) {             // clear any traiiing bits in most sig. portion
-                // We HAVE to clear trailing bits in case the nibble iterator is being used
-                const mask = (0xffffffff << (BitSetConsts.NBITS - diff)) >>> 0;
-                newAry[numUnits - 1] &= mask;
             }
             this._numBits = len;
             this.bitArray = newAry;
