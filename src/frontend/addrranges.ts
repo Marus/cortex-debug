@@ -121,7 +121,7 @@ export class AddressRangesInUse {
             minGap = (minGap + 7) & ~7;     // Make it a multiple of 8 rounding up
         }
         for (let nxtRange of exactVals) {
-            if (lastRange && ((lastRange.base + lastRange.length + minGap) >= nxtRange.base)) {
+            if (lastRange && ((lastRange.nxtAddr() + minGap) >= nxtRange.base)) {
                 lastRange.length = nxtRange.base - lastRange.base + nxtRange.length;
             } else {
                 retVal.push(nxtRange);
@@ -160,7 +160,7 @@ export class AddressRangesInUse {
                 newRanges.push(r);
             }
         }
-        const logIt = false;
+        const logIt = true;
         if (newRanges.length && logIt) {
             AddressRangesInUse.consoleLog(dbgMsg, newRanges[0].base, dbgLen, newRanges);
         }
