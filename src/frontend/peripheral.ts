@@ -10,6 +10,7 @@ import { NumberFormat, NodeSetting } from '../common';
 import reporting from '../reporting';
 import {AddrRange, AddressRangesInUse} from './addrranges';
 import { throws, rejects } from 'assert';
+import { resolve } from 'url';
 
 export enum RecordType {
     Peripheral = 1,
@@ -227,7 +228,6 @@ export class PeripheralNode extends BaseNode {
             if (!this.expanded) { resolve(false); return; }
 
             this.readMemory().then((data) => {
-                //console.log(`Updating registers for ${this.name}\n`);
                 let promises = this.children.map((r) => r.update());
                 Promise.all(promises).then((updated) => {
                     resolve(true);
@@ -240,61 +240,30 @@ export class PeripheralNode extends BaseNode {
         });
     }
 
-    protected async readMemory(optimize:boolean = true): Promise<boolean> {
-        if (!optimize) {
-            // This is the original way, lets keep it for now for verification
-            return new Promise((resolve, reject) => {
-                vscode.debug.activeDebugSession.customRequest(
-                    'read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
-                    this.currentValue = data.bytes;
+    protected readMemory(optimize:boolean = true): Promise<boolean> {
+        const values = new Array<number>(this.totalLength);
+        this.currentValue = values;
+        const promises = this.addrRanges.map((r) => {
+            return new Promise((resolve,reject) => {
+                vscode.debug.activeDebugSession.customRequest('read-memory', { address: r.base, length: r.length }).then((data) => {
+                    let ix = r.base - this.baseAddress;
+                    const bytes: number[] = data.bytes;
+                    for (let i = 0; i < bytes.length; i++) {
+                        values[ix++] = bytes[i];        // Yes, map is way too slow
+                    }
                     resolve(true);
                 }, (e) => {
                     reject(e);
                 });
             });
-        }
-
-        const logReads = false;
-        if (logReads) {
-            console.log(`**** Reading peripheral ${this.name}, ` +
-                `addr=0x${this.baseAddress.toString(16)}, totalLen=${this.totalLength}\n`)
-        }
-
-        let err = null;
-        const values = new Array<number>(this.totalLength);
-        this.currentValue = values;
-        let actualRead = 0;
-        for (let range of this.addrRanges) {
-            let data = await vscode.debug.activeDebugSession.customRequest(
-                'read-memory', { address: range.base, length: range.length });
-            if (data && data.bytes) {
-                const bytes: number[] = data.bytes;
-                let ix = range.base - this.baseAddress;
-                for (let i = 0; i < bytes.length; i++) {
-                    values[ix++] = bytes[i];        // Yes, map is too slow
-                }
-                if (logReads) {
-                    console.log(`  Read:0x${range.base.toString(16)},${range.length} = ${bytes}\n`);
-                }
-                actualRead += range.length;
-            } else {
-                err = `Read(failed):0x${range.base.toString(16)},${range.length}, Err=${data}`;
-                if (logReads) {
-                    console.log('  ' + err + '\n');
-                }
-                break;
-            }
-        }
-        if (logReads && !err) {
-            console.log(`**** Read peripheral ${this.name}, addr=0x${this.baseAddress.toString(16)}, ` +
-                `totalLen=${this.totalLength}, actual=${actualRead}\n`)
-        }
-        return new Promise((resolve, reject) => {
-            if (!err) {
+        });
+    
+        return new Promise((resolve,reject) => {
+            Promise.all(promises).then((x) => {
                 resolve(true);
-            } else {
-                reject(err);
-            }
+            }).catch((e) => {
+                reject(`read-failed ${e}`);
+            });
         });
     }
 
@@ -316,8 +285,6 @@ export class PeripheralNode extends BaseNode {
         // Anothr benefit, we can minimize gdb timoeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
         this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes);
-        //AddressRangesInUse.consoleLog(`-- Peripheral ${this.name} Final addresses `,
-        //    this.baseAddress, this.totalLength, this.addrRanges);
     }
 
     public getPeripheralNode(): PeripheralNode {
