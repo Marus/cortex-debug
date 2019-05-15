@@ -24,7 +24,7 @@ export class FileSWOSource extends EventEmitter implements SWOSource {
     }
 
     private read() {
-        const buf: Buffer = new Buffer(64);
+        const buf: Buffer = Buffer.alloc(64);
         fs.read(this.fd, buf, 0, 64, null, (err, bytesRead, buffer) => {
             if (bytesRead > 0) {
                 this.emit('data', buffer.slice(0, bytesRead));

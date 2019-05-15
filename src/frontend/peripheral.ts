@@ -8,6 +8,8 @@ import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
 import { ProviderResult } from 'vscode';
 import { NumberFormat, NodeSetting } from '../common';
 import reporting from '../reporting';
+import {AddrRange, AddressRangesInUse} from './addrranges';
+import {MemReadUtils} from './memreadutils'
 
 export enum RecordType {
     Peripheral = 1,
@@ -68,6 +70,7 @@ export class BaseNode {
     public setFormat(format: NumberFormat): void {
         this.format = format;
     }
+    public markAddresses(_a: AddressRangesInUse):void {}
 }
 
 function parseInteger(value: string): number {
@@ -162,6 +165,7 @@ export class PeripheralNode extends BaseNode {
     public readonly accessType: AccessType;
     public readonly size: number;
     public readonly resetValue: number;
+    protected addrRanges: AddrRange[];
     
     private currentValue: number[];
 
@@ -175,6 +179,7 @@ export class PeripheralNode extends BaseNode {
         this.resetValue = options.resetValue || 0;
         this.size = options.size || 32;
         this.children = [];
+        this.addrRanges = [];
     }
 
     public getTreeNode(): TreeNode {
@@ -209,6 +214,10 @@ export class PeripheralNode extends BaseNode {
         return this.baseAddress + offset;
     }
 
+    public getOffset(offset:number) {
+        return offset;
+    }
+
     public getFormat(): NumberFormat {
         return this.format;
     }
@@ -217,20 +226,44 @@ export class PeripheralNode extends BaseNode {
         return new Promise((resolve, reject) => {
             if (!this.expanded) { resolve(false); return; }
 
-            vscode.debug.activeDebugSession.customRequest('read-memory', { address: this.baseAddress, length: this.totalLength }).then((data) => {
-                this.currentValue = data.bytes;
-                
+            this.readMemory().then((unused) => {
                 let promises = this.children.map((r) => r.update());
-                Promise.all(promises).then((updated) => {
+                Promise.all(promises).then((_updated) => {
                     resolve(true);
                 }).catch((e) => {
                     reject("Failed");
                 });
-
             }, (error) => {
                 reject(error);
             });
         });
+    }
+
+    protected readMemory(): Promise<boolean> {
+        if (!this.currentValue) {
+            this.currentValue = new Array<number>(this.totalLength);;
+        }
+        return MemReadUtils.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
+    }
+
+    public markAddresses(): void {
+        let ranges = [new AddrRange(this.baseAddress, this.totalLength)];   // Default range
+        const skipAddressGaps = true;
+        if (skipAddressGaps) {
+            // Split the entire range into a set of smaller ranges. Some svd files specify
+            // a very large address space but may use very little of it.
+            const gapThreshold = 16;    // Merge gaps less than this many bytes, avoid too many gdb requests
+            const addresses = new AddressRangesInUse(this.totalLength);
+            this.children.map((child) => child.markAddresses(addresses));
+            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, gapThreshold);
+        }
+
+        // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)
+        // which causes unaligned reads (via gdb) and silent failures. There is patch for this in OpenOCD
+        // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
+        // Anothr benefit, we can minimize gdb timoeouts
+        const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
+        this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
     }
 
     public getPeripheralNode(): PeripheralNode {
@@ -319,6 +352,10 @@ export class ClusterNode extends BaseNode {
         return this.parent.getAddress(this.offset + offset);
     }
 
+    public getOffset(offset:number) {
+        return this.parent.getOffset(this.offset + offset);
+    }
+    
     public getFormat(): NumberFormat {
         if (this.format !== NumberFormat.Auto) { return this.format; }
         else { return this.parent.getFormat(); }
@@ -360,6 +397,10 @@ export class ClusterNode extends BaseNode {
 
     public getPeripheralNode(): PeripheralNode {
         return this.parent;
+    }
+
+    public markAddresses(addrs: AddressRangesInUse):void {
+        this.children.map((r) => {r.markAddresses(addrs);});
     }
 }
 
@@ -539,7 +580,7 @@ export class RegisterNode extends BaseNode {
     public update(): Thenable<boolean> {
         const bc = this.size / 8;
         const bytes = this.parent.getBytes(this.offset, bc);
-        const buffer = new Buffer(bytes);
+        const buffer = Buffer.from(bytes);
         switch (bc) {
             case 1:
                 this.currentValue = buffer.readUInt8(0);
@@ -584,6 +625,12 @@ export class RegisterNode extends BaseNode {
 
     public getPeripheralNode(): PeripheralNode {
         return this.parent.getPeripheralNode();
+    }
+
+    public markAddresses(addrs: AddressRangesInUse):void {
+        let finalOffset = this.parent.getOffset(this.offset);
+        //console.log(`Mark ${this.name} = ${finalOffset.toString(16)},${this.size/8}`);
+        addrs.setAddrRange(finalOffset, this.size/8);
     }
 }
 
@@ -1075,6 +1122,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
                             else { return 0; }
                         }
                     });
+
+                    this.peripherials.map((p) => {p.markAddresses();});
 
                     this.loaded = true;
 

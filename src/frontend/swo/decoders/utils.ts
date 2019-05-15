@@ -6,7 +6,7 @@ const FloatParser = new Parser().endianess('little').floatle('value');
 
 export function parseFloat(buffer: Buffer) {
     if (buffer.length < 4) {
-        const tmp = new Buffer(4);
+        const tmp = Buffer.alloc(4);
         buffer.copy(tmp);
         buffer = tmp;
     }
@@ -17,7 +17,7 @@ export function parseFloat(buffer: Buffer) {
 
 export function parseSigned(buffer: Buffer) {
     if (buffer.length < 4) {
-        const tmp = new Buffer(4);
+        const tmp = Buffer.alloc(4);
         buffer.copy(tmp);
         buffer = tmp;
     }
@@ -28,7 +28,7 @@ export function parseSigned(buffer: Buffer) {
 
 export function parseUnsigned(buffer: Buffer) {
     if (buffer.length < 4) {
-        const tmp = new Buffer(4);
+        const tmp = Buffer.alloc(4);
         buffer.copy(tmp);
         buffer = tmp;
     }
