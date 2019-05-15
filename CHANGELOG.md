@@ -1,3 +1,7 @@
+# V0.2.6
+
+* Updated watch var name generation to avoid problems with certain expressions containing reserved characters/strings. Should fix issue [159](https://github.com/Marus/cortex-debug/issues/159) and partially fix [157](https://github.com/Marus/cortex-debug/issues/157).
+
 # V0.2.5
 
 * Updated PyOCD start detection to work with newer versions - Fixes issue [165](https://github.com/Marus/cortex-debug/issues/165)
