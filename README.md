@@ -42,6 +42,7 @@ Requirements:
 * At least one of:
     * J-Link Software Tools - provides the J-Link GDB Server for J-Link based debuggers (https://www.segger.com/downloads/jlink)
     * OpenOCD - provides a GDB Server that can be used with a number of debuggers (http://openocd.org)
+        * NOTE: On macOS do not use the default version of OpenOCD provided by homebrew, this is not compatible with releases V0.2.4 and newer. You can either install from source using homebrew (`brew install open-ocd --HEAD`) or the packages from https://github.com/gnu-mcu-eclipse/openocd/releases will also work. Some linux versions and Windows may also need a more up-to-date version of OpenOCD from the gnu-mcu-eclipse releases.
     * Texane's st-util GDB server - Only supports ST-Link Debug Probes (https://github.com/texane/stlink)
     * pyOCD GDB Server - GDB server that supports the CMSIS-DAP debugger on a number of mbed boards (https://github.com/mbedmicro/pyOCD)
     * Black Magic Probe

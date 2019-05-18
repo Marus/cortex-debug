@@ -580,7 +580,7 @@
                                 ]
                             },
                             "configFiles": {
-                                "description": "OpenOCD configuration file(s) to load",
+                                "description": "OpenOCD/pegdbserver configuration file(s) to load",
                                 "items": {
                                     "type": "string"
                                 },
@@ -1498,5 +1498,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.2.4"
+    "version": "0.2.6"
 }
