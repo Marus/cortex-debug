@@ -13,6 +13,8 @@ import * as net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as hasbin from 'hasbin';
+import * as crypto from 'crypto';
+
 import { setTimeout } from 'timers';
 import { EventEmitter } from 'events';
 
@@ -1482,7 +1484,10 @@ export class GDBDebugSession extends DebugSession {
         if (args.context === 'watch') {
             try {
                 const exp = args.expression;
-                const varObjName = `watch_${exp.replace(/\./g, '__').replace(/\[/g, '_').replace(/\]/g, '_')}`;
+                let hasher = crypto.createHash('sha256');
+                hasher.update(exp);
+                const watchName = hasher.digest('hex')
+                const varObjName = `watch_${watchName}`;
                 let varObj: VariableObject;
                 try {
                     const changes = await this.miDebugger.varUpdate(varObjName);
