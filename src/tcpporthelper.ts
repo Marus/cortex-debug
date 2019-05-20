@@ -15,7 +15,7 @@ export module TcpPortHelper {
 					console.log(`port ${host}:${port} is used`, code);
 					resolve(true);					// Port in use
 				} else {
-					console.log(`port ${host}:${port} is used`, code);
+					console.log(`port ${host}:${port} is error`, code);
 					resolve(false);					// some other failure
 				}
 				server.close();
@@ -23,7 +23,7 @@ export module TcpPortHelper {
 
 			server.listen(port, host, () => {
 				// Port not in use
-				console.log(`port ${host}:${port} is in free`);
+				//console.log(`port ${host}:${port} is in free`);
 				resolve(false);
 				server.close();
 			});
@@ -31,15 +31,31 @@ export module TcpPortHelper {
 	}
 
 	const useServer = true;
-	function isPortInUseEx(port, host): Promise<boolean> {
+	async function isPortInUseEx(port, host): Promise<boolean> {
 		if (useServer) {
+			let inUse = false;
+			const tries = ['0.0.0.0', '127.0.0.1', '::1', ''];
+			for (let ix = 0; ix < tries.length ; ix++) {
+				await isPortInUse(port,tries[ix]).then((v) => { inUse = v ; });
+				if (inUse) { break; }
+			}
+			return new Promise((resolve,reject) => {
+				resolve(inUse);
+			});
+
+			/*
 			const promises = getLocalHostAliases().map((h) => { return isPortInUse(port, h) });
+			let promises = [];
+			promises.push(isPortInUse('127.0.0.1');
+			promises.push(isPortInUse('0.0.0.0'));
+			promises.push(isPortInUse('');
 			return new Promise((resolve, _reject) => {
 				Promise.all(promises).then((values) => {
 					const inUse = (values.indexOf(true) > -1);
 					resolve(inUse);
 				});
 			});
+			*/
 		} else {
 			return tcpPortUsed.check(port, host);
 		}
@@ -144,6 +160,7 @@ export module TcpPortHelper {
 			*/
 			const reserved = ['127.0.0.1'];
 			if (os.platform() === 'win32') {
+				// win32 can have servers here too. Not an exact alias to localhost
 				reserved.push('0.0.0.0');
 			}
 			reserved.forEach((h) => {
@@ -152,6 +169,7 @@ export module TcpPortHelper {
 				}
 			});
 			if (os.platform() !== 'linux') {
+				// Mac and Windows need the empty default. Linux 64 does not
 				aliases.push('');
 			}
 			console.log(aliases.join(','));
