@@ -30,8 +30,10 @@ export module TcpPortHelper
 		let   found = 0;
 		let error = null;
 		for (let port = min; port <= max; port++) {
+			let startTine = process.hrtime();
 			await tcpPortUsed.check(port, host)
 				.then((inUse) => {
+					const endTime = process.hrtime(startTine);
 					if (inUse) {
 						busyPorts.push(port);
 					} else {
@@ -47,8 +49,10 @@ export module TcpPortHelper
 						found++;
 					}
 					if (doLog) {
+						const ms = (endTime[1]/1e6).toFixed(2);
+						const t = `${endTime[0]}s ${ms}ms`;
 						console.log(`TcpPortHelper.find Port ${host}:${port} ` +
-							(inUse ? 'busy' : 'free') + `, Found: ${found} of ${needed} needed`);
+							(inUse ? 'busy' : 'free') + `, Found: ${found} of ${needed} needed ` + t);
 					}
 				}, (err) => {
 					if (doLog) {
