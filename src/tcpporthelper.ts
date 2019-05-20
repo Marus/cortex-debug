@@ -3,10 +3,9 @@
 import * as tcpPortUsed from 'tcp-port-used';
 import net = require('net');
 
-export module TcpPortHelper
-{
-	function isPortInUse(port:number, host:string) : Promise<boolean> {
-		return new Promise((resolve,_reject) => {
+export module TcpPortHelper {
+	function isPortInUse(port: number, host: string): Promise<boolean> {
+		return new Promise((resolve, _reject) => {
 			const server = net.createServer((c) => {
 			});
 			server.once('error', (e) => {
@@ -24,13 +23,13 @@ export module TcpPortHelper
 	}
 
 	const useServer = true;
-	function isPortInUseEx(port, host) : Promise<boolean> {
+	function isPortInUseEx(port, host): Promise<boolean> {
 		if (useServer) {
 			let promises = [];
 			promises.push(isPortInUse(port, '127.0.0.1'));	// localhost
 			promises.push(isPortInUse(port, '0.0.0.0'));	// this-host
 			promises.push(isPortInUse(port, null));			// use the default host
-			return new Promise((resolve,_reject) => {
+			return new Promise((resolve, _reject) => {
 				Promise.all(promises).then((values) => {
 					const inUse = (values.indexOf(true) > -1);
 					resolve(inUse);
@@ -52,18 +51,18 @@ export module TcpPortHelper
 	 * @deprecated param cb This callback is called if non-null and the required ports are found and it will return a null promise
 	 * @return a Promise with an array of ports or null when cb is used
 	 */
-	export async function find({ min, max, retrieve = 1, consecutive = false, doLog = false}:
+	export async function find({ min, max, retrieve = 1, consecutive = false, doLog = false }:
 		{
 			min: number;			// Starting port number
 			max: number;			// Ending port number (inclusive)
 			retrieve?: number;		// Number of ports needed
 			consecutive?: boolean;
 			doLog?: boolean;
-		}, host = '0.0.0.0', cb=null) : Promise<number[]> | null {
-		let   freePorts = [];
+		}, host = '0.0.0.0', cb = null): Promise<number[]> | null {
+		let freePorts = [];
 		const busyPorts = [];
 		const needed = retrieve;
-		let   found = 0;
+		let found = 0;
 		let error = null;
 		for (let port = min; port <= max; port++) {
 			let startTine = process.hrtime();
@@ -74,18 +73,18 @@ export module TcpPortHelper
 						busyPorts.push(port);
 					} else {
 						if (consecutive && (freePorts.length > 0) &&
-							(port !== (1 + freePorts[freePorts.length-1]))) {
-								if (doLog) {
-									console.log(`TcpPortHelper.finnd: Oops, reset for consecutive requirement`);
-								}
-								freePorts = [];
-								found = 0;
+							(port !== (1 + freePorts[freePorts.length - 1]))) {
+							if (doLog) {
+								console.log(`TcpPortHelper.finnd: Oops, reset for consecutive requirement`);
 							}
+							freePorts = [];
+							found = 0;
+						}
 						freePorts.push(port);
 						found++;
 					}
 					if (doLog) {
-						const ms = (endTime[1]/1e6).toFixed(2);
+						const ms = (endTime[1] / 1e6).toFixed(2);
 						const t = `${endTime[0]}s ${ms}ms`;
 						console.log(`TcpPortHelper.find Port ${host}:${port} ` +
 							(inUse ? 'busy' : 'free') + `, Found: ${found} of ${needed} needed ` + t);
@@ -101,7 +100,7 @@ export module TcpPortHelper
 			}
 		}
 		if (!cb) {
-			return new Promise((resolve,reject) => {
+			return new Promise((resolve, reject) => {
 				if (!error && (found === needed)) {
 					resolve(freePorts);
 				} else {
@@ -116,11 +115,11 @@ export module TcpPortHelper
 		}
 	}
 
-	export function monitorPortOpen(port, host='0.0.0.0', retryTimeMs=100, timeOutMs=5000) : Promise<void> {
+	export function monitorPortOpen(port, host = '0.0.0.0', retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
 		return tcpPortUsed.waitUntilUsedOnHost(port, host, retryTimeMs, timeOutMs);
 	}
 
-	export function monitorPortClosed(port, host='0.0.0.0', retryTimeMs=100, timeOutMs=5000) : Promise<void> {
+	export function monitorPortClosed(port, host = '0.0.0.0', retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
 		return tcpPortUsed.waitUntilFreeOnHost(port, host, retryTimeMs, timeOutMs);
 	}
 }

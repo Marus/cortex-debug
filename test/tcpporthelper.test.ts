@@ -2,8 +2,8 @@
 // Author to Blame: haneefdm on github
 
 import * as assert from 'assert';
-import * as http from  'http';		  
-import {TcpPortHelper} from '../src/tcpporthelper';
+import * as http from 'http';
+import { TcpPortHelper } from '../src/tcpporthelper';
 import { platform } from 'os';
 
 /**
@@ -18,7 +18,7 @@ suite("TcpPortHelper Tests", () => {
 		let hrStart = process.hrtime();
 		function timeit() {
 			const hrEnd = process.hrtime(hrStart);
-			const ms = (hrEnd[1]/1e6).toFixed(2);
+			const ms = (hrEnd[1] / 1e6).toFixed(2);
 			const ret = `${hrEnd[0]}s ${ms}ms`;
 			hrStart = process.hrtime();
 			return ret;
@@ -35,11 +35,11 @@ suite("TcpPortHelper Tests", () => {
 		const hostNameOrIp = '127.0.0.1';
 		timeit();
 		await TcpPortHelper.find(args, hostNameOrIp).then((ret) => {
-			if (doLog) { console.log(`Found free ports ${ret}, ${timeit()}`);}
+			if (doLog) { console.log(`Found free ports ${ret}, ${timeit()}`); }
 			ports = ret;
 			assert.strictEqual(ports.length, args.retrieve, `wrong number of ports ${ports}`);
 			assert.strictEqual(ports[0] >= args.min, true);
-			assert.strictEqual(ports[args.retrieve-1] <= args.max, true);
+			assert.strictEqual(ports[args.retrieve - 1] <= args.max, true);
 			assert.deepStrictEqual(ports, ports.sort(), `ports are not ordered? ${ports}`);
 		}).catch((e) => {
 			assert.fail(`TcpPortHelper.find failed, ${timeit()} ` + e);
@@ -47,10 +47,10 @@ suite("TcpPortHelper Tests", () => {
 
 		const port = ports[1];
 		timeit();
-		await TcpPortHelper.monitorPortOpen(port,hostNameOrIp,100,400).then(() => {
+		await TcpPortHelper.monitorPortOpen(port, hostNameOrIp, 100, 400).then(() => {
 			assert.fail(`0: Timeout expected on port ${port} ${timeit()}`);
 		}, async (err) => {
-			if (doLog) { console.log(`0: Timeout: Success waiting on port ${port} ${timeit()} `, err.message);}
+			if (doLog) { console.log(`0: Timeout: Success waiting on port ${port} ${timeit()} `, err.message); }
 			assert.strictEqual(err.message, 'timeout');
 
 			// Lets create a server, but don't start listening for a while. This could have been
@@ -68,7 +68,7 @@ suite("TcpPortHelper Tests", () => {
 
 			// See if the server started on the requested port
 			timeit();
-			await TcpPortHelper.monitorPortOpen(port,hostNameOrIp,100,5000).then(() => {
+			await TcpPortHelper.monitorPortOpen(port, hostNameOrIp, 100, 5000).then(() => {
 				if (doLog) { console.log(`1. Success server port ${port} is ready ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`1. Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
@@ -80,15 +80,15 @@ suite("TcpPortHelper Tests", () => {
 			args.consecutive = true;
 			timeit();
 			await TcpPortHelper.find(args, hostNameOrIp).then((ret) => {
-				if (doLog) { console.log(`Found free consecutive ports ${ret} ${timeit()}`);}
+				if (doLog) { console.log(`Found free consecutive ports ${ret} ${timeit()}`); }
 				let newPorts = ret;
 				assert.strictEqual(newPorts.length, args.retrieve, `wrong number of ports ${newPorts}`);
 				assert.strictEqual(newPorts[0] >= args.min, true);
-				assert.strictEqual(newPorts[args.retrieve-1] <= args.max, true);
+				assert.strictEqual(newPorts[args.retrieve - 1] <= args.max, true);
 				assert.deepStrictEqual(newPorts, newPorts.sort(), `ports are not ordered? ${newPorts}`);
-				assert.strictEqual(newPorts.find((p) => {return p === port;}), undefined, `used port ${port} found as unused`);
+				assert.strictEqual(newPorts.find((p) => { return p === port; }), undefined, `used port ${port} found as unused`);
 				for (let ix = 1; ix < args.retrieve; ix++) {
-					assert.strictEqual(newPorts[ix-1]+1, newPorts[ix], `ports are not consecutive ${newPorts}`);
+					assert.strictEqual(newPorts[ix - 1] + 1, newPorts[ix], `ports are not consecutive ${newPorts}`);
 				}
 			}).catch((e) => {
 				assert.fail(`TcpPortHelper.find consecutive failed ${timeit()} ` + e);
@@ -98,7 +98,7 @@ suite("TcpPortHelper Tests", () => {
 			// no one connected?!?
 			server.close();
 			timeit();
-			await TcpPortHelper.monitorPortClosed(port,hostNameOrIp,50,3000).then(() => {
+			await TcpPortHelper.monitorPortClosed(port, hostNameOrIp, 50, 3000).then(() => {
 				if (doLog) { console.log(`2. Success Server port ${port} is closed ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`2. Timeout: Failed waiting on port ${port} to close ${timeit()}`, err); }
@@ -106,8 +106,8 @@ suite("TcpPortHelper Tests", () => {
 				assert.fail('Why is the server still running? ' + err);
 			});
 		});
-	// Maximum timeout for this test. Mac/Linux finish in under a second
-	// Windows takes 10-13 seconds, PC specs got nothing to do with it
+		// Maximum timeout for this test. Mac/Linux finish in under a second
+		// Windows takes 10-13 seconds, PC specs got nothing to do with it
 	}).timeout(platform() == 'win32' ? 20000 : 4000);
 });
 
