@@ -131,6 +131,7 @@ export module TcpPortHelper {
 	let aliases = [];
 	function getLocalHostAliases(): string[] {
 		if (aliases.length === 0) {
+			/*
 			var ifaces = os.networkInterfaces();
 			Object.keys(ifaces).forEach(function (ifname) {
 				ifaces[ifname].forEach(function (iface) {
@@ -140,6 +141,7 @@ export module TcpPortHelper {
 					}
 				});
 			});
+			*/
 			const reserved = ['127.0.0.1'];
 			if (os.platform() === 'win32') {
 				reserved.push('0.0.0.0');
@@ -149,7 +151,7 @@ export module TcpPortHelper {
 					aliases.push(h);
 				}
 			});
-			if (os.platform() === 'win32') {
+			if (os.platform() !== 'linux') {
 				aliases.push('');
 			}
 			console.log(aliases.join(','));
