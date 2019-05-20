@@ -17,7 +17,7 @@ export module TcpPortHelper
 			server.listen(port, '0.0.0.0', () => {		// Port not in use
 				resolve(false);
 				server.close();
-			}
+			});
 		});
 	}
 
