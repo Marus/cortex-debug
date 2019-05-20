@@ -310,12 +310,14 @@ export class GDBDebugSession extends DebugSession {
                 
                 if (attach) {
                     commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.attachCommands());
+                    const attachCommands = this.args.overrideAttachCommands || this.serverController.attachCommands();
+                    commands.push(...attachCommands);
                     commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
                 }
                 else {
                     commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.launchCommands());
+                    const launchCommands = this.args.overrideLaunchCommands || this.serverController.launchCommands();
+                    commands.push(...launchCommands);
                     commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                 }
                 
@@ -649,7 +651,8 @@ export class GDBDebugSession extends DebugSession {
             const commands = [];
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
-            commands.push(...this.serverController.restartCommands());
+            const restartCommands = this.args.overrideRestartCommands || this.serverController.restartCommands()
+            commands.push(...restartCommands);
             commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
 
             this.miDebugger.restart(commands).then((done) => {

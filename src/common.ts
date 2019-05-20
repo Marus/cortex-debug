@@ -92,10 +92,13 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     debuggerArgs: string[];
     preLaunchCommands: string[];
     postLaunchCommands: string[];
+    overrideLaunchCommands: string[];
     preAttachCommands: string[];
     postAttachCommands: string[];
+    overrideAttachCommands: string[];
     preRestartCommands: string[];
     postRestartCommands: string[];
+    overrideRestartCommands: string[];
     overrideGDBServerStartedRegex: string;
     svdFile: string;
     swoConfig: SWOConfiguration;
