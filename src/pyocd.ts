@@ -122,11 +122,15 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             serverargs.push(this.args.targetId.toString());
         }
 
+        if (this.args.cmsisPack) {
+            serverargs.push('--pack');
+            serverargs.push(this.args.cmsisPack.toString());
+        }
         return serverargs;
     }
 
     public initMatch(): RegExp {
-        return /GDB server started (at)|(on) port/;
+        return /GDB server started .*? port/;
     }
 
     public serverLaunchStarted(): void {}

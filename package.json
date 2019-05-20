@@ -603,46 +603,6 @@
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
                                 "anyOf": [
                                     {
-                                        "enum": [
-                                            "kl25z",
-                                            "kl26z",
-                                            "lpc824",
-                                            "k82f25615",
-                                            "lpc11xx_32",
-                                            "kinetis",
-                                            "lpc800",
-                                            "lpc4088qsb",
-                                            "maxwsnenv",
-                                            "kl05z",
-                                            "k64f",
-                                            "lpc1768",
-                                            "lpc4088",
-                                            "lpc4330",
-                                            "max32600mbed",
-                                            "k66f18",
-                                            "w7500",
-                                            "ke18f16",
-                                            "k22f",
-                                            "lpc4088dm",
-                                            "ke15z7",
-                                            "kv11z7",
-                                            "nrf51",
-                                            "nrf52",
-                                            "kv10z7",
-                                            "k20d50m",
-                                            "kl46z",
-                                            "stm32f103rc",
-                                            "kl27z4",
-                                            "kw40z4",
-                                            "cortex_m",
-                                            "lpc11u24",
-                                            "stm32f051",
-                                            "kl02z",
-                                            "ncs36510",
-                                            "kl28z",
-                                            "kl43z4",
-                                            "kw01z4"
-                                        ],
                                         "type": "string"
                                     },
                                     {
@@ -653,6 +613,10 @@
                             },
                             "boardId": {
                                 "description": "PyOCD Board Identifier. Needed if multiple compatible boards are connected.",
+                                "type": "string"
+                            },
+                            "cmsisPack": {
+                                "description": "Path to a CMSIS-Pack file. Use to add extra device support.",
                                 "type": "string"
                             },
                             "BMPGDBSerialPort": {
@@ -1123,46 +1087,6 @@
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
                                 "anyOf": [
                                     {
-                                        "enum": [
-                                            "kl25z",
-                                            "kl26z",
-                                            "lpc824",
-                                            "k82f25615",
-                                            "lpc11xx_32",
-                                            "kinetis",
-                                            "lpc800",
-                                            "lpc4088qsb",
-                                            "maxwsnenv",
-                                            "kl05z",
-                                            "k64f",
-                                            "lpc1768",
-                                            "lpc4088",
-                                            "lpc4330",
-                                            "max32600mbed",
-                                            "k66f18",
-                                            "w7500",
-                                            "ke18f16",
-                                            "k22f",
-                                            "lpc4088dm",
-                                            "ke15z7",
-                                            "kv11z7",
-                                            "nrf51",
-                                            "nrf52",
-                                            "kv10z7",
-                                            "k20d50m",
-                                            "kl46z",
-                                            "stm32f103rc",
-                                            "kl27z4",
-                                            "kw40z4",
-                                            "cortex_m",
-                                            "lpc11u24",
-                                            "stm32f051",
-                                            "kl02z",
-                                            "ncs36510",
-                                            "kl28z",
-                                            "kl43z4",
-                                            "kw01z4"
-                                        ],
                                         "type": "string"
                                     },
                                     {
@@ -1173,6 +1097,10 @@
                             },
                             "boardId": {
                                 "description": "PyOCD Board Identifier. Needed if multiple compatible boards are connected.",
+                                "type": "string"
+                            },
+                            "cmsisPack": {
+                                "description": "Path to a CMSIS-Pack file. Use to add extra device support.",
                                 "type": "string"
                             },
                             "BMPGDBSerialPort": {

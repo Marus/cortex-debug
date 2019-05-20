@@ -105,6 +105,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     rtos: string;
     interface: string;
     targetId: string | number;
+    cmsisPack: string;
     runToMain: boolean;
 
     // J-Link Specific
