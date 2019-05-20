@@ -12,10 +12,10 @@ export module TcpPortHelper {
 			server.once('error', (e) => {
 				const code:string = (e as any).code;
 				if (code === 'EADDRINUSE') {
-					//console.log(`port ${host}:${port} is used`, code);
+					console.log(`port ${host}:${port} is used`, code);
 					resolve(true);					// Port in use
 				} else {
-					//console.log(`port ${host}:${port} is used`, code);
+					console.log(`port ${host}:${port} is used`, code);
 					resolve(false);					// some other failure
 				}
 				server.close();
@@ -23,7 +23,7 @@ export module TcpPortHelper {
 
 			server.listen(port, host, () => {
 				// Port not in use
-				//console.log(`port ${host}:${port} is in free`);
+				console.log(`port ${host}:${port} is in free`);
 				resolve(false);
 				server.close();
 			});
@@ -140,8 +140,8 @@ export module TcpPortHelper {
 					}
 				});
 			});
-			const reserved = ['127.0.0.1', '::1'];
-			if (os.platform() !== 'darwin') {
+			const reserved = ['127.0.0.1'];
+			if (os.platform() === 'win32') {
 				reserved.push('0.0.0.0');
 			}
 			reserved.forEach((h) => {
@@ -149,7 +149,9 @@ export module TcpPortHelper {
 					aliases.push(h);
 				}
 			});
-			aliases.push('');
+			if (os.platform() === 'win32') {
+				aliases.push('');
+			}
 			console.log(aliases.join(','));
 		}
 		return aliases;
