@@ -5,16 +5,18 @@ import net = require('net');
 
 export module TcpPortHelper
 {
-	function isPortInUse(port:number) : Promise<boolean> {
+	function isPortInUse(port:number, host:string) : Promise<boolean> {
 		return new Promise((resolve,_reject) => {
 			const server = net.createServer((c) => {
 			});
-			server.once('error', () => {
+			server.once('error', (e) => {
+				//console.log(`port ${port} is in use`, e);
 				resolve(true);							// Port in use
 				server.close();
 			});
 
-			server.listen(port, '0.0.0.0', () => {		// Port not in use
+			server.listen(port, host, () => {		// Port not in use
+				//console.log(`port ${port} is in free`);
 				resolve(false);
 				server.close();
 			});
