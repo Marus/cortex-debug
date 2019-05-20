@@ -96,6 +96,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     postAttachCommands: string[];
     preRestartCommands: string[];
     postRestartCommands: string[];
+    overrideGDBServerStartedRegex: string;
     svdFile: string;
     swoConfig: SWOConfiguration;
     graphConfig: any[];

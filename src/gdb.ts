@@ -254,7 +254,12 @@ export class GDBDebugSession extends DebugSession {
                 this.handleMsg('log', dbgMsg);
             }
 
-            this.server = new GDBServer(executable, args, this.serverController.initMatch(), this.ports['gdbPort']);
+            let initMatch = this.serverController.initMatch();
+            if (this.args.overrideGDBServerStartedRegex) {
+                initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
+            }
+
+            this.server = new GDBServer(executable, args, initMatch, this.ports['gdbPort']);
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {
