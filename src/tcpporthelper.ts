@@ -1,7 +1,7 @@
 // Author to Blame: haneefdm on github
 
 import * as tcpPortUsed from 'tcp-port-used';
-const net = require('net');
+import net = require('net');
 
 export module TcpPortHelper
 {
