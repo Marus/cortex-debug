@@ -26,7 +26,16 @@ export module TcpPortHelper
 	const useServer = true;
 	function isPortInUseEx(port, host) : Promise<boolean> {
 		if (useServer) {
-			return isPortInUse(port);
+			let promises = [];
+			promises.push(isPortInUse(port, '127.0.0.1'));	// localhost
+			promises.push(isPortInUse(port, '0.0.0.0'));	// this-host
+			promises.push(isPortInUse(port, null));			// use the default host
+			return new Promise((resolve,_reject) => {
+				Promise.all(promises).then((values) => {
+					const inUse = (values.indexOf(true) > -1);
+					resolve(inUse);
+				});
+			});
 		} else {
 			return tcpPortUsed.check(port, host);
 		}

@@ -32,7 +32,7 @@ suite("TcpPortHelper Tests", () => {
 			doLog: doLog
 		};
 		let ports: number[];
-		const hostNameOrIp = '0.0.0.0';
+		const hostNameOrIp = '127.0.0.1';
 		timeit();
 		await TcpPortHelper.find(args, hostNameOrIp).then((ret) => {
 			if (doLog) { console.log(`Found free ports ${ret}, ${timeit()}`);}
