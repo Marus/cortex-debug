@@ -1,6 +1,7 @@
 // Author to Blame: haneefdm on github
 
 import * as tcpPortUsed from 'tcp-port-used';
+import os = require('os');
 import net = require('net');
 
 export module TcpPortHelper {
@@ -9,13 +10,20 @@ export module TcpPortHelper {
 			const server = net.createServer((c) => {
 			});
 			server.once('error', (e) => {
-				//console.log(`port ${port} is in use`, e);
-				resolve(true);							// Port in use
+				const code:string = (e as any).code;
+				if (code === 'EADDRINUSE') {
+					//console.log(`port ${host}:${port} is used`, code);
+					resolve(true);					// Port in use
+				} else {
+					//console.log(`port ${host}:${port} is used`, code);
+					resolve(false);					// some other failure
+				}
 				server.close();
 			});
 
-			server.listen(port, host, () => {		// Port not in use
-				//console.log(`port ${port} is in free`);
+			server.listen(port, host, () => {
+				// Port not in use
+				//console.log(`port ${host}:${port} is in free`);
 				resolve(false);
 				server.close();
 			});
@@ -25,10 +33,7 @@ export module TcpPortHelper {
 	const useServer = true;
 	function isPortInUseEx(port, host): Promise<boolean> {
 		if (useServer) {
-			let promises = [];
-			promises.push(isPortInUse(port, '127.0.0.1'));	// localhost
-			promises.push(isPortInUse(port, '0.0.0.0'));	// this-host
-			promises.push(isPortInUse(port, null));			// use the default host
+			const promises = getLocalHostAliases().map((h) => { return isPortInUse(port, h) });
 			return new Promise((resolve, _reject) => {
 				Promise.all(promises).then((values) => {
 					const inUse = (values.indexOf(true) > -1);
@@ -121,5 +126,32 @@ export module TcpPortHelper {
 
 	export function monitorPortClosed(port, host = '0.0.0.0', retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
 		return tcpPortUsed.waitUntilFreeOnHost(port, host, retryTimeMs, timeOutMs);
+	}
+
+	let aliases = [];
+	function getLocalHostAliases(): string[] {
+		if (aliases.length === 0) {
+			var ifaces = os.networkInterfaces();
+			Object.keys(ifaces).forEach(function (ifname) {
+				ifaces[ifname].forEach(function (iface) {
+					if (('IPv4' === iface.family)  && iface.internal){
+						aliases.push(iface.address);
+						console.log(iface.address);
+					}
+				});
+			});
+			const reserved = ['127.0.0.1', '::1'];
+			if (os.platform() !== 'darwin') {
+				reserved.push('0.0.0.0');
+			}
+			reserved.forEach((h) => {
+				if (aliases.indexOf(h) === -1) {
+					aliases.push(h);
+				}
+			});
+			aliases.push('');
+			console.log(aliases.join(','));
+		}
+		return aliases;
 	}
 }
