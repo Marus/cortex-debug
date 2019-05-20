@@ -7,7 +7,7 @@ const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['qemu-system-arm'];
 
 export class QEMUServerController extends EventEmitter implements GDBServerController {
-    public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort'];
+    public portsNeeded: string[] = ['gdbPort'];
     public name: 'QEMU';
 
     private args: ConfigurationArguments;
@@ -74,8 +74,6 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
-        // const swoport = this.ports['swoPort'];
-        // const consoleport = this.ports['consolePort'];
 
         const cmdargs = [
 			'-cpu', this.args.cpu,
