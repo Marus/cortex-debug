@@ -144,7 +144,7 @@ export module TcpPortHelper {
 			let ifaces = os.networkInterfaces();
 			Object.keys(ifaces).forEach(function (ifname) {
 				ifaces[ifname].forEach(function (iface) {
-					if ('IPv4' === iface.family) {
+					if ('ipv4' === iface.family.toLowerCase()) {
 						if (aliases.indexOf(iface.address) === -1) {
 							aliases.push(iface.address);
 						}						
