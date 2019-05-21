@@ -23,7 +23,7 @@ suite("TcpPortHelper Tests", () => {
 			hrStart = process.hrtime();
 			return ret;
 		}
-		const doLog = true;
+		const doLog = false;
 		const args = {
 			min: 51000,
 			max: 52000,

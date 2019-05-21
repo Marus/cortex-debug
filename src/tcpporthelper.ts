@@ -12,10 +12,11 @@ export module TcpPortHelper {
 			server.once('error', (e) => {
 				const code:string = (e as any).code;
 				if (code === 'EADDRINUSE') {
-					console.log(`port ${host}:${port} is used`, code);
+					// console.log(`port ${host}:${port} is used`, code);
 					resolve(true);					// Port in use
 				} else {
-					console.log(`port ${host}:${port} is error`, code);
+					// This should never happen so, log it always
+					console.log(`port ${host}:${port} is unexpected error `, code);
 					resolve(false);					// some other failure
 				}
 				server.close();
@@ -23,7 +24,7 @@ export module TcpPortHelper {
 
 			server.listen(port, host, () => {
 				// Port not in use
-				//console.log(`port ${host}:${port} is in free`);
+				// console.log(`port ${host}:${port} is in free`);
 				resolve(false);
 				server.close();
 			});
@@ -34,28 +35,18 @@ export module TcpPortHelper {
 	async function isPortInUseEx(port, host): Promise<boolean> {
 		if (useServer) {
 			let inUse = false;
-			const tries = ['0.0.0.0', '127.0.0.1', '::1', ''];
+			const tries = getLocalHostAliases();
 			for (let ix = 0; ix < tries.length ; ix++) {
+				// We don;t use Promise.all because since we are trying to create a bubch of
+				// servers on the same machine, they could interfere with each other if you
+				// do it asynchronously. It adds very little runtime (fractions of ms).
+				// There is also a slight benefit that we can bail early if a port is in use
 				await isPortInUse(port,tries[ix]).then((v) => { inUse = v ; });
 				if (inUse) { break; }
 			}
 			return new Promise((resolve,reject) => {
 				resolve(inUse);
 			});
-
-			/*
-			const promises = getLocalHostAliases().map((h) => { return isPortInUse(port, h) });
-			let promises = [];
-			promises.push(isPortInUse('127.0.0.1');
-			promises.push(isPortInUse('0.0.0.0'));
-			promises.push(isPortInUse('');
-			return new Promise((resolve, _reject) => {
-				Promise.all(promises).then((values) => {
-					const inUse = (values.indexOf(true) > -1);
-					resolve(inUse);
-				});
-			});
-			*/
 		} else {
 			return tcpPortUsed.check(port, host);
 		}
@@ -147,32 +138,20 @@ export module TcpPortHelper {
 	let aliases = [];
 	function getLocalHostAliases(): string[] {
 		if (aliases.length === 0) {
-			/*
-			var ifaces = os.networkInterfaces();
+			// On Unixes, the first two are treated like true aliases but on Windows
+			// you have distint servers on all of them. So, try everything.
+			aliases = ['0.0.0.0', '127.0.0.1', '::1', ''];
+			let ifaces = os.networkInterfaces();
 			Object.keys(ifaces).forEach(function (ifname) {
 				ifaces[ifname].forEach(function (iface) {
-					if (('IPv4' === iface.family)  && iface.internal){
-						aliases.push(iface.address);
-						console.log(iface.address);
+					if ('IPv4' === iface.family) {
+						if (aliases.indexOf(iface.address) === -1) {
+							aliases.push(iface.address);
+						}						
 					}
 				});
 			});
-			*/
-			const reserved = ['127.0.0.1'];
-			if (os.platform() === 'win32') {
-				// win32 can have servers here too. Not an exact alias to localhost
-				reserved.push('0.0.0.0');
-			}
-			reserved.forEach((h) => {
-				if (aliases.indexOf(h) === -1) {
-					aliases.push(h);
-				}
-			});
-			if (os.platform() !== 'linux') {
-				// Mac and Windows need the empty default. Linux 64 does not
-				aliases.push('');
-			}
-			console.log(aliases.join(','));
+			// console.log(aliases.join(','));
 		}
 		return aliases;
 	}
