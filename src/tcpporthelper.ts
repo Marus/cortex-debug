@@ -10,7 +10,7 @@ export module TcpPortHelper {
 			const server = net.createServer((c) => {
 			});
 			server.once('error', (e) => {
-				const code:string = (e as any).code;
+				const code: string = (e as any).code;
 				if (code === 'EADDRINUSE') {
 					// console.log(`port ${host}:${port} is used`, code);
 					resolve(true);					// Port in use
@@ -36,15 +36,15 @@ export module TcpPortHelper {
 		if (useServer) {
 			let inUse = false;
 			const tries = getLocalHostAliases();
-			for (let ix = 0; ix < tries.length ; ix++) {
+			for (let ix = 0; ix < tries.length; ix++) {
 				// We don;t use Promise.all because since we are trying to create a bubch of
 				// servers on the same machine, they could interfere with each other if you
 				// do it asynchronously. It adds very little runtime (fractions of ms).
 				// There is also a slight benefit that we can bail early if a port is in use
-				await isPortInUse(port,tries[ix]).then((v) => { inUse = v ; });
+				await isPortInUse(port, tries[ix]).then((v) => { inUse = v; });
 				if (inUse) { break; }
 			}
-			return new Promise((resolve,reject) => {
+			return new Promise((resolve, reject) => {
 				resolve(inUse);
 			});
 		} else {
@@ -147,7 +147,7 @@ export module TcpPortHelper {
 					if ('ipv4' === iface.family.toLowerCase()) {
 						if (aliases.indexOf(iface.address) === -1) {
 							aliases.push(iface.address);
-						}						
+						}
 					}
 				});
 			});
