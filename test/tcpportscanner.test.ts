@@ -3,8 +3,7 @@
 
 import * as assert from 'assert';
 import * as http from 'http';
-import { TcpPortScanner } from '../src/tcpporthelper';
-import { platform } from 'os';
+import { TcpPortScanner } from '../src/tcpportscanner';
 
 /**
  * Sorry, this is a slow test because we are testing timeouts. Hate anything time related
