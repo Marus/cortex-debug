@@ -12,8 +12,8 @@ import { TcpPortScanner } from '../src/tcpportscanner';
  * no false positives. If your computer is quiet enough, we should be able to get through
  * the test fine
  */
-suite("TcpPortHelper Tests", () => {
-	test("TcpPortHelper finder/waitfor(open/close) tests", async () => {
+suite("TcpPortScanner Tests", () => {
+	test("TcpPortScanner finder/waitfor(open/close) tests", async () => {
 		let hrStart = process.hrtime();
 		function timeit() {
 			const hrEnd = process.hrtime(hrStart);
@@ -41,7 +41,7 @@ suite("TcpPortHelper Tests", () => {
 			assert.strictEqual(ports[args.retrieve - 1] <= args.max, true);
 			assert.deepStrictEqual(ports, ports.sort(), `ports are not ordered? ${ports}`);
 		}).catch((e) => {
-			assert.fail(`TcpPortHelper.find failed, ${timeit()} ` + e);
+			assert.fail(`TcpPortScanner.find failed, ${timeit()} ` + e);
 		});
 
 		const port = ports[1];
@@ -90,7 +90,7 @@ suite("TcpPortHelper Tests", () => {
 					assert.strictEqual(newPorts[ix - 1] + 1, newPorts[ix], `ports are not consecutive ${newPorts}`);
 				}
 			}).catch((e) => {
-				assert.fail(`TcpPortHelper.find consecutive failed ${timeit()} ` + e);
+				assert.fail(`TcpPortScanner.find consecutive failed ${timeit()} ` + e);
 			});
 
 			// Close the server and try again. Not sure it closes instantly. It should since it should have
