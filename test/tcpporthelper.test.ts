@@ -14,7 +14,7 @@ import { platform } from 'os';
  * the test fine
  */
 suite("TcpPortHelper Tests", () => {
-	test("TcpPortHelper finder/monitor(open/close) tests", async () => {
+	test("TcpPortHelper finder/waitfor(open/close) tests", async () => {
 		let hrStart = process.hrtime();
 		function timeit() {
 			const hrEnd = process.hrtime(hrStart);
@@ -47,7 +47,7 @@ suite("TcpPortHelper Tests", () => {
 
 		const port = ports[1];
 		timeit();
-		await TcpPortHelper.monitorPortOpen(port, hostNameOrIp, 100, 400).then(() => {
+		await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, 100, 400).then(() => {
 			assert.fail(`0: Timeout expected on port ${port} ${timeit()}`);
 		}, async (err) => {
 			if (doLog) { console.log(`0: Timeout: Success waiting on port ${port} ${timeit()} `, err.message); }
@@ -68,7 +68,7 @@ suite("TcpPortHelper Tests", () => {
 
 			// See if the server started on the requested port
 			timeit();
-			await TcpPortHelper.monitorPortOpen(port, hostNameOrIp, 100, 5000).then(() => {
+			await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, 100, 5000).then(() => {
 				if (doLog) { console.log(`1. Success server port ${port} is ready ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`1. Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
@@ -98,7 +98,7 @@ suite("TcpPortHelper Tests", () => {
 			// no one connected?!?
 			server.close();
 			timeit();
-			await TcpPortHelper.monitorPortClosed(port, hostNameOrIp, 50, 3000).then(() => {
+			await TcpPortHelper.waitForPortClosed(port, hostNameOrIp, 50, 3000).then(() => {
 				if (doLog) { console.log(`2. Success Server port ${port} is closed ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`2. Timeout: Failed waiting on port ${port} to close ${timeit()}`, err); }
