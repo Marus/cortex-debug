@@ -34,7 +34,7 @@ suite("TcpPortHelper Tests", () => {
 		let ports: number[];
 		const hostNameOrIp = '0.0.0.0';
 		timeit();
-		await TcpPortHelper.find(args, hostNameOrIp).then((ret) => {
+		await TcpPortHelper.findFreePorts(args, hostNameOrIp).then((ret) => {
 			if (doLog) { console.log(`Found free ports ${ret}, ${timeit()}`); }
 			ports = ret;
 			assert.strictEqual(ports.length, args.retrieve, `wrong number of ports ${ports}`);
@@ -79,7 +79,7 @@ suite("TcpPortHelper Tests", () => {
 			// skip the port we are already using
 			args.consecutive = true;
 			timeit();
-			await TcpPortHelper.find(args, hostNameOrIp).then((ret) => {
+			await TcpPortHelper.findFreePorts(args, hostNameOrIp).then((ret) => {
 				if (doLog) { console.log(`Found free consecutive ports ${ret} ${timeit()}`); }
 				let newPorts = ret;
 				assert.strictEqual(newPorts.length, args.retrieve, `wrong number of ports ${newPorts}`);

@@ -3,10 +3,11 @@
 import * as tcpPortUsed from 'tcp-port-used';
 import os = require('os');
 import net = require('net');
+import { resolve } from 'dns';
 
 export module TcpPortHelper {
 	//
-	// There are two ways we can look for open ports or get status
+	// There are two ways we can check/look for open ports or get status
 	// 1. Client: Try to see if we can connect to that port. This is the preferred method
 	//    because you probe for remote host probes as well but on Windows each probe on an free
 	//    port takes 1 second even on localhost
@@ -17,7 +18,7 @@ export module TcpPortHelper {
 	//
 
 	function isPortInUse(port: number, host: string): Promise<boolean> {
-		return new Promise((resolve, _reject) => {
+		return new Promise((resolve, reject) => {
 			const server = net.createServer((c) => {
 			});
 			server.once('error', (e) => {
@@ -28,7 +29,7 @@ export module TcpPortHelper {
 				} else {
 					// This should never happen so, log it always
 					console.log(`port ${host}:${port} is unexpected error `, code);
-					resolve(false);					// some other failure
+					reject(e);					// some other failure
 				}
 				server.close();
 			});
@@ -42,21 +43,41 @@ export module TcpPortHelper {
 		});
 	}
 
-	export async function isPortInUseEx(port, host): Promise<boolean> {
+	export function isPortInUseEx(port: number, host: string): Promise<boolean> {
 		if (isLocalHost(host)) {
-			let inUse = false;
 			const tries = getLocalHostAliases();
+			let ix = 0;
+			// We don't use Promise.all because since we are trying to create a bunch of
+			// servers on the same machine/port, they could interfere with each other if you
+			// do it asynchronously. It adds very little runtime (fractions of ms).
+			// There is also a slight benefit that we can bail early if a port is in use
+			return new Promise((resolve, reject) => {
+				function next(port: number, host: string) {
+					isPortInUse(port, host).then((inUse) => {
+						if (inUse) {
+							resolve(inUse);
+						} else if (++ix === tries.length) {
+							resolve(false);
+						} else {
+							next(port, tries[ix]);
+						}
+					}).catch((err) => {
+						reject(err);
+					});
+				}
+				next(port, tries[ix]);
+			});
+
+			/*
+			let inUse = false;
 			for (let ix = 0; ix < tries.length; ix++) {
-				// We don't use Promise.all because since we are trying to create a bunch of
-				// servers on the same machine, they could interfere with each other if you
-				// do it asynchronously. It adds very little runtime (fractions of ms).
-				// There is also a slight benefit that we can bail early if a port is in use
 				await isPortInUse(port, tries[ix]).then((v) => { inUse = v; });
 				if (inUse) { break; }
 			}
 			return new Promise((resolve, reject) => {
 				resolve(inUse);
 			});
+			*/
 		} else {
 			// This function is too slow on windows when checking on an open port.
 			return tcpPortUsed.check(port, host);
@@ -67,30 +88,81 @@ export module TcpPortHelper {
 	 * Don't like the interface but trying to keep compatibility with portastic.find(). But unlike,
 	 * it the default ports to retrieve is 1 and we also have the option of returning consecutive ports
 	 * 
-	 * FIXME: Function is mostly synchronous. If we make it async. though, we may queue up thousands
-	 * of promises where maybe just we are looking for a small number of open ports in very large port range
+	 * While this function is async, promises are chained to find open ports, but recursively
 	 * 
 	 * @param0 
 	 * @param host Use any string that is a valid host name or ip address
-	 * @deprecated param cb This callback is called if non-null and the required ports are found and it will return a null promise
 	 * @return a Promise with an array of ports or null when cb is used
 	 */
-	export async function find({ min, max, retrieve = 1, consecutive = false, doLog = false }:
+	export function findFreePorts({ min, max, retrieve = 1, consecutive = false, doLog = false }:
 		{
 			min: number;			// Starting port number
 			max: number;			// Ending port number (inclusive)
 			retrieve?: number;		// Number of ports needed
 			consecutive?: boolean;
 			doLog?: boolean;
-		}, host = '0.0.0.0', cb = null): Promise<number[]> | null {
+		}, host = '0.0.0.0'): Promise<number[]> | null {
 		let freePorts = [];
 		const busyPorts = [];
 		const needed = retrieve;
-		let found = 0;
+		const func = isLocalHost(host) ? isPortInUseEx : tcpPortUsed;
+		return new Promise((resolve, reject) => {
+			function next(port: number, host: string) {
+				const startTine = process.hrtime();
+				func(port, host).then((inUse) => {
+					const endTime = process.hrtime(startTine);
+					if (inUse) {
+						busyPorts.push(port);
+					} else {
+						if (consecutive && (freePorts.length > 0) &&
+							(port !== (1 + freePorts[freePorts.length - 1]))) {
+							if (doLog) {
+								console.log(`TcpPortHelper.finnd: Oops, reset for consecutive requirement`);
+							}
+							freePorts = [];
+						}
+						freePorts.push(port);
+					}
+					if (doLog) {
+						const ms = (endTime[1] / 1e6).toFixed(2);
+						const t = `${endTime[0]}s ${ms}ms`;
+						console.log(`TcpPortHelper.find Port ${host}:${port} ` +
+							(inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ` + t);
+					}
+					if (freePorts.length === needed) {
+						resolve(freePorts);
+					} else if (port < max) {
+						next(port + 1, host);
+					} else {
+						reject(new Error(`Only found ${freePorts.length} of ${needed} ports`));
+					}
+				}).catch((err) => {
+					reject(err);
+				});
+			}
+			next(min, host);		// Start the hunt
+		});
+	}
+
+	/**
+	 * @deprecated This a synchronous version findFreePorts(). Use it instead
+	 */
+	export async function findFreePortsSync({ min, max, retrieve = 1, consecutive = false, doLog = false }:
+		{
+			min: number;			// Starting port number
+			max: number;			// Ending port number (inclusive)
+			retrieve?: number;		// Number of ports needed
+			consecutive?: boolean;
+			doLog?: boolean;
+		}, host = '0.0.0.0', cb = null): Promise<number[]> {
+		let freePorts = [];
+		const busyPorts = [];
+		const needed = retrieve;
 		let error = null;
+		const func = isLocalHost(host) ? isPortInUseEx : tcpPortUsed;
 		for (let port = min; port <= max; port++) {
 			let startTine = process.hrtime();
-			await isPortInUseEx(port, host)
+			await func(port, host)
 				.then((inUse) => {
 					const endTime = process.hrtime(startTine);
 					if (inUse) {
@@ -102,16 +174,14 @@ export module TcpPortHelper {
 								console.log(`TcpPortHelper.finnd: Oops, reset for consecutive requirement`);
 							}
 							freePorts = [];
-							found = 0;
 						}
 						freePorts.push(port);
-						found++;
 					}
 					if (doLog) {
 						const ms = (endTime[1] / 1e6).toFixed(2);
 						const t = `${endTime[0]}s ${ms}ms`;
 						console.log(`TcpPortHelper.find Port ${host}:${port} ` +
-							(inUse ? 'busy' : 'free') + `, Found: ${found} of ${needed} needed ` + t);
+							(inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ` + t);
 					}
 				}, (err) => {
 					if (doLog) {
@@ -119,20 +189,20 @@ export module TcpPortHelper {
 					}
 					error = err;
 				});
-			if (error || (found === needed)) {
+			if (error || (freePorts.length === needed)) {
 				break;
 			}
 		}
 		if (!cb) {
 			return new Promise((resolve, reject) => {
-				if (!error && (found === needed)) {
+				if (!error && (freePorts.length === needed)) {
 					resolve(freePorts);
 				} else {
-					reject(error ? error : `Only found ${found} of ${needed} ports`);
+					reject(error ? error : `Only found ${freePorts.length} of ${needed} ports`);
 				}
 			});
 		} else {
-			if (!error && (found === needed)) {
+			if (!error && (freePorts.length === needed)) {
 				cb(freePorts);
 			}
 			return null;
