@@ -3,18 +3,18 @@
 import * as tcpPortUsed from 'tcp-port-used';
 import os = require('os');
 import net = require('net');
-import { rejects } from 'assert';
 
 export module TcpPortHelper {
 	//
-	// There are two ways we can look for open ports.
+	// There are two ways we can look for open ports or get status
 	// 1. Client: Try to see if we can connect to that port. This is the preferred method
-	//    because you probe for remote host probes as well but on Windows each probe on an open
+	//    because you probe for remote host probes as well but on Windows each probe on an free
 	//    port takes 1 second even on localhost
 	// 2. Server: See if we can create a server on that port. It is super fast on all platforms,
-	//    but, we can only do this on a localhost
+	//    but, we can only do this on a localhost. We use this method is we can quickly determine
+	//    if it is a localhost. We also look for ports on its aliases because, you can
+	//    run servers on some aliases
 	//
-	const useServerMethod = true;
 
 	function isPortInUse(port: number, host: string): Promise<boolean> {
 		return new Promise((resolve, _reject) => {
@@ -42,8 +42,8 @@ export module TcpPortHelper {
 		});
 	}
 
-	async function isPortInUseEx(port, host): Promise<boolean> {
-		if (useServerMethod) {
+	export async function isPortInUseEx(port, host): Promise<boolean> {
+		if (isLocalHost(host)) {
 			let inUse = false;
 			const tries = getLocalHostAliases();
 			for (let ix = 0; ix < tries.length; ix++) {
@@ -139,27 +139,29 @@ export module TcpPortHelper {
 		}
 	}
 
-	class myStatusArgs {
-		public readonly startTimeMs: number;
+	export class portStatusArgs {
+		public startTimeMs: number = 0;
 		constructor(
 			public readonly status: boolean,	// true means looking for open
 			public readonly port: number,
-			public readonly host: string,
-			public readonly retryTimeMs: number,
-			public readonly timeOutMs: number
+			public readonly host: string = '0.0.0.0',
+			public readonly checkLocalHostAliases = true,
+			public readonly retryTimeMs: number = 100,
+			public readonly timeOutMs: number = 5000
 		) {
-			this.startTimeMs = Date.now();
 			this.retryTimeMs = Math.max(this.retryTimeMs, 1);
 		}
 	}
 
-	function waitForPortStatus(opts: myStatusArgs): Promise<boolean> {
+	function waitForPortStatusEx(opts: portStatusArgs): Promise<void> {
+		opts.startTimeMs = Date.now();
+		const func = opts.checkLocalHostAliases ? isPortInUseEx : isPortInUse;
 		return new Promise(function tryAgain(resolve, reject) {
-			isPortInUseEx(opts.port, opts.host)
+			func(opts.port, opts.host)
 				.then((inUse) => {
-					//console.log(`isPortInUseEx returned ${inUse}`)
+					//console.log(`${func.name} returned ${inUse}`)
 					if (inUse === opts.status) {	// status match
-						return resolve(inUse);
+						return resolve();
 					} else {
 						throw 'tryagain';
 					}
@@ -174,38 +176,51 @@ export module TcpPortHelper {
 								tryAgain(resolve, reject);
 							}, opts.retryTimeMs);
 						} else {
-							return reject({ message: 'timeout' });
+							return reject(new Error('timeout'));
 						}
 					}
 				});
 		});
 	}
 
+	export function waitForPortStatus(port, host = '0.0.0.0', inUse = true,
+		checkLocalHostAliaes = true, retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
+		retryTimeMs = Math.max(retryTimeMs, 1);
+		if (!isLocalHost(host)) {
+			return tcpPortUsed.waitForStatus(port, host, inUse, retryTimeMs, timeOutMs);
+		} else {
+			const opts = new portStatusArgs(inUse, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
+			return waitForPortStatusEx(opts);
+		}
+	}
 
 	/**
-	 * Wait for port to open. We always do a minium of one try regardless of timeouts
+	 * Wait for port to open. We always do a minium of one try regardless of timeouts, so setting a timeout
+	 * of 0 means only one try is made
 	 * @param port Wait until a port opens
 	 * @param host 
 	 * @param retryTimeMs 
 	 * @param timeOutMs 
 	 */
-	export async function waitForPortOpen(port, host = '0.0.0.0', retryTimeMs = 100, timeOutMs = 5000): Promise<boolean> {
+	export function waitForPortOpen(port, host = '0.0.0.0', checkLocalHostAliaes = true,
+		retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
 		retryTimeMs = Math.max(retryTimeMs, 1);
-		if (!useServerMethod) {
+		if (!isLocalHost(host)) {
 			return tcpPortUsed.waitUntilUsedOnHost(port, host, retryTimeMs, timeOutMs);
 		} else {
-			const opts = new myStatusArgs(true, port, host, retryTimeMs, timeOutMs);
-			return waitForPortStatus(opts);
+			const opts = new portStatusArgs(true, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
+			return waitForPortStatusEx(opts);
 		}
 	}
 
-	export function waitForPortClosed(port, host = '0.0.0.0', retryTimeMs = 100, timeOutMs = 5000): Promise<boolean> {
+	export function waitForPortClosed(port, host = '0.0.0.0', checkLocalHostAliaes = true,
+		retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
 		retryTimeMs = Math.max(retryTimeMs, 1);
-		if (!useServerMethod) {
+		if (!isLocalHost(host)) {
 			return tcpPortUsed.waitUntilFreeOnHost(port, host, retryTimeMs, timeOutMs);
 		} else {
-			const opts = new myStatusArgs(false, port, host, retryTimeMs, timeOutMs);
-			return waitForPortStatus(opts);
+			const opts = new portStatusArgs(false, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
+			return waitForPortStatusEx(opts);
 		}
 	}
 
@@ -228,5 +243,10 @@ export module TcpPortHelper {
 			// console.log(aliases.join(','));
 		}
 		return aliases;
+	}
+
+	// quick way of figuring out. quaranteed way would have been to do a dns.resolve()
+	function isLocalHost(host: string): boolean {
+		return !host || (host === '') || (host === 'localhost') || (getLocalHostAliases().indexOf(host) >= 0);
 	}
 }

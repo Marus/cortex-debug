@@ -32,7 +32,7 @@ suite("TcpPortHelper Tests", () => {
 			doLog: doLog
 		};
 		let ports: number[];
-		const hostNameOrIp = '127.0.0.1';
+		const hostNameOrIp = '0.0.0.0';
 		timeit();
 		await TcpPortHelper.find(args, hostNameOrIp).then((ret) => {
 			if (doLog) { console.log(`Found free ports ${ret}, ${timeit()}`); }
@@ -47,7 +47,7 @@ suite("TcpPortHelper Tests", () => {
 
 		const port = ports[1];
 		timeit();
-		await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, 100, 400).then(() => {
+		await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, false, 100, 400).then(() => {
 			assert.fail(`0: Timeout expected on port ${port} ${timeit()}`);
 		}, async (err) => {
 			if (doLog) { console.log(`0: Timeout: Success waiting on port ${port} ${timeit()} `, err.message); }
@@ -68,7 +68,7 @@ suite("TcpPortHelper Tests", () => {
 
 			// See if the server started on the requested port
 			timeit();
-			await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, 100, 5000).then(() => {
+			await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(() => {
 				if (doLog) { console.log(`1. Success server port ${port} is ready ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`1. Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
@@ -98,7 +98,7 @@ suite("TcpPortHelper Tests", () => {
 			// no one connected?!?
 			server.close();
 			timeit();
-			await TcpPortHelper.waitForPortClosed(port, hostNameOrIp, 50, 3000).then(() => {
+			await TcpPortHelper.waitForPortClosed(port, hostNameOrIp, true, 50, 1000).then(() => {
 				if (doLog) { console.log(`2. Success Server port ${port} is closed ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`2. Timeout: Failed waiting on port ${port} to close ${timeit()}`, err); }
@@ -106,8 +106,6 @@ suite("TcpPortHelper Tests", () => {
 				assert.fail('Why is the server still running? ' + err);
 			});
 		});
-		// Maximum timeout for this test. Mac/Linux finish in under a second
-		// Windows takes 10-13 seconds, PC specs got nothing to do with it
-	}).timeout(platform() == 'win32' ? 20000 : 4000);
+	}).timeout(4000);
 });
 
