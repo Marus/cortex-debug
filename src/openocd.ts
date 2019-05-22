@@ -140,11 +140,18 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
 
         if (this.args.swoConfig.enabled) {
+            let tpiuIntExt;
             if (os.platform() == 'win32') {
                 this.swoPath = this.swoPath.replace(/\\/g, '/');
             }
+            if (this.args.swoConfig.source === 'probe') {
+                tpiuIntExt = `internal ${this.swoPath}`
+            }
+            else {
+                tpiuIntExt = `external`
+            }
             // tslint:disable-next-line:max-line-length
-            commands.push(`tpiu config internal ${this.swoPath} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
+            commands.push(`tpiu config ${tpiuIntExt} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
         }
 
         // Append additional commands
