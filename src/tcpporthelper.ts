@@ -3,9 +3,8 @@
 import * as tcpPortUsed from 'tcp-port-used';
 import os = require('os');
 import net = require('net');
-import { resolve } from 'dns';
 
-export module TcpPortHelper {
+export module TcpPortScanner {
 	//
 	// There are two ways we can check/look for open ports or get status
 	// 1. Client: Try to see if we can connect to that port. This is the preferred method
@@ -67,17 +66,6 @@ export module TcpPortHelper {
 				}
 				next(port, tries[ix]);
 			});
-
-			/*
-			let inUse = false;
-			for (let ix = 0; ix < tries.length; ix++) {
-				await isPortInUse(port, tries[ix]).then((v) => { inUse = v; });
-				if (inUse) { break; }
-			}
-			return new Promise((resolve, reject) => {
-				resolve(inUse);
-			});
-			*/
 		} else {
 			// This function is too slow on windows when checking on an open port.
 			return tcpPortUsed.check(port, host);
@@ -107,6 +95,10 @@ export module TcpPortHelper {
 		const needed = retrieve;
 		const func = isLocalHost(host) ? isPortInUseEx : tcpPortUsed;
 		return new Promise((resolve, reject) => {
+			if (needed <= 0) {
+				resolve(freePorts);
+				return;
+			}
 			function next(port: number, host: string) {
 				const startTine = process.hrtime();
 				func(port, host).then((inUse) => {
@@ -159,8 +151,14 @@ export module TcpPortHelper {
 		const busyPorts = [];
 		const needed = retrieve;
 		let error = null;
+		if (needed <= 0) {
+			return new Promise((resolve) => {resolve(freePorts);});
+		}
 		const func = isLocalHost(host) ? isPortInUseEx : tcpPortUsed;
 		for (let port = min; port <= max; port++) {
+			if (needed <= 0) {
+				return;
+			}
 			let startTine = process.hrtime();
 			await func(port, host)
 				.then((inUse) => {

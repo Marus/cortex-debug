@@ -3,7 +3,7 @@
 
 import * as assert from 'assert';
 import * as http from 'http';
-import { TcpPortHelper } from '../src/tcpporthelper';
+import { TcpPortScanner } from '../src/tcpporthelper';
 import { platform } from 'os';
 
 /**
@@ -34,7 +34,7 @@ suite("TcpPortHelper Tests", () => {
 		let ports: number[];
 		const hostNameOrIp = '0.0.0.0';
 		timeit();
-		await TcpPortHelper.findFreePorts(args, hostNameOrIp).then((ret) => {
+		await TcpPortScanner.findFreePorts(args, hostNameOrIp).then((ret) => {
 			if (doLog) { console.log(`Found free ports ${ret}, ${timeit()}`); }
 			ports = ret;
 			assert.strictEqual(ports.length, args.retrieve, `wrong number of ports ${ports}`);
@@ -47,7 +47,7 @@ suite("TcpPortHelper Tests", () => {
 
 		const port = ports[1];
 		timeit();
-		await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, false, 100, 400).then(() => {
+		await TcpPortScanner.waitForPortOpen(port, hostNameOrIp, false, 100, 400).then(() => {
 			assert.fail(`0: Timeout expected on port ${port} ${timeit()}`);
 		}, async (err) => {
 			if (doLog) { console.log(`0: Timeout: Success waiting on port ${port} ${timeit()} `, err.message); }
@@ -68,7 +68,7 @@ suite("TcpPortHelper Tests", () => {
 
 			// See if the server started on the requested port
 			timeit();
-			await TcpPortHelper.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(() => {
+			await TcpPortScanner.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(() => {
 				if (doLog) { console.log(`1. Success server port ${port} is ready ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`1. Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
@@ -79,7 +79,7 @@ suite("TcpPortHelper Tests", () => {
 			// skip the port we are already using
 			args.consecutive = true;
 			timeit();
-			await TcpPortHelper.findFreePorts(args, hostNameOrIp).then((ret) => {
+			await TcpPortScanner.findFreePorts(args, hostNameOrIp).then((ret) => {
 				if (doLog) { console.log(`Found free consecutive ports ${ret} ${timeit()}`); }
 				let newPorts = ret;
 				assert.strictEqual(newPorts.length, args.retrieve, `wrong number of ports ${newPorts}`);
@@ -98,7 +98,7 @@ suite("TcpPortHelper Tests", () => {
 			// no one connected?!?
 			server.close();
 			timeit();
-			await TcpPortHelper.waitForPortClosed(port, hostNameOrIp, true, 50, 1000).then(() => {
+			await TcpPortScanner.waitForPortClosed(port, hostNameOrIp, true, 50, 1000).then(() => {
 				if (doLog) { console.log(`2. Success Server port ${port} is closed ${timeit()}`); }
 			}, (err) => {
 				if (doLog) { console.log(`2. Timeout: Failed waiting on port ${port} to close ${timeit()}`, err); }
