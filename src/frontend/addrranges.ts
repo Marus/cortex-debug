@@ -1,6 +1,6 @@
 // Author to Blame: haneefdm on github
 
-import {FixedBitSet} from './fixedbitset';
+import { FixedBitSet } from './fixedbitset';
 import { totalmem } from 'os';
 
 /*
@@ -17,7 +17,7 @@ import { totalmem } from 'os';
  * Use case here is to calculate used addr-ranges. As a user you can decide what 1-bit represents
  */
 
- /** Represents a single address-range */
+/** Represents a single address-range */
 export class AddrRange {
     constructor(public base: number, public length: number) {
     }
@@ -26,7 +26,7 @@ export class AddrRange {
     public nxtAddr() {
         return this.base + this.length;
     }
-    
+
     /** return last address in this range */
     public endAddr() {
         return this.nxtAddr() - 1;
@@ -39,21 +39,21 @@ export class AddrRange {
  */
 export class AddressRangesInUse {
     // We could have derived from bitSet but want to be able to change implementation
-    protected bitSet : FixedBitSet;
+    protected bitSet: FixedBitSet;
 
-    constructor(len:number) {
+    constructor(len: number) {
         this.bitSet = new FixedBitSet(len);
     }
 
-    public get length() : number {
+    public get length(): number {
         return this.bitSet.numBits;
     }
 
-    public setAddrRange(offset:number, length:number=4) : void {
+    public setAddrRange(offset: number, length: number = 4): void {
         if ((offset & 0x3) || (length & 0x3)) {
             // either offset or length not a multiple of 4
-            for(let ix = 0; ix < length; ix++) {
-                this.bitSet.setBit(ix+offset);
+            for (let ix = 0; ix < length; ix++) {
+                this.bitSet.setBit(ix + offset);
             }
         } else {
             while (length > 0) {
@@ -64,7 +64,7 @@ export class AddressRangesInUse {
         }
     }
 
-    public setWord(offset: number) : void {
+    public setWord(offset: number): void {
         this.bitSet.setNibble(offset);
     }
 
@@ -75,13 +75,13 @@ export class AddressRangesInUse {
      * @param aligned if true, we look for 4 byte chunks or it is byte at a time
      * @returns an array of ordered unique address ranges containing valid addresses. Can be an empty array
      */
-    public getAddressRangesExact(base:number, aligned:boolean=false) : AddrRange[] {
+    public getAddressRangesExact(base: number, aligned: boolean = false): AddrRange[] {
         const retVal: AddrRange[] = [];
         const incr = aligned ? 4 : 1;
         let nxtIx = -1;                 // init to an impossible value
         let range: AddrRange | null = null;
 
-        function gotOne(ix:number) : boolean {
+        function gotOne(ix: number): boolean {
             if (nxtIx !== ix) {
                 range = new AddrRange(base + ix, incr);
                 retVal.push(range);
@@ -89,7 +89,7 @@ export class AddressRangesInUse {
                 range!.length += incr;  // range! because it can't be null, lint will complain
             }
             nxtIx = ix + incr;          // Got a hit, start watching for adjacents
-            return true;                
+            return true;
         }
 
         if (aligned) {
@@ -109,34 +109,34 @@ export class AddressRangesInUse {
      * @param minGap gaps less than specified number of bytes will be merged in multiple of 8
      * @returns an array of ordered compressed address ranges. Can be an empty array
      */
-    public getAddressRangesOptimized(base:number, aligned:boolean=false, minGap:number = 8) : AddrRange[] {
+    public getAddressRangesOptimized(base: number, aligned: boolean = false, minGap: number = 8): AddrRange[] {
         const exactVals = this.getAddressRangesExact(base, aligned);
         if ((minGap <= 0) || (exactVals.length < 2)) {
             return exactVals;
         }
 
         const retVal = [];
-        let lastRange : AddrRange | null = null;
+        let lastRange: AddrRange | null = null;
         if (aligned) {
             minGap = (minGap + 7) & ~7;     // Make it a multiple of 8 rounding up
         }
-        for (let nxtRange of exactVals) {
+        for (const nxtRange of exactVals) {
             if (lastRange && ((lastRange.nxtAddr() + minGap) >= nxtRange.base)) {
                 lastRange.length = nxtRange.base - lastRange.base + nxtRange.length;
             } else {
                 retVal.push(nxtRange);
-                lastRange = nxtRange;                
+                lastRange = nxtRange;
             }
         }
 
         return retVal;
     }
 
-    public toHexString() : string {
-        return this.bitSet.toHexString(); 
+    public toHexString(): string {
+        return this.bitSet.toHexString();
     }
 
-    public clearAll() : void {
+    public clearAll(): void {
         this.bitSet.clearAll();
     }
 
@@ -148,9 +148,9 @@ export class AddressRangesInUse {
      * @param dbgMsg To output debug messages -- name of address space
      * @param dbgLen To output debug messages -- total length of addr space
      */
-    public static splitIntoChunks(ranges: AddrRange[], maxBytes:number, dbgMsg:string = '', dbgLen:number=0) : AddrRange[] {
-        let newRanges = new Array<AddrRange>();
-        for (let r of ranges) {
+    public static splitIntoChunks(ranges: AddrRange[], maxBytes: number, dbgMsg: string = '', dbgLen: number = 0): AddrRange[] {
+        const newRanges = new Array<AddrRange>();
+        for (const r of ranges) {
             while (r.length > maxBytes) {
                 newRanges.push(new AddrRange(r.base, maxBytes));
                 r.base += maxBytes;
@@ -167,10 +167,10 @@ export class AddressRangesInUse {
         return newRanges;
     }
 
-    public static consoleLog(prefix:string, base:number, len:number, ranges: AddrRange[]) : void {
+    public static consoleLog(prefix: string, base: number, len: number, ranges: AddrRange[]): void {
         console.log(prefix + ` base=0x${base.toString(16)}, totalLen=${len}, #ranges=${ranges.length}\n`);
         let bc = 0;
-        for (let range of ranges) {
+        for (const range of ranges) {
             bc += range.length;
             console.log(`**** 0x${range.base.toString(16)}, len=${range.length}, cum-bytes=${bc}\n`);
         }
