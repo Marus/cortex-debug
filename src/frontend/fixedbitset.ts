@@ -11,7 +11,7 @@ export const enum BitSetConsts {
     // etc. are syntactic sugar -- take a look at generated code.
     SHFT  = 5,
     NBITS = (1 << SHFT),
-    MASK  = (NBITS-1)
+    MASK  = (NBITS - 1)
 }
 
 /**
@@ -29,10 +29,10 @@ export const enum BitSetConsts {
  * It is also a very efficient way of doing unions/intersections using bitwise operations.
  */
 export class FixedBitSet {
-    protected bitArray : Uint32Array ;
-    protected _numBits: number;
+    protected bitArray: Uint32Array ;
+    protected xnumBits: number;
     public get numBits(): number {
-        return this._numBits;
+        return this.xnumBits;
     }
 
     // Enable this to do error checking. Maybe there is a better waay, to remove assert overhead
@@ -42,45 +42,45 @@ export class FixedBitSet {
         if (FixedBitSet.doAsserts) {
             console.assert(Number.isInteger(len) && (len >= 0));
         }
-        this._numBits = len;
+        this.xnumBits = len;
         this.bitArray = new Uint32Array(FixedBitSet.calcAryLen(len));
     }
 
-    public dup() : FixedBitSet {
+    public dup(): FixedBitSet {
         const ret = new FixedBitSet(this.numBits);
-        ret.bitArray.set(this.bitArray)
+        ret.bitArray.set(this.bitArray);
         return ret;
     }
 
-    private ixRangeCheck(ix: number) : boolean {
+    private ixRangeCheck(ix: number): boolean {
         return Number.isInteger(ix) && (ix >= 0) && (ix < this.numBits);
     }
     /**
      * Get bit at specified index
      * @return a number that is either zero or non-zero
      */
-    public getBit(ix:number) : number {
+    public getBit(ix: number): number {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'getBit: invalid index ', ix, this);
         }
         return this.bitArray[ix >>> BitSetConsts.SHFT] & (1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Sets the bit at index 'ix' to 1 */
-    public setBit(ix:number) : void {
+    public setBit(ix: number): void {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'setBit: invalid index ', ix, this);
         }
         this.bitArray[ix >>> BitSetConsts.SHFT] |= (1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Sets the bit at index 'ix' to 0 */
-    public clrBit(ix:number) : void {
+    public clrBit(ix: number): void {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'clrBit: invalid index ', ix, this);
         }
         this.bitArray[ix >>> BitSetConsts.SHFT] &= ~(1 << (ix & BitSetConsts.MASK)) ;
     }
     /** Inverts the bit at index 'ix' to 0 */
-    public invBit(ix:number) : void {
+    public invBit(ix: number): void {
         if (FixedBitSet.doAsserts) {
             console.assert(this.ixRangeCheck(ix), 'invBit: invalid index ', ix, this);
         }
@@ -88,22 +88,22 @@ export class FixedBitSet {
     }
 
     /** clears all bits */
-    public clearAll() : void {
+    public clearAll(): void {
         this.bitArray.fill(0);
     }
 
     /** Sets a set of four consecutive bits
      * @param ix: Must a multiple of four and in range
      */
-    public setNibble(ix: number) : void {
-		if (FixedBitSet.doAsserts) {
-            console.assert(this.ixRangeCheck(ix+3), 'setNibble: invalid index ', ix, this);
-			console.assert((ix & 0x3) == 0, 'setNibble: ix must be >= 0 & multiple of 4');
-		}
+    public setNibble(ix: number): void {
+        if (FixedBitSet.doAsserts) {
+            console.assert(this.ixRangeCheck(ix + 3), 'setNibble: invalid index ', ix, this);
+            console.assert((ix & 0x3) === 0, 'setNibble: ix must be >= 0 & multiple of 4');
+        }
         this.bitArray[ix >>> BitSetConsts.SHFT] |= ((0xf << (ix & BitSetConsts.MASK)) >>> 0);
     }
 
-    public toString() : string {
+    public toString(): string {
         return this.bitArray.toString();
     }
 
@@ -114,18 +114,18 @@ export class FixedBitSet {
      * @param cb: a function called with the next bit position that is non-zero. If
      * callback returns false, iterator will terminate
      */
-    public findBitItor(cb: (ix:number) => boolean) : void {
+    public findBitItor(cb: (ix: number) => boolean): void {
         // Could have used an actual Iterator interface but we have to keep too much
         // state to make a next() work properly.   
         let bitIx = 0;
         let aryIx = 0;
-        while (bitIx < this._numBits) {
+        while (bitIx < this.xnumBits) {
             let elem = this.bitArray[aryIx++];
             if (elem === 0) {
                 bitIx += BitSetConsts.NBITS;
                 continue;
             }
-            for (let byteIx = 0; (byteIx < (BitSetConsts.NBITS/8)) && (bitIx < this.numBits); byteIx++) {
+            for (let byteIx = 0; (byteIx < (BitSetConsts.NBITS / 8)) && (bitIx < this.numBits); byteIx++) {
                 const byteVal = elem & 0xff;
                 elem >>>= 8;
                 if (byteVal === 0) {    // Try to skip byte at a time
@@ -133,7 +133,7 @@ export class FixedBitSet {
                     continue;
                 }
                 // We do not bail early or skip bits to keep bitIx updated
-                for(let bitPos = 1; (bitPos < (1<<8)) && (bitIx < this.numBits); bitPos <<= 1) {
+                for (let bitPos = 1; (bitPos < (1 << 8)) && (bitIx < this.numBits); bitPos <<= 1) {
                     if (byteVal & bitPos) {
                         if (!cb(bitIx)) { return; }
                     }
@@ -143,8 +143,8 @@ export class FixedBitSet {
         }
     }
 
-    /** Return an array of indices where a bit positions are non-zero */ 
-    public findAllBits() : number[] {
+    /** Return an array of indices where a bit positions are non-zero */
+    public findAllBits(): number[] {
         const ret: number[] = [];
         this.findBitItor((ix): boolean => {
             ret.push(ix);
@@ -189,26 +189,26 @@ export class FixedBitSet {
      * if needed. Expecting this to be used mostly for debugging. Note that the nibbles
      * are also backards in each byte. One char represents a nibble.
      */
-    public toHexString() : string {  
+    public toHexString(): string {
         const buf = Buffer.from(this.bitArray.buffer);
         const str = buf.toString('hex');
         return str;
     }
 
     /** resizes the number of bits --  not yet tested */
-    public reSize(len: number) : void {
+    public reSize(len: number): void {
         if (FixedBitSet.doAsserts) {
             console.assert(Number.isInteger(len) && (len >= 0));
         }
         if (len <= 0) {
-            this._numBits = 0;
-            this.bitArray = new Uint32Array(0);            
-        } else if (len != this._numBits) {
+            this.xnumBits = 0;
+            this.bitArray = new Uint32Array(0);
+        } else if (len !== this.xnumBits) {
             const numUnits = FixedBitSet.calcAryLen(len);
-            let newAry : Uint32Array;
+            let newAry: Uint32Array;
             if (numUnits <= this.bitArray.length) {
                 newAry = this.bitArray.subarray(0, numUnits);
-                let diff = (numUnits * BitSetConsts.NBITS) - len;
+                const diff = (numUnits * BitSetConsts.NBITS) - len;
                 if (diff > 0) {             // clear any traiiing bits in most sig. portion
                     // We HAVE to clear trailing bits in case the nibble iterator is being used
                     const mask = (0xffffffff << (BitSetConsts.NBITS - diff)) >>> 0;
@@ -218,13 +218,13 @@ export class FixedBitSet {
                 newAry = new Uint32Array(numUnits);
                 newAry.set(this.bitArray);
             }
-            this._numBits = len;
+            this.xnumBits = len;
             this.bitArray = newAry;
         }
     }
 
     /** Basically does a Math.ceil(len / NBITS) using integer ops. */
-    protected static calcAryLen(len:number) : number {
+    protected static calcAryLen(len: number): number {
         const ret = (len <= 0) ? 0 : ((len + BitSetConsts.MASK) >>> BitSetConsts.SHFT);
         return ret;
     }
