@@ -1,6 +1,8 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-	"editor.insertSpaces": false,
+	"editor.tabSize": 4,
+	"editor.insertSpaces": true,
+	"editor.useTabStops": false,
 	"files.exclude": {
 		"out": false // set this to true to hide the "out" folder with the compiled JS files
 	},
