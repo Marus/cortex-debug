@@ -225,7 +225,7 @@ export class MI2 extends EventEmitter implements IBackend {
             process.kill(-proc.pid);
         }
         catch (e) {
-            this.log('log', `kill failed for ${-proc.pid}` + e)
+            this.log('log', `kill failed for ${-proc.pid}` + e);
         }
     }
     
