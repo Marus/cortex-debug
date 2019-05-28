@@ -40,8 +40,11 @@ export class TcpPortScanner {
             server.once('error', (e) => {
                 const code: string = (e as any).code;
                 if (code && (code === 'EADDRINUSE') || (code === 'EACCES')) {
-                    // Technically, EACCES means permission denied, so we consider it as used
                     // console.log(`port ${host}:${port} is used`, code);
+                    if (code === 'EACCES') {
+                        // Technically, EACCES means permission denied, so we consider it as used
+                        console.log(`port ${host}:${port} returned code EACCES?`);
+                    }
                     resolve(true);				// Port in use
                 } else {
                     // This should never happen so, log it always
