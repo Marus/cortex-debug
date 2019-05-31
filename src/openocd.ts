@@ -175,7 +175,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         // When debug is enabled, you get too many matches looking for the cpu. This message
         // has been there atleast since 2016-12-19
         */
-        return /Info\s:[^\n]*Listening on port \d+ for gdb connection/i;
+        return /Info\s:\s([^\n\.]*)\.cpu([^\n]*)/i;
     }
 
     public serverLaunchStarted(): void {
