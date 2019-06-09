@@ -27,17 +27,17 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
     }
 
     public initCommands(): string[] {
-        const commands: string[] = [
-            'interpreter-exec console "set mem inaccessible-by-default off"'
+        let target = this.args.gdbTarget;
+        return [
+            `target-select extended-remote ${target}`
         ];
-
-        return commands;
     }
 
     public launchCommands(): string[] {
         const commands = [
+            'interpreter-exec console "monitor reset halt"',
             'target-download',
-            'interpreter-exec console "monitor reset"',
+            'interpreter-exec console "monitor reset halt"',
             'enable-pretty-printing'
         ];
 
@@ -46,6 +46,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
 
     public attachCommands(): string[] {
         const commands = [
+            'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
 
@@ -54,7 +55,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
 
     public restartCommands(): string[] {
         const commands: string[] = [
-            'interpreter-exec console "monitor reset"'
+            'interpreter-exec console "monitor reset halt"'
         ];
 
         return commands;

@@ -25,6 +25,7 @@ import { PyOCDServerController } from './pyocd';
 import { BMPServerController } from './bmp';
 import { PEServerController } from './pemicro';
 import { QEMUServerController } from './qemu';
+import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
@@ -36,7 +37,8 @@ const SERVER_TYPE_MAP = {
     pyocd: PyOCDServerController,
     pe: PEServerController,
     bmp: BMPServerController,
-    qemu: QEMUServerController
+    qemu: QEMUServerController,
+    external: ExternalServerController
 };
 
 class ExtendedVariable {

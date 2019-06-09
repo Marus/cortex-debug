@@ -280,10 +280,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifyExternalConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.swoConfig.enabled) {
+        if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             vscode.window.showWarningMessage('SWO support is not available for external GDB servers. Disabling SWO support.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
+        }
+
+        if (!config.gdbTarget) {
+            return "External GDB server type must specify the GDB target. This should either be a \"hostname:port\" combination or a serial port."
         }
 
         return null;

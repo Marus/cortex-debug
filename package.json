@@ -166,7 +166,8 @@
                                     "stutil",
                                     "bmp",
                                     "pe",
-                                    "qemu"
+                                    "qemu",
+                                    "external"
                                 ]
                             },
                             "cwd": {
@@ -254,6 +255,11 @@
                             },
                             "executable": {
                                 "description": "Path of executable",
+                                "type": "string"
+                            },
+                            "gdbTarget": {
+                                "default": null,
+                                "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "graphConfig": {
@@ -661,7 +667,8 @@
                                     "stutil",
                                     "bmp",
                                     "pe",
-                                    "qemu"
+                                    "qemu",
+                                    "external"
                                 ]
                             },
                             "cwd": {
@@ -749,6 +756,11 @@
                             },
                             "executable": {
                                 "description": "Path of executable",
+                                "type": "string"
+                            },
+                            "gdbTarget": {
+                                "default": null,
+                                "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "runToMain": {
