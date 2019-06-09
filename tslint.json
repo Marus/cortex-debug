@@ -10,7 +10,8 @@
         "max-line-length": [true, {"limit": 160, "ignore-pattern": "^import |^export {(.*?)}"}],
         "trailing-comma": [true, {"multiline": "never", "singleline": "never"}],
         "object-literal-sort-keys": [false],
-        "max-classes-per-file": [false],
+        "max-classes-per-file": [false, 1],
+        "no-console": [false, "log"],
         "member-ordering": false,
         "no-bitwise": false,
         "no-empty": false,
@@ -22,7 +23,7 @@
         "no-conditional-assignment": false,
         "radix": false,
         "no-var-requires": false,
-        "interface-name": false,
+        "interface-name": false
     },
     "rulesDirectory": []
 }

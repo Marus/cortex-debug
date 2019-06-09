@@ -231,10 +231,14 @@ export class PeripheralNode extends BaseNode {
                 Promise.all(promises).then((_updated) => {
                     resolve(true);
                 }).catch((e) => {
-                    reject("Failed");
+                    const str = `Failed  to update peripheral ${this.name}:${e}`;
+                    console.log(str);
+                    reject(str);
                 });
             }, (error) => {
-                reject(error);
+                const str = `Failed  to read peripheral ${this.name}:${error}`;
+                console.log(str);
+                reject(str);
             });
         });
     }

@@ -27,6 +27,7 @@ import { PEServerController } from './pemicro';
 import { QEMUServerController } from './qemu';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
+import { TcpPortScanner } from './tcpportscanner';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -170,7 +171,7 @@ export class GDBDebugSession extends DebugSession {
 
         if (args.swoConfig && args.swoConfig.decoders) {
             args.swoConfig.decoders = args.swoConfig.decoders.map((dec) => {
-                if (dec.type == "advanced" && dec.decoder && !path.isAbsolute(dec.decoder)) {
+                if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
                     dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
                 }
                 return dec;
@@ -201,8 +202,10 @@ export class GDBDebugSession extends DebugSession {
         this.crashed = false;
         this.debugReady = false;
         this.stopped = false;
-        
-        portastic.find({ min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length }, '0.0.0.0').then((ports) => {
+
+        const portFinder = true ? TcpPortScanner.findFreePorts : portastic.find;
+        const portFinderOpts = { min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length };
+        portFinder(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
             this.ports = {};
             this.serverController.portsNeeded.forEach((val, idx) => {
                 this.ports[val] = ports[idx];
@@ -227,7 +230,8 @@ export class GDBDebugSession extends DebugSession {
                     this.sendErrorResponse(
                         response,
                         103,
-                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
+                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
+                            'Please configure "cortex-debug.armToolchainPath" correctly.'
                     );
                     return;
                 }
@@ -237,7 +241,8 @@ export class GDBDebugSession extends DebugSession {
                     this.sendErrorResponse(
                         response,
                         103,
-                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\nPlease configure "cortex-debug.armToolchainPath" correctly.`
+                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
+                            'Please configure "cortex-debug.armToolchainPath" correctly.'
                     );
                     return;
                 }
@@ -245,11 +250,11 @@ export class GDBDebugSession extends DebugSession {
 
             if (this.args.showDevDebugOutput) {
                 this.handleMsg('log', `Please check OUTPUT tab (Adapter Output) for log of ${executable}` + '\n');
-                const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => { return `"${s}"`; }).join(' ') + '\n';
+                const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => `"${s}"`).join(' ') + '\n';
                 this.handleMsg('log', dbgMsg);
             }
 
-            this.server = new GDBServer(executable, args, this.serverController.initMatch());
+            this.server = new GDBServer(executable, args, this.serverController.initMatch(), this.ports['gdbPort']);
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {
@@ -275,7 +280,7 @@ export class GDBDebugSession extends DebugSession {
                     `Failed to launch ${this.serverController.name} GDB Server: Timeout.`
                 ));
                 this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
-            }, 10000);
+            }, GDBServer.SERVER_TIMEOUT);
 
             this.serverController.serverLaunchStarted();
             this.server.init().then((started) => {
@@ -769,7 +774,7 @@ export class GDBDebugSession extends DebugSession {
             });
             
             try {
-                let brkpoints = await Promise.all(all);
+                const brkpoints = await Promise.all(all);
                 const finalBrks = [];
                 brkpoints.forEach((brkp) => {
                     if (brkp[0]) { finalBrks.push({ line: brkp[1].line }); }
@@ -779,7 +784,7 @@ export class GDBDebugSession extends DebugSession {
                 };
                 this.sendResponse(response);
             }
-            catch(msg) {
+            catch (msg) {
                 this.sendErrorResponse(response, 10, msg.toString());
             }
             if (shouldContinue) {
@@ -1257,7 +1262,7 @@ export class GDBDebugSession extends DebugSession {
             }
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
-                    let pvar = id as VariableObject;
+                    const pvar = id as VariableObject;
                     const variables: DebugProtocol.Variable[] = [];
 
                     // Variable members
@@ -1484,9 +1489,9 @@ export class GDBDebugSession extends DebugSession {
         if (args.context === 'watch') {
             try {
                 const exp = args.expression;
-                let hasher = crypto.createHash('sha256');
+                const hasher = crypto.createHash('sha256');
                 hasher.update(exp);
-                const watchName = hasher.digest('hex')
+                const watchName = hasher.digest('hex');
                 const varObjName = `watch_${watchName}`;
                 let varObj: VariableObject;
                 try {

@@ -219,16 +219,26 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
+    private tryKill() {
+        const proc = this.process;
+        try {
+            process.kill(-proc.pid);
+        }
+        catch (e) {
+            this.log('log', `kill failed for ${-proc.pid}` + e);
+        }
+    }
+    
     public stop() {
         const proc = this.process;
-        const to = setTimeout(() => { process.kill(-proc.pid); }, 1000);
+        const to = setTimeout(() => { this.tryKill(); }, 1000);
         this.process.on('exit', (code) => { clearTimeout(to); });
         this.sendRaw('-gdb-exit');
     }
 
     public detach() {
         const proc = this.process;
-        const to = setTimeout(() => { process.kill(-proc.pid); }, 1000);
+        const to = setTimeout(() => { this.tryKill(); }, 1000);
         this.process.on('exit', (code) => { clearTimeout(to); });
         this.sendRaw('-target-detach');
     }
