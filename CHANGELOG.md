@@ -1,3 +1,11 @@
+# V0.2.7
+
+* Added new `servertype` of external for cases where you want to control the GDB server yourself. This could be used for cases where you need to run the GDB server on a different machine, or in cases where there are multiple target cores which may cause the debug server to not operate as expected by cortex-debug. This configuration may require more customizations to the launch.json file than other more automated server types. When this `servertype` is selected a value for the `gdbTarget` launch.json property must be supplied.
+* Added new launch.json options (overrideLaunchCommands, overrideRestartCommands and overrideAttachCommands) to be able to override the default commands run on those operations. In most cases this is not needed, but may be required for `external` server types (by default commands that are compatible with openocd are used for `external` server types).
+* Add a `overrideGDBServerStartedRegex` launch.json configuration option - this allows you to provide the system with an alternative regular expression to detect that the GDB server has completed launching and is ready to accept connections. In most cases this will be need - but may be useful in cases where the debug servers output has changed and is no longer recognized.
+* Major upgrade to the system for finding free ports to use (big thanks to https://github.com/haneefdm for his work on this); should fix recurring problems with port number collisions (e.g. 117(https://github.com/Marus/cortex-debug/issues/117)).
+* Updates to PyOCD to enable support for CMSIS-Pack specification (added in PyOCD v0.16.0) - thanks to https://github.com/pelrun for this improvement
+
 # V0.2.6
 
 * Updated watch var name generation to avoid problems with certain expressions containing reserved characters/strings. Should fix issue [159](https://github.com/Marus/cortex-debug/issues/159) and partially fix [157](https://github.com/Marus/cortex-debug/issues/157).

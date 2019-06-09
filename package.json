@@ -1496,7 +1496,6 @@
         "debug": "^4.1.1",
         "hasbin": "^1.2.3",
         "nan": "^2.8.0",
-        "portastic": "^1.0.1",
         "prebuild-install": "^5.2.2",
         "promirepl": "^1.0.1",
         "ringbufferjs": "^1.1.0",
