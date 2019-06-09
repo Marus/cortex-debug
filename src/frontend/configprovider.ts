@@ -99,7 +99,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 validationResponse = this.verifyQEMUConfiguration(folder, config);
                 break;
             default:
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe", "qemu"';
+                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
                 break;
         }
 
