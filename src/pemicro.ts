@@ -66,7 +66,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
     public serverExecutable() {
         
-        console.log(`Getting Exec`)
+        console.log('Getting Exec');
         if (this.args.serverpath) { return this.args.serverpath; }
         else {
             if (os.platform() === 'win32') {
@@ -76,23 +76,25 @@ export class PEServerController extends EventEmitter implements GDBServerControl
                 return 'pegdbserver_console';
             }
         }
-	}
-	
+    }
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
         const serverargs = [];
 
-		serverargs.push('-startserver');
-		serverargs.push('-singlesession');
+        serverargs.push('-startserver');
+        serverargs.push('-singlesession');
         serverargs.push(`-device=${this.args.device}`);
         serverargs.push(`-serverport=${gdbport}`);
         
-        if (this.args.ipAddress)
+        if (this.args.ipAddress) {
             serverargs.push(`-serverip=${this.args.ipAddress}`);
+        }
 
-        if (this.args.rtos)
+        if (this.args.rtos) {
             serverargs.push(`-kernal=${this.args.rtos}`);
+        }
 
         if (this.args.interface) {
             serverargs.push(`-interface=${this.args.interface}`);
@@ -100,9 +102,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
         if (this.args.configFiles) {
             serverargs.push(`-configfile=${this.args.configFiles[0]}`);
-        };
-        
-        console.log(`ServerArgs:${serverargs}`)
+        }
 
         return serverargs;
     }

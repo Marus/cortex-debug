@@ -66,9 +66,9 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
         if (this.args.serverpath) { return this.args.serverpath; }
         else {
             for (const name in EXECUTABLE_NAMES) {
-				if (commandExistsSync(name)) { return name; }
-			}
-			return 'qemu-system-arm';
+                if (commandExistsSync(name)) { return name; }
+            }
+            return 'qemu-system-arm';
         }
     }
     
@@ -76,13 +76,13 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
         const gdbport = this.ports['gdbPort'];
 
         const cmdargs = [
-			'-cpu', this.args.cpu,
-			'-machine', this.args.machine,
-			'-nographic',
-			'-semihosting-config', 'enable=on,target=native',
-			'-gdb', 'tcp::' + gdbport.toString(),
-			'-S',
-			'-kernel', this.args.executable
+            '-cpu', this.args.cpu,
+            '-machine', this.args.machine,
+            '-nographic',
+            '-semihosting-config', 'enable=on,target=native',
+            '-gdb', 'tcp::' + gdbport.toString(),
+            '-S',
+            '-kernel', this.args.executable
         ];
 
         return cmdargs;

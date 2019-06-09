@@ -7,7 +7,6 @@ import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerControll
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
-import * as portastic from 'portastic';
 import * as os from 'os';
 import * as net from 'net';
 import * as path from 'path';
@@ -205,9 +204,8 @@ export class GDBDebugSession extends DebugSession {
         this.debugReady = false;
         this.stopped = false;
 
-        const portFinder = true ? TcpPortScanner.findFreePorts : portastic.find;
         const portFinderOpts = { min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length };
-        portFinder(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
+        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
             this.ports = {};
             this.serverController.portsNeeded.forEach((val, idx) => {
                 this.ports[val] = ports[idx];
@@ -312,13 +310,15 @@ export class GDBDebugSession extends DebugSession {
                 
                 if (attach) {
                     commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
-                    const attachCommands = this.args.overrideAttachCommands != null ? this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
+                    const attachCommands = this.args.overrideAttachCommands != null ?
+                        this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
                     commands.push(...attachCommands);
                     commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
                 }
                 else {
                     commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
-                    const launchCommands = this.args.overrideLaunchCommands != null ? this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
+                    const launchCommands = this.args.overrideLaunchCommands != null ?
+                        this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
                     commands.push(...launchCommands);
                     commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                 }
@@ -653,7 +653,8 @@ export class GDBDebugSession extends DebugSession {
             const commands = [];
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
-            const restartCommands = this.args.overrideRestartCommands != null ? this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands()
+            const restartCommands = this.args.overrideRestartCommands != null ?
+                this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
             commands.push(...restartCommands);
             commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
 
@@ -784,9 +785,9 @@ export class GDBDebugSession extends DebugSession {
             });
             
             try {
-                const brkpoints = await Promise.all(all);
+                const breakpoints = await Promise.all(all);
                 const finalBrks = [];
-                brkpoints.forEach((brkp) => {
+                breakpoints.forEach((brkp) => {
                     if (brkp[0]) { finalBrks.push({ line: brkp[1].line }); }
                 });
                 response.body = {

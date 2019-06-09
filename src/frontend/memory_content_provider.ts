@@ -127,7 +127,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         const ranges = [];
         const firstOffset = ascii ? this.firstAsciiPos : this.firstBytePos;
         const lastOffset = ascii ? this.lastAsciiPos : this.lastBytePos;
-        for (let i =startPos.line; i <= endPos.line; ++i) {
+        for (let i = startPos.line; i <= endPos.line; ++i) {
             const start = new vscode.Position(i, (i === startPos.line ? startPos.character : firstOffset));
             const end = new vscode.Position(i, (i === endPos.line ? endPos.character : lastOffset));
             ranges.push(new vscode.Range(start, end));
@@ -150,7 +150,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
     });
 
     public handleSelection(e: vscode.TextEditorSelectionChangeEvent) {
-        const numLine = e.textEditor.document.lineCount
+        const numLine = e.textEditor.document.lineCount;
         if (e.selections[0].start.line + 1 === numLine ||
             e.selections[0].end.line + 1 === numLine) {
             e.textEditor.setDecorations(this.smallDecorationType, []);

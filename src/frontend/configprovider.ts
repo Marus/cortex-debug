@@ -99,6 +99,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 validationResponse = this.verifyQEMUConfiguration(folder, config);
                 break;
             default:
+                // tslint:disable-next-line:max-line-length
                 validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
                 break;
         }
@@ -125,8 +126,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     private verifyQEMUConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
         if (config.qemupath && !config.serverpath) { config.serverpath = config.qemupath; }
 
-        if (!config.cpu) { config.cpu = "cortex-m3"; }
-        if (!config.machine) { config.machine = "lm3s6965evb"; }
+        if (!config.cpu) { config.cpu = 'cortex-m3'; }
+        if (!config.machine) { config.machine = 'lm3s6965evb'; }
 
         if (config.swoConfig.enabled) {
             vscode.window.showWarningMessage('SWO support is not available when using QEMU.');
@@ -287,7 +288,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         if (!config.gdbTarget) {
-            return "External GDB server type must specify the GDB target. This should either be a \"hostname:port\" combination or a serial port."
+            return 'External GDB server type must specify the GDB target. This should either be a "hostname:port" combination or a serial port.';
         }
 
         return null;

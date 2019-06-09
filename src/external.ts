@@ -27,7 +27,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
     }
 
     public initCommands(): string[] {
-        let target = this.args.gdbTarget;
+        const target = this.args.gdbTarget;
         return [
             `target-select extended-remote ${target}`
         ];

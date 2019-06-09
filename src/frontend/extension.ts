@@ -38,7 +38,7 @@ class CortexDebugExtension {
     private memoryProvider: MemoryContentProvider;
 
     private peripheralTreeView: vscode.TreeView<TreeNode>;
-    private registerTreeView: vscode.TreeView<RTreeNode>
+    private registerTreeView: vscode.TreeView<RTreeNode>;
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
