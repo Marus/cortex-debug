@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import * as portastic from 'portastic';
+import { TcpPortScanner } from '../../tcpportscanner';
 import * as os from 'os';
 
 import { SWOConsoleProcessor } from './decoders/console';
@@ -193,7 +193,8 @@ export class SWOCore {
         this.source.on('data', this.handleData.bind(this));
         this.source.on('disconnected', () => { this.connected = false; });
         
-        portastic.find({ min: 53333, max: 54333, retrieve: 1 }).then((ports) => {
+        const portFinderOptions = { min: 53333, max: 54333, retrieve: 1 };
+        TcpPortScanner.findFreePorts(portFinderOptions).then((ports) => {
             const port = ports[0];
             this.socketServer = new SWOSocketServer(port, args.graphConfig);
 

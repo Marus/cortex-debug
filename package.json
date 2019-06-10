@@ -166,7 +166,8 @@
                                     "stutil",
                                     "bmp",
                                     "pe",
-                                    "qemu"
+                                    "qemu",
+                                    "external"
                                 ]
                             },
                             "cwd": {
@@ -201,6 +202,23 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
+                            },
+                            "overrideAttachCommands": {
+                                "default": null,
+                                "type": "array",
+                                "items": "string",
+                                "description": "You can use this to property to override the commands that are normally executed as part of attaching to a running target. In most cases it is preferable to use preAttachCommands and postAttachCommands to customize the GDB attach sequence."
+                            },
+                            "overrideRestartCommands": {
+                                "default": null,
+                                "type": "array",
+                                "items": "string",
+                                "description": "You can use this to property to override the commands that are normally executed as part of restarting the target. In most cases it is preferable to use preRestartCommands and postRestartCommands to customize the GDB restart sequence."
+                            },
+                            "overrideGDBServerStartedRegex": {
+                                "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB server that is looked for to determine if the GDB server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB server types.",
+                                "type": "string",
+                                "default": null
                             },
                             "cpu": {
                                 "default": "cortex-m3",
@@ -237,6 +255,11 @@
                             },
                             "executable": {
                                 "description": "Path of executable",
+                                "type": "string"
+                            },
+                            "gdbTarget": {
+                                "default": null,
+                                "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "graphConfig": {
@@ -644,7 +667,8 @@
                                     "stutil",
                                     "bmp",
                                     "pe",
-                                    "qemu"
+                                    "qemu",
+                                    "external"
                                 ]
                             },
                             "cwd": {
@@ -679,6 +703,23 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
+                            },
+                            "overrideLaunchCommands": {
+                                "default": null,
+                                "type": "array",
+                                "items": "string",
+                                "description": "You can use this to property to override the commands that are normally executed as part of flashing and launching the target. In most cases it is preferable to use preLaunchCommands and postLaunchCommands to customize the GDB launch sequence."
+                            },
+                            "overrideRestartCommands": {
+                                "default": null,
+                                "type": "array",
+                                "items": "string",
+                                "description": "You can use this to property to override the commands that are normally executed as part of restarting the target. In most cases it is preferable to use preRestartCommands and postRestartCommands to customize the GDB restart sequence."
+                            },
+                            "overrideGDBServerStartedRegex": {
+                                "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB server that is looked for to determine if the GDB server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB server types.",
+                                "type": "string",
+                                "default": null
                             },
                             "cpu": {
                                 "default": "cortex-m3",
@@ -715,6 +756,11 @@
                             },
                             "executable": {
                                 "description": "Path of executable",
+                                "type": "string"
+                            },
+                            "gdbTarget": {
+                                "default": null,
+                                "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "runToMain": {
@@ -1450,7 +1496,6 @@
         "debug": "^4.1.1",
         "hasbin": "^1.2.3",
         "nan": "^2.8.0",
-        "portastic": "^1.0.1",
         "prebuild-install": "^5.2.2",
         "promirepl": "^1.0.1",
         "ringbufferjs": "^1.1.0",
@@ -1499,5 +1544,5 @@
         "vscode:prepublish": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
-    "version": "0.2.6"
+    "version": "0.2.7"
 }

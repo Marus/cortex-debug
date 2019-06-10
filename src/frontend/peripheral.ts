@@ -8,8 +8,8 @@ import { hexFormat, binaryFormat, createMask, extractBits } from './utils';
 import { ProviderResult } from 'vscode';
 import { NumberFormat, NodeSetting } from '../common';
 import reporting from '../reporting';
-import {AddrRange, AddressRangesInUse} from './addrranges';
-import {MemReadUtils} from './memreadutils'
+import { AddrRange, AddressRangesInUse } from './addrranges';
+import { MemReadUtils } from './memreadutils';
 
 export enum RecordType {
     Peripheral = 1,
@@ -70,7 +70,7 @@ export class BaseNode {
     public setFormat(format: NumberFormat): void {
         this.format = format;
     }
-    public markAddresses(_a: AddressRangesInUse):void {}
+    public markAddresses(a: AddressRangesInUse): void { }
 }
 
 function parseInteger(value: string): number {
@@ -214,7 +214,7 @@ export class PeripheralNode extends BaseNode {
         return this.baseAddress + offset;
     }
 
-    public getOffset(offset:number) {
+    public getOffset(offset: number) {
         return offset;
     }
 
@@ -227,8 +227,8 @@ export class PeripheralNode extends BaseNode {
             if (!this.expanded) { resolve(false); return; }
 
             this.readMemory().then((unused) => {
-                let promises = this.children.map((r) => r.update());
-                Promise.all(promises).then((_updated) => {
+                const promises = this.children.map((r) => r.update());
+                Promise.all(promises).then((_) => {
                     resolve(true);
                 }).catch((e) => {
                     const str = `Failed  to update peripheral ${this.name}:${e}`;
@@ -245,7 +245,7 @@ export class PeripheralNode extends BaseNode {
 
     protected readMemory(): Promise<boolean> {
         if (!this.currentValue) {
-            this.currentValue = new Array<number>(this.totalLength);;
+            this.currentValue = new Array<number>(this.totalLength);
         }
         return MemReadUtils.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
     }
@@ -356,7 +356,7 @@ export class ClusterNode extends BaseNode {
         return this.parent.getAddress(this.offset + offset);
     }
 
-    public getOffset(offset:number) {
+    public getOffset(offset: number) {
         return this.parent.getOffset(this.offset + offset);
     }
     
@@ -367,11 +367,11 @@ export class ClusterNode extends BaseNode {
 
     public update(): Thenable<boolean> {
         return new Promise((resolve, reject) => {
-            let promises = this.children.map((r) => r.update());
+            const promises = this.children.map((r) => r.update());
             Promise.all(promises).then((updated) => {
                 resolve(true);
             }).catch((e) => {
-                reject("Failed");
+                reject('Failed');
             });
         });
     }
@@ -403,8 +403,8 @@ export class ClusterNode extends BaseNode {
         return this.parent;
     }
 
-    public markAddresses(addrs: AddressRangesInUse):void {
-        this.children.map((r) => {r.markAddresses(addrs);});
+    public markAddresses(addrs: AddressRangesInUse): void {
+        this.children.map((r) => { r.markAddresses(addrs); });
     }
 }
 
@@ -631,10 +631,9 @@ export class RegisterNode extends BaseNode {
         return this.parent.getPeripheralNode();
     }
 
-    public markAddresses(addrs: AddressRangesInUse):void {
-        let finalOffset = this.parent.getOffset(this.offset);
-        //console.log(`Mark ${this.name} = ${finalOffset.toString(16)},${this.size/8}`);
-        addrs.setAddrRange(finalOffset, this.size/8);
+    public markAddresses(addrs: AddressRangesInUse): void {
+        const finalOffset = this.parent.getOffset(this.offset);
+        addrs.setAddrRange(finalOffset, this.size / 8);
     }
 }
 
@@ -1072,8 +1071,8 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
     }
     
     private _loadSVD(SVDFile: string): Thenable<any> {
-        if(!path.isAbsolute(SVDFile)) {
-            let fullpath = path.normalize(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, SVDFile));
+        if (!path.isAbsolute(SVDFile)) {
+            const fullpath = path.normalize(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, SVDFile));
             SVDFile = fullpath;
         }
 
@@ -1127,7 +1126,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<TreeNode>
                         }
                     });
 
-                    this.peripherials.map((p) => {p.markAddresses();});
+                    this.peripherials.map((p) => { p.markAddresses(); });
 
                     this.loaded = true;
 

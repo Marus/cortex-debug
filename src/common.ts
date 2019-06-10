@@ -92,10 +92,14 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     debuggerArgs: string[];
     preLaunchCommands: string[];
     postLaunchCommands: string[];
+    overrideLaunchCommands: string[];
     preAttachCommands: string[];
     postAttachCommands: string[];
+    overrideAttachCommands: string[];
     preRestartCommands: string[];
     postRestartCommands: string[];
+    overrideRestartCommands: string[];
+    overrideGDBServerStartedRegex: string;
     svdFile: string;
     swoConfig: SWOConfiguration;
     graphConfig: any[];
@@ -131,6 +135,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     // QEMU Specific
     cpu: string;
     machine: string;
+
+    // External 
+    gdbTarget: string;
 
     // Hidden settings - These settings are for advanced configuration and are not exposed in the package.json file
     gdbpath: string;

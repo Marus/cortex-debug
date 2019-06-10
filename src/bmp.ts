@@ -33,14 +33,14 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
         if (this.args.powerOverBMP === 'enable') {
             commands.push('interpreter-exec console "monitor tpwr enable"');
-            //sleep for 100 ms. MCU need some time to boot up after power up
-            commands.push('interpreter-exec console "shell sleep 0.1"'); 
+            // sleep for 100 ms. MCU need some time to boot up after power up
+            commands.push('interpreter-exec console "shell sleep 0.1"');
         }
         else if (this.args.powerOverBMP === 'disable'){
             commands.push('interpreter-exec console "monitor tpwr disable"');
         }
         else{
-            //keep last power state (do nothing)
+            // keep last power state (do nothing)
         }
 
         if (this.args.interface === 'jtag') {

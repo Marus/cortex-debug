@@ -7,7 +7,7 @@ const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['qemu-system-arm'];
 
 export class QEMUServerController extends EventEmitter implements GDBServerController {
-    public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort'];
+    public portsNeeded: string[] = ['gdbPort'];
     public name: 'QEMU';
 
     private args: ConfigurationArguments;
@@ -66,25 +66,23 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
         if (this.args.serverpath) { return this.args.serverpath; }
         else {
             for (const name in EXECUTABLE_NAMES) {
-				if (commandExistsSync(name)) { return name; }
-			}
-			return 'qemu-system-arm';
+                if (commandExistsSync(name)) { return name; }
+            }
+            return 'qemu-system-arm';
         }
     }
     
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
-        // const swoport = this.ports['swoPort'];
-        // const consoleport = this.ports['consolePort'];
 
         const cmdargs = [
-			'-cpu', this.args.cpu,
-			'-machine', this.args.machine,
-			'-nographic',
-			'-semihosting-config', 'enable=on,target=native',
-			'-gdb', 'tcp::' + gdbport.toString(),
-			'-S',
-			'-kernel', this.args.executable
+            '-cpu', this.args.cpu,
+            '-machine', this.args.machine,
+            '-nographic',
+            '-semihosting-config', 'enable=on,target=native',
+            '-gdb', 'tcp::' + gdbport.toString(),
+            '-S',
+            '-kernel', this.args.executable
         ];
 
         return cmdargs;
