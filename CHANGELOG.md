@@ -1,3 +1,15 @@
+# V0.2.8
+
+	These format sepecifiers are appended to the end of the watch expression separated by a `,` - eg. `*(unsigned int *)(0x40011004),b` would display the contents at address `0x40011004` in binary.
+* Changed core registers to be displayed using their "natural" formatting:
+	* `rXX` in decimal
+	* `sXX` in floating point
+	* stack pointers (`sp`, `msp`, `psp`) in hexidecimal
+	* program counter (`pc`) in hexidecimal with corresponding symbol location if available
+	* xPSR/cPSR/Control in hexidecimal (this is overridden from the GDB defaults for those registers)
+
+	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future.
+
 # V0.2.7
 
 * Added new `servertype` of external for cases where you want to control the GDB server yourself. This could be used for cases where you need to run the GDB server on a different machine, or in cases where there are multiple target cores which may cause the debug server to not operate as expected by cortex-debug. This configuration may require more customizations to the launch.json file than other more automated server types. When this `servertype` is selected a value for the `gdbTarget` launch.json property must be supplied.

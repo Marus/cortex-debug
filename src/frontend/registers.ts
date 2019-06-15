@@ -8,7 +8,7 @@ import { NumberFormat, NodeSetting } from '../common';
 
 interface RegisterValue {
     number: number;
-    value: number;
+    value: string;
 }
 
 export enum RecordType {
@@ -51,6 +51,7 @@ export class BaseNode {
 export class RegisterNode extends BaseNode {
     private fields: FieldNode[];
     private currentValue: number;
+    private currentNaturalValue: string;
 
     constructor(public name: string, public index: number) {
         super(RecordType.Register);
@@ -79,6 +80,7 @@ export class RegisterNode extends BaseNode {
         }
 
         this.currentValue = 0x00;
+        this.currentNaturalValue = '0x00000000';
     }
 
     public extractBits(offset: number, width: number): number {
@@ -86,19 +88,7 @@ export class RegisterNode extends BaseNode {
     }
 
     public getTreeNode(): TreeNode {
-        let label = `${this.name} = `;
-        switch (this.getFormat()) {
-            case NumberFormat.Decimal:
-                label += this.currentValue.toString();
-                break;
-            case NumberFormat.Binary:
-                label += binaryFormat(this.currentValue, 32, false, true);
-                break;
-            default:
-                label += hexFormat(this.currentValue, 8);
-                break;
-        }
-
+        const label = `${this.name} = ${this.currentNaturalValue}`;
         if (this.fields && this.fields.length > 0) {
             return new TreeNode(label, this.expanded ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed, 'register', this);
         }
@@ -111,19 +101,19 @@ export class RegisterNode extends BaseNode {
         return this.fields;
     }
 
-    public setValue(newValue: number) {
-        this.currentValue = newValue;
+    public setValue(newValue: string) {
+        this.currentNaturalValue = newValue;
+        if (this.name.toUpperCase() === 'CONTROL' || this.name.toUpperCase() === 'XPSR' || this.name.toUpperCase() === 'CPSR') {
+            this.currentValue = parseInt(this.currentNaturalValue, 10);
+            let cv = this.currentValue.toString(16);
+            while (cv.length < 8) { cv = '0' + cv; }
+            this.currentNaturalValue = '0x' + cv;
+        }
+        
     }
 
     public getCopyValue(): string {
-        switch (this.getFormat()) {
-            case NumberFormat.Decimal:
-                return this.currentValue.toString();
-            case NumberFormat.Binary:
-                return binaryFormat(this.currentValue, 32);
-            default:
-                return hexFormat(this.currentValue, 8);
-        }
+        return this.currentNaturalValue;
     }
 
     public getFormat(): NumberFormat {
@@ -231,9 +221,8 @@ export class RegisterTreeProvider implements vscode.TreeDataProvider<TreeNode> {
         vscode.debug.activeDebugSession.customRequest('read-registers').then((data) => {
             data.forEach((reg) => {
                 const index = parseInt(reg.number, 10);
-                const value = parseInt(reg.value, 16);
                 const regNode = this.registerMap[index];
-                if (regNode) { regNode.setValue(value); }
+                if (regNode) { regNode.setValue(reg.value); }
             });
             this._onDidChangeTreeData.fire();
         });

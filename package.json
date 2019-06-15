@@ -1467,7 +1467,7 @@
                 },
                 {
                     "command": "cortex-debug.registers.setFormat",
-                    "when": "view == cortex-debug.registers"
+                    "when": "view == cortex-debug.registers && false"
                 }
             ],
             "view/title": []

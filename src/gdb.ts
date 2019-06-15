@@ -586,7 +586,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
-        this.miDebugger.sendCommand('data-list-register-values x').then((node) => {
+        this.miDebugger.sendCommand('data-list-register-values N').then((node) => {
             if (node.resultRecords.resultClass === 'done') {
                 const rv = node.resultRecords.results[0][1];
                 response.body = rv.map((n) => {
