@@ -509,12 +509,37 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
+    public static FORMAT_SPEC_MAP = {
+        b: 'binary',
+        d: 'decimal',
+        h: 'hexadecimal',
+        o: 'octal',
+        n: 'natural',
+        x: 'hexadecimal'
+    };
+
     public async varCreate(expression: string, name: string = '-'): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
-        const res = await this.sendCommand(`var-create ${name} @ "${expression}"`);
-        return new VariableObject(res.result(''));
+        let fmt = null;
+        if (/,[bdhonx]/i.test(expression)) {
+            fmt = expression.substring(expression.length - 1);
+            expression = expression.substring(0, expression.length - 2);
+        }
+
+        const createResp = await this.sendCommand(`var-create ${name} @ "${expression}"`);
+        let overrideVal = null;
+        if (fmt && name !== '-') {
+            const formatResp = await this.sendCommand(`var-set-format ${name} ${MI2.FORMAT_SPEC_MAP[fmt]}`);
+            overrideVal = formatResp.result('value');
+        }
+
+        let result = createResp.result('');
+        if (overrideVal) {
+            result = result.map((r: string[]) => r[0] === 'value' ?  ['value', overrideVal] : r);
+        }
+        return new VariableObject(result);
     }
 
     public async varEvalExpression(name: string): Promise<MINode> {

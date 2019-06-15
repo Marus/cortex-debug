@@ -1,5 +1,11 @@
 # V0.2.8
 
+* Added support for formatting watch values; add the following format strings:
+	* `b` - format in binary
+	* `h` or `x` - format in hexidecimal
+	* `d` - format in decimal
+	* `o` - format in octal
+	
 	These format sepecifiers are appended to the end of the watch expression separated by a `,` - eg. `*(unsigned int *)(0x40011004),b` would display the contents at address `0x40011004` in binary.
 * Changed core registers to be displayed using their "natural" formatting:
 	* `rXX` in decimal
