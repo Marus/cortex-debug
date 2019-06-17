@@ -1,7 +1,5 @@
 // Author to Blame: haneefdm on github
-
 import { FixedBitSet } from './fixedbitset';
-import { totalmem } from 'os';
 
 /*
  * This file contains classes to create address ranges that are in use in an address space.

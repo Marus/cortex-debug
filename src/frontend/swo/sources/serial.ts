@@ -14,7 +14,7 @@ export class SerialSWOSource extends EventEmitter implements SWOSource {
 
         const binarypath = path.normalize(path.join(extensionPath, 'binary_modules', process.version, os.platform(), process.arch, 'node_modules'));
 
-        if (module.paths.indexOf(binarypath) == -1) {
+        if (module.paths.indexOf(binarypath) === -1) {
             module.paths.splice(0, 0, binarypath);
         }
 
