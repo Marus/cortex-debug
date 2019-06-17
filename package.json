@@ -73,30 +73,30 @@
         "commands": [
             {
                 "command": "cortex-debug.peripherals.updateNode",
-                "title": "Update Value"
-            },
-            {
-                "command": "cortex-debug.peripherals.selectedNode",
-                "title": "Selected"
-            },
-            {
-                "command": "cortex-debug.registers.selectedNode",
-                "title": "Selected"
+                "title": "Update Value",
+                "icon": {
+                    "light": "resources/light/edit.svg",
+                    "dark": "resources/dark/edit.svg"
+                }
             },
             {
                 "command": "cortex-debug.peripherals.copyValue",
-                "title": "Copy Value"
+                "title": "Copy Value",
+                "icon": {
+                    "light": "resources/light/copy.svg",
+                    "dark": "resources/dark/copy.svg"
+                }
             },
             {
                 "command": "cortex-debug.registers.copyValue",
-                "title": "Copy Value"
+                "title": "Copy Value",
+                "icon": {
+                    "light": "resources/light/copy.svg",
+                    "dark": "resources/dark/copy.svg"
+                }
             },
             {
                 "command": "cortex-debug.peripherals.setFormat",
-                "title": "Set Value Format"
-            },
-            {
-                "command": "cortex-debug.registers.setFormat",
                 "title": "Set Value Format"
             },
             {
@@ -1384,10 +1384,6 @@
                     "when": "false"
                 },
                 {
-                    "command": "cortex-debug.peripherals.selectedNode",
-                    "when": "false"
-                },
-                {
                     "command": "cortex-debug.peripherals.copyValue",
                     "when": "false"
                 },
@@ -1415,27 +1411,33 @@
             "view/item/context": [
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == field"
+                    "when": "view == cortex-debug.peripherals && viewItem == field",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRW",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerWO"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerWO",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == field"
+                    "when": "view == cortex-debug.peripherals && viewItem == field",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRW",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRO"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRO",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
@@ -1455,19 +1457,17 @@
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
-                    "when": "view == cortex-debug.registers && viewItem == register"
+                    "when": "view == cortex-debug.registers && viewItem == register",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
-                    "when": "view == cortex-debug.registers && viewItem == field"
+                    "when": "view == cortex-debug.registers && viewItem == field",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.setFormat",
                     "when": "view == cortex-debug.peripherals"
-                },
-                {
-                    "command": "cortex-debug.registers.setFormat",
-                    "when": "view == cortex-debug.registers && false"
                 }
             ],
             "view/title": []
