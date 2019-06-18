@@ -17,11 +17,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     
     private peripherials: PeripheralNode[] = [];
     private loaded: boolean = false;
-    private SVDPath: string = '';
-
-    private defaultResetValue: number = 0x00000000;
-    private defaultSize: number = 32;
-
+    
     constructor() {
 
     }

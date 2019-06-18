@@ -26,7 +26,7 @@ interface SVDInfo {
     path: string;
 }
 
-class CortexDebugExtension {
+export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private swo: SWOCore = null;
     private swosource: SWOSource = null;
@@ -52,14 +52,6 @@ class CortexDebugExtension {
             tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
         }
         catch (e) {}
-
-        this.SVDDirectory = tmp.map((de) => {
-            let exp = null;
-            if (de.id) { exp = new RegExp('^' + de.id + '$', ''); }
-            else { exp = new RegExp(de.expression, de.flags); }
-
-            return { expression: exp, path: de.path };
-        });
 
         Reporting.activate(context);
 
@@ -122,6 +114,14 @@ class CortexDebugExtension {
     private getSVDFile(device: string): string {
         const entry = this.SVDDirectory.find((de) => de.expression.test(device));
         return entry ? entry.path : null;
+    }
+
+    public registerSVDFile(expression: RegExp | string, path: string): void {
+        if (typeof expression === 'string') {
+            expression = new RegExp(`^${expression}$`, '');
+        }
+
+        this.SVDDirectory.push({ expression: expression, path: path });
     }
 
     private activeEditorChanged(editor: vscode.TextEditor) {
@@ -346,10 +346,7 @@ class CortexDebugExtension {
         session.customRequest('get-arguments').then((args) => {
             let svdfile = args.svdFile;
             if (!svdfile) {
-                const basepath = this.getSVDFile(args.device);
-                if (basepath) {
-                    svdfile = path.join(this.context.extensionPath, basepath);
-                }
+                svdfile = this.getSVDFile(args.device);
             }
 
             Reporting.beginSession(args as ConfigurationArguments);
@@ -466,7 +463,7 @@ class CortexDebugExtension {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    const extension = new CortexDebugExtension(context);
+    return new CortexDebugExtension(context);
 }
 
 export function deactivate() {}
