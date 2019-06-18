@@ -1,5 +1,12 @@
-# V0.2.8
+# V0.3.0
 
+## NOTE: Cortex-Debug is now only compatible with Visual Studio Code V1.34.0 or newer.
+
+**NOTE: V0.3.0 has a few backwards incompatible changes that may require you to update your `launch.json` file.**
+1. The deprecated launch configuration types (`jlink-gdb`, `openocd-gdb`, `pyocd-gdb`, `stutil-gdb`, and `pe-gdb`) have now been removed - all launch configurations for Cortex-Debug should now use the `cortex-debug` type.
+2. There are now no SVD files bundled with the main Cortex-Debug extension; these SVD files added significant bulk to the download sizes for the main extension install and update while not being always needed and not changing often. The bundled SVD files will be separated out into separate "Device Support Pack" extensions that target particular microcontrollers (or families of microcontrollers); starting with packs for the STM32F1, STM32F4 and STM32L4 families that had been bundled previously. If you were using your own SVD file specified through the `svdfFle` property in your `launch.json` then no configuration changes are needd, but if you were using one of the previously auto-detected SVD files through the `device` property then you will need to install the appropriate "Device Support Packs" (search for "Cortex-Debug" in the extension marketplace).
+
+### Other Changes in V0.3.0
 * Added support for formatting watch values; add the following format strings:
 	* `b` - format in binary
 	* `h` or `x` - format in hexidecimal
@@ -15,6 +22,7 @@
 	* xPSR/cPSR/Control in hexidecimal (this is overridden from the GDB defaults for those registers)
 
 	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future.
+* Major refactor of the code for the Core Register and Peripheral Register displays; along with bringing (hopefully) improved formatting and UX to this views will make the code much easier to maintain and expand in the future.
 
 # V0.2.7
 
