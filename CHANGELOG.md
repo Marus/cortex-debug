@@ -24,6 +24,7 @@
 	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future.
 * Major refactor of the code for the Core Register and Peripheral Register displays; along with bringing (hopefully) improved formatting and UX to this views will make the code much easier to maintain and expand in the future.
 * The SWO grapher view should now be functional again on newer of VSCode. This view is now also theme aware and will adapt the colour scheme for standard elements to work with your theme (you still need to provide appropriate colours for your plots in the graph config).
+* Extension code is now bundled for faster load time and smaller installs
 
 # V0.2.7
 

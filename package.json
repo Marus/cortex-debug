@@ -1230,7 +1230,7 @@
                 ],
                 "extensions": [],
                 "label": "Cortex Debug",
-                "program": "./out/src/gdb.js",
+                "program": "./dist/debugadapter.bundle.js",
                 "runtime": "node",
                 "type": "cortex-debug",
                 "variables": {}
@@ -1347,10 +1347,12 @@
         }
     },
     "dependencies": {
+        "ajv": "^6.10.0",
         "binary-parser": "^1.4.0",
         "bindings": "^1.5.0",
         "command-exists": "^1.2.2",
         "commander": "^2.20.0",
+        "d3": "^5.9.2",
         "debug": "^4.1.1",
         "hasbin": "^1.2.3",
         "nan": "^2.14.0",
@@ -1365,7 +1367,6 @@
         "vscode-debugadapter": "^1.34.0",
         "vscode-debugprotocol": "^1.34.0",
         "vscode-extension-telemetry": "0.1.1",
-        "ws": "^6.2.1",
         "xml2js": "^0.4.19"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
@@ -1374,9 +1375,12 @@
         "@types/mocha": "^5.2.7",
         "@types/node": "^10.14.9",
         "mocha": "^5.2.0",
+        "ts-loader": "^6.0.3",
         "tslint": "^5.17.0",
         "typescript": "^3.5.2",
-        "vscode": "^1.1.34"
+        "vscode": "^1.1.34",
+        "webpack": "^4.35.0",
+        "webpack-cli": "^3.3.4"
     },
     "displayName": "Cortex-Debug",
     "engines": {
@@ -1389,7 +1393,7 @@
         "debug",
         "embedded"
     ],
-    "main": "./out/src/frontend/extension",
+    "main": "./dist/extension.bundle",
     "name": "cortex-debug",
     "preview": true,
     "publisher": "marus25",
@@ -1398,10 +1402,10 @@
         "url": "https://github.com/Marus/cortex-debug.git"
     },
     "scripts": {
-        "compile": "tsc -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "vscode:prepublish": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "vscode:prepublish": "webpack --mode production",
+        "watch": "webpack --mode development --watch",
+        "compile": "webpack --mode development"
     },
     "version": "0.3.0"
 }

@@ -4,6 +4,10 @@ import { SWOAdvancedDecoderConfig, AdvancedDecoder, GrapherDataMessage } from '.
 import { EventEmitter } from 'events';
 import { Packet } from '../common';
 
+declare function __webpack_require__();
+declare const __non_webpack_require__: NodeRequire;
+const dynamicRequire = typeof __webpack_require__ === 'function' ? __non_webpack_require__ : require;
+
 export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
     private output: vscode.OutputChannel;
     public readonly format: string = 'advanced';
@@ -15,10 +19,10 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
         this.ports = [];
 
         const decoderPath = config.decoder;
-        const resolved = require.resolve(decoderPath);
-        if (require.cache[resolved]) { delete require.cache[resolved]; } // Force reload
+        const resolved = dynamicRequire.resolve(decoderPath);
+        if (dynamicRequire.cache[resolved]) { delete dynamicRequire.cache[resolved]; } // Force reload
 
-        const decoderModule = require(decoderPath);
+        const decoderModule = dynamicRequire(decoderPath);
 
         if (decoderModule && decoderModule.default) {
             const decoderClass = decoderModule.default;
