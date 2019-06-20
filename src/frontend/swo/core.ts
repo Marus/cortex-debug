@@ -186,7 +186,7 @@ class SWOWebview {
             enableFindWidget: false,
             enableCommandUris: false,
             enableScripts: true,
-            localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'grapher', 'dist'))]
+            localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'dist'))]
         };
 
         this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', `SWO Graphs [${time}]`, showOptions, viewOptions);
@@ -195,10 +195,10 @@ class SWOWebview {
     }
 
     private getHTML() {
-        const scriptUri = vscode.Uri.file(path.join(this.extensionPath, 'grapher', 'dist', 'bundle.js')).with({ scheme: 'vscode-resource' });
+        const scriptUri = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js')).with({ scheme: 'vscode-resource' });
         const nonce = this.getNonce();
 
-        let html = fs.readFileSync(path.join(this.extensionPath, 'grapher', 'index.html'), { encoding: 'utf8', flag: 'r' });
+        let html = fs.readFileSync(path.join(this.extensionPath, 'resources', 'grapher.html'), { encoding: 'utf8', flag: 'r' });
         html = html.replace(/\$\{nonce\}/g, nonce).replace(/\$\{scriptUri\}/g, scriptUri.toString());
 
         return html;

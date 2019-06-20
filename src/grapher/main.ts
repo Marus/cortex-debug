@@ -9,10 +9,13 @@ interface VSCodeAPI {
     getState(): any;
     setState(state: any): void;
 }
+
 declare function acquireVsCodeApi(): VSCodeAPI;
+declare const window: Window;
 declare global {
     interface Window {
         datasource: GraphDataSource;
+        addEventListener(event: string, callback: (event: any) => void);
     }
 }
 

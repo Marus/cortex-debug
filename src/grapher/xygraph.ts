@@ -2,6 +2,15 @@ import * as d3 from 'd3';
 import { Graph, XYGraphConfiguration, GraphPoint } from './types';
 import { GraphDataSource } from './datasource';
 
+declare const window: Window;
+declare global {
+    interface Window {
+        datasource: GraphDataSource;
+        addEventListener(event: string, callback: (event: any) => void);
+        requestAnimationFrame(callback: () => void);
+    }
+}
+
 interface XYGraphPoint {
     timestamp: number;
     x: number;
