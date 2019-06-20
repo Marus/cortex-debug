@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { SWODecoder } from './common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
-import { SWOGraphDecoderConfig, WebsocketDataMessage } from '../common';
+import { SWOGraphDecoderConfig, GrapherDataMessage } from '../common';
 import { Packet } from '../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
@@ -32,7 +32,7 @@ export class SWOGraphProcessor extends EventEmitter implements SWODecoder {
         const decodedValue = parseEncoded(packet.data, this.encoding);
         const scaledValue = decodedValue * this.scale;
 
-        const message: WebsocketDataMessage = { type: 'data', timestamp: new Date().getTime(), data: scaledValue, id: this.graphId };
+        const message: GrapherDataMessage = { type: 'data', data: scaledValue, id: this.graphId };
         this.emit('message', message);
     }
 

@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import { SWODecoder } from './common';
-import { SWOAdvancedDecoderConfig, WebsocketDataMessage, AdvancedDecoder } from '../common';
-import { decoders as DECODER_MAP } from './utils';
+import { SWOAdvancedDecoderConfig, AdvancedDecoder, GrapherDataMessage } from '../common';
 import { EventEmitter } from 'events';
-import { decoders } from './utils';
 import { Packet } from '../common';
 
 export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
@@ -62,7 +60,7 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
     }
 
     public graphData(data: number, id: string) {
-        const message: WebsocketDataMessage = { type: 'data', timestamp: new Date().getTime(), data: data, id: id };
+        const message: GrapherDataMessage = { type: 'data', data: data, id: id };
         this.emit('data', message);
     }
 

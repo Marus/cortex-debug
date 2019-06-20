@@ -35,11 +35,12 @@ export interface GraphConfiguration {
     label: string;
 }
 
-export interface RealtimeGraphConfiguration extends GraphConfiguration {
+export interface TimeseriesGraphConfiguration extends GraphConfiguration {
     minimum: number;
     maximum: number;
+    timespan: number;
     plots: Array<{
-        graphId: number,
+        graphId: string,
         label: string,
         color: string
     }>;
@@ -52,26 +53,35 @@ export interface XYGraphConfiguration extends GraphConfiguration {
     xMaximum: number;
     yMinimum: number;
     yMaximum: number;
+    initialX: number;
+    initialY: number;
+    timespan: number;
+    xGraphId: string;
+    yGraphId: string;
 }
 
-export interface WebsocketMessage {
-    type: string;
+export interface GrapherMessage {
+    timestamp?: number;
+    type: 'configure' | 'status' | 'data' | 'program-counter' | 'init';
 }
 
-export interface WebsocketDataMessage extends WebsocketMessage {
-    timestamp: number;
-    data: number;
+export interface GrapherStatusMessage extends GrapherMessage {
+    status: 'stopped' | 'terminated' | 'continued';
+}
+
+export interface GrapherDataMessage extends GrapherMessage {
     id: string;
+    data: number;
 }
 
-export interface WebsocketProgramCounterMessage extends WebsocketMessage {
-    timestamp: number;
-    counter: number;
+export interface GrapherProgramCounterMessage extends GrapherMessage {
     function: string;
+    counter: number;
 }
 
-export interface WebsocketStatusMessage extends WebsocketMessage {
-    status: string;
+export interface GrapherConfigurationMessage extends GrapherMessage {
+    graphs: [GraphConfiguration];
+    status: 'stopped' | 'terminated' | 'continued';
 }
 
 export interface AdvancedDecoder {
@@ -79,12 +89,12 @@ export interface AdvancedDecoder {
         config: SWOAdvancedDecoderConfig,
         outputData: (output: string) => void,
         graphData: (data: number, id: string) => void
-    );
+    ): void;
     typeName(): string;
     outputLabel(): string;
-    softwareEvent(port: number, data: Buffer);
-    synchronized();
-    lostSynchronization();
+    softwareEvent(port: number, data: Buffer): void;
+    synchronized(): void;
+    lostSynchronization(): void;
 }
 
 export enum PacketType {
