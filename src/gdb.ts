@@ -415,7 +415,7 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
             case 'read-memory':
-                this.readMemoryRequest(response, args['address'], args['length']);
+                this.readMemoryRequestCustom(response, args['address'], args['length']);
                 break;
             case 'write-memory':
                 this.writeMemoryRequest(response, args['address'], args['data']);
@@ -554,7 +554,7 @@ export class GDBDebugSession extends DebugSession {
         return instructions;
     }
 
-    protected readMemoryRequest(response: DebugProtocol.Response, startAddress: number, length: number) {
+    protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: number, length: number) {
         const address = hexFormat(startAddress, 8);
         this.miDebugger.sendCommand(`data-read-memory-bytes ${address} ${length}`).then((node) => {
             const startAddress = node.resultRecords.results[0][1][0][0][1];
@@ -586,7 +586,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
-        this.miDebugger.sendCommand('data-list-register-values x').then((node) => {
+        this.miDebugger.sendCommand('data-list-register-values N').then((node) => {
             if (node.resultRecords.resultClass === 'done') {
                 const rv = node.resultRecords.results[0][1];
                 response.body = rv.map((n) => {
@@ -1260,7 +1260,7 @@ export class GDBDebugSession extends DebugSession {
             const threadId = (args.variablesReference & 0xFF00) >>> 8;
             return this.staticVariablesRequest(threadId, frameId, response, args);
         }
-        else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STATIC_HANDLES_START) {
+        else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STACK_HANDLES_FINISH) {
             const frameId = args.variablesReference & 0xFF;
             const threadId = (args.variablesReference & 0xFF00) >>> 8;
             return this.stackVariablesRequest(threadId, frameId, response, args);

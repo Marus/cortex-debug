@@ -1,11 +1,6 @@
 {
     "activationEvents": [
-        "onDebugResolve:cortex-debug",
-        "onDebugResolve:jlink-gdb",
-        "onDebugResolve:openocd-gdb",
-        "onDebugResolve:pyocd-gdb",
-        "onDebugResolve:pe-gdb",
-        "onDebugResolve:stutil-gdb"
+        "onDebugResolve:cortex-debug"
     ],
     "categories": [
         "Debuggers"
@@ -73,30 +68,30 @@
         "commands": [
             {
                 "command": "cortex-debug.peripherals.updateNode",
-                "title": "Update Value"
-            },
-            {
-                "command": "cortex-debug.peripherals.selectedNode",
-                "title": "Selected"
-            },
-            {
-                "command": "cortex-debug.registers.selectedNode",
-                "title": "Selected"
+                "title": "Update Value",
+                "icon": {
+                    "light": "resources/light/edit.svg",
+                    "dark": "resources/dark/edit.svg"
+                }
             },
             {
                 "command": "cortex-debug.peripherals.copyValue",
-                "title": "Copy Value"
+                "title": "Copy Value",
+                "icon": {
+                    "light": "resources/light/copy.svg",
+                    "dark": "resources/dark/copy.svg"
+                }
             },
             {
                 "command": "cortex-debug.registers.copyValue",
-                "title": "Copy Value"
+                "title": "Copy Value",
+                "icon": {
+                    "light": "resources/light/copy.svg",
+                    "dark": "resources/dark/copy.svg"
+                }
             },
             {
                 "command": "cortex-debug.peripherals.setFormat",
-                "title": "Set Value Format"
-            },
-            {
-                "command": "cortex-debug.registers.setFormat",
                 "title": "Set Value Format"
             },
             {
@@ -1235,145 +1230,9 @@
                 ],
                 "extensions": [],
                 "label": "Cortex Debug",
-                "program": "./out/src/gdb.js",
+                "program": "./dist/debugadapter.bundle.js",
                 "runtime": "node",
                 "type": "cortex-debug",
-                "variables": {}
-            },
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {},
-                        "required": []
-                    },
-                    "launch": {
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm",
-                        "rust"
-                    ]
-                },
-                "extensions": [],
-                "label": "Cortex Debug: OpenOCD (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "openocd-gdb",
-                "variables": {}
-            },
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {},
-                        "required": []
-                    },
-                    "launch": {
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm",
-                        "rust"
-                    ]
-                },
-                "extensions": [],
-                "label": "Cortex Debug: JLink (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "jlink-gdb",
-                "variables": {}
-            },
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {},
-                        "required": []
-                    },
-                    "launch": {
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm",
-                        "rust"
-                    ]
-                },
-                "extensions": [],
-                "label": "Cortex Debug: PEMicro (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "pe-gdb",
-                "variables": {}
-            },
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {},
-                        "required": []
-                    },
-                    "launch": {
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm",
-                        "rust"
-                    ]
-                },
-                "extensions": [],
-                "initialConfigurations": [],
-                "label": "Cortex Debug: ST-Util (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "stutil-gdb",
-                "variables": {}
-            },
-            {
-                "configurationAttributes": {
-                    "attach": {
-                        "properties": {},
-                        "required": []
-                    },
-                    "launch": {
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm",
-                        "rust"
-                    ]
-                },
-                "extensions": [],
-                "label": "Cortex Debug: PyOCD (Deprecated)",
-                "program": "./out/src/gdb.js",
-                "runtime": "node",
-                "type": "pyocd-gdb",
                 "variables": {}
             }
         ],
@@ -1381,10 +1240,6 @@
             "commandPalette": [
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "false"
-                },
-                {
-                    "command": "cortex-debug.peripherals.selectedNode",
                     "when": "false"
                 },
                 {
@@ -1415,27 +1270,33 @@
             "view/item/context": [
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == field"
+                    "when": "view == cortex-debug.peripherals && viewItem == field",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRW",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerWO"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerWO",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == field"
+                    "when": "view == cortex-debug.peripherals && viewItem == field",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRW",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRO"
+                    "when": "view == cortex-debug.peripherals && viewItem == registerRO",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
@@ -1455,19 +1316,17 @@
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
-                    "when": "view == cortex-debug.registers && viewItem == register"
+                    "when": "view == cortex-debug.registers && viewItem == register",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
-                    "when": "view == cortex-debug.registers && viewItem == field"
+                    "when": "view == cortex-debug.registers && viewItem == field",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.peripherals.setFormat",
                     "when": "view == cortex-debug.peripherals"
-                },
-                {
-                    "command": "cortex-debug.registers.setFormat",
-                    "when": "view == cortex-debug.registers"
                 }
             ],
             "view/title": []
@@ -1488,15 +1347,16 @@
         }
     },
     "dependencies": {
-        "binary-parser": "^1.3.0",
-        "bindings": "^1.3.0",
+        "ajv": "^6.10.0",
+        "binary-parser": "^1.4.0",
+        "bindings": "^1.5.0",
         "command-exists": "^1.2.2",
-        "commander": "^2.13.0",
-        "copy-paste": "^1.3.0",
+        "commander": "^2.20.0",
+        "d3": "^5.9.2",
         "debug": "^4.1.1",
         "hasbin": "^1.2.3",
-        "nan": "^2.8.0",
-        "prebuild-install": "^5.2.2",
+        "nan": "^2.14.0",
+        "prebuild-install": "^5.3.0",
         "promirepl": "^1.0.1",
         "ringbufferjs": "^1.1.0",
         "safe-buffer": "^5.1.1",
@@ -1504,24 +1364,27 @@
         "tmp": "0.0.33",
         "universal-analytics": "^0.4.16",
         "uuid": "^3.2.1",
-        "vscode-debugadapter": "^1.16.0",
-        "vscode-debugprotocol": "^1.16.0",
+        "vscode-debugadapter": "^1.34.0",
+        "vscode-debugprotocol": "^1.34.0",
         "vscode-extension-telemetry": "0.1.1",
-        "ws": "^6.1.2",
         "xml2js": "^0.4.19"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
     "devDependencies": {
-        "@types/mocha": "^5.2.5",
-        "@types/node": "^10.12.18",
+        "@types/binary-parser": "^1.3.1",
+        "@types/mocha": "^5.2.7",
+        "@types/node": "^10.14.9",
         "mocha": "^5.2.0",
-        "tslint": "^5.9.1",
-        "typescript": "^3.2.4",
-        "vscode": "^1.1.26"
+        "ts-loader": "^6.0.3",
+        "tslint": "^5.17.0",
+        "typescript": "^3.5.2",
+        "vscode": "^1.1.34",
+        "webpack": "^4.35.0",
+        "webpack-cli": "^3.3.4"
     },
     "displayName": "Cortex-Debug",
     "engines": {
-        "vscode": "^1.29.0"
+        "vscode": "^1.34.0"
     },
     "icon": "images/icon.png",
     "keywords": [
@@ -1530,7 +1393,7 @@
         "debug",
         "embedded"
     ],
-    "main": "./out/src/frontend/extension",
+    "main": "./dist/extension.bundle",
     "name": "cortex-debug",
     "preview": true,
     "publisher": "marus25",
@@ -1539,10 +1402,10 @@
         "url": "https://github.com/Marus/cortex-debug.git"
     },
     "scripts": {
-        "compile": "tsc -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "vscode:prepublish": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "vscode:prepublish": "webpack --mode production",
+        "watch": "webpack --mode development --watch",
+        "compile": "webpack --mode development"
     },
-    "version": "0.2.7"
+    "version": "0.3.0"
 }

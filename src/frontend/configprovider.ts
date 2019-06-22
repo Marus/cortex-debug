@@ -1,26 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
 import * as os from 'os';
-
-export class DeprecatedDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-    constructor(private context: vscode.ExtensionContext, private id: string) {}
-
-    public resolveDebugConfiguration(
-        folder: vscode.WorkspaceFolder | undefined,
-        config: vscode.DebugConfiguration,
-        token?: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.DebugConfiguration> {
-        // tslint:disable-next-line:max-line-length
-        vscode.window.showWarningMessage(`Your current launch configuration has been deprecated. Please replace "type": "${this.id}-gdb" with "type": "cortex-debug" and "servertype": "${this.id}"`);
-
-        config.type = 'cortex-debug';
-        config.servertype = this.id;
-
-        const cp = new CortexDebugConfigurationProvider(this.context);
-        return cp.resolveDebugConfiguration(folder, config, token);
-    }
-}
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III'];
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];

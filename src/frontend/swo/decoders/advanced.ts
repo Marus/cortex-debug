@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { SWODecoder } from './common';
-import { SWOAdvancedDecoderConfig, WebsocketDataMessage, AdvancedDecoder } from '../common';
-import { decoders as DECODER_MAP } from './utils';
+import { SWOAdvancedDecoderConfig, AdvancedDecoder, GrapherDataMessage } from '../common';
 import { EventEmitter } from 'events';
-import { decoders } from './utils';
 import { Packet } from '../common';
+
+declare function __webpack_require__();
+declare const __non_webpack_require__: NodeRequire;
+const dynamicRequire = typeof __webpack_require__ === 'function' ? __non_webpack_require__ : require;
 
 export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
     private output: vscode.OutputChannel;
@@ -17,10 +19,10 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
         this.ports = [];
 
         const decoderPath = config.decoder;
-        const resolved = require.resolve(decoderPath);
-        if (require.cache[resolved]) { delete require.cache[resolved]; } // Force reload
+        const resolved = dynamicRequire.resolve(decoderPath);
+        if (dynamicRequire.cache[resolved]) { delete dynamicRequire.cache[resolved]; } // Force reload
 
-        const decoderModule = require(decoderPath);
+        const decoderModule = dynamicRequire(decoderPath);
 
         if (decoderModule && decoderModule.default) {
             const decoderClass = decoderModule.default;
@@ -62,7 +64,7 @@ export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
     }
 
     public graphData(data: number, id: string) {
-        const message: WebsocketDataMessage = { type: 'data', timestamp: new Date().getTime(), data: data, id: id };
+        const message: GrapherDataMessage = { type: 'data', data: data, id: id };
         this.emit('data', message);
     }
 

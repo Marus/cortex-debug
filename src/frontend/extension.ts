@@ -1,20 +1,18 @@
 import * as vscode from 'vscode';
-import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 
-import { PeripheralTreeProvider, TreeNode, FieldNode, RecordType, BaseNode, PeripheralNode, RegisterNode as PeripheralRegisterNode, ClusterNode } from './peripheral';
-import { RegisterTreeProvider, TreeNode as RTreeNode, RecordType as RRecordType, BaseNode as RBaseNode, RegisterNode } from './registers';
-import { setTimeout } from 'timers';
+import { PeripheralTreeProvider } from './views/peripheral';
+import { RegisterTreeProvider } from './views/registers';
+import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
+
 import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
-import { SWOConfigureEvent, NumberFormat, ConfigurationArguments } from '../common';
+import { NumberFormat, ConfigurationArguments } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
-import * as CopyPaste from 'copy-paste';
-import { DeprecatedDebugConfigurationProvider, CortexDebugConfigurationProvider } from './configprovider';
+import { CortexDebugConfigurationProvider } from './configprovider';
 import { SocketSWOSource } from './swo/sources/socket';
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
@@ -28,7 +26,7 @@ interface SVDInfo {
     path: string;
 }
 
-class CortexDebugExtension {
+export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private swo: SWOCore = null;
     private swosource: SWOSource = null;
@@ -37,8 +35,8 @@ class CortexDebugExtension {
     private registerProvider: RegisterTreeProvider;
     private memoryProvider: MemoryContentProvider;
 
-    private peripheralTreeView: vscode.TreeView<TreeNode>;
-    private registerTreeView: vscode.TreeView<RTreeNode>;
+    private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
+    private registerTreeView: vscode.TreeView<BaseNode>;
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
@@ -55,37 +53,31 @@ class CortexDebugExtension {
         }
         catch (e) {}
 
-        this.SVDDirectory = tmp.map((de) => {
-            let exp = null;
-            if (de.id) { exp = new RegExp('^' + de.id + '$', ''); }
-            else { exp = new RegExp(de.expression, de.flags); }
-
-            return { expression: exp, path: de.path };
-        });
-
         Reporting.activate(context);
 
         this.peripheralTreeView = vscode.window.createTreeView('cortex-debug.peripherals', {
             treeDataProvider: this.peripheralProvider
         });
 
+        this.registerTreeView = vscode.window.createTreeView('cortex-debug.registers', {
+            treeDataProvider: this.registerProvider
+        });
+
         context.subscriptions.push(
             vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
             vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
+
             vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.selectedNode', this.peripheralsSelectedNode.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.registers.selectedNode', this.registersSelectedNode.bind(this)),
+            
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.registers.setFormat', this.registersSetFormat.bind(this)),
+            
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
 
-            // vscode.window.registerTreeDataProvider('cortex-debug.peripherals', this.peripheralProvider),
-            vscode.window.registerTreeDataProvider('cortex-debug.registers', this.registerProvider),
             vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
@@ -93,29 +85,39 @@ class CortexDebugExtension {
             vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
                 if (e && e.textEditor.document.fileName.endsWith('.cdmem')) { this.memoryProvider.handleSelection(e); }
             }),
-            vscode.debug.registerDebugConfigurationProvider('jlink-gdb', new DeprecatedDebugConfigurationProvider(context, 'jlink')),
-            vscode.debug.registerDebugConfigurationProvider('openocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'openocd')),
-            vscode.debug.registerDebugConfigurationProvider('stutil-gdb', new DeprecatedDebugConfigurationProvider(context, 'stutil')),
-            vscode.debug.registerDebugConfigurationProvider('pyocd-gdb', new DeprecatedDebugConfigurationProvider(context, 'pyocd')),
-            vscode.debug.registerDebugConfigurationProvider('pe-gdb', new DeprecatedDebugConfigurationProvider(context, 'pe')),
+
             vscode.debug.registerDebugConfigurationProvider('cortex-debug', new CortexDebugConfigurationProvider(context)),
-            this.peripheralTreeView
+
+            this.registerTreeView,
+            this.registerTreeView.onDidCollapseElement((e) => {
+                e.element.expanded = false;
+            }),
+            this.registerTreeView.onDidExpandElement((e) => {
+                e.element.expanded = true;
+            }),
+            this.peripheralTreeView,
+            this.peripheralTreeView.onDidExpandElement((e) => {
+                e.element.expanded = true;
+                e.element.getPeripheral().updateData();
+                this.peripheralProvider.refresh();
+            }),
+            this.peripheralTreeView.onDidCollapseElement((e) => {
+                e.element.expanded = false;
+            })
         );
-
-        this.peripheralTreeView.onDidExpandElement((e) => {
-            e.element.node.expanded = true;
-            e.element.node.getPeripheralNode().update();
-            this.peripheralProvider.refresh();
-        });
-
-        this.peripheralTreeView.onDidCollapseElement((e) => {
-            e.element.node.expanded = false;
-        });
     }
 
     private getSVDFile(device: string): string {
         const entry = this.SVDDirectory.find((de) => de.expression.test(device));
         return entry ? entry.path : null;
+    }
+
+    public registerSVDFile(expression: RegExp | string, path: string): void {
+        if (typeof expression === 'string') {
+            expression = new RegExp(`^${expression}$`, '');
+        }
+
+        this.SVDDirectory.push({ expression: expression, path: path });
     }
 
     private activeEditorChanged(editor: vscode.TextEditor) {
@@ -276,8 +278,8 @@ class CortexDebugExtension {
     }
 
     // Peripherals
-    private peripheralsUpdateNode(node: TreeNode): void {
-        node.node.performUpdate().then((result) => {
+    private peripheralsUpdateNode(node: PeripheralBaseNode): void {
+        node.performUpdate().then((result) => {
             if (result) {
                 this.peripheralProvider.refresh();
                 Reporting.sendEvent('Peripheral View', 'Update Node');
@@ -287,19 +289,16 @@ class CortexDebugExtension {
         });
     }
 
-    private peripheralsSelectedNode(node: BaseNode): void {
-        
-    }
-
-    private peripheralsCopyValue(tn: TreeNode): void {
-        const cv = tn.node.getCopyValue();
+    private peripheralsCopyValue(node: PeripheralBaseNode): void {
+        const cv = node.getCopyValue();
         if (cv) {
-            CopyPaste.copy(cv);
-            Reporting.sendEvent('Peripheral View', 'Copy Value');
+            vscode.env.clipboard.writeText(cv).then(() => {
+                Reporting.sendEvent('Peripheral View', 'Copy Value');
+            });
         }
     }
 
-    private async peripheralsSetFormat(tn: TreeNode): Promise<void> {
+    private async peripheralsSetFormat(node: PeripheralBaseNode): Promise<void> {
         const result = await vscode.window.showQuickPick([
             { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
             { label: 'Hex', description: 'Format value in hexidecimal', value: NumberFormat.Hexidecimal },
@@ -307,42 +306,25 @@ class CortexDebugExtension {
             { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
         ]);
 
-        tn.node.setFormat(result.value);
+        node.format = result.value;
         this.peripheralProvider.refresh();
         Reporting.sendEvent('Peripheral View', 'Set Format', result.label);
     }
 
-    private async peripheralsForceRefresh(bn: TreeNode): Promise<void> {
-        bn.node.getPeripheralNode().update().then((e) => {
+    private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
+        node.getPeripheral().updateData().then((e) => {
             this.peripheralProvider.refresh();
         });
     }
 
     // Registers
-    private registersSelectedNode(node: BaseNode): void {
-        if (node.recordType !== RRecordType.Field) { node.expanded = !node.expanded; }
-        this.registerProvider.refresh();
-    }
-
-    private registersCopyValue(tn: RTreeNode): void {
-        const cv = tn.node.getCopyValue();
+    private registersCopyValue(node: BaseNode): void {
+        const cv = node.getCopyValue();
         if (cv) {
-            CopyPaste.copy(cv);
-            Reporting.sendEvent('Register View', 'Update Node');
+            vscode.env.clipboard.writeText(cv).then(() => {
+                Reporting.sendEvent('Register View', 'Copy Value');
+            });
         }
-    }
-
-    private async registersSetFormat(tn: RTreeNode): Promise<void> {
-        const result = await vscode.window.showQuickPick([
-            { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
-            { label: 'Hex', description: 'Format value in hexidecimal', value: NumberFormat.Hexidecimal },
-            { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
-            { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
-        ]);
-        
-        tn.node.setFormat(result.value);
-        this.registerProvider.refresh();
-        Reporting.sendEvent('Register View', 'Set Format', result.label);
     }
 
     // Debug Events
@@ -360,10 +342,7 @@ class CortexDebugExtension {
         session.customRequest('get-arguments').then((args) => {
             let svdfile = args.svdFile;
             if (!svdfile) {
-                const basepath = this.getSVDFile(args.device);
-                if (basepath) {
-                    svdfile = path.join(this.context.extensionPath, basepath);
-                }
+                svdfile = this.getSVDFile(args.device);
             }
 
             Reporting.beginSession(args as ConfigurationArguments);
@@ -480,7 +459,7 @@ class CortexDebugExtension {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    const extension = new CortexDebugExtension(context);
+    return new CortexDebugExtension(context);
 }
 
 export function deactivate() {}

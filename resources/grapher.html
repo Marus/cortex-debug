@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <!--
+                    Use a content security policy to only allow loading images from https or from our extension directory,
+                    and only allow scripts that have a specific nonce.
+                    -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cortex-Debug Grapher</title>
+
+        <style nonce="${nonce}">
+            body {
+                background-color: var(--vscode-editor-background);
+            }
+            h1 {
+                color: var(--vscode-editor-foreground);
+                font-family: Arial, Helvetica, sans-serif;
+            }
+            .legend-entry rect {
+                stroke: var(--vscode-editor-foreground);
+            }
+            .legend-entry text {
+                fill: var(--vscode-editor-foreground);
+                stroke: none;
+                font-weight: bold
+            }
+            rect.highlight-area {
+                fill: var(--vscode-editor-selectionBackground);
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>Cortex-Debug SWO Grapher</h1>
+        <div class="graph-container"></div>
+        <script nonce="${nonce}" src="${scriptUri}"></script>
+    </body>
+</html>

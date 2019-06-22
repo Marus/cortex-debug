@@ -1,21 +1,19 @@
 import * as vscode from 'vscode';
-
-import { TcpPortScanner } from '../../tcpportscanner';
-import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
 
 import { SWOConsoleProcessor } from './decoders/console';
 import { SWOBinaryProcessor } from './decoders/binary';
 import { SWOGraphProcessor } from './decoders/graph';
 import { SWODecoder } from './decoders/common';
 import { SWOSource } from './sources/common';
-import { SWOSocketServer } from './websocket_server';
-import { SWODecoderConfig, GraphConfiguration, WebsocketStatusMessage, SWOAdvancedDecoderConfig, SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig, WebsocketProgramCounterMessage, SWOBasicDecoderConfig } from './common';
+import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig, SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig, SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './common';
 import { SWOAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
-import { PacketType, Packet, TimestampType, TimestampPacket } from './common';
+import { PacketType, Packet } from './common';
 import { parseUnsigned } from './decoders/utils';
-import { hexFormat } from '../utils';
-import { SymbolType, SymbolScope, SymbolInformation } from '../../symbols';
+import { SymbolInformation } from '../../symbols';
+import { fstat } from 'fs';
 
 const RingBuffer = require('ringbufferjs');
 
@@ -47,7 +45,7 @@ class ITMDecoder extends EventEmitter {
 
     constructor() {
         super();
-
+        
         this.syncBuffer.enq(0xFF);
         this.syncBuffer.enq(0xFF);
         this.syncBuffer.enq(0xFF);
@@ -173,12 +171,81 @@ interface ConfigurationArguments {
     graphConfig: GraphConfiguration[];
 }
 
+class SWOWebview {
+    private viewPanel: vscode.WebviewPanel;
+    private currentStatus: 'stopped' | 'terminated' | 'continued' = 'stopped';
+    private now: Date;
+
+    constructor(private extensionPath: string, public graphs: GraphConfiguration[]) {
+        this.now = new Date();
+        const time = this.now.toTimeString();
+
+        const showOptions = { preserveFocus: true, viewColumn: vscode.ViewColumn.Beside };
+        const viewOptions: vscode.WebviewOptions & vscode.WebviewPanelOptions = {
+            retainContextWhenHidden: true,
+            enableFindWidget: false,
+            enableCommandUris: false,
+            enableScripts: true,
+            localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'dist'))]
+        };
+
+        this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', `SWO Graphs [${time}]`, showOptions, viewOptions);
+        this.viewPanel.webview.onDidReceiveMessage((msg) => { this.onMessage(msg); });
+        this.viewPanel.webview.html = this.getHTML();
+    }
+
+    private getHTML() {
+        const scriptUri = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js')).with({ scheme: 'vscode-resource' });
+        const nonce = this.getNonce();
+
+        let html = fs.readFileSync(path.join(this.extensionPath, 'resources', 'grapher.html'), { encoding: 'utf8', flag: 'r' });
+        html = html.replace(/\$\{nonce\}/g, nonce).replace(/\$\{scriptUri\}/g, scriptUri.toString());
+
+        return html;
+    }
+
+    private getNonce() {
+        let text = '';
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < 32; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
+    }
+
+    private processors: Array<SWOGraphProcessor | SWOAdvancedProcessor> = [];
+    public registerProcessors(processor: SWOGraphProcessor | SWOAdvancedProcessor): void {
+        processor.on('message', this.sendMessage.bind(this));
+        this.processors.push(processor);
+    }
+
+    public clearProcessors(): void {
+        this.processors = [];
+    }
+
+    private lastId: number = 0;
+    public sendMessage(message: GrapherMessage): void {
+        message.timestamp = new Date().getTime();
+        this.viewPanel.webview.postMessage(message);
+    }
+
+    private onMessage(message: GrapherMessage) {
+        console.log('Received message: ', message);
+        if (message.type === 'init') {
+            const message = { type: 'configure', graphs: this.graphs, status: this.currentStatus };
+            console.log('Configure Message: ', message);
+            this.viewPanel.webview.postMessage(message);
+        }
+    }
+}
+
 export class SWOCore {
     private processors: SWODecoder[] = [];
-    private socketServer: SWOSocketServer;
     private connected: boolean = false;
     private itmDecoder: ITMDecoder;
     private functionSymbols: SymbolInformation[];
+
+    private webview: SWOWebview;
 
     constructor(private source: SWOSource, args: ConfigurationArguments, extensionPath: string) {
         this.itmDecoder = new ITMDecoder();
@@ -192,54 +259,39 @@ export class SWOCore {
         else { this.source.on('connected', () => { this.connected = true; }); }
         this.source.on('data', this.handleData.bind(this));
         this.source.on('disconnected', () => { this.connected = false; });
+
+        if (args.graphConfig.length >= 1) {
+            this.webview = new SWOWebview(extensionPath, args.graphConfig);
+        }
         
-        const portFinderOptions = { min: 53333, max: 54333, retrieve: 1 };
-        TcpPortScanner.findFreePorts(portFinderOptions).then((ports) => {
-            const port = ports[0];
-            this.socketServer = new SWOSocketServer(port, args.graphConfig);
+        args.swoConfig.decoders.forEach((conf) => {
+            let processor;
 
-            if (args.graphConfig.length >= 1) {
-                const now = new Date();
-                const timestamp = now.getTime();
-                const time = now.toTimeString();
-                let grapherURL = `file://${extensionPath}/grapher/index.html?port=${port}&timestamp=${timestamp}`;
-                if (os.platform() === 'win32') {
-                    const ep = extensionPath.replace(/\\/g, '/');
-                    grapherURL = `file:///${ep}/grapher/index.html?port=${port}&timestamp=${timestamp}`;
-                }
-
-                vscode.commands.executeCommand('vscode.previewHtml', grapherURL, vscode.ViewColumn.Two, `SWO Graphs [${time}]`).then((e) => {}, (err) => {});
-            }
-        }).then((result) => {
-            args.swoConfig.decoders.forEach((conf) => {
-                let processor;
-
-                switch (conf.type) {
-                    case 'console':
-                        this.processors.push(new SWOConsoleProcessor(conf as SWOConsoleDecoderConfig));
-                        break;
-                    case 'binary':
-                        this.processors.push(new SWOBinaryProcessor(conf as SWOBinaryDecoderConfig));
-                        break;
-                    case 'graph':
-                        processor = new SWOGraphProcessor(conf as SWOGraphDecoderConfig);
-                        this.socketServer.registerProcessor(processor);
+            switch (conf.type) {
+                case 'console':
+                    this.processors.push(new SWOConsoleProcessor(conf as SWOConsoleDecoderConfig));
+                    break;
+                case 'binary':
+                    this.processors.push(new SWOBinaryProcessor(conf as SWOBinaryDecoderConfig));
+                    break;
+                case 'graph':
+                    processor = new SWOGraphProcessor(conf as SWOGraphDecoderConfig);
+                    if (this.webview) { this.webview.registerProcessors(processor); }
+                    this.processors.push(processor);
+                    break;
+                case 'advanced':
+                    try {
+                        processor = new SWOAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
+                        if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
                         break;
-                    case 'advanced':
-                        try {
-                            processor = new SWOAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
-                            this.socketServer.registerProcessor(processor);
-                            this.processors.push(processor);
-                            break;
-                        }
-                        catch (e) {
-                            vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
-                        }
-                    default:
-                        break;
-                }
-            });
+                    }
+                    catch (e) {
+                        vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
+                    }
+                default:
+                    break;
+            }
         });
 
         this.itmDecoder.on('software-event', this.processPacket.bind(this));
@@ -264,17 +316,16 @@ export class SWOCore {
         else if (packet.type === PacketType.HARDWARE) {
             this.processors.forEach((p) => p.hardwareEvent(packet));
             if (packet.port === 2) {
-                const pc = parseUnsigned(packet.data);
-                const symbol = this.getFunctionAtAddress(pc);
+                if (this.webview) {
+                    const pc = parseUnsigned(packet.data);
+                    const symbol = this.getFunctionAtAddress(pc);
 
-                const message: WebsocketProgramCounterMessage = {
-                    type: 'program-counter',
-                    timestamp: new Date().getTime(),
-                    counter: pc,
-                    function: symbol ? symbol.name : '**Unknown**'
-                };
-                if (this.socketServer) {
-                    this.socketServer.broadcastMessage(message);
+                    const message: GrapherProgramCounterMessage = {
+                        type: 'program-counter',
+                        counter: pc,
+                        function: symbol ? symbol.name : '**Unknown**'
+                    };
+                    this.webview.sendMessage(message);
                 }
             }
             else {
@@ -321,39 +372,32 @@ export class SWOCore {
     }
 
     public debugSessionTerminated() {
-        const message: WebsocketStatusMessage = { type: 'status', status: 'terminated' };
-        this.socketServer.broadcastMessage(message);
-        this.socketServer.currentStatus = 'terminated';
-        setTimeout(() => {
-            this.socketServer.dispose();
-            this.socketServer = null;
-        }, 250);
+        if (this.webview) {
+            const message: GrapherStatusMessage = { type: 'status', status: 'terminated' };
+            this.webview.sendMessage(message);
+        }
     }
 
     public debugStopped() {
-        if (this.socketServer) {
-            const message: WebsocketStatusMessage = { type: 'status', status: 'stopped' };
-            this.socketServer.broadcastMessage(message);
-            this.socketServer.currentStatus = 'stopped';
+        if (this.webview) {
+            const message: GrapherStatusMessage = { type: 'status', status: 'stopped' };
+            this.webview.sendMessage(message);
         }
     }
 
     public debugContinued() {
-        if (this.socketServer) {
-            const message: WebsocketStatusMessage = { type: 'status', status: 'continued' };
-            this.socketServer.broadcastMessage(message);
-            this.socketServer.currentStatus = 'continued';
+        if (this.webview) {
+            const message: GrapherStatusMessage = { type: 'status', status: 'continued' };
+            this.webview.sendMessage(message);
         }
     }
     
     public dispose() {
-        if (this.socketServer) {
-            this.socketServer.dispose();
-            this.socketServer = null;
-        }
-
         this.processors.forEach((p) => p.dispose());
         this.processors = null;
+        if (this.webview) {
+            this.webview.clearProcessors();
+        }
         this.connected = false;
     }
 

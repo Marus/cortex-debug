@@ -4,7 +4,7 @@ const SignedParser = new Parser().endianess('little').int32('value');
 const UnsignedParser = new Parser().endianess('little').uint32('value');
 const FloatParser = new Parser().endianess('little').floatle('value');
 
-export function parseFloat(buffer: Buffer) {
+export function parseFloat(buffer: Buffer): number {
     if (buffer.length < 4) {
         const tmp = Buffer.alloc(4);
         buffer.copy(tmp);
@@ -15,18 +15,18 @@ export function parseFloat(buffer: Buffer) {
     return result.value;
 }
 
-export function parseSigned(buffer: Buffer) {
+export function parseSigned(buffer: Buffer): number {
     if (buffer.length < 4) {
         const tmp = Buffer.alloc(4);
         buffer.copy(tmp);
         buffer = tmp;
     }
-
+    
     const result = SignedParser.parse(buffer);
     return result.value;
 }
 
-export function parseUnsigned(buffer: Buffer) {
+export function parseUnsigned(buffer: Buffer): number {
     if (buffer.length < 4) {
         const tmp = Buffer.alloc(4);
         buffer.copy(tmp);

@@ -1,3 +1,31 @@
+# V0.3.0
+
+## NOTE: Cortex-Debug is now only compatible with Visual Studio Code V1.34.0 or newer.
+
+**NOTE: V0.3.0 has a few backwards incompatible changes that may require you to update your `launch.json` file.**
+1. The deprecated launch configuration types (`jlink-gdb`, `openocd-gdb`, `pyocd-gdb`, `stutil-gdb`, and `pe-gdb`) have now been removed - all launch configurations for Cortex-Debug should now use the `cortex-debug` type.
+2. There are now no SVD files bundled with the main Cortex-Debug extension; these SVD files added significant bulk to the download sizes for the main extension install and update while not being always needed and not changing often. The bundled SVD files will be separated out into separate "Device Support Pack" extensions that target particular microcontrollers (or families of microcontrollers); starting with packs for the STM32F1, STM32F4 and STM32L4 families that had been bundled previously. If you were using your own SVD file specified through the `svdfFle` property in your `launch.json` then no configuration changes are needd, but if you were using one of the previously auto-detected SVD files through the `device` property then you will need to install the appropriate "Device Support Packs" (search for "Cortex-Debug" in the extension marketplace).
+
+### Other Changes in V0.3.0
+* Added support for formatting watch values; add the following format strings:
+	* `b` - format in binary
+	* `h` or `x` - format in hexidecimal
+	* `d` - format in decimal
+	* `o` - format in octal
+	
+	These format sepecifiers are appended to the end of the watch expression separated by a `,` - eg. `*(unsigned int *)(0x40011004),b` would display the contents at address `0x40011004` in binary.
+* Changed core registers to be displayed using their "natural" formatting:
+	* `rXX` in decimal
+	* `sXX` in floating point
+	* stack pointers (`sp`, `msp`, `psp`) in hexidecimal
+	* program counter (`pc`) in hexidecimal with corresponding symbol location if available
+	* xPSR/cPSR/Control in hexidecimal (this is overridden from the GDB defaults for those registers)
+
+	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future.
+* Major refactor of the code for the Core Register and Peripheral Register displays; along with bringing (hopefully) improved formatting and UX to this views will make the code much easier to maintain and expand in the future.
+* The SWO grapher view should now be functional again on newer of VSCode. This view is now also theme aware and will adapt the colour scheme for standard elements to work with your theme (you still need to provide appropriate colours for your plots in the graph config).
+* Extension code is now bundled for faster load time and smaller installs
+
 # V0.2.7
 
 * Added new `servertype` of external for cases where you want to control the GDB server yourself. This could be used for cases where you need to run the GDB server on a different machine, or in cases where there are multiple target cores which may cause the debug server to not operate as expected by cortex-debug. This configuration may require more customizations to the launch.json file than other more automated server types. When this `servertype` is selected a value for the `gdbTarget` launch.json property must be supplied.

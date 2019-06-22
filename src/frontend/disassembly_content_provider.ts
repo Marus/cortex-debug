@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { hexFormat } from './utils';
 import { DisassemblyInstruction } from '../common';
 
 export class DisassemblyContentProvider implements vscode.TextDocumentContentProvider {
