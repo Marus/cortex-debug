@@ -23,13 +23,13 @@ const SCOPE_MAP: { [id: string]: SymbolScope } = {
 export class SymbolTable {
     private symbols: SymbolInformation[];
 
-    constructor(private toolchainPath: string, private executable: string) {
+    constructor(private toolchainPath: string, private toolchainPrefix: string, private executable: string) {
         this.symbols = [];
     }
 
     public loadSymbols() {
         try {
-            let objdumpExePath = os.platform() !== 'win32' ? 'arm-none-eabi-objdump' : 'arm-none-eabi-objdump.exe';
+            let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
             if (this.toolchainPath) {
                 objdumpExePath = path.normalize(path.join(this.toolchainPath, objdumpExePath));
             }

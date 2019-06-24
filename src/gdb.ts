@@ -143,7 +143,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
         this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
+        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -152,7 +152,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
         this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.executable);
+        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -216,7 +216,7 @@ export class GDBDebugSession extends DebugSession {
             const executable = this.serverController.serverExecutable();
             const args = this.serverController.serverArguments();
 
-            let gdbExePath = os.platform() !== 'win32' ? 'arm-none-eabi-gdb' : 'arm-none-eabi-gdb.exe';
+            let gdbExePath = os.platform() !== 'win32' ? `${this.args.toolchainPrefix}-gdb` : `${this.args.toolchainPrefix}-gdb.exe`;
             if (this.args.toolchainPath) {
                 gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
             }

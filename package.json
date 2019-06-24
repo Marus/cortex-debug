@@ -16,7 +16,12 @@
                         "null"
                     ],
                     "default": null,
-                    "description": "Path to the GCC Arm Toolchain (prefix arm-none-eabi) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                    "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                },
+                "cortex-debug.armToolchainPrefix": {
+                    "type": ["string", "null"],
+                    "default": "arm-none-eabi",
+                    "description": "The prefix to use for the arm toolchain - the standard release from arm uses \"arm-none-eabi\" but alternative toolchains may use a different prefix. Currently the gdb and objdump tools are needed."
                 },
                 "cortex-debug.JLinkGDBServerPath": {
                     "type": [
@@ -1230,7 +1235,7 @@
                 ],
                 "extensions": [],
                 "label": "Cortex Debug",
-                "program": "./dist/debugadapter.bundle.js",
+                "program": "./dist/debugadapter.js",
                 "runtime": "node",
                 "type": "cortex-debug",
                 "variables": {}
@@ -1271,6 +1276,11 @@
                 {
                     "command": "cortex-debug.peripherals.updateNode",
                     "when": "view == cortex-debug.peripherals && viewItem == field",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.peripherals.updateNode",
+                    "when": "view == cortex-debug.peripherals && viewItem == fieldWO",
                     "group": "inline"
                 },
                 {
@@ -1393,7 +1403,7 @@
         "debug",
         "embedded"
     ],
-    "main": "./dist/extension.bundle",
+    "main": "./dist/extension",
     "name": "cortex-debug",
     "preview": true,
     "publisher": "marus25",
@@ -1405,7 +1415,8 @@
         "postinstall": "node ./node_modules/vscode/bin/install",
         "vscode:prepublish": "webpack --mode production",
         "watch": "webpack --mode development --watch",
-        "compile": "webpack --mode development"
+        "compile": "webpack --mode development",
+        "test-compile": "tsc -p ./"
     },
     "version": "0.3.0"
 }

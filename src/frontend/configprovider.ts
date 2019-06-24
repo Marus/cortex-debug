@@ -89,6 +89,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.toolchainPath) {
             config.toolchainPath = configuration.armToolchainPath;
         }
+        config.toolchainPrefix = configuration.armToolchainPrefix || 'arm-none-eabi';
         
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
