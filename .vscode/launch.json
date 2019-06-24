@@ -11,7 +11,7 @@
 			"stopOnEntry": false,
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/out/**/*.js"
+				"${workspaceRoot}/dist/*.js"
 			]
 		},
 		{
@@ -24,7 +24,7 @@
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/out/**/*.js"
+				"${workspaceRoot}/dist/*js"
 			],
 			"cwd": "${workspaceRoot}"
 		},
@@ -37,8 +37,9 @@
 			"stopOnEntry": false,
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/out/**/*.js"
-			]
+				"${workspaceRoot}/out/test/**/*.js"
+			],
+			"preLaunchTask": "npm: test-compile"
 		}
 	],
 	"compounds": [
