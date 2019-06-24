@@ -39,7 +39,7 @@
 			"outFiles": [
 				"${workspaceRoot}/out/test/**/*.js"
 			],
-			"preLaunchTask": "npm: test-compile"
+			"preLaunchTask": "test-compile"
 		}
 	],
 	"compounds": [
