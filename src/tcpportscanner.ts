@@ -439,11 +439,12 @@ export class TcpPortScanner {
         if (TcpPortScanner.localHostAliases.length === 0) {
             // On Unixes, the first two are treated like true aliases but on Windows
             // you have distint servers on all of them. So, try everything.
-            TcpPortScanner.localHostAliases = ['0.0.0.0', '127.0.0.1', '::1', ''];
+            TcpPortScanner.localHostAliases = ['0.0.0.0', '127.0.0.1', ''];
             const ifaces = os.networkInterfaces();
             Object.keys(ifaces).forEach((ifname) => {
                 ifaces[ifname].forEach((iface) => {
-                    if ('ipv4' === iface.family.toLowerCase()) {
+                    // Skip external interfaces (VPN tunnels, actual IP, etc). Only want loopbacks
+                    if (iface.internal && ('ipv4' === iface.family.toLowerCase())) {
                         if (TcpPortScanner.localHostAliases.indexOf(iface.address) === -1) {
                             TcpPortScanner.localHostAliases.push(iface.address);
                         }
