@@ -3,6 +3,8 @@
 import * as tcpPortUsed from 'tcp-port-used';
 import os = require('os');
 import net = require('net');
+import child_process = require('child_process');
+import command_exists = require('command-exists');
 
 export class TcpPortScanner {
     //
@@ -243,6 +245,98 @@ export class TcpPortScanner {
             }
             return null;
         }
+    }
+
+    protected static OSNetProbeCmd = '';
+    protected static OSNetProbeCmdRegexpStr = '';
+    protected static getOsNetProbeCmd(): string {
+        /**
+         * Notes:
+         * `netstat` does not exist on Linux by default. Replacement is `ss`
+         * `netstat` and `ss` are faster than lsof. netstat on mac is super fast.
+         * what program to use is baed of platform and availability
+         */
+        if (TcpPortScanner.OSNetProbeCmd === '') {
+            const commandExistsSync = command_exists.sync;
+            const isWin = os.platform() === 'win32';
+            /**
+             * for `netstat` and `ss` We are looking for things that are in the 'local address' field for
+             * ports that are listening. Technically, you can have multiple matches because the local machine
+             * can have multiple addresses
+             */
+            if (!isWin && commandExistsSync('ss')) {
+                TcpPortScanner.OSNetProbeCmd = 'ss -nat';
+                TcpPortScanner.OSNetProbeCmdRegexpStr = 'LISTEN\\s+[^\\n]*:XYZZY\\s+[^\\s]+[^\\n]*\\n';
+            } else if (commandExistsSync('netstat')) {
+                // On windows, if you ask for tcp it will only give you ipv4. On Mac, it gives both
+                TcpPortScanner.OSNetProbeCmd = isWin ? 'netstat -na' : 'netstat -nap tcp';
+                // netstat output varies wildly, so be careful
+                TcpPortScanner.OSNetProbeCmdRegexpStr = '[tT][cC][pP][^\\n]*[:\\.]XYZZY\\s+[^\\s]+\\s+LISTEN[^\\n]*\\n';
+            } else if (!isWin && commandExistsSync('lsof')) {
+                // This is the slowest of all but probably the most consistent
+                TcpPortScanner.OSNetProbeCmd = 'lsof -n -i tcp:XYZZY';
+                TcpPortScanner.OSNetProbeCmdRegexpStr = ':XYZZY\\s[^\\n]*\\(LISTEN\\)[^\\n]*\\n';
+            } else {
+                TcpPortScanner.OSNetProbeCmd = '?';
+            }
+        }
+        return TcpPortScanner.OSNetProbeCmd;
+    }
+
+    /**
+     * This is the most unobtrusive way of figuring out if a port is open. It does not try
+     * to create servers or clients but use system commands to figure out if a port is open
+     * On Mac, the runtime is not bad 1.5 to 2X of the time take to do it the other ways.
+     * On windows, surprise!, it is an order of magnititude slower.
+     * 
+     * But, it is also not bulletproof. depends on version of the OS and if some things do
+     * not get installed by default.
+     * 
+     * @param port look for port to be open. don't matter what
+     * @param retryTimeMs retry after that many milliseconds.
+     * @param timeOutMs max timeout
+     * @param fallback Fallback to using the intrusive method if proper OS command is not available
+     */
+    public static waitForPortOpenOSUtil(port: number, retryTimeMs = 100, timeOutMs = 5000, fallback = true, doLog = true): Promise<void> {
+        const cmd = TcpPortScanner.getOsNetProbeCmd().replace('XYZZY', port.toString());
+        if (doLog) { console.log(cmd); }
+        if (fallback && (cmd === '?')) {
+            return TcpPortScanner.waitForPortOpen(port, TcpPortScanner.DefaultHost, true, retryTimeMs, timeOutMs);
+        }
+
+        const rexStr = TcpPortScanner.OSNetProbeCmdRegexpStr.replace('XYZZY', port.toString());
+        if (doLog) { console.log(rexStr); }
+        const rex = new RegExp(rexStr);
+        const startTimeMs = Date.now();
+        let first = true;
+        retryTimeMs = Math.max(retryTimeMs, 1);
+        return new Promise(function tryAgain(resolve, reject) {
+            if (cmd === '?') {
+                return reject(new Error('failed'));
+            }
+            child_process.exec(cmd, (error, stdout) => {
+                if (error) {
+                    return reject(error);
+                } else if (rex.test(stdout)) {
+                    if (doLog) { console.log(stdout.match(rex).join('\n')); }
+                    return resolve();
+                } else {
+                    if (first) {
+                        // if (doLog) { console.log(stdout); }
+                        first = false;
+                    }
+                    const t = Date.now() - startTimeMs;
+                    if (t < timeOutMs) {
+                        if (doLog) { console.log(`Setting timeout for ${retryTimeMs}ms, curTime = ${t}ms`); }
+                        setTimeout(() => {
+                            tryAgain(resolve, reject);
+                        }, retryTimeMs);
+                    } else {
+                        return reject(new Error('timeout'));
+                    }
+                }
+            });
+        });
     }
 
     /**
