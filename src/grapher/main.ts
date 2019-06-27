@@ -1,6 +1,6 @@
-import { TimeseriesGraph } from './TimeSeriesGraph';
-import { XYGraph } from './XYGraph';
-import { ProgramStatsGraph } from './ProgramStatsGraph';
+import { TimeseriesGraph } from './timeseriesgraph';
+import { XYGraph } from './xygraph';
+import { ProgramStatsGraph } from './programstatsgraph';
 import { Graph, GrapherConfigurationMessage, TimeseriesGraphConfiguration, XYGraphConfiguration, GrapherMessage, GrapherDataMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './types';
 import { GraphDataSource } from './datasource';
 
