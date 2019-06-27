@@ -253,6 +253,11 @@
                                 "description": "This setting can be used to override the armToolchainPath user setting for a particular launch configuration. This should be the path where arm-none-eabi-gdb and arm-none-eabi-objdump are located.",
                                 "type": "string"
                             },
+                            "serverpath": {
+                                "default": null,
+                                "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
+                                "type": "string"
+                            },
                             "executable": {
                                 "description": "Path of executable",
                                 "type": "string"
@@ -752,6 +757,11 @@
                             "armToolchainPath": {
                                 "default": null,
                                 "description": "This setting can be used to override the armToolchainPath user setting for a particular launch configuration. This should be the path where arm-none-eabi-gdb and arm-none-eabi-objdump are located.",
+                                "type": "string"
+                            },
+                            "serverpath": {
+                                "default": null,
+                                "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
                                 "type": "string"
                             },
                             "executable": {
