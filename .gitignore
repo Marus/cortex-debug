@@ -1,7 +1,7 @@
-dist
 out
 node_modules
 *.vsix
 .vscode-test
 .DS_Store
 .sass-cache
+/dist

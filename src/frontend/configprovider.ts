@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 
-const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III'];
+const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'auto'];
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
@@ -13,6 +13,13 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
+        // Flatten the platform specific stuff as it is not done by VSCode at this point.
+        switch (os.platform()) {
+            case 'darwin': Object.assign(config, config.osx); delete config.osx; break;
+            case 'win32': Object.assign(config, config.windows); delete config.windows; break;
+            case 'linux': Object.assign(config, config.linux); delete config.linux; break;
+            default: console.log(`Unknown platform ${os.platform()}`);
+        }
         if (config.debugger_args && !config.debuggerArgs) {
             config.debuggerArgs = config.debugger_args;
         }

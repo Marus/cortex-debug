@@ -74,6 +74,14 @@ suite('TcpPortScanner Tests', () => {
                 assert.fail('unexpected timeout ' + err);
             });
 
+            timeit();
+            await TcpPortScanner.waitForPortOpenOSUtil(port, 50, 1000, false, doLog).then(() => {
+                if (doLog) { console.log(`1.1 Success server port ${port} is ready ${timeit()}`); }
+            }, (err) => {
+                if (doLog) { console.log(`1.1 Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
+                assert.fail('unexpected timeout ' + err);
+            });
+
             // Lets see if consecutive ports request works while server is still running. It should
             // skip the port we are already using
             args.consecutive = true;
