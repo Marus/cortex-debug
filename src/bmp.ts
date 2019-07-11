@@ -64,12 +64,6 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             'interpreter-exec console "SoftwareReset"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled) {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -77,12 +71,6 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const commands = [
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled) {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -90,12 +78,15 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const commands: string[] = [
             'interpreter-exec console "SoftwareReset"'
         ];
+        return commands;
+    }
 
+    public swoCommands(): string[]{
+        const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-
         return commands;
     }
 

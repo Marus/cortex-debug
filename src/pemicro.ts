@@ -64,6 +64,10 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         return commands;
     }
 
+    public swoCommands(): string[] {
+        return [];
+    }
+
     public serverExecutable() {
         
         console.log('Getting Exec');

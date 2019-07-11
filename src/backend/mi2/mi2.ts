@@ -237,10 +237,8 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public detach() {
-        const proc = this.process;
-        const to = setTimeout(() => { this.tryKill(); }, 1000);
-        this.process.on('exit', (code) => { clearTimeout(to); });
-        this.sendRaw('-target-detach');
+        this.sendCommand('target-detach');
+        this.stop();
     }
 
     public interrupt(threadId: number): Thenable<boolean> {

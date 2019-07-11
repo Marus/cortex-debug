@@ -248,7 +248,7 @@ export class GDBDebugSession extends DebugSession {
                 }
             }
 
-            if (this.args.showDevDebugOutput) {
+            if (this.args.showDevDebugOutput && executable) {
                 this.handleMsg('log', `Please check OUTPUT tab (Adapter Output) for log of ${executable}` + '\n');
                 const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => `"${s}"`).join(' ') + '\n';
                 this.handleMsg('log', dbgMsg);
@@ -314,6 +314,7 @@ export class GDBDebugSession extends DebugSession {
                         this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
                     commands.push(...attachCommands);
                     commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
+                    commands.push(...this.serverController.swoCommands());
                 }
                 else {
                     commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
@@ -321,11 +322,13 @@ export class GDBDebugSession extends DebugSession {
                         this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
                     commands.push(...launchCommands);
                     commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
+                    commands.push(...this.serverController.swoCommands());
                 }
                 
                 this.serverController.debuggerLaunchStarted();
                 this.miDebugger.once('debug-ready', () => {
                     this.debugReady = true;
+                    this.attached = attach;
                 });
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
@@ -634,17 +637,25 @@ export class GDBDebugSession extends DebugSession {
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
         if (this.miDebugger) {
-            if (this.attached) { this.miDebugger.detach(); }
-            else { this.miDebugger.stop(); }
+            if (this.attached) {
+                this.attached = false;
+                if (!this.stopped) {
+                    this.miDebugger.sendCommand('exec-interrupt');
+                }
+                this.miDebugger.detach();
+            } else {
+                this.miDebugger.stop();
+            }
         }
         if (this.commandServer) {
             this.commandServer.close();
             this.commandServer = undefined;
         }
 
-        try { this.server.exit(); }
-        catch (e) {}
-
+        setTimeout(() => {      // Give gdb a chance to  disconnect and exit normally
+            try {this.server.exit(); }
+            catch (e) {}
+        }, 100);
         this.sendResponse(response);
     }
 
@@ -657,6 +668,7 @@ export class GDBDebugSession extends DebugSession {
                 this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
             commands.push(...restartCommands);
             commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
+            commands.push(...this.serverController.swoCommands());
 
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);
