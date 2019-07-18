@@ -662,11 +662,6 @@
                             "powerOverBMP": {
                                 "type": "string",
                                 "description": "Power up the board over Black Magic Probe. \"powerOverBMP\" : \"enable\" or \"powerOverBMP\" : \"disable\". If not set it will use the last power state."
-                            },
-                            "stopOnEntry": {
-                                "type": "boolean",
-                                "description": "Halt device after debug start",
-                                "default": true
                             }
                         },
                         "required": [
@@ -795,6 +790,11 @@
                                 "description": "If enabled the debugger will run until it the start of the main function.",
                                 "type": "boolean",
                                 "default": false
+                            },
+                            "stopOnEntry": {
+                                "type": "boolean",
+                                "description": "Halt device after debug start",
+                                "default": true
                             },
                             "graphConfig": {
                                 "items": {
