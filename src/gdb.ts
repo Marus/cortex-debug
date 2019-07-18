@@ -342,25 +342,30 @@ export class GDBDebugSession extends DebugSession {
                     };
 
 
-                    if (!this.args.stopOnEntry) {
-
-                        setTimeout(() => {
-                            this.stopped = false;
-                            this.miDebugger.sendCommand('exec-continue');
-                        }, 100);
-
-                    } else if (this.args.runToMain) {
+                    if (this.args.runToMain) {
                         this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
                             this.miDebugger.once('generic-stopped', launchComplete);
                             // To avoid race conditions between finishing configuration, we should stay
                             // in stopped mode. Or, we end up clobbering the stopped event that might come
                             // during setting of any additional breakpoints.
-                            this.onConfigDone.once('done', () => {
-                                this.miDebugger.sendCommand('exec-continue');
-                            });
+                            if (!this.args.stopOnEntry) {
+                                this.onConfigDone.once('done', () => {
+                                    this.miDebugger.sendCommand('exec-continue');
+                                });
+                            }
                         });
                     }
-                    else {
+                    else if (!this.args.stopOnEntry) {
+                        // do not run to main and do not stop at entry
+
+                        this.onConfigDone.once('done', () => {
+                            this.stopped = false;
+                            this.miDebugger.sendCommand('exec-continue');
+                        });
+
+                    } else {
+                        // do not run to main; but stop on entry
+
                         launchComplete();
                     }
                 }, (err) => {
