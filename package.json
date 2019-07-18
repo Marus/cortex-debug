@@ -19,7 +19,10 @@
                     "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
                 },
                 "cortex-debug.armToolchainPrefix": {
-                    "type": ["string", "null"],
+                    "type": [
+                        "string",
+                        "null"
+                    ],
                     "default": "arm-none-eabi",
                     "description": "The prefix to use for the arm toolchain - the standard release from arm uses \"arm-none-eabi\" but alternative toolchains may use a different prefix. Currently the gdb and objdump tools are needed."
                 },
@@ -659,6 +662,11 @@
                             "powerOverBMP": {
                                 "type": "string",
                                 "description": "Power up the board over Black Magic Probe. \"powerOverBMP\" : \"enable\" or \"powerOverBMP\" : \"disable\". If not set it will use the last power state."
+                            },
+                            "stopOnEntry": {
+                                "type": "boolean",
+                                "description": "Halt device after debug start",
+                                "default": true
                             }
                         },
                         "required": [

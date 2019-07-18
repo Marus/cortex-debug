@@ -112,6 +112,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     targetId: string | number;
     cmsisPack: string;
     runToMain: boolean;
+    stopOnEntry: boolean;
 
     // J-Link Specific
     ipAddress: string;
