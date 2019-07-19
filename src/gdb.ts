@@ -689,10 +689,8 @@ export class GDBDebugSession extends DebugSession {
                         this.sendEvent(new StoppedEvent('restart', this.currentThreadId, true));
                     }, 50);
                 } else {
-                    setTimeout(() => {
-                        this.stopped = false;
-                        this.miDebugger.sendCommand('exec-continue');
-                    }, 100);
+                    this.stopped = false;
+                    this.miDebugger.sendCommand('exec-continue');
                 }
 
             }, (msg) => {
