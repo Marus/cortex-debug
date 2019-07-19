@@ -344,11 +344,18 @@ export class GDBDebugSession extends DebugSession {
 
                     if (this.args.runToMain) {
                         this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
-                            this.miDebugger.once('generic-stopped', launchComplete);
                             // To avoid race conditions between finishing configuration, we should stay
                             // in stopped mode. Or, we end up clobbering the stopped event that might come
                             // during setting of any additional breakpoints.
-                            if (!this.args.stopOnEntry) {
+                            if (this.args.stopOnEntry) {
+                                // stop on reset vector and on main
+
+                                launchComplete();
+                            } else {
+                                // stop on main; but do not stop at reset vector
+
+                                this.miDebugger.once('generic-stopped', launchComplete);
+
                                 this.onConfigDone.once('done', () => {
                                     this.miDebugger.sendCommand('exec-continue');
                                 });
@@ -356,7 +363,7 @@ export class GDBDebugSession extends DebugSession {
                         });
                     }
                     else if (!this.args.stopOnEntry) {
-                        // do not run to main and do not stop at entry
+                        // do not run to main; do not stop at reset vector
 
                         this.onConfigDone.once('done', () => {
                             this.stopped = false;
@@ -364,7 +371,7 @@ export class GDBDebugSession extends DebugSession {
                         });
 
                     } else {
-                        // do not run to main; but stop on entry
+                        // do not stop on main; but stop on reset vector
 
                         launchComplete();
                     }
