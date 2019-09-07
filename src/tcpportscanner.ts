@@ -258,24 +258,27 @@ export class TcpPortScanner {
          */
         if (TcpPortScanner.OSNetProbeCmd === '') {
             const commandExistsSync = command_exists.sync;
-            const isWin = os.platform() === 'win32';
+            const platform = os.platform();
+            const isWin = platform === 'win32';
+            const isMac = platform === 'darwin';
             /**
              * for `netstat` and `ss` We are looking for things that are in the 'local address' field for
              * ports that are listening. Technically, you can have multiple matches because the local machine
              * can have multiple addresses
              */
-            if (!isWin && commandExistsSync('ss')) {
-                TcpPortScanner.OSNetProbeCmd = 'ss -nat';
+            if (!isWin && !isMac && commandExistsSync('ss')) {
+                TcpPortScanner.OSNetProbeCmd = 'ss -nat4';
                 TcpPortScanner.OSNetProbeCmdRegexpStr = 'LISTEN\\s+[^\\n]*:XYZZY\\s+[^\\s]+[^\\n]*\\n';
             } else if (commandExistsSync('netstat')) {
-                // On windows, if you ask for tcp it will only give you ipv4. On Mac, it gives both
-                TcpPortScanner.OSNetProbeCmd = isWin ? 'netstat -na' : 'netstat -nap tcp';
+                // On windows, if you ask for tcp it will only give you ipv4. On Mac, it gives both, so we have to
+                // use the -f on Mac
+                TcpPortScanner.OSNetProbeCmd = isWin ? 'netstat -nap tcp' : 'netstat -nap tcp -f inet';
                 // netstat output varies wildly, so be careful
                 TcpPortScanner.OSNetProbeCmdRegexpStr = '[tT][cC][pP][^\\n]*[:\\.]XYZZY\\s+[^\\s]+\\s+LISTEN[^\\n]*\\n';
-            } else if (!isWin && commandExistsSync('lsof')) {
+            } else if (isMac && commandExistsSync('lsof')) {
                 // This is the slowest of all but probably the most consistent
-                TcpPortScanner.OSNetProbeCmd = 'lsof -n -i tcp:XYZZY';
-                TcpPortScanner.OSNetProbeCmdRegexpStr = ':XYZZY\\s[^\\n]*\\(LISTEN\\)[^\\n]*\\n';
+                TcpPortScanner.OSNetProbeCmd = 'lsof -n -iTCP:XYZZY -sTCP:LISTEN';
+                TcpPortScanner.OSNetProbeCmdRegexpStr = 'IPv4[^\\n]+:XYZZY\\s[^\\n]*\\(LISTEN\\)[^\\n]*\\n';
             } else {
                 TcpPortScanner.OSNetProbeCmd = '?';
             }
@@ -290,7 +293,7 @@ export class TcpPortScanner {
      * On windows, surprise!, it is an order of magnititude slower.
      * 
      * But, it is also not bulletproof. depends on version of the OS and if some things do
-     * not get installed by default.
+     * not get installed by default. This is limited to looking for IPv4 addresses
      * 
      * @param port look for port to be open. don't matter what
      * @param retryTimeMs retry after that many milliseconds.
@@ -315,7 +318,8 @@ export class TcpPortScanner {
                 return reject(new Error('failed'));
             }
             child_process.exec(cmd, (error, stdout) => {
-                if (error) {
+                if (error && !cmd.startsWith('lsof')) {
+                    // lsof returns an error code if nothing matches. May match later
                     return reject(error);
                 } else if (rex.test(stdout)) {
                     if (doLog) { console.log(stdout.match(rex).join('\n')); }
