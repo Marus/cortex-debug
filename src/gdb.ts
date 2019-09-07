@@ -78,6 +78,8 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+const traceThreads = false;
+
 export class GDBDebugSession extends DebugSession {
     private server: GDBServer;
     private args: ConfigurationArguments;
@@ -89,6 +91,7 @@ export class GDBDebugSession extends DebugSession {
     protected variableHandlesReverse: { [id: string]: number } = {};
     protected quit: boolean;
     protected attached: boolean;
+    protected detaching: boolean;
     protected trimCWD: string;
     protected switchCWD: string;
     protected started: boolean;
@@ -99,6 +102,7 @@ export class GDBDebugSession extends DebugSession {
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
     protected currentThreadId: number = 0;
+    protected activeThreadIds = new Set<number>();
     
     private stopped: boolean = false;
     private stoppedReason: string = '';
@@ -127,6 +131,7 @@ export class GDBDebugSession extends DebugSession {
         this.miDebugger.on('thread-created', this.handleThreadCreated.bind(this));
         this.miDebugger.on('thread-exited', this.handleThreadExited.bind(this));
         this.miDebugger.on('thread-selected', this.handleThreadSelected.bind(this));
+        this.miDebugger.on('thread-group-exited', this.handleThreadGroupExited.bind(this));
         this.sendEvent(new InitializedEvent());
     }
 
@@ -203,6 +208,7 @@ export class GDBDebugSession extends DebugSession {
         this.crashed = false;
         this.debugReady = false;
         this.stopped = false;
+        this.activeThreadIds.clear();
 
         const portFinderOpts = { min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length };
         TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
@@ -248,9 +254,11 @@ export class GDBDebugSession extends DebugSession {
                 }
             }
 
-            if (this.args.showDevDebugOutput && executable) {
-                this.handleMsg('log', `Please check OUTPUT tab (Adapter Output) for log of ${executable}` + '\n');
-                const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => `"${s}"`).join(' ') + '\n';
+            if (executable) {
+                this.handleMsg('log', `Please check OUTPUT tab (Adapter Output) for output from ${executable}` + '\n');
+                const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => {
+                    return '"' + s.replace(/"/g, '\\"') + '"';
+                }).join(' ') + '\n';
                 this.handleMsg('log', dbgMsg);
             }
 
@@ -259,7 +267,7 @@ export class GDBDebugSession extends DebugSession {
                 initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
             }
 
-            this.server = new GDBServer(executable, args, initMatch, this.ports['gdbPort']);
+            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, this.ports['gdbPort']);
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {
@@ -330,6 +338,14 @@ export class GDBDebugSession extends DebugSession {
                     this.debugReady = true;
                     this.attached = attach;
                 });
+
+                if (true) {
+                    const dbgMsg = `Launching GDB: "${gdbExePath}" ` + gdbargs.map((s) => {
+                        return '"' + s.replace(/"/g, '\\"') + '"';
+                    }).join(' ') + '\n';
+                    this.handleMsg('log', dbgMsg);
+                }
+
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
@@ -357,6 +373,9 @@ export class GDBDebugSession extends DebugSession {
                     }
                     else {
                         launchComplete();
+                        this.onConfigDone.once('done', () => {
+                            this.runPostStartSessionCommands(false);
+                        });
                     }
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
@@ -380,6 +399,27 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
             this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    // Runs a set of commands after a quiet time and is no other gdb transactions are happening
+    protected runPostStartSessionCommands(isRestart: boolean, interval: number = 10): void {
+        let commands = isRestart ? this.args.postRestartSessionCommands : this.args.postStartSessionCommands;
+        if (commands && (commands.length > 0)) {
+            let curToken = this.miDebugger.getCurrentToken();
+            commands = commands.map(COMMAND_MAP);
+            // We want to let things quiet down before we run the next set of commands. Note that while
+            // we are running this command sequence, some results can cause other gdb commands to be generated if
+            // running state changes. Can't help it for now
+            const to = setInterval(() => {
+                const nxtToken = this.miDebugger.getCurrentToken();
+                if (curToken === nxtToken) {
+                    clearInterval(to);
+                    this.miDebugger.postStart(commands);
+                } else {
+                    curToken = nxtToken;
+                }
+            }, interval);
+        }
     }
 
     protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
@@ -636,31 +676,40 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-        if (this.miDebugger) {
+        const doDisconnectProcessing = () => {
             if (this.attached) {
                 this.attached = false;
-                if (!this.stopped) {
-                    this.miDebugger.sendCommand('exec-interrupt');
-                }
+                this.detaching = true;
                 this.miDebugger.detach();
             } else {
                 this.miDebugger.stop();
             }
-        }
-        if (this.commandServer) {
-            this.commandServer.close();
-            this.commandServer = undefined;
-        }
+            if (this.commandServer) {
+                this.commandServer.close();
+                this.commandServer = undefined;
+            }
+            setTimeout(() => {      // Give gdb a chance to  disconnect and exit normally
+                try {this.server.exit(); }
+                catch (e) {}
+            }, 100);
+        };
 
-        setTimeout(() => {      // Give gdb a chance to  disconnect and exit normally
-            try {this.server.exit(); }
-            catch (e) {}
-        }, 100);
+        if (this.miDebugger) {
+            if (this.attached && !this.stopped) {
+                this.miDebugger.once('generic-stopped', doDisconnectProcessing);
+                this.miDebugger.sendCommand('exec-interrupt');
+            } else {
+                doDisconnectProcessing();
+            }
+        }
         this.sendResponse(response);
     }
 
+    protected restarting = false;
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
-        const restartProcessing = () => {
+        const restartProcessing = async () => {
+            this.currentThreadId = 0;
+            this.activeThreadIds.clear();
             const commands = [];
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
@@ -673,15 +722,23 @@ export class GDBDebugSession extends DebugSession {
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);
                 setTimeout(() => {
-                    this.stopped = true;
+                    this.restarting = false;
+                    this.stopped = true;        // This should aleady be true??
                     this.stoppedReason = 'restart';
                     this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
                     this.sendEvent(new StoppedEvent('restart', this.currentThreadId, true));
+                    this.sendEvent(new CustomStoppedEvent('restart', this.currentThreadId));
+                    this.runPostStartSessionCommands(true, 50);
                 }, 50);
             }, (msg) => {
                 this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
             });
         };
+
+        // When the exec-interrupt happens, there will be resulting events and requests coming and we want
+        // try and suppress those and let things settle down. Or else, it may interrupt the restart sequence
+        // We want to keep our own state valid but not generate events that can produce further gdb chatter
+        this.restarting = true;
 
         if (this.stopped) {
             restartProcessing();
@@ -712,38 +769,99 @@ export class GDBDebugSession extends DebugSession {
         this.sendEvent(new CustomContinuedEvent(this.currentThreadId, true));
     }
 
+    protected findPausedThread(info: MINode) {
+        if (info.outOfBandRecord && info.outOfBandRecord[0] && info.outOfBandRecord[0].output) {
+            for (const item of info.outOfBandRecord[0].output) {
+                if (item[0] === 'thread-id') {
+                    this.currentThreadId = parseInt(item[1]);
+                    return;
+                }
+            }
+        }
+    }
+    
     protected handleBreakpoint(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
-        this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
-        this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
+        this.findPausedThread(info);
+        if (!this.restarting) {
+            this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
+            this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
+        }
     }
 
     protected handleBreak(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'step';
-        this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
-        this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
+        this.findPausedThread(info);
+        if (!this.restarting) {
+            this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
+            this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
+        }
+    }
+
+    // Rename this to 'sendEvent' to monitor specific events this after debug finished
+    public sendEventUnused(event: DebugProtocol.Event): void {
+        super.sendEvent(event);
+        if (event instanceof StoppedEvent || event instanceof ContinuedEvent) {
+            this.handleMsg('stdout', 'Event: ' + JSON.stringify(event) + '\n');
+        }
     }
 
     protected handlePause(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'user request';
-        this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
-        this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
+        this.findPausedThread(info);
+        if (!this.restarting) {
+            this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
+            this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
+        }
     }
 
-    protected handleThreadCreated(info: { threadId: number, threadGroupId: number }) {
-        this.sendEvent(new ThreadEvent('started', info.threadId));
+    protected handleThreadCreated(info: { threadId: number, threadGroupId: string }) {
+        if (!this.activeThreadIds.has(info.threadId)) {
+            if (traceThreads) {
+                this.handleMsg('log', `**** Thread created ${info.threadId}\n`);
+            }
+            if (this.activeThreadIds.size === 0) {
+                this.currentThreadId = info.threadId;
+            }
+            this.activeThreadIds.add(info.threadId);
+            this.sendEvent(new ThreadEvent('started', info.threadId));
+        }
     }
 
-    protected handleThreadExited(info: { threadId: number, threadGroupId: number }) {
+    protected handleThreadExited(info: { threadId: number, threadGroupId: string }) {
+        if (traceThreads) {
+            this.handleMsg('log', `**** Thread exited ${info.threadId}\n`);
+        }
+        this.activeThreadIds.delete(info.threadId);
+        if (this.currentThreadId === info.threadId) {
+            this.currentThreadId = 0;
+        }
         this.sendEvent(new ThreadEvent('exited', info.threadId));
     }
 
     protected handleThreadSelected(info: { threadId: number }) {
+        if (traceThreads) {
+            this.handleMsg('log', `**** Thread selected ${info.threadId}\n`);
+        }
         this.currentThreadId = info.threadId;
         this.sendEvent(new ThreadEvent('selected', info.threadId));
+    }
+
+    protected handleThreadGroupExited(info: { threadGroupId: string }) {
+        if (traceThreads) {
+            this.handleMsg('log', `**** Thread group exited ${info.threadGroupId}\n`);
+        }
+        // When a thread group exits for whaever reason (especially for a re-start) cleanup
+        // and notify VSCode or it will be in a bad state. This can be distinct from a quitEvent
+        // A crash, hd/tcp disconnect in the gdb-server can also cause this event.
+        this.currentThreadId = 0;
+        for (const thId of this.activeThreadIds.values()) {
+            this.sendEvent(new ThreadEvent('exited', thId));
+        }
+        this.activeThreadIds.clear();
     }
 
     protected stopEvent(info: MINode) {
@@ -757,6 +875,9 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected quitEvent() {
+        if (traceThreads) {
+            this.handleMsg('log', '**** quit event\n');
+        }
         this.quit = true;
         this.sendEvent(new TerminatedEvent());
     }
@@ -767,22 +888,42 @@ export class GDBDebugSession extends DebugSession {
         this.quitEvent();
     }
 
+    // returns [threadId, frameId]
+    protected static decodeReference(varRef: number): number[] {
+        return [(varRef & 0xFF00) >>> 8, varRef & 0xFF];
+    }
+
+    protected static encodeReference(threadId: number, frameId: number): number {
+        return ((threadId << 8) | (frameId & 0xFF)) & 0xFFFF;
+    }
+
     protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
         try {
             let name = args.name;
-            if (args.variablesReference >= VAR_HANDLES_START) {
+            let threadId = -1;
+            let frameId = -1;
+            const varRef = args.variablesReference;
+            if (varRef >= VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
                 name = `${parent.name}.${name}`;
+            } else if (varRef === GLOBAL_HANDLE_ID) {
+                name = 'global_var_' + name;
+            } else if (varRef >= STACK_HANDLES_START && varRef < STACK_HANDLES_FINISH) {
+                const tryName = this.createStackVarName(name, varRef);
+                if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
+                    name = tryName;
+                }
+                [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
             }
 
-            const res = await this.miDebugger.varAssign(name, args.value);
+            const res = await this.miDebugger.varAssign(name, args.value, threadId, frameId);
             response.body = {
                 value: res.result('value')
             };
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
+            this.sendErrorResponse(response, 11, `Could not set variable: ${err}`);
         }
     }
 
@@ -922,22 +1063,44 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        if (!this.stopped) {
+        if (!this.stopped || this.restarting) {
             response.body = { threads: [] };
             this.sendResponse(response);
+            return Promise.resolve();
         }
         try {
             const threadIdNode = await this.miDebugger.sendCommand('thread-list-ids');
             const threadIds: number[] = threadIdNode.result('thread-ids').map((ti) => parseInt(ti[1]));
             const currentThread = threadIdNode.result('current-thread-id');
 
+            if (!threadIds || (threadIds.length === 0)) {
+                // Yes, this does happen at the very beginning of an RTOS session
+                response.body = { threads: [] };
+                this.sendResponse(response);
+                return Promise.resolve();
+            }
+
+            for (const thId of threadIds) {
+                // Make sure VSCode knows about all the threads. GDB may still be in the process of notifying
+                // new threads while we already have a thread-list
+                this.handleThreadCreated({threadId: thId, threadGroupId: 'i1'});
+            }
+
             if (!currentThread) {
-                await this.miDebugger.sendCommand(`thread-select ${threadIds[0]}`);
-                this.currentThreadId = threadIds[0];
+                if (!this.activeThreadIds.has(this.currentThreadId)) {
+                    this.currentThreadId = threadIds[0];
+                    // Following doesn't actually work on most embedded gdb-servers. But we will at least
+                    // be in sync with gdb. Things may rectify themselves like they do with OpenOCD bit later
+                    await this.miDebugger.sendCommand(`thread-select ${this.currentThreadId}`);
+                }
             }
             else {
                 this.currentThreadId = parseInt(currentThread);
             }
+
+            /* We have to send this event or else VSCode may have the last/wrong/no thread selected
+             * even though we sent events when a pause/breakpoint happened */
+            this.sendEvent(new ThreadEvent('selected', this.currentThreadId));
 
             const nodes = await Promise.all(threadIds.map((id) => this.miDebugger.sendCommand(`thread-info ${id}`)));
 
@@ -971,7 +1134,7 @@ export class GDBDebugSession extends DebugSession {
             const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
             const ret: StackFrame[] = [];
             for (const element of stack) {
-                const stackId = (args.threadId << 8 | (element.level & 0xFF)) & 0xFFFF;
+                const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
                 const file = element.file;
                 let disassemble = this.forceDisassembly || !file;
                 if (!disassemble) { disassemble = !(await this.checkFileExists(file)); }
@@ -1063,7 +1226,7 @@ export class GDBDebugSession extends DebugSession {
                 const varObjName = `global_var_${symbol.name}`;
                 let varObj: VariableObject;
                 try {
-                    const changes = await this.miDebugger.varUpdate(varObjName);
+                    const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
                     const changelist = changes.result('changelist');
                     changelist.forEach((change) => {
                         const name = MINode.valueOf(change, 'name');
@@ -1114,7 +1277,7 @@ export class GDBDebugSession extends DebugSession {
                 const varObjName = `${file}_static_var_${symbol.name}`;
                 let varObj: VariableObject;
                 try {
-                    const changes = await this.miDebugger.varUpdate(varObjName);
+                    const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
                     const changelist = changes.result('changelist');
                     changelist.forEach((change) => {
                         const name = MINode.valueOf(change, 'name');
@@ -1169,22 +1332,25 @@ export class GDBDebugSession extends DebugSession {
         return varObj.isCompound() ? id : 0;
     }
 
+    protected createStackVarName(name: string, varRef: number) {
+        return `var_${name}_${varRef}`;
+    }
+
     private async stackVariablesRequest(
-        threadId: number,
-        frameId: number,
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
                 try {
-                    const varObjName = `var_${variable.name}`;
+                    const varObjName = this.createStackVarName(variable.name, args.variablesReference);
                     let varObj: VariableObject;
                     try {
-                        const changes = await this.miDebugger.varUpdate(varObjName);
+                        const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
                         const changelist = changes.result('changelist');
                         changelist.forEach((change) => {
                             const name = MINode.valueOf(change, 'name');
@@ -1197,7 +1363,8 @@ export class GDBDebugSession extends DebugSession {
                     }
                     catch (err) {
                         if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(variable.name, varObjName);
+                            // Create variable in current frame/thread context. Matters when we have to set the variable */
+                            varObj = await this.miDebugger.varCreate(variable.name, varObjName, '*');
                             const varId = this.findOrCreateVariable(varObj);
                             varObj.exp = variable.name;
                             varObj.id = varId;
@@ -1230,7 +1397,7 @@ export class GDBDebugSession extends DebugSession {
         // Variable members
         let variable;
         try {
-            variable = await this.miDebugger.evalExpression(JSON.stringify(id));
+            variable = await this.miDebugger.evalExpression(JSON.stringify(id), -1, -1);
             try {
                 let expanded = expandValue(this.createVariable.bind(this), variable.result('value'), id, variable);
                 if (!expanded) {
@@ -1268,14 +1435,11 @@ export class GDBDebugSession extends DebugSession {
             return this.globalVariablesRequest(response, args);
         }
         else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference <= STATIC_HANDLES_FINISH) {
-            const frameId = args.variablesReference & 0xFF;
-            const threadId = (args.variablesReference & 0xFF00) >>> 8;
+            const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
             return this.staticVariablesRequest(threadId, frameId, response, args);
         }
         else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STACK_HANDLES_FINISH) {
-            const frameId = args.variablesReference & 0xFF;
-            const threadId = (args.variablesReference & 0xFF00) >>> 8;
-            return this.stackVariablesRequest(threadId, frameId, response, args);
+            return this.stackVariablesRequest(response, args);
         }
         else {
             id = this.variableHandles.get(args.variablesReference);
@@ -1328,7 +1492,7 @@ export class GDBDebugSession extends DebugSession {
                             this.sendResponse(response);
                         };
                         const addOne = async () => {
-                            const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`));
+                            const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`), -1, -1);
                             try {
                                 const expanded = expandValue(this.createVariable.bind(this), variable.result('value'), varReq.name, variable);
                                 if (!expanded) {
@@ -1391,8 +1555,8 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.ContinueArguments): void {
-        this.miDebugger.interrupt(args.threadId).then((done) => {
+    protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments): void {
+        this.miDebugger.interrupt().then((done) => {
             this.sendResponse(response);
         }, (msg) => {
             this.sendErrorResponse(response, 3, `Could not pause: ${msg}`);
@@ -1488,6 +1652,12 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
+        /*
+         * Expressions (watch/hover/REPL) should always be evaluated in the current context.  Unfortunately, we don't know
+         * what that is as the user is interacting with the call-stack window and VSCode caches some results. But it is
+         * passed in as part of 'args.frameId`. Bit of a misnomer, it has both the thread and frame id encoded into it
+         * when we originally created IDs for each frame.
+         */
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));
@@ -1509,6 +1679,14 @@ export class GDBDebugSession extends DebugSession {
             return varObj.isCompound() ? id : 0;
         };
 
+        // Spec says if 'frameId' is specified, evaluate in the scope specified or in the global scope. Well,
+        // we don't have a way to specify global scope ... use current thread then.
+        let threadId = this.currentThreadId;
+        let frameId = 0;
+        if (args.frameId) {     // Should always be valid
+            [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
+        }
+
         if (args.context === 'watch') {
             try {
                 const exp = args.expression;
@@ -1518,7 +1696,7 @@ export class GDBDebugSession extends DebugSession {
                 const varObjName = `watch_${watchName}`;
                 let varObj: VariableObject;
                 try {
-                    const changes = await this.miDebugger.varUpdate(varObjName);
+                    const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
                     const changelist = changes.result('changelist');
                     changelist.forEach((change) => {
                         const name = MINode.valueOf(change, 'name');
@@ -1561,7 +1739,7 @@ export class GDBDebugSession extends DebugSession {
         }
         else if (args.context === 'hover') {
             try {
-                const res = await this.miDebugger.evalExpression(args.expression);
+                const res = await this.miDebugger.evalExpression(args.expression, threadId, frameId);
                 response.body = {
                     variablesReference: 0,
                     result: res.result('value')
@@ -1573,6 +1751,10 @@ export class GDBDebugSession extends DebugSession {
             }
         }
         else {
+            // REPL: Set the proper thread/frame context before sending command to gdb. We don't know
+            // what the command is but it needs to be run in the proper context.
+            this.miDebugger.sendCommand(`thread-select ${threadId}`);
+            this.miDebugger.sendCommand(`stack-select-frame ${frameId}`);
             this.miDebugger.sendUserInput(args.expression).then((output) => {
                 if (typeof output === 'undefined') {
                     response.body = {
