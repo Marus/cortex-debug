@@ -42,6 +42,8 @@ export class GDBServer extends EventEmitter {
                         }
                     }).catch((e) => {
                         // We could reject here if it is truly a timeout and not something else, caller already has a timeout
+                        // ALso, this is not bullet proof if it fails, we don't know why because of differences in OSes, upgrades, etc.
+                        // But, when it works, we know for sure it worked.
                     });
                 }
 
