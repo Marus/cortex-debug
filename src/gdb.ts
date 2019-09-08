@@ -91,7 +91,8 @@ export class GDBDebugSession extends DebugSession {
     protected variableHandlesReverse: { [id: string]: number } = {};
     protected quit: boolean;
     protected attached: boolean;
-    protected detaching: boolean;
+    protected disconnecting = false;
+    protected restarting = false;
     protected trimCWD: string;
     protected switchCWD: string;
     protected started: boolean;
@@ -679,7 +680,6 @@ export class GDBDebugSession extends DebugSession {
         const doDisconnectProcessing = () => {
             if (this.attached) {
                 this.attached = false;
-                this.detaching = true;
                 this.miDebugger.detach();
             } else {
                 this.miDebugger.stop();
@@ -689,11 +689,15 @@ export class GDBDebugSession extends DebugSession {
                 this.commandServer = undefined;
             }
             setTimeout(() => {      // Give gdb a chance to  disconnect and exit normally
-                try {this.server.exit(); }
+                try {
+                    this.disconnecting = false;
+                    this.server.exit();
+                }
                 catch (e) {}
             }, 100);
         };
 
+        this.disconnecting = true;
         if (this.miDebugger) {
             if (this.attached && !this.stopped) {
                 this.miDebugger.once('generic-stopped', doDisconnectProcessing);
@@ -705,7 +709,13 @@ export class GDBDebugSession extends DebugSession {
         this.sendResponse(response);
     }
 
-    protected restarting = false;
+    //
+    // I don't think we are following the protocol here. but the protocol doesn't make sense. I got a
+    // clarification that for an attach session, restart means detach and re-attach. How does this make
+    // any sense? Isn't that like a null operation?
+    //
+    // https://github.com/microsoft/debug-adapter-protocol/issues/73
+    //
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
         const restartProcessing = async () => {
             this.currentThreadId = 0;
@@ -784,7 +794,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
         this.findPausedThread(info);
-        if (!this.restarting) {
+        if (!this.restarting && !this.disconnecting) {
             this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
         }
@@ -794,7 +804,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'step';
         this.findPausedThread(info);
-        if (!this.restarting) {
+        if (!this.restarting && !this.disconnecting) {
             this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
         }
@@ -812,7 +822,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'user request';
         this.findPausedThread(info);
-        if (!this.restarting) {
+        if (!this.restarting && !this.disconnecting) {
             this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
         }
@@ -1063,7 +1073,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        if (!this.stopped || this.restarting) {
+        if (!this.stopped || this.restarting || this.disconnecting) {
             response.body = { threads: [] };
             this.sendResponse(response);
             return Promise.resolve();
