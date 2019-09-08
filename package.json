@@ -627,6 +627,22 @@
                                     "jtag"
                                 ]
                             },
+                            "openOCDLaunchCommands": {
+                                "default": [],
+                                "description": "OpenOCD commands after config. files are loaded (-c options)",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            "openOCDPreConfigLaunchCommands": {
+                                "default": [],
+                                "description": "OpenOCD commands before config. files are loaded (-c options)",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
                             "configFiles": {
                                 "description": "OpenOCD/pegdbserver configuration file(s) to load",
                                 "items": {
@@ -1155,6 +1171,22 @@
                                 "default": null,
                                 "description": "J-Link script file - optional input file for customizing J-Link actions.",
                                 "type": "string"
+                            },
+                            "openOCDLaunchCommands": {
+                                "default": [],
+                                "description": "OpenOCD commands after config. files are loaded (-c options)",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            "openOCDPreConfigLaunchCommands": {
+                                "default": [],
+                                "description": "OpenOCD commands before config. files are loaded (-c options)",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
                             },
                             "configFiles": {
                                 "description": "OpenOCD configuration file(s) to load",
