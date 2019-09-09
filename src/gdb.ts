@@ -91,8 +91,6 @@ export class GDBDebugSession extends DebugSession {
     protected variableHandlesReverse: { [id: string]: number } = {};
     protected quit: boolean;
     protected attached: boolean;
-    protected disconnecting = false;
-    protected restarting = false;
     protected trimCWD: string;
     protected switchCWD: string;
     protected started: boolean;
@@ -104,7 +102,16 @@ export class GDBDebugSession extends DebugSession {
     protected activeEditorPath: string = null;
     protected currentThreadId: number = 0;
     protected activeThreadIds = new Set<number>();
-    
+
+    /**
+     * If we are requested a major switch like restart/disconnect/detach we may have to interrupt the
+     * the target to make it happen. That interrupt can cause a chain reaction of events, responses
+     * and requests -- considerable gdb chatter -- that affects what we are trying to do. We still rely
+     * on our event 'generic-stopped' but not send events to clients like VSCode or our own frontend.
+     * We should always keep our own state valid though
+     */
+    protected disableSendStoppedEvents = false;
+
     private stopped: boolean = false;
     private stoppedReason: string = '';
 
@@ -688,16 +695,16 @@ export class GDBDebugSession extends DebugSession {
                 this.commandServer.close();
                 this.commandServer = undefined;
             }
-            setTimeout(() => {      // Give gdb a chance to  disconnect and exit normally
+            setTimeout(() => {      // Give gdb a chance to disconnect and exit normally
                 try {
-                    this.disconnecting = false;
+                    this.disableSendStoppedEvents = false;
                     this.server.exit();
                 }
                 catch (e) {}
             }, 100);
         };
 
-        this.disconnecting = true;
+        this.disableSendStoppedEvents = true;
         if (this.miDebugger) {
             if (this.attached && !this.stopped) {
                 this.miDebugger.once('generic-stopped', doDisconnectProcessing);
@@ -718,6 +725,7 @@ export class GDBDebugSession extends DebugSession {
     //
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
         const restartProcessing = async () => {
+            this.disableSendStoppedEvents = false;
             this.currentThreadId = 0;
             this.activeThreadIds.clear();
             const commands = [];
@@ -732,7 +740,6 @@ export class GDBDebugSession extends DebugSession {
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);
                 setTimeout(() => {
-                    this.restarting = false;
                     this.stopped = true;        // This should aleady be true??
                     this.stoppedReason = 'restart';
                     this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
@@ -745,11 +752,7 @@ export class GDBDebugSession extends DebugSession {
             });
         };
 
-        // When the exec-interrupt happens, there will be resulting events and requests coming and we want
-        // try and suppress those and let things settle down. Or else, it may interrupt the restart sequence
-        // We want to keep our own state valid but not generate events that can produce further gdb chatter
-        this.restarting = true;
-
+        this.disableSendStoppedEvents = true;
         if (this.stopped) {
             restartProcessing();
         }
@@ -794,7 +797,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
         this.findPausedThread(info);
-        if (!this.restarting && !this.disconnecting) {
+        if (!this.disableSendStoppedEvents) {
             this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
         }
@@ -804,7 +807,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'step';
         this.findPausedThread(info);
-        if (!this.restarting && !this.disconnecting) {
+        if (!this.disableSendStoppedEvents) {
             this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
         }
@@ -822,7 +825,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'user request';
         this.findPausedThread(info);
-        if (!this.restarting && !this.disconnecting) {
+        if (!this.disableSendStoppedEvents) {
             this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
         }
@@ -1073,7 +1076,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        if (!this.stopped || this.restarting || this.disconnecting) {
+        if (!this.stopped || this.disableSendStoppedEvents) {
             response.body = { threads: [] };
             this.sendResponse(response);
             return Promise.resolve();
