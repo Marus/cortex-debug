@@ -1095,7 +1095,7 @@ export class GDBDebugSession extends DebugSession {
 
             for (const thId of threadIds) {
                 // Make sure VSCode knows about all the threads. GDB may still be in the process of notifying
-                // new threads while we already have a thread-list
+                // new threads while we already have a thread-list. Technically, this should never happen
                 this.handleThreadCreated({threadId: thId, threadGroupId: 'i1'});
             }
 
