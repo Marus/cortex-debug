@@ -28,6 +28,7 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { threadId } from 'worker_threads';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -1100,10 +1101,11 @@ export class GDBDebugSession extends DebugSession {
             }
 
             if (!currentThread) {
-                if (!this.activeThreadIds.has(this.currentThreadId)) {
-                    this.currentThreadId = threadIds[0];
-                    // Following doesn't actually work on most embedded gdb-servers. But we will at least
-                    // be in sync with gdb. Things may rectify themselves like they do with OpenOCD bit later
+                this.currentThreadId = threadIds[0];
+                if (threadIds.length > 1) {    // No confusion when there is only one thread
+                    // thread-select doesn't actually work on most embedded gdb-servers. But we will at least
+                    // be in sync with gdb for querying local variables, etc. Things may rectify themselves like
+                    // they do with OpenOCD bit later. In general, this only happens with buggy gdb-servers
                     await this.miDebugger.sendCommand(`thread-select ${this.currentThreadId}`);
                 }
             }
@@ -1111,8 +1113,10 @@ export class GDBDebugSession extends DebugSession {
                 this.currentThreadId = parseInt(currentThread);
             }
 
-            /* We have to send this event or else VSCode may have the last/wrong/no thread selected
-             * even though we sent events when a pause/breakpoint happened */
+            // We have to send this event or else VSCode may have the last/wrong/no thread selected
+            // even though we sent events when a pause/breakpoint happened. Needed even where there is
+            // is just one thread to make sure call-stack window has proper focus and selection for the
+            // debug buttons to have proper state
             this.sendEvent(new ThreadEvent('selected', this.currentThreadId));
 
             const nodes = await Promise.all(threadIds.map((id) => this.miDebugger.sendCommand(`thread-info ${id}`)));
