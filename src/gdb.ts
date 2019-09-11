@@ -28,7 +28,6 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
-import { threadId } from 'worker_threads';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
