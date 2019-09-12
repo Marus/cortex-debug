@@ -100,6 +100,9 @@ export class GDBDebugSession extends DebugSession {
     protected commandServer: net.Server;
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
+    // currentThreadId is the currently selected thread or where execution has stopped. It not very
+    // meaningful since the current thread id in gdb can change in many ways (when you use a --thread
+    // option on certain commands) 
     protected currentThreadId: number = 0;
     protected activeThreadIds = new Set<number>();
 
@@ -114,6 +117,14 @@ export class GDBDebugSession extends DebugSession {
 
     private stopped: boolean = false;
     private stoppedReason: string = '';
+
+    // stoppedThreadId represents where execution stopped because of a pause, exception, step or breakpoint
+    // Generally continuing execution can only work from that thread for embedded processors. It is bit
+    // different from 'currentThreadId'. This is also the last thread-id used to notify VSCode about
+    // the current thread so the call-stack will initially point to this thread. Maybe currentThreadId
+    // can be made stricter and we can remove this variable -- maybe not set it in handleThreadSelected
+    private stoppedThreadId: number = 0;
+    private stoppedEventPending = false;
 
     protected breakpointMap: Map<string, Breakpoint[]> = new Map();
     protected fileExistsCache: Map<string, boolean> = new Map();
@@ -363,6 +374,7 @@ export class GDBDebugSession extends DebugSession {
                         setTimeout(() => {
                             this.stopped = true;
                             this.stoppedReason = 'start';
+                            this.stoppedThreadId = this.currentThreadId;
                             this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
                             this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
                         }, 50);
@@ -727,6 +739,7 @@ export class GDBDebugSession extends DebugSession {
         const restartProcessing = async () => {
             this.disableSendStoppedEvents = false;
             this.currentThreadId = 0;
+            this.stoppedThreadId = 0;
             this.activeThreadIds.clear();
             const commands = [];
 
@@ -787,9 +800,16 @@ export class GDBDebugSession extends DebugSession {
             for (const item of info.outOfBandRecord[0].output) {
                 if (item[0] === 'thread-id') {
                     this.currentThreadId = parseInt(item[1]);
+                    this.stoppedThreadId = this.currentThreadId;
+                    if (traceThreads) {
+                        this.handleMsg('stdout', `**** Paused Thread: ${this.stoppedThreadId}\n`);
+                    }
                     return;
                 }
             }
+        }
+        if (traceThreads) {
+            this.handleMsg('stdout', `**** Paused Thread: not found. Using ID ${this.stoppedThreadId}. Not good\n`);
         }
     }
     
@@ -800,6 +820,8 @@ export class GDBDebugSession extends DebugSession {
         if (!this.disableSendStoppedEvents) {
             this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
+        } else {
+            this.stoppedEventPending = true;
         }
     }
 
@@ -810,14 +832,15 @@ export class GDBDebugSession extends DebugSession {
         if (!this.disableSendStoppedEvents) {
             this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
+        } else {
+            this.stoppedEventPending = true;
         }
     }
 
-    // Rename this to 'sendEvent' to monitor specific events this after debug finished
-    public sendEventUnused(event: DebugProtocol.Event): void {
+    public sendEvent(event: DebugProtocol.Event): void {
         super.sendEvent(event);
-        if (event instanceof StoppedEvent || event instanceof ContinuedEvent) {
-            this.handleMsg('stdout', 'Event: ' + JSON.stringify(event) + '\n');
+        if (traceThreads && (event instanceof StoppedEvent || event instanceof ContinuedEvent)) {
+            this.handleMsg('stdout', '**** Event: ' + JSON.stringify(event) + '\n');
         }
     }
 
@@ -828,6 +851,8 @@ export class GDBDebugSession extends DebugSession {
         if (!this.disableSendStoppedEvents) {
             this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
+        } else {
+            this.stoppedEventPending = true;
         }
     }
 
@@ -835,9 +860,6 @@ export class GDBDebugSession extends DebugSession {
         if (!this.activeThreadIds.has(info.threadId)) {
             if (traceThreads) {
                 this.handleMsg('log', `**** Thread created ${info.threadId}\n`);
-            }
-            if (this.activeThreadIds.size === 0) {
-                this.currentThreadId = info.threadId;
             }
             this.activeThreadIds.add(info.threadId);
             this.sendEvent(new ThreadEvent('started', info.threadId));
@@ -860,7 +882,6 @@ export class GDBDebugSession extends DebugSession {
             this.handleMsg('log', `**** Thread selected ${info.threadId}\n`);
         }
         this.currentThreadId = info.threadId;
-        this.sendEvent(new ThreadEvent('selected', info.threadId));
     }
 
     protected handleThreadGroupExited(info: { threadGroupId: string }) {
@@ -882,6 +903,7 @@ export class GDBDebugSession extends DebugSession {
         if (!this.quit) {
             this.stopped = true;
             this.stoppedReason = 'exception';
+            this.findPausedThread(info);
             this.sendEvent(new StoppedEvent('exception', this.currentThreadId, true));
             this.sendEvent(new CustomStoppedEvent('exception', this.currentThreadId));
         }
@@ -1100,7 +1122,12 @@ export class GDBDebugSession extends DebugSession {
             }
 
             if (!currentThread) {
-                this.currentThreadId = threadIds[0];
+                this.currentThreadId = threadIds.findIndex((x) => {
+                    return x === this.stoppedThreadId;
+                }) >= 0 ? this.stoppedThreadId : threadIds[0];
+                if (traceThreads) {
+                    this.handleMsg('log', `**** thread-list-ids: no current thread, setting to ${this.currentThreadId}\n`);
+                }
                 if (threadIds.length > 1) {    // No confusion when there is only one thread
                     // thread-select doesn't actually work on most embedded gdb-servers. But we will at least
                     // be in sync with gdb for querying local variables, etc. Things may rectify themselves like
@@ -1110,13 +1137,22 @@ export class GDBDebugSession extends DebugSession {
             }
             else {
                 this.currentThreadId = parseInt(currentThread);
+                if (traceThreads) {
+                    this.handleMsg('log', `**** thread-list-ids: current thread = ${this.currentThreadId}\n`);
+                }
             }
 
             // We have to send this event or else VSCode may have the last/wrong/no thread selected
-            // even though we sent events when a pause/breakpoint happened. Needed even where there is
-            // is just one thread to make sure call-stack window has proper focus and selection for the
-            // debug buttons to have proper state
-            this.sendEvent(new ThreadEvent('selected', this.currentThreadId));
+            // because when we stopped, we may not have had a valid thread (gdb-server issues). Needed even
+            // where there is is just one thread to make sure call-stack window has proper focus and
+            // selection for the debug buttons to have proper state. Esp. matters on restart with runToMain = false
+            // and on an attach
+            if (this.stoppedEventPending || (this.currentThreadId !== this.stoppedThreadId)) {
+                this.stoppedEventPending = false;
+                this.stoppedThreadId = this.currentThreadId;
+                this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+                this.sendEvent(new CustomStoppedEvent(this.stoppedReason, this.currentThreadId));
+            }
 
             const nodes = await Promise.all(threadIds.map((id) => this.miDebugger.sendCommand(`thread-info ${id}`)));
 
