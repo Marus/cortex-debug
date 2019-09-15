@@ -42,12 +42,6 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
             'interpreter-exec console "monitor reset"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -56,12 +50,6 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -70,12 +58,15 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
             'interpreter-exec console "monitor halt"',
             'interpreter-exec console "monitor reset"'
         ];
+        return commands;
+    }
 
+    public swoCommands(): string[] {
+        const commands = [];
         if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-
         return commands;
     }
 

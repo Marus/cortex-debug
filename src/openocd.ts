@@ -45,12 +45,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             'interpreter-exec console "monitor reset halt"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled) {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -59,12 +53,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled) {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -72,12 +60,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands: string[] = [
             'interpreter-exec console "monitor reset halt"'
         ];
+        return commands;
+    }
 
+    public swoCommands(): string[] {
+        const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-
         return commands;
     }
 

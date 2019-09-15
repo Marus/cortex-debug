@@ -45,12 +45,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             'interpreter-exec console "monitor reset"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled) {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -59,12 +53,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled) {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-        
         return commands;
     }
 
@@ -73,12 +61,15 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             'interpreter-exec console "monitor halt"',
             'interpreter-exec console "monitor reset"'
         ];
+        return commands;
+    }
 
+    public swoCommands(): string[] {
+        const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-
         return commands;
     }
 

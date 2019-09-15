@@ -41,12 +41,6 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             'interpreter-exec console "monitor reset halt"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -57,12 +51,6 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
-
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            const swocommands = this.SWOConfigurationCommands();
-            commands.push(...swocommands);
-        }
-
         return commands;
     }
 
@@ -70,12 +58,15 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const commands: string[] = [
             'interpreter-exec console "monitor reset"'
         ];
+        return commands;
+    }
 
+    public swoCommands(): string[] {
+        const commands = [];
         if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-
         return commands;
     }
 

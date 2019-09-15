@@ -164,6 +164,7 @@ export interface GDBServerController extends EventEmitter {
     launchCommands(): string[];
     attachCommands(): string[];
     restartCommands(): string[];
+    swoCommands(): string[];
     serverExecutable(): string;
     serverArguments(): string[];
     initMatch(): RegExp;
