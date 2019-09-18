@@ -889,7 +889,7 @@ export class GDBDebugSession extends DebugSession {
         }
         if (!this.activeThreadIds.has(info.threadId)) {
             // We are seeing this happen. Not sure why and and can this event be relied upon?
-            this.handleMsg('log', `Thread Error: GDB trying to select thread '${info.threadId}' that does not exist.\n`);
+            this.handleMsg('log', `Thread Error: GDB trying to select thread '${info.threadId}' that does not exist. No harm done\n`);
         } else {
             this.currentThreadId = info.threadId;
         }
