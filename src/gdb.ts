@@ -104,7 +104,7 @@ export class GDBDebugSession extends DebugSession {
     // meaningful since the current thread id in gdb can change in many ways (when you use a --thread
     // option on certain commands) 
     protected currentThreadId: number = 0;
-    protected activeThreadIds = new Set<number>();
+    protected activeThreadIds = new Set<number>();      // Used for consistency check
 
     /**
      * If we are requested a major switch like restart/disconnect/detach we may have to interrupt the
@@ -122,7 +122,7 @@ export class GDBDebugSession extends DebugSession {
     // Generally continuing execution can only work from that thread for embedded processors. It is bit
     // different from 'currentThreadId'. This is also the last thread-id used to notify VSCode about
     // the current thread so the call-stack will initially point to this thread. Maybe currentThreadId
-    // can be made stricter and we can remove this variable -- maybe not set it in handleThreadSelected
+    // can be made stricter and we can remove this variable
     private stoppedThreadId: number = 0;
     private stoppedEventPending = false;
 
@@ -738,9 +738,6 @@ export class GDBDebugSession extends DebugSession {
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
         const restartProcessing = async () => {
             this.disableSendStoppedEvents = false;
-            this.currentThreadId = 0;
-            this.stoppedThreadId = 0;
-            this.activeThreadIds.clear();
             const commands = [];
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
@@ -840,7 +837,7 @@ export class GDBDebugSession extends DebugSession {
     public sendEvent(event: DebugProtocol.Event): void {
         super.sendEvent(event);
         if (traceThreads && (event instanceof StoppedEvent || event instanceof ContinuedEvent)) {
-            this.handleMsg('stdout', '**** Event: ' + JSON.stringify(event) + '\n');
+            this.handleMsg('log', '**** Event: ' + JSON.stringify(event) + '\n');
         }
     }
 
@@ -863,6 +860,8 @@ export class GDBDebugSession extends DebugSession {
             }
             this.activeThreadIds.add(info.threadId);
             this.sendEvent(new ThreadEvent('started', info.threadId));
+        } else {
+            this.handleMsg('log', `Thread Error: GDB trying to create thread '${info.threadId}' that already exists`);
         }
     }
 
@@ -870,9 +869,16 @@ export class GDBDebugSession extends DebugSession {
         if (traceThreads) {
             this.handleMsg('log', `**** Thread exited ${info.threadId}\n`);
         }
-        this.activeThreadIds.delete(info.threadId);
+        if (this.activeThreadIds.has(info.threadId)) {
+            this.activeThreadIds.delete(info.threadId);
+        } else {
+            this.handleMsg('log', `Thread Error: GDB trying to delete thread '${info.threadId}' that does not exist.\n`);
+        }
         if (this.currentThreadId === info.threadId) {
             this.currentThreadId = 0;
+        }
+        if (this.stoppedThreadId === info.threadId) {
+            this.stoppedThreadId = 0;
         }
         this.sendEvent(new ThreadEvent('exited', info.threadId));
     }
@@ -881,7 +887,12 @@ export class GDBDebugSession extends DebugSession {
         if (traceThreads) {
             this.handleMsg('log', `**** Thread selected ${info.threadId}\n`);
         }
-        this.currentThreadId = info.threadId;
+        if (!this.activeThreadIds.has(info.threadId)) {
+            // We are seeing this happen. Not sure why and and can this event be relied upon?
+            this.handleMsg('log', `Thread Error: GDB trying to select thread '${info.threadId}' that does not exist.\n`);
+        } else {
+            this.currentThreadId = info.threadId;
+        }
     }
 
     protected handleThreadGroupExited(info: { threadGroupId: string }) {
@@ -1118,7 +1129,9 @@ export class GDBDebugSession extends DebugSession {
             for (const thId of threadIds) {
                 // Make sure VSCode knows about all the threads. GDB may still be in the process of notifying
                 // new threads while we already have a thread-list. Technically, this should never happen
-                this.handleThreadCreated({threadId: thId, threadGroupId: 'i1'});
+                if (!this.activeThreadIds.has(thId)) {
+                    this.handleThreadCreated({threadId: thId, threadGroupId: 'i1'});
+                }
             }
 
             if (!currentThread) {
@@ -1704,12 +1717,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-        /*
-         * Expressions (watch/hover/REPL) should always be evaluated in the current context.  Unfortunately, we don't know
-         * what that is as the user is interacting with the call-stack window and VSCode caches some results. But it is
-         * passed in as part of 'args.frameId`. Bit of a misnomer, it has both the thread and frame id encoded into it
-         * when we originally created IDs for each frame.
-         */
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));
@@ -1737,6 +1744,12 @@ export class GDBDebugSession extends DebugSession {
         let frameId = 0;
         if (args.frameId) {     // Should always be valid
             [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
+            if (traceThreads) {
+                this.handleMsg('log', `**** evaluateRequest: ${args.context} '${args.expression}' in thread#${threadId} frame#${frameId}\n`);
+            }
+        } else {
+            // In practice, never seen this unless it comes from a custom request
+            this.handleMsg('log', `Thread Warning: ${args.context}: eval. expression '${args.expression}' with no thread context. Using default\n`);
         }
 
         if (args.context === 'watch') {
@@ -1765,7 +1778,7 @@ export class GDBDebugSession extends DebugSession {
                 }
                 catch (err) {
                     if (err instanceof MIError && err.message === 'Variable object not found') {
-                        varObj = await this.miDebugger.varCreate(exp, varObjName);
+                        varObj = await this.miDebugger.varCreate(exp, varObjName, '@');  // Create floating variable
                         const varId = findOrCreateVariable(varObj);
                         varObj.exp = exp;
                         varObj.id = varId;
