@@ -17,6 +17,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     
     private peripherials: PeripheralNode[] = [];
     private loaded: boolean = false;
+    private svdFileName: string | null;
     
     constructor() {
 
@@ -37,6 +38,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             SVDFile = fullpath;
         }
 
+        this.svdFileName = SVDFile;
         return SVDParser.parseSVD(SVDFile).then((peripherals) => {
             this.peripherials = peripherals;
             this.loaded = true;
@@ -70,7 +72,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             }
         }
         else if (!this.loaded) {
-            return [new MessageNode('No SVD File Loaded', null)];
+            return [new MessageNode('No SVD File Loaded: ' + this.svdFileName || 'None', null)];
         }
         else {
             return [];
@@ -112,7 +114,11 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                             this.peripherials = [];
                             this.loaded = false;
                             this._onDidChangeTreeData.fire();
-                            vscode.window.showErrorMessage(`Unable to parse SVD file: ${e.toString()}`);
+                            const msg = `Unable to parse SVD file: ${e.toString()}`;
+                            vscode.window.showErrorMessage(msg);
+                            if (vscode.debug.activeDebugConsole) {
+                                vscode.debug.activeDebugConsole.appendLine(msg);
+                            }
                             resolve();
                             reporting.sendEvent('Peripheral View', 'Error', e.toString());
                         }

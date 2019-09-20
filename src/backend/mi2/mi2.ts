@@ -190,19 +190,26 @@ export class MI2 extends EventEmitter implements IBackend {
                                 }
                             }
                             else if (record.type === 'notify') {
+                                let tid: undefined | string;
+                                let gid: undefined | string;
+                                for (const item of record.output) {
+                                    if (item[0] === 'id') {
+                                        tid = item[1];
+                                    } else if (item[0] === 'group-id') {
+                                        gid = item[1];
+                                    }
+                                }
                                 if (record.asyncClass === 'thread-created') {
-                                    const tid = parsed.result('id');
-                                    const gid = parsed.result('group-id');
-                                    this.emit('thread-created', { threadId: tid, threadGroupId: gid });
+                                    this.emit('thread-created', { threadId: parseInt(tid), threadGroupId: gid });
                                 }
                                 else if (record.asyncClass === 'thread-exited') {
-                                    const tid = parsed.result('id');
-                                    const gid = parsed.result('group-id');
-                                    this.emit('thread-exited', { threadId: tid, threadGroupId: gid });
+                                    this.emit('thread-exited', { threadId: parseInt(tid), threadGroupId: gid });
                                 }
                                 else if (record.asyncClass === 'thread-selected') {
-                                    const tid = parsed.result('id');
-                                    this.emit('thread-selected', { threadId: tid });
+                                    this.emit('thread-selected', { threadId: parseInt(tid) });
+                                }
+                                else if (record.asyncClass === 'thread-group-exited') {
+                                    this.emit('thread-group-exited', { threadGroupId: tid });
                                 }
                             }
                         }
@@ -229,24 +236,33 @@ export class MI2 extends EventEmitter implements IBackend {
         }
     }
     
-    public stop() {
+    public async stop() {
+        if (trace) {
+            this.log('stderr', 'stop');
+        }
         const proc = this.process;
         const to = setTimeout(() => { this.tryKill(); }, 1000);
         this.process.on('exit', (code) => { clearTimeout(to); });
+        // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
+        // program is in paused state
+        await this.sendCommand('target-disconnect');
         this.sendRaw('-gdb-exit');
     }
 
-    public detach() {
-        this.sendCommand('target-detach');
+    public async detach() {
+        if (trace) {
+            this.log('stderr', 'detach');
+        }
+        await this.sendCommand('target-detach');
         this.stop();
     }
 
-    public interrupt(threadId: number): Thenable<boolean> {
+    public interrupt(arg: string = ''): Thenable<boolean> {
         if (trace) {
-            this.log('stderr', 'interrupt');
+            this.log('stderr', 'interrupt ' + arg);
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand(`exec-interrupt --thread ${threadId}`).then((info) => {
+            this.sendCommand(`exec-interrupt ${arg}`).then((info) => {
                 resolve(info.resultRecords.resultClass === 'done');
             }, reject);
         });
@@ -305,13 +321,22 @@ export class MI2 extends EventEmitter implements IBackend {
         return this._sendCommandSequence(commands);
     }
 
+    public postStart(commands: string[]): Thenable<boolean> {
+        if (trace) {
+            this.log('stderr', 'post-start');
+        }
+        return this._sendCommandSequence(commands);
+    }
+
     private _sendCommandSequence(commands: string[]): Thenable<boolean> {
         return new Promise((resolve, reject) => {
             const nextCommand = ((commands: string[]) => {
-                if (commands.length === 0) { resolve(true); }
-                const command = commands[0];
-
-                this.sendCommand(command).then((r) => { nextCommand(commands.slice(1)); }, reject);
+                if (commands.length === 0) {
+                    resolve(true);
+                } else {
+                    const command = commands[0];
+                    this.sendCommand(command).then((r) => { nextCommand(commands.slice(1)); }, reject);
+                }
             }).bind(this);
 
             nextCommand(commands);
@@ -496,12 +521,14 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public evalExpression(name: string): Thenable<any> {
+    // Pass negative threadId/frameId to specify no context or current context
+    public evalExpression(name: string, threadId: number, frameId: number): Thenable<any> {
         if (trace) {
             this.log('stderr', 'evalExpression');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand('data-evaluate-expression ' + name).then((result) => {
+            const thFr = MI2.getThreadFrameStr(threadId, frameId);
+            this.sendCommand(`data-evaluate-expression ${thFr} ` + name).then((result) => {
                 resolve(result);
             }, reject);
         });
@@ -516,17 +543,19 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(expression: string, name: string = '-'): Promise<VariableObject> {
+    public async varCreate(expression: string, name: string = '-', scope: string = '@'): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
         let fmt = null;
-        if (/,[bdhonx]/i.test(expression)) {
-            fmt = expression.substring(expression.length - 1);
+        expression = expression.trim();
+        if (/,[bdhonx]$/i.test(expression)) {
+            fmt = expression.substring(expression.length - 1).toLocaleLowerCase();
             expression = expression.substring(0, expression.length - 2);
         }
+        expression = expression.replace(/"/g, '\\"');
 
-        const createResp = await this.sendCommand(`var-create ${name} @ "${expression}"`);
+        const createResp = await this.sendCommand(`var-create ${name} ${scope} "${expression}"`);
         let overrideVal = null;
         if (fmt && name !== '-') {
             const formatResp = await this.sendCommand(`var-set-format ${name} ${MI2.FORMAT_SPEC_MAP[fmt]}`);
@@ -558,18 +587,26 @@ export class MI2 extends EventEmitter implements IBackend {
         return omg;
     }
 
-    public async varUpdate(name: string = '*'): Promise<MINode> {
+    public static getThreadFrameStr(threadId: number, frameId: number): string {
+        const th = threadId > 0 ? `--thread ${threadId} ` : '';
+        const fr = frameId >= 0 ? `--frame ${frameId}` : '';
+        return th + fr;
+    }
+
+    // Pass negative threadId/frameId to specify no context or current context
+    public async varUpdate(name: string = '*', threadId: number, frameId: number): Promise<MINode> {
         if (trace) {
             this.log('stderr', 'varUpdate');
         }
-        return this.sendCommand(`var-update --all-values ${name}`);
+        return this.sendCommand(`var-update ${MI2.getThreadFrameStr(threadId, frameId)} --all-values ${name}`);
     }
 
-    public async varAssign(name: string, rawValue: string): Promise<MINode> {
+    // Pass negative threadId/frameId to specify no context or current context
+    public async varAssign(name: string, rawValue: string, threadId: number, frameId: number): Promise<MINode> {
         if (trace) {
             this.log('stderr', 'varAssign');
         }
-        return this.sendCommand(`var-assign ${name} ${rawValue}`);
+        return this.sendCommand(`var-assign ${MI2.getThreadFrameStr(threadId, frameId)} ${name} ${rawValue}`);
     }
 
     public logNoNewLine(type: string, msg: string) {
@@ -590,10 +627,17 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public sendRaw(raw: string) {
-        if (this.printCalls) {
+        if (this.printCalls || trace) {
             this.log('log', raw);
         }
+        if (raw.includes('undefined')) {
+            console.log(raw);
+        }
         this.process.stdin.write(raw + '\n');
+    }
+
+    public getCurrentToken(): number {
+        return this.currentToken;
     }
 
     public sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
