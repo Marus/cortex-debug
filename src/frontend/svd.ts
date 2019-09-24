@@ -26,7 +26,7 @@ export class SVDParser {
         return new Promise((resolve, reject) => {
             fs.readFile(path, 'utf8', (err, data) => {
                 if (err) {
-                    reject(path + ': ' + err.message);
+                    reject(err);
                     return;
                 }
 
