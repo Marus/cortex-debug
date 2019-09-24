@@ -83,7 +83,9 @@ export class SVDParser {
                         }
                     });
 
-                    peripherials.forEach((p) => { p.markAddresses(); });
+                    for (const p of peripherials) {
+                        p.markAddresses();
+                    }
                     
                     resolve(peripherials);
                 });
@@ -343,11 +345,13 @@ export class SVDParser {
         
         const peripheral = new PeripheralNode(options);
 
-        if (p.registers[0].register) {
-            SVDParser.parseRegisters(p.registers[0].register, peripheral);
-        }
-        if (p.registers[0].cluster) {
-            SVDParser.parseClusters(p.registers[0].cluster, peripheral);
+        if (p.registers) {
+            if (p.registers[0].register) {
+                SVDParser.parseRegisters(p.registers[0].register, peripheral);
+            }
+            if (p.registers[0].cluster) {
+                SVDParser.parseClusters(p.registers[0].cluster, peripheral);
+            }
         }
 
         return peripheral;
