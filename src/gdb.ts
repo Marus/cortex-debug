@@ -617,9 +617,8 @@ export class GDBDebugSession extends DebugSession {
         return instructions;
     }
 
-    protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: number, length: number) {
-        const address = hexFormat(startAddress, 8);
-        this.miDebugger.sendCommand(`data-read-memory-bytes ${address} ${length}`).then((node) => {
+    protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
+        this.miDebugger.sendCommand(`data-read-memory-bytes "${startAddress}" ${length}`).then((node) => {
             const startAddress = node.resultRecords.results[0][1][0][0][1];
             const endAddress = node.resultRecords.results[0][1][0][2][1];
             const data = node.resultRecords.results[0][1][0][3][1];
@@ -633,7 +632,7 @@ export class GDBDebugSession extends DebugSession {
         }, (error) => {
             response.body = { error: error };
             this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
-            this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', `${startAddress.toString(16)}-${length.toString(16)}`));
+            this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', `${startAddress},${length.toString(16)}`));
         });
     }
 

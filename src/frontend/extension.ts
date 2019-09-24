@@ -226,29 +226,38 @@ export class CortexDebugExtension {
             }
         }
 
+        function validateAddress(address: string) {
+            if (address === '') {
+                return null;
+            }
+            return address;
+        }
+
         if (!vscode.debug.activeDebugSession) {
             vscode.window.showErrorMessage('No debugging session available');
             return;
         }
 
         vscode.window.showInputBox({
-            placeHolder: 'Prefix with 0x for hexidecimal format',
+            placeHolder: 'Enter a valid C/gdb expression. Use 0x prefix for hexidecimal numbers',
             ignoreFocusOut: true,
             prompt: 'Memory Address'
         }).then(
             (address) => {
-                if (!validateValue(address)) {
+                address = address.trim();
+                if (!validateAddress(address)) {
                     vscode.window.showErrorMessage('Invalid memory address entered');
                     Reporting.sendEvent('Examine Memory', 'Invalid Address', address);
                     return;
                 }
 
                 vscode.window.showInputBox({
-                    placeHolder: 'Prefix with 0x for hexidecimal format',
+                    placeHolder: 'Enter a constant value. Prefix with 0x for hexidecimal format.',
                     ignoreFocusOut: true,
                     prompt: 'Length'
                 }).then(
                     (length) => {
+                        length = length.trim();
                         if (!validateValue(length)) {
                             vscode.window.showErrorMessage('Invalid length entered');
                             Reporting.sendEvent('Examine Memory', 'Invalid Length', length);
@@ -257,8 +266,10 @@ export class CortexDebugExtension {
 
                         Reporting.sendEvent('Examine Memory', 'Valid', `${address}-${length}`);
                         const timestamp = new Date().getTime();
+                        const addrEnc = encodeURIComponent(`${address}`);
                         // tslint:disable-next-line:max-line-length
-                        vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${address}+${length}].cdmem?address=${address}&length=${length}&timestamp=${timestamp}`))
+                        const uri = vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`);
+                        vscode.workspace.openTextDocument(uri)
                             .then((doc) => {
                                 vscode.window.showTextDocument(doc, { viewColumn: 2, preview: false });
                                 Reporting.sendEvent('Examine Memory', 'Used');
