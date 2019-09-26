@@ -268,8 +268,7 @@ export class CortexDebugExtension {
                         const timestamp = new Date().getTime();
                         const addrEnc = encodeURIComponent(`${address}`);
                         // tslint:disable-next-line:max-line-length
-                        const uri = vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`);
-                        vscode.workspace.openTextDocument(uri)
+                        vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`))
                             .then((doc) => {
                                 vscode.window.showTextDocument(doc, { viewColumn: 2, preview: false });
                                 Reporting.sendEvent('Examine Memory', 'Used');

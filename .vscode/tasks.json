@@ -7,7 +7,19 @@
             "label": "test-compile",
             "type": "shell",
             "command": "npm",
-            "args": ["run-script", "test-compile"]
+            "args": [
+                "run-script",
+                "test-compile"
+            ]
+        },
+        {
+            "type": "npm",
+            "script": "watch",
+            "problemMatcher": [
+                "$tsc-watch"
+            ],
+            "group": "build",
+            "isBackground": true
         }
     ]
 }

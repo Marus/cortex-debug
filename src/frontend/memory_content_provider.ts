@@ -75,6 +75,8 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
             const name = pair.shift();      // First part is name
             query[name] = pair.join('=');   // Rest is the value
         }
+        // THe API has already decoded the Uri or else we could have just split on '&' and '=' and be order-independent
+        // We know that we will have three parameters and it is the first one that will have complex stuff in it
         const pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
         addToQuery(pairs.pop());            // get timestamp
         addToQuery(pairs.pop());            // get length

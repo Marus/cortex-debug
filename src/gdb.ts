@@ -632,7 +632,7 @@ export class GDBDebugSession extends DebugSession {
         }, (error) => {
             response.body = { error: error };
             this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
-            this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', `${startAddress},${length.toString(16)}`));
+            this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', `${startAddress}-${length.toString(16)}`));
         });
     }
 
