@@ -1,3 +1,17 @@
+# V0.3.3
+
+1. New Features
+   * Added `postStartSessionCommands` and `postRestartSessionCommands` configuration options to `launch.json`. These gdb commands are executed after a debug session has (re)started. These options apply to both `launch` and `attach` sessions. However, `postStartSessionCommands` is ignored if `runToMain` is enabled. See [Issue 197](https://github.com/Marus/cortex-debug/issues/197). You can use this feature to issue a `continue` or request a gdb-server like OpenOCD to perform a sync, etc.
+   * Added `openOCDPreConfigLaunchCommands` configuration option to `launch.json`. This is similar to `openOCDLaunchCommands` but are executed before any OpenOCD config files are loaded.
+   * Added the ability to use an expression for the start address of a memory window. This can be any valid expression understood by GDB
+2. There are several changes related to RTOS thread aware debugging. In general, the experience is much better but we have become aware that many gdb-servers are not fully compliant or get out of sync with gdb and thus Cortex-Debug. This is especially true at the (re)start of a debug session.
+   * Better tracking of thread creation/exiting and the entire program exiting
+   * When the debugger pauses due to any reason, the proper thread is highlighted in the Call Stack Window
+   * Variables and Watch windows better track the current thread/frame. Same is true for hover and REPL; expressions evaluate in the context of the currently selected thread/frame in the Call Stack Window.
+3. The gdb-server (like OpenOCD/pyocd) now starts in the same directory as the `cwd` option in `launch.json`. Before, it was undefined.
+4. Fixed a crash if an SVD peripheral had no registers. Issue [#208](https://github.com/Marus/cortex-debug/issues/208)
+5. Fixed an issue where setting a variable was not working in the Variables Window. There may still be an issue with file static variables.
+
 # V0.3.0
 
 ## NOTE: Cortex-Debug is now only compatible with Visual Studio Code V1.34.0 or newer.
@@ -9,7 +23,7 @@
 ### Other Changes in V0.3.0
 * Added support for formatting watch values; add the following format strings:
 	* `b` - format in binary
-	* `h` or `x` - format in hexidecimal
+	* `h` or `x` - format in hexadecimal
 	* `d` - format in decimal
 	* `o` - format in octal
 	
@@ -21,7 +35,7 @@
 	* program counter (`pc`) in hexidecimal with corresponding symbol location if available
 	* xPSR/cPSR/Control in hexidecimal (this is overridden from the GDB defaults for those registers)
 
-	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future.
+	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future. You can also use a Watch expression for a register to the desired $reg,format to get the format you desire. For instance `$r0,x` will display the register value of `r0` in hexadecimal format.
 * Major refactor of the code for the Core Register and Peripheral Register displays; along with bringing (hopefully) improved formatting and UX to this views will make the code much easier to maintain and expand in the future.
 * The SWO grapher view should now be functional again on newer of VSCode. This view is now also theme aware and will adapt the colour scheme for standard elements to work with your theme (you still need to provide appropriate colours for your plots in the graph config).
 * Extension code is now bundled for faster load time and smaller installs
