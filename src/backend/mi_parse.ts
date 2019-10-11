@@ -247,6 +247,7 @@ export function parseMI(output: string): MINode {
         const canBeValueList = output[0] === '[';
         output = output.substr(1);
         if (output[0] === '}' || output[0] === ']') {
+            output = output.substr(1);
             return [];
         }
         if (canBeValueList) {

@@ -118,6 +118,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             serverargs.push('-s', this.args.cwd);
         }
 
+        for (const cmd of this.args.openOCDPreConfigLaunchCommands || []) {
+            serverargs.push('-c', cmd);
+        }
+
         this.args.configFiles.forEach((cf, idx) => {
             serverargs.push('-f', cf);
         });
@@ -145,15 +149,12 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             commands.push(`tpiu config ${tpiuIntExt} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
         }
 
-        // Append additional commands
-        if (this.args.openOCDLaunchCommands) {
-            this.args.openOCDLaunchCommands.forEach((cmd) => {
-                commands.push(cmd);
-            });
-        }
-        
         if (commands.length > 0) {
             serverargs.push('-c', commands.join('; '));
+        }
+
+        for (const cmd of this.args.openOCDLaunchCommands || []) {
+            serverargs.push('-c', cmd);
         }
 
         return serverargs;

@@ -30,7 +30,7 @@ export interface IBackend {
     connect(cwd: string, executable: string, target: string[]): Thenable<any>;
     stop();
     detach();
-    interrupt(threadId: number): Thenable<boolean>;
+    interrupt(arg: string): Thenable<boolean>;
     continue(threadId: number): Thenable<boolean>;
     next(threadId: number, instruction: boolean): Thenable<boolean>;
     step(threadId: number, instruction: boolean): Thenable<boolean>;
@@ -39,7 +39,7 @@ export interface IBackend {
     removeBreakpoints(breakpoints: number[]): Promise<boolean>;
     getStack(threadId: number, startLevel: number, maxLevels: number): Thenable<Stack[]>;
     getStackVariables(thread: number, frame: number): Thenable<Variable[]>;
-    evalExpression(name: string): Thenable<any>;
+    evalExpression(name: string, threadId: number, frameId: number): Thenable<any>;
     isReady(): boolean;
     changeVariable(name: string, rawValue: string): Thenable<any>;
     examineMemory(from: number, to: number): Thenable<any>;

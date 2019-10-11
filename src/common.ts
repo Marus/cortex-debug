@@ -100,6 +100,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     preRestartCommands: string[];
     postRestartCommands: string[];
     overrideRestartCommands: string[];
+    postStartSessionCommands: string[];
+    postRestartSessionCommands: string[];
     overrideGDBServerStartedRegex: string;
     svdFile: string;
     swoConfig: SWOConfiguration;
@@ -122,6 +124,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     configFiles: string[];
     searchDir: string[];
     openOCDLaunchCommands: string[];
+    openOCDPreConfigLaunchCommands: string[];
 
     // PyOCD Specific
     boardId: string;

@@ -28,6 +28,7 @@ interface SVDInfo {
 
 export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
+    private clearAdapterOutputChannel = false;
     private swo: SWOCore = null;
     private swosource: SWOSource = null;
 
@@ -370,6 +371,7 @@ export class CortexDebugExtension {
             this.swosource.dispose();
             this.swosource = null;
         }
+        this.clearAdapterOutputChannel = true;
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
@@ -441,7 +443,11 @@ export class CortexDebugExtension {
     private receivedAdapterOutput(e) {
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+            this.adapterOutputChannel.show();
+        } else if (this.clearAdapterOutputChannel) {
+            this.adapterOutputChannel.clear();
         }
+        this.clearAdapterOutputChannel = false;
 
         let output = e.body.content;
         if (!output.endsWith('\n')) { output += '\n'; }
