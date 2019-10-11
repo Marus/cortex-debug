@@ -14,11 +14,12 @@ export class MemReadUtils {
     public static readMemoryChunks(startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<boolean> {
         const promises = specs.map((r) => {
             return new Promise((resolve, reject) => {
-                vscode.debug.activeDebugSession.customRequest('read-memory', { address: r.base, length: r.length }).then((data) => {
+                const addr = '0x' + r.base.toString(16);
+                vscode.debug.activeDebugSession.customRequest('read-memory', { address: addr, length: r.length }).then((data) => {
                     let dst = r.base - startAddr;
                     const bytes: number[] = data.bytes;
                     for (const byte of bytes) {
-                        storeTo[dst++] = byte;        // Yes, map is way too slow, where is my memcpy?
+                        storeTo[dst++] = byte;
                     }
                     resolve(true);
                 }, (e) => {
@@ -31,7 +32,7 @@ export class MemReadUtils {
             Promise.all(promises).then((_) => {
                 resolve(true);
             }).catch((e) => {
-                reject(`read-failed ${e}`);
+                reject(e);
             });
         });
     }

@@ -11,12 +11,12 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
             const highlightAt = -1;
             const query = this.parseQuery(uri.query);
             
-            const address: number = query['address'].startsWith('0x') ? parseInt(query['address'].substring(2), 16) : parseInt(query['address'], 10);
-            const length: number = query['length'].startsWith('0x') ? parseInt(query['length'].substring(2), 16) : parseInt(query['length'], 10);
-            
-            vscode.debug.activeDebugSession.customRequest('read-memory', { address: address, length: length || 32 }).then((data) => {
+            const addressExpr = query['address'];
+            const length: number = this.parseHexOrDecInt(query['length']);
+
+            vscode.debug.activeDebugSession.customRequest('read-memory', { address: addressExpr, length: length || 32 }).then((data) => {
                 const bytes = data.bytes;
-                
+                const address = this.parseHexOrDecInt(data.startAddress);
                 let lineAddress = address - (address % 16);
                 const lineLength = 16;
                 const offset = address - lineAddress;
@@ -57,7 +57,8 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
                 resolve(output);
             }, (error) => {
-                vscode.window.showErrorMessage(`Unable to read memory from ${hexFormat(address, 8)} to ${hexFormat(address + length, 8)}`);
+                const msg = error.message || '';
+                vscode.window.showErrorMessage(`Unable to read memory from ${addressExpr} of length ${hexFormat(length, 8)}: ${msg}`);
                 reject(error.toString());
             });
         });
@@ -69,12 +70,22 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
     private parseQuery(queryString) {
         const query = {};
-        const pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
-        for (const pairstring of pairs) {
-            const pair = pairstring.split('=');
-            query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        function addToQuery(str: string) {
+            const pair = str.split('=');
+            const name = pair.shift();      // First part is name
+            query[name] = pair.join('=');   // Rest is the value
         }
+        // THe API has already decoded the Uri or else we could have just split on '&' and '=' and be order-independent
+        // We know that we will have three parameters and it is the first one that will have complex stuff in it
+        const pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
+        addToQuery(pairs.pop());            // get timestamp
+        addToQuery(pairs.pop());            // get length
+        addToQuery(pairs.join('&'));        // Rest is the addr-expression
         return query;
+    }
+
+    private parseHexOrDecInt(str: string): number {
+        return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
     }
 
     /**

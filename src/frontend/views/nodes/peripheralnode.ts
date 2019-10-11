@@ -7,6 +7,7 @@ import { MemReadUtils } from '../../memreadutils';
 import { hexFormat } from '../../utils';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralClusterNode } from './peripheralclusternode';
+import * as vscode from 'vscode';
 
 export interface PeripheralOptions {
     name: string;
@@ -107,14 +108,20 @@ export class PeripheralNode extends PeripheralBaseNode {
                 Promise.all(promises).then((_) => {
                     resolve(true);
                 }).catch((e) => {
-                    const str = `Failed  to update peripheral ${this.name}:${e}`;
-                    console.log(str);
-                    reject(str);
+                    const msg = e.message || 'unknown error';
+                    const str = `Failed to update peripheral ${this.name}: ${msg}`;
+                    if (vscode.debug.activeDebugConsole) {
+                        vscode.debug.activeDebugConsole.appendLine(str);
+                    }
+                    reject(new Error(str));
                 });
-            }, (error) => {
-                const str = `Failed  to read peripheral ${this.name}:${error}`;
-                console.log(str);
-                reject(str);
+            }, (e) => {
+                const msg = e.message || 'unknown error';
+                const str = `Failed to update peripheral ${this.name}: ${msg}`;
+                if (vscode.debug.activeDebugConsole) {
+                    vscode.debug.activeDebugConsole.appendLine(str);
+                }
+                reject(new Error(str));
             });
         });
     }
@@ -143,7 +150,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)
         // which causes unaligned reads (via gdb) and silent failures. There is patch for this in OpenOCD
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
-        // Anothr benefit, we can minimize gdb timoeouts
+        // Another benefit, we can minimize gdb timeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
         this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
     }
