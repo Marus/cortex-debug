@@ -712,7 +712,10 @@ export class GDBDebugSession extends DebugSession {
                     this.server.exit();
                 }
                 catch (e) {}
-            }, 100);
+                finally {
+                    this.sendResponse(response);
+                }
+            }, 50);
         };
 
         this.disableSendStoppedEvents = true;
@@ -724,7 +727,6 @@ export class GDBDebugSession extends DebugSession {
                 doDisconnectProcessing();
             }
         }
-        this.sendResponse(response);
     }
 
     //
