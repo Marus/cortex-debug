@@ -1,3 +1,7 @@
+# V0.3.4
+
+* Fixed an issue where in an attach type debug session, if the disconnect button was used to end debugging, the gdb-server (like OpenOCD) kept running preventing a future attach/launch from starting until the server was killed manually.
+
 # V0.3.3
 
 1. New Features
