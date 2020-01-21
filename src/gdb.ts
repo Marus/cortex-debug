@@ -1516,34 +1516,19 @@ export class GDBDebugSession extends DebugSession {
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
                     const pvar = id as VariableObject;
-                    const variables: DebugProtocol.Variable[] = [];
 
                     // Variable members
                     let children: VariableObject[];
-                    const prevNames = {};
                     try {
                         children = await this.miDebugger.varListChildren(id.name);
                         const vars = children.map((child) => {
-                            const exp: string = child.exp;
-                            const isAnon = exp.startsWith('<anonymous ');
-                            if (isAnon) {
-                                const count: number = prevNames[exp];
-                                if (count) {    // Previously seen name?
-                                    // Resolve (display) name collisions as VSCode does not like them. You can get collisions
-                                    // with anonymous unions/structs.
-                                    prevNames[exp] = count + 1;
-                                    child.exp = exp + '#' + count.toString(10);  // This is now the display name
-                                }
-                                prevNames[child.exp] = 1;
-                            }
-
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
-                            if (/^\d+$/.test(exp)) {
-                                child.fullExp = `${pvar.fullExp || pvar.exp}[${exp}]`;
+                            if (/^\d+$/.test(child.exp)) {
+                                child.fullExp = `${pvar.fullExp || pvar.exp}[${child.exp}]`;
                             }
                             else {
-                                child.fullExp = `${pvar.fullExp || pvar.exp}` + (isAnon ? '' : `.${exp}`);
+                                child.fullExp = `${pvar.fullExp || pvar.exp}.${child.exp}`;
                             }
                             return child.toProtocolVariable();
                         });

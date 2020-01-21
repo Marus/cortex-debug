@@ -583,7 +583,15 @@ export class MI2 extends EventEmitter implements IBackend {
         // TODO: add `from` and `to` arguments
         const res = await this.sendCommand(`var-list-children --all-values ${name}`);
         const children = res.result('children') || [];
-        const omg: VariableObject[] = children.map((child) => new VariableObject(child[1]));
+        const omg: VariableObject[] = [];
+        for (const item of children) {
+            const child = new VariableObject(item[1]);
+            if (child.exp.startsWith('<anonymous ')) {
+                omg.push(... await this.varListChildren(child.name));
+            } else {
+                omg.push(child);
+            }
+        }
         return omg;
     }
 
