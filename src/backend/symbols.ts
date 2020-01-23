@@ -89,7 +89,7 @@ export class SymbolTable {
     }
 
     public getStaticVariables(file: string): SymbolInformation[] {
-        return this.symbols.filter((s) => s.type === SymbolType.Object && s.scope === SymbolScope.Local && s.file === file);
+        return this.symbols.filter((s) => s.type === SymbolType.Object && s.scope === SymbolScope.Local && !s.name.includes(".") && (s.file === file || file.endsWith(`/${s.file}`)));
     }
 
     public getFunctionByName(name: string, file?: string): SymbolInformation {
