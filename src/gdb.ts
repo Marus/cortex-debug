@@ -1516,7 +1516,6 @@ export class GDBDebugSession extends DebugSession {
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
                     const pvar = id as VariableObject;
-                    const variables: DebugProtocol.Variable[] = [];
 
                     // Variable members
                     let children: VariableObject[];
