@@ -167,7 +167,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
         this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable);
+        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -176,7 +176,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
         this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable);
+        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -333,6 +333,10 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.debugOutput = !!this.args.showDevDebugOutput;
 
                 const commands = [`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`];
+                if (this.args.demangle) {
+                    commands.push('interpreter-exec console "set print demangle on"');
+                    commands.push('interpreter-exec console "set print asm-demangle on"');
+                }
                 commands.push(...this.serverController.initCommands());
                 
                 if (attach) {
@@ -950,11 +954,12 @@ export class GDBDebugSession extends DebugSession {
             let threadId = -1;
             let frameId = -1;
             const varRef = args.variablesReference;
-            if (varRef >= VAR_HANDLES_START) {
+            const globOrStatic = this.getFloatingVariable(varRef, name);
+            if (globOrStatic) {
+                name = globOrStatic.name;
+            } else if (varRef >= VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
                 name = `${parent.name}.${name}`;
-            } else if (varRef === GLOBAL_HANDLE_ID) {
-                name = 'global_var_' + name;
             } else if (varRef >= STACK_HANDLES_START && varRef < STACK_HANDLES_FINISH) {
                 const tryName = this.createStackVarName(name, varRef);
                 if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
@@ -1275,7 +1280,10 @@ export class GDBDebugSession extends DebugSession {
         const scopes = new Array<Scope>();
         scopes.push(new Scope('Local', parseInt(args.frameId as any), false));
         scopes.push(new Scope('Global', GLOBAL_HANDLE_ID, false));
-        scopes.push(new Scope('Static', STATIC_HANDLES_START + parseInt(args.frameId as any), false));
+
+        const staticId = STATIC_HANDLES_START + parseInt(args.frameId as any);
+        scopes.push(new Scope('Static', staticId, false));
+        this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
 
         response.body = {
             scopes: scopes
@@ -1304,14 +1312,21 @@ export class GDBDebugSession extends DebugSession {
                     varObj = this.variableHandles.get(varId) as any;
                 }
                 catch (err) {
-                    if (err instanceof MIError && err.message === 'Variable object not found') {
-                        varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
-                        const varId = this.findOrCreateVariable(varObj);
-                        varObj.exp = symbol.name;
-                        varObj.id = varId;
+                    try {
+                        if (err instanceof MIError && err.message === 'Variable object not found') {
+                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
+                            const varId = this.findOrCreateVariable(varObj);
+                            varObj.exp = symbol.name;
+                            varObj.id = varId;
+                            this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
+                        } else {
+                            throw err;
+                        }
                     }
-                    else {
-                        throw err;
+                    catch (err) {
+                        this.handleMsg('stderr', `Could not create global variable ${symbol.name}\n`);
+                        this.handleMsg('stderr', `Error: ${err}\n`);
+                        varObj = null;
                     }
                 }
 
@@ -1326,6 +1341,34 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
+    private createStaticVarName(fHash: string, name: string): string {
+        const varObjName = `static_var_${name}_${fHash}`;
+        return varObjName;
+    }
+
+    /*
+    // floatingVariableMap is meant for things that are not relevant to the current thread/frame.
+    // It is organized by ths scope reference and then a map is held for each simple name.
+    // Technically, we can put even non global/static variable here, but cleanup can be an issue.
+    //
+    // See also scopesRequest().
+    //
+    // Note that this becomes important in implementing set-variable where not much info is available
+    */
+    private floatingVariableMap: {[scopeId: number]: {[name: string]: VariableObject}} = {};
+
+    private putFloatingVariable(scopeId: number, name: string, varObj: VariableObject): void {
+        const scopeMap = this.floatingVariableMap[scopeId] || {};
+        scopeMap[name] = varObj;
+        this.floatingVariableMap[scopeId] = scopeMap;
+    }
+
+    private getFloatingVariable(scopeId: number, name: string): VariableObject {
+        const scopeMap = this.floatingVariableMap[scopeId];
+        const ret = scopeMap ? scopeMap[name] : null;
+        return ret;
+    }
+
     private async staticVariablesRequest(
         threadId: number,
         frameId: number,
@@ -1338,9 +1381,13 @@ export class GDBDebugSession extends DebugSession {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             const file = frame.fileName;
             const staticSymbols = this.symbolTable.getStaticVariables(file);
-            
+
+            const hasher = crypto.createHash('sha256');
+            hasher.update(file);
+            const fHash = hasher.digest('hex');
+
             for (const symbol of staticSymbols) {
-                const varObjName = `${file}_static_var_${symbol.name}`;
+                const varObjName = this.createStaticVarName(fHash, symbol.name);
                 let varObj: VariableObject;
                 try {
                     const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
@@ -1355,25 +1402,37 @@ export class GDBDebugSession extends DebugSession {
                     varObj = this.variableHandles.get(varId) as any;
                 }
                 catch (err) {
-                    if (err instanceof MIError && err.message === 'Variable object not found') {
-                        varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
-                        const varId = this.findOrCreateVariable(varObj);
-                        varObj.exp = symbol.name;
-                        varObj.id = varId;
+                    try {
+                        // Not all static variables found via objdump can be found with gdb. Happens
+                        // with function/block scoped static variables (objdump uses one name and gdb uses another)
+                        // Try to report what we can. Others show up under the Locals section hopefully.
+                        if (err instanceof MIError && err.message === 'Variable object not found') {
+                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
+                            const varId = this.findOrCreateVariable(varObj);
+                            varObj.exp = symbol.name;
+                            varObj.id = varId;
+                        } else {
+                            throw err;
+                        }
                     }
-                    else {
-                        throw err;
+                    catch (err) {
+                        this.handleMsg('stderr', `Could not create static variable ${file}:${symbol.name}\n`);
+                        this.handleMsg('stderr', `Error: ${err}\n`);
+                        varObj = null;
                     }
                 }
 
-                statics.push(varObj.toProtocolVariable());
+                if (varObj) {
+                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
+                    statics.push(varObj.toProtocolVariable());
+                }
             }
 
             response.body = { variables: statics };
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 1, `Could not get global variable information: ${err}`);
+            this.sendErrorResponse(response, 1, `Could not get static variable information: ${err}`);
         }
     }
 

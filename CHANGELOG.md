@@ -1,3 +1,14 @@
+# V0.3.5
+
+1. Issues Fixed
+   * Issue #232: Enumerated types `derivedFrom` attribute now supported (used by ST quite a lot). Caused silent SVD parsing failures before and the Peripherals window said `No SVD File Loaded`.
+   * Issue #239: Better handling of multiple anynymous unions and structs in the same data structure. Only the first one was shown previously, defect in VSCode really, but had to find a workaround.
+   * Issue #179: Depending on how the compiler was used, only static variables declared files in the current directory were being displayed. It was an issue with how `objdump` and `gdb` behaved differently. Not a perfect fix. Use Watch Window when in doubt and report any further issues and descrepancies.
+2. New Features
+   * Preliminary support for C++ demangled names. In `launch.json`, there is now a configuration option `demangle` to enable demangling of symbols both by GDB and Cortex-Debug. We may remove this property in the future and demangle all the time. All users are encouraged to enable this to see if affects debugging in a negative way. With C++, there can be a lot of issues related to overloading and templates. Please report issues.
+   * Could be classified as a bugfix. Before, setting static variable values in the Variables Window did not work. Now, it should work as expected.
+   * There were some performance enhancements done for loading the Variables window when Global or Static scopes were expanded. Noticable when single stepping in large executables.
+
 # V0.3.4
 
 * Fixed an issue where in an attach type debug session, if the disconnect button was used to end debugging, the gdb-server (like OpenOCD) kept running preventing a future attach/launch from starting until the server was killed manually.

@@ -115,6 +115,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cmsisPack: string;
     runToMain: boolean;
 
+    // C++ specific
+    demangle: boolean;
+
     // J-Link Specific
     ipAddress: string;
     serialNumber: string;

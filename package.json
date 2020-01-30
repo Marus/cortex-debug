@@ -287,6 +287,11 @@
                                 "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
+                            "demangle": {
+                                "description": "Experimental: If enabled the debugger will demangle C++ names.",
+                                "type": "boolean",
+                                "default": false
+                            },
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [
@@ -828,6 +833,11 @@
                             },
                             "runToMain": {
                                 "description": "If enabled the debugger will run until it the start of the main function.",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "demangle": {
+                                "description": "Experimental: If enabled the debugger will demangle C++ names.",
                                 "type": "boolean",
                                 "default": false
                             },

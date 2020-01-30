@@ -21,7 +21,8 @@ export interface SymbolInformation {
     section: string;
     type: SymbolType;
     scope: SymbolScope;
-    file: string;
+    file: string;                // The official file name
+    fileMaps: string[];          // Set of files this symbol could match
     instructions: DisassemblyInstruction[];
     hidden: boolean;
 }
