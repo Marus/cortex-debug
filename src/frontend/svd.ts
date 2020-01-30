@@ -22,7 +22,9 @@ const ACCESS_TYPE_MAP = {
 };
 
 export class SVDParser {
+    private static enumTypeValuesMap = {};
     public static parseSVD(path: string): Promise<PeripheralNode[]> {
+        SVDParser.enumTypeValuesMap = {};
         return new Promise((resolve, reject) => {
             fs.readFile(path, 'utf8', (err, data) => {
                 if (err) {
@@ -134,18 +136,37 @@ export class SVDParser {
             let valueMap: EnumerationMap = null;
             if (f.enumeratedValues) {
                 valueMap = {};
-
-                const ev = f.enumeratedValues[0];
-                ev.enumeratedValue.map((ev) => {
-                    if (ev.value && ev.value.length > 0) {
-                        const evname = ev.name[0];
-                        const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
-                        const val = ev.value[0].toLowerCase();
-                        const evvalue = parseInteger(val);
-                        
-                        valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
+                const eValues = f.enumeratedValues[0];
+                if (eValues.$ && eValues.$.derivedFrom) {
+                    const found = SVDParser.enumTypeValuesMap[eValues.$.derivedFrom];
+                    if (!found) {
+                        throw new Error(`Invalid derivedFrom=${eValues.$.derivedFrom} for enumeratedValues of field ${f.name[0]}`);
                     }
-                });
+                    valueMap = found;
+                }
+                else {
+                    eValues.enumeratedValue.map((ev) => {
+                        if (ev.value && ev.value.length > 0) {
+                            const evname = ev.name[0];
+                            const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
+                            const val = ev.value[0].toLowerCase();
+                            const evvalue = parseInteger(val);
+                            
+                            valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
+                        }
+                    });
+
+                    // According to the SVD spec/schema, I am not sure any scope applies. Seems like everything is in a global name space
+                    // No make sense but how I am interpreting it for now. Easy to make it scope based but then why allow referencing
+                    // other peripherals. Global scope it is. Overrides dups from previous definitions!!!
+                    if (eValues.name && eValues.name[0]) {
+                        let evName = eValues.name[0];
+                        for (const prefix of [null, f.name[0], parent.name, parent.parent.name]) {
+                            evName = prefix ? prefix + '.' + evName : evName;
+                            SVDParser.enumTypeValuesMap[evName] = valueMap;
+                        }
+                    }
+                }
             }
 
             const baseOptions = {
