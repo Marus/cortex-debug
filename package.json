@@ -279,9 +279,10 @@
                                 "type": "string"
                             },
                             "serverArgs": {
-                                "default": null,
+                                "default": [],
                                 "description": "Additional arguments to pass to gdb-server command line",
-                                "type": "array"
+                                "type": "array",
+                                "items": "string"
                             },
                             "executable": {
                                 "description": "Path of executable",
@@ -823,9 +824,10 @@
                                 "type": "string"
                             },
                             "serverArgs": {
-                                "default": null,
+                                "default": [],
                                 "description": "Additional arguments to pass to gdb-server command line",
-                                "type": "array"
+                                "type": "array",
+                                "items": "string"
                             },
                             "executable": {
                                 "description": "Path of executable",
