@@ -822,6 +822,11 @@
                                 "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
                                 "type": "string"
                             },
+                            "serverArgs": {
+                                "default": null,
+                                "description": "Additional arguments to pass to gdb-server command line",
+                                "type": "array"
+                            },
                             "executable": {
                                 "description": "Path of executable",
                                 "type": "string"
