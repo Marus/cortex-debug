@@ -79,7 +79,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
-        const cmdargs = [
+        let cmdargs = [
             '-cpu', this.args.cpu,
             '-machine', this.args.machine,
             '-nographic',
@@ -88,6 +88,10 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
             '-S',
             '-kernel', this.args.executable
         ];
+
+        if (this.args.serverArgs) {
+            cmdargs = cmdargs.concat(this.args.serverArgs);
+        }
 
         return cmdargs;
     }

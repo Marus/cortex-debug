@@ -106,7 +106,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
-        const serverargs = [];
+        let serverargs = [];
 
         serverargs.push('-c', `gdb_port ${gdbport}`);
 
@@ -130,6 +130,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             const tmpCfgPath = tmp.tmpNameSync();
             fs.writeFileSync(tmpCfgPath, `$_TARGETNAME configure -rtos ${this.args.rtos}\n`, 'utf8');
             serverargs.push('-f', tmpCfgPath);
+        }
+
+        if (this.args.serverArgs) {
+            serverargs = serverargs.concat(this.args.serverArgs);
         }
 
         const commands = [];

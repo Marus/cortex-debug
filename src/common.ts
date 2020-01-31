@@ -89,6 +89,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     executable: string;
     servertype: string;
     serverpath: string;
+    serverArgs: string[];
     device: string;
     debuggerArgs: string[];
     preLaunchCommands: string[];
