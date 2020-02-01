@@ -9,6 +9,8 @@
    * There is a new `launch.json` configuration option `"serverArgs"` to add additional command-line arguments when launching any supported gdb-server (like J-Link, STlink, etc.)
    * Could be classified as a bug-fix. Before, setting static variable values in the Variables Window did not work. Now, it should work as expected.
    * There were some performance enhancements done for loading the Variables window when Global or Static scopes were expanded. Noticeable when single-stepping in large executables.
+   * New setting `flattenAnonymous` which will flatten anonymous structs/unions. Default=false
+   * New setting `registerUseNaturalFormat` which will display registers either in Natural format or Hex: Default=true
 
 # V0.3.4
 

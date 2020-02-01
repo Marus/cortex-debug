@@ -114,6 +114,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     targetId: string | number;
     cmsisPack: string;
     runToMain: boolean;
+    flattenAnonymous: boolean;
+    registerUseNaturalFormat: boolean;
 
     // C++ specific
     demangle: boolean;

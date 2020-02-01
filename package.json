@@ -70,6 +70,16 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Enable Telemetry for the Cortex-Debug Extension. Reporting will also respect the global telemetry.enableTelemetry setting."
+                },
+                "cortex-debug.flattenAnonymous": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "If true, anonymous unions/structs are flattened in their parent data structure"
+                },
+                "cortex-debug.registerUseNaturalFormat": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "If true, display registers in their natural format as specified by ARM. Hex otherwise."
                 }
             }
         },

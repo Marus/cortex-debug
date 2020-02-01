@@ -652,7 +652,8 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
-        this.miDebugger.sendCommand('data-list-register-values N').then((node) => {
+        const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
+        this.miDebugger.sendCommand(`data-list-register-values ${fmt}`).then((node) => {
             if (node.resultRecords.resultClass === 'done') {
                 const rv = node.resultRecords.results[0][1];
                 response.body = rv.map((n) => {
@@ -959,7 +960,8 @@ export class GDBDebugSession extends DebugSession {
                 name = globOrStatic.name;
             } else if (varRef >= VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
-                name = `${parent.name}.${name}`;
+                const fullName = parent.children[name];
+                name = fullName ? fullName : `${parent.name}.${name}`;
             } else if (varRef >= STACK_HANDLES_START && varRef < STACK_HANDLES_FINISH) {
                 const tryName = this.createStackVarName(name, varRef);
                 if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
@@ -1556,26 +1558,26 @@ export class GDBDebugSession extends DebugSession {
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
         let id: number | string | VariableObject | ExtendedVariable;
 
-        // How to deal with anonymous unions/structs. gdb uses the same display name for all of them. This
-        // is a problem when there are multiple. VSCode requires that all children have unique display names.
-        // So, we make them unique. The next issue is should we use the programming model which essentially
-        // flattens the union/struct. We have three objectives we have to satisfy
+        /*
+        // How to deal with multiple anonymous unions/structs in the same scope. gdb uses the same display name for
+        // all of them. VSCode requires that all children have unique display names. So, we make them unique. The next
+        // issue is should we use the programming model which essentially flattens the union/struct or the natural one.
+        // We have three objectives we have to satisfy
         //
         // 1. Does it display correctly?
-        // 2. Can I do an 'Add to Watch'/'Copy as Expression' in the Variables Window?
+        // 2. Can I do 'Add to Watch' or 'Copy as Expression' in the Variables Window?
         // 3. Can I set a value on a field?
         //
-        // If we flatten the anonymous stuff, we can't satisfy (3) above because we never created a parent reference
-        // for the anonymous union. If don't flatten, all three objectives are met, but the display will look different
-        // from Visual Studio or Eclipse which uses the programming model. I believe the natural model is actually better
-        // is it is closely aligned with the source code.
+        // We meet all three objectives, whether we flatten or not. I believe the natural model is better
+        // because it is closely aligned with the source code. Visual Studio and Eclipse use the flattened model.
+        // So, we have a config option to let the user decide. Not many people uae multiple anonymous stuff but
+        // Zephyr OS does and since it is legal C, we have to try our best to support it.
         //
         // Note: VSCode has a bug where if a union member is modified by the user, it does not refresh the Variables window
         // but it will re-evaluate everything in the Watch window. Basically, it has no concept of a union and there is no
-        // way for us to force a refresh of the parent
-        //
-        const flattenAnonymous = false;
-        
+        // way I know of to force a refresh
+        */
+
         if (args.variablesReference === GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
         }
@@ -1600,7 +1602,7 @@ export class GDBDebugSession extends DebugSession {
                     let children: VariableObject[];
                     const childMap: {[name: string]: number} = {};
                     try {
-                        children = await this.miDebugger.varListChildren(id.name, flattenAnonymous);
+                        children = await this.miDebugger.varListChildren(id.name, this.args.flattenAnonymous);
                         const vars = children.map((child) => {
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
@@ -1609,7 +1611,7 @@ export class GDBDebugSession extends DebugSession {
                             }
                             else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
-                                if (child.exp.startsWith('<anonymous')) {       // We can have duplicates
+                                if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
                                     const prev = childMap[child.exp];
                                     if (prev) {
                                         childMap[child.exp] = prev + 1;
@@ -1617,6 +1619,10 @@ export class GDBDebugSession extends DebugSession {
                                     }
                                     childMap[child.exp] = 1;
                                     suffix = '';    // Anonymous ones don't have a suffix. Have to use parent name
+                                } else {
+                                    // The full-name is not always derivable from the parent and child info. Esp. children
+                                    // of anonymous stuff. Might as well store all of them or set-value will not work.
+                                    pvar.children[child.exp] = child.name;
                                 }
                                 child.fullExp = `${pvar.fullExp || pvar.exp}${suffix}`;
                             }

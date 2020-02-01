@@ -70,12 +70,12 @@ export class RegisterNode extends BaseNode {
     public setValue(newValue: string) {
         this.currentNaturalValue = newValue;
         if (this.name.toUpperCase() === 'CONTROL' || this.name.toUpperCase() === 'XPSR' || this.name.toUpperCase() === 'CPSR') {
-            this.currentValue = parseInt(this.currentNaturalValue, 10);
+            const base = this.currentNaturalValue.startsWith('0x') ? 16 : 10;
+            this.currentValue = parseInt(this.currentNaturalValue, base);
             let cv = this.currentValue.toString(16);
             while (cv.length < 8) { cv = '0' + cv; }
             this.currentNaturalValue = '0x' + cv;
         }
-        
     }
 
     public getCopyValue(): string {
