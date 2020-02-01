@@ -576,7 +576,7 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.sendCommand(`var-evaluate-expression ${name}`);
     }
 
-    public async varListChildren(name: string): Promise<VariableObject[]> {
+    public async varListChildren(name: string, flattenAnonymous: boolean): Promise<VariableObject[]> {
         if (trace) {
             this.log('stderr', 'varListChildren');
         }
@@ -586,8 +586,8 @@ export class MI2 extends EventEmitter implements IBackend {
         const omg: VariableObject[] = [];
         for (const item of children) {
             const child = new VariableObject(item[1]);
-            if (child.exp.startsWith('<anonymous ')) {
-                omg.push(... await this.varListChildren(child.name));
+            if (flattenAnonymous && child.exp.startsWith('<anonymous ')) {
+                omg.push(... await this.varListChildren(child.name, flattenAnonymous));
             } else {
                 omg.push(child);
             }
