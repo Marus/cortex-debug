@@ -85,7 +85,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
-        const serverargs = [];
+        let serverargs = [];
 
         serverargs.push('-startserver');
         serverargs.push('-singlesession');
@@ -106,6 +106,10 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
         if (this.args.configFiles) {
             serverargs.push(`-configfile=${this.args.configFiles[0]}`);
+        }
+
+        if (this.args.serverArgs) {
+            serverargs = serverargs.concat(this.args.serverArgs);
         }
 
         return serverargs;
