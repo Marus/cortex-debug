@@ -102,9 +102,13 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
-        const serverargs = ['-p', gdbport.toString(), '-v', '--no-reset'];
+        let serverargs = ['-p', gdbport.toString(), '-v', '--no-reset'];
         if (this.args.v1) {
             serverargs.push('--stlinkv1');
+        }
+
+        if (this.args.serverArgs) {
+            serverargs = serverargs.concat(this.args.serverArgs);
         }
 
         return serverargs;

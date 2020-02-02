@@ -111,7 +111,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const swoport = this.ports['swoPort'];
         const consoleport = this.ports['consolePort'];
 
-        const cmdargs = [
+        let cmdargs = [
             '-if', this.args.interface,
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),
@@ -132,6 +132,10 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
         if (this.args.jlinkscript) {
             cmdargs.push('-jlinkscriptfile', this.args.jlinkscript);
+        }
+
+        if (this.args.serverArgs) {
+            cmdargs = cmdargs.concat(this.args.serverArgs);
         }
 
         return cmdargs;

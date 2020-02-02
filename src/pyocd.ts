@@ -101,7 +101,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
-        const serverargs = ['--persist', '--port', gdbport.toString(), '--reset-break'];
+        let serverargs = ['--persist', '--port', gdbport.toString(), '--reset-break'];
 
         if (this.args.boardId) {
             serverargs.push('--board');
@@ -116,6 +116,10 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         if (this.args.cmsisPack) {
             serverargs.push('--pack');
             serverargs.push(this.args.cmsisPack.toString());
+        }
+
+        if (this.args.serverArgs) {
+            serverargs = serverargs.concat(this.args.serverArgs);
         }
         return serverargs;
     }
