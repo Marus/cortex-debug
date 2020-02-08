@@ -30,7 +30,7 @@ fi
 mkdir -p tmp
 cd tmp
 
-function gen() {
+function generate () {
     # vers: version of electron
     # arch: x86 or x64
     # os: linux | darwin | win??
@@ -66,10 +66,11 @@ function gen() {
 
 os=`uname`
 if [[ "$os" == 'Linux' ]] ; then
-    gen $version x64 linux
-    gen $version x86 linux
+    generate $version x64 linux
+    # 32-bit linux is dead for VSCode
+    # generate $version x86 linux
 elif [[ "$os" == 'Darwin' ]] ; then
-    gen $version x64 darwin
+    generate $version x64 darwin
 else
     echo "Error: Unsupported OS $os"
 fi
