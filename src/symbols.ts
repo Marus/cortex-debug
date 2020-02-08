@@ -20,6 +20,7 @@ export interface SymbolInformation {
     name: string;
     section: string;
     type: SymbolType;
+    origScope: SymbolScope;     // This was what was parsed
     scope: SymbolScope;
     file: string;                // The official file name
     fileMaps: string[];          // Set of files this symbol could match

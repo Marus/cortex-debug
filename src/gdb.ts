@@ -1038,7 +1038,7 @@ export class GDBDebugSession extends DebugSession {
                     let sidx = 13;
                     if (sourcepath.startsWith('disassembly:///')) { sidx = 15; }
                     const path = sourcepath.substring(sidx, sourcepath.length - 6); // Account for protocol and extension
-                    const parts = path.split('::');
+                    const parts = path.split(':::');
                     let func: string;
                     let file: string;
 
@@ -1052,18 +1052,20 @@ export class GDBDebugSession extends DebugSession {
 
                     const symbol: SymbolInformation = await this.getDisassemblyForFunction(func, file);
                     
-                    args.breakpoints.forEach((brk) => {
-                        if (brk.line <= symbol.instructions.length) {
-                            const line = symbol.instructions[brk.line - 1];
-                            all.push(this.miDebugger.addBreakPoint({
-                                file: args.source.path,
-                                line: brk.line,
-                                condition: brk.condition,
-                                countCondition: brk.hitCondition,
-                                raw: line.address
-                            }));
-                        }
-                    });
+                    if (symbol) {
+                        args.breakpoints.forEach((brk) => {
+                            if (brk.line <= symbol.instructions.length) {
+                                const line = symbol.instructions[brk.line - 1];
+                                all.push(this.miDebugger.addBreakPoint({
+                                    file: args.source.path,
+                                    line: brk.line,
+                                    condition: brk.condition,
+                                    countCondition: brk.hitCondition,
+                                    raw: line.address
+                                }));
+                            }
+                        });
+                    }
                 }
                 else {
                     args.breakpoints.forEach((brk) => {
@@ -1215,8 +1217,8 @@ export class GDBDebugSession extends DebugSession {
                     const symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
                     let url: string;
                     if (symbolInfo) {
-                        if (symbolInfo.scope !== SymbolScope.Global) {
-                            url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                         }
                         else {
                             url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -1236,9 +1238,9 @@ export class GDBDebugSession extends DebugSession {
                         if (line !== -1) {
                             let fname: string;
                             let url: string;
-                            if (symbolInfo.scope !== SymbolScope.Global) {
-                                fname = `${symbolInfo.file}::${symbolInfo.name}.cdasm`;
-                                url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                fname = `${symbolInfo.file}:${symbolInfo.name}.cdasm`;
+                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 fname = `${symbolInfo.name}.cdasm`;
@@ -1320,7 +1322,6 @@ export class GDBDebugSession extends DebugSession {
                             const varId = this.findOrCreateVariable(varObj);
                             varObj.exp = symbol.name;
                             varObj.id = varId;
-                            this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
                         } else {
                             throw err;
                         }
@@ -1332,7 +1333,10 @@ export class GDBDebugSession extends DebugSession {
                     }
                 }
 
-                globals.push(varObj.toProtocolVariable());
+                if (varObj) {
+                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
+                    globals.push(varObj.toProtocolVariable());
+                }
             }
 
             response.body = { variables: globals };
@@ -1743,8 +1747,8 @@ export class GDBDebugSession extends DebugSession {
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                     let url: string;
-                    if (symbolInfo.scope !== SymbolScope.Global) {
-                        url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                     }
                     else {
                         url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -1779,8 +1783,8 @@ export class GDBDebugSession extends DebugSession {
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                     let url: string;
-                    if (symbolInfo.scope !== SymbolScope.Global) {
-                        url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                     }
                     else {
                         url = `disassembly:///${symbolInfo.name}.cdasm`;

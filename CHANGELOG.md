@@ -1,11 +1,13 @@
-# V0.3.5
+# V0.3.5-beta
+
+This is a pretty big release. The biggest change is to address C++ (and maybe Rust) de-mangled names. It had a big effect on the overall code base especially with regards to how disassembly was provided. The separator `::` caused quite a few issues and there are strange an un-expected things in the symbol table. It can affect users not even using C++ or de-mangling. Wish there was a way to publish beta releases in VSCode
 
 1. Issues Fixed
    * Issue #232: SVD Enumerated types `derivedFrom` attribute now supported (used by ST quite a lot). Caused silent SVD parsing failures before and the Peripherals window said `No SVD File Loaded`.
    * Issue #229: Better handling of multiple anonymous unions and structs in the same data structure. Only the first one was shown previously, defect in VSCode really, but had to find a workaround.
    * Issue #179: Depending on how the compiler was used, only static variables declared in files the current directory were being displayed. It was an issue with how `objdump` and `gdb` behaved differently. Not a perfect fix. Use Watch Window when in doubt and report any further issues and discrepancies.
 2. New Features
-   * Preliminary support for C++ demangled names. In `launch.json`, there is now a configuration option `"demangle"` to enable demangling of symbols both by GDB and Cortex-Debug. We may remove this property in the future and demangle all the time. All users are encouraged to enable this to see if affects debugging in a negative way. With C++, there can be a lot of issues related to overloading and templates. Please report issues.
+   * Preliminary support for C++ de-mangled names. In `launch.json`, there is now a configuration option `"demangle"` to enable de-mangling of symbols both by GDB and Cortex-Debug. We may remove this property in the future and demangle all the time. All users are encouraged to enable this to see if affects debugging in a negative way. With C++, there can be a lot of issues related to overloading and templates. Please report issues.
    * There is a new `launch.json` configuration option `"serverArgs"` to add additional command-line arguments when launching any supported gdb-server (like J-Link, STlink, etc.)
    * Could be classified as a bug-fix. Before, setting static variable values in the Variables Window did not work. Now, it should work as expected.
    * There were some performance enhancements done for loading the Variables window when Global or Static scopes were expanded. Noticeable when single-stepping in large executables.

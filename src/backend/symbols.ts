@@ -25,8 +25,8 @@ export class SymbolTable {
 
     // The following are caches that are either created on demand or on symbol load. Helps performance
     // on large executables since most of our searches are linear. Or, to avoid a search entirely if possible
-    // Case sinsitivity for path names is an issue: We follow just what gcc records so inherently case-sentive
-    // or case-preserving. We don't try to re-interpret/massage those pathnames. Maybe later
+    // Case sensitivity for path names is an issue: We follow just what gcc records so inherently case-sensitive
+    // or case-preserving. We don't try to re-interpret/massage those path-names. Maybe later
     //
     // TODO: Support for source-maps for both gdb and for symbol/file lookups
     private staticsByFile: {[file: string]: SymbolInformation[]} = {};
@@ -57,14 +57,22 @@ export class SymbolTable {
             this.collectCompilationUnits(lines);
 
             let currentFile: string = null;
-            let currentMapped: string[] = [];
+            let currentMapped: string[] = null;
 
             for (const line of lines) {
                 const match = line.match(SYMBOL_REGEX);
                 if (match) {
                     if (match[7] === 'd' && match[8] === 'f') {
-                        currentFile = match[11].trim();
-                        currentMapped = this.addToFileMap(currentFile.split('/').pop(), currentFile);
+                        if (match[11]) {
+                            currentFile = match[11].trim();
+                            currentMapped = this.addToFileMap(currentFile.split('/').pop(), currentFile);
+                        } else {
+                            // This can happen with C++. Inline and template methods/variables/functions/etc. are listed with
+                            // an empty file association. So, symbols after this line can come from multiple compilation
+                            // units with no clear owner. These can be locals, globals or other.
+                            currentFile = null;
+                            currentMapped = null;
+                        }
                     }
                     const type = TYPE_MAP[match[8]];
                     const scope = SCOPE_MAP[match[2]];
@@ -79,6 +87,7 @@ export class SymbolTable {
                     const sym: SymbolInformation = {
                         address: parseInt(match[1], 16),
                         type: type,
+                        origScope: scope,
                         scope: scope,
                         section: match[9].trim(),
                         length: parseInt(match[10], 16),
@@ -90,18 +99,33 @@ export class SymbolTable {
                     };
 
                     this.allSymbols.push(sym);
-                    if (scope === SymbolScope.Global) {
-                        if (type === SymbolType.Object) {
-                            this.globalVars.push(sym);
-                        } else if (type === SymbolType.Function) {
+                    if (scope !== SymbolScope.Local) {
+                        if (type === SymbolType.Function) {
+                            sym.scope = SymbolScope.Global;
                             this.globalFuncs.push(sym);
+                        } else if (type === SymbolType.Object) {
+                            if (scope === SymbolScope.Global) {
+                                this.globalVars.push(sym);
+                            } else {
+                                // These fail gdb create-vars. So ignoring them. C++ generates them
+                                console.log('SymbolTable: ignoring non local object: ' + name);
+                            }
                         }
-                    } else if (scope === SymbolScope.Local) {
+                    } else if (currentFile) {
+                        // Yes, you can have statics with no file association in C++. They are neither
+                        // truly global or local. Some can be considered but not sure how to filter
                         if (type === SymbolType.Object) {
                             this.staticVars.push(sym);
                         } else if (type === SymbolType.Function) {
                             this.staticFuncs.push(sym);
                         }
+                    } else if (type === SymbolType.Function) {
+                        sym.scope = SymbolScope.Global;
+                        this.globalFuncs.push(sym);
+                    } else if (type === SymbolType.Object) {
+                        // We are currently ignoring Local objects with no file association for objects.
+                        // Revisit later with care and decide how to classify them
+                        console.log('SymbolTable: ignoring local object: ' + name);
                     }
                 }
             }
@@ -193,11 +217,6 @@ export class SymbolTable {
                     return s;
                 }
             }
-        } else {
-            // Not sure we should do this part. Only an issue I think if a static function exists but for
-            // some reason does not have a file name associated during a stack trace.
-            const s = this.staticFuncs.find((s) => s.name === name);
-            if (s) { return s; }
         }
 
         // Fall back to global scope

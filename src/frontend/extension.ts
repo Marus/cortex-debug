@@ -150,11 +150,14 @@ export class CortexDebugExtension {
         }
 
         try {
-            const funcname: string = await vscode.window.showInputBox({
+            let funcname: string = await vscode.window.showInputBox({
                 placeHolder: 'main',
                 ignoreFocusOut: true,
                 prompt: 'Function Name to Disassemble'
             });
+            
+            funcname = funcname ? funcname.trim() : null;
+            if (!funcname) { return ; }
 
             const functions = this.functionSymbols.filter((s) => s.name === funcname);
 
@@ -164,11 +167,11 @@ export class CortexDebugExtension {
                 vscode.window.showErrorMessage(`No function with name ${funcname} found.`);
             }
             else if (functions.length === 1) {
-                if (functions[0].scope === SymbolScope.Global) {
+                if (!functions[0].file || (functions[0].scope === SymbolScope.Global)) {
                     url = `disassembly:///${functions[0].name}.cdasm`;
                 }
                 else {
-                    url = `disassembly:///${functions[0].file}::${functions[0].name}.cdasm`;
+                    url = `disassembly:///${functions[0].file}:::${functions[0].name}.cdasm`;
                 }
             }
             else {
@@ -178,21 +181,23 @@ export class CortexDebugExtension {
                         name: f.name,
                         file: f.file,
                         scope: f.scope,
-                        description: f.scope === SymbolScope.Global ? 'Global Scope' : `Static in ${f.file}`
+                        description: (!f.file || f.scope === SymbolScope.Global) ? 'Global Scope' : `Static in ${f.file}`
                     };
                 }), {
                     ignoreFocusOut: true
                 });
 
-                if (selected.scope === SymbolScope.Global) {
+                if (!selected.file || (selected.scope === SymbolScope.Global)) {
                     url = `disassembly:///${selected.name}.cdasm`;
                 }
                 else {
-                    url = `disassembly:///${selected.file}::${selected.name}.cdasm`;
+                    url = `disassembly:///${selected.file}:::${selected.name}.cdasm`;
                 }
             }
 
-            vscode.window.showTextDocument(vscode.Uri.parse(url));
+            if (url) {
+                vscode.window.showTextDocument(vscode.Uri.parse(url));
+            }
         }
         catch (e) {
             vscode.window.showErrorMessage('Unable to show disassembly.');
