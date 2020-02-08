@@ -30,8 +30,11 @@ suite('Serial Port tests', () => {
         }
 
         await SerialPort.list().then((ports) => {
-            for (const port of ports) {
-                // console.log(port.path);
+            // We should disable next block when things are working fine across all platforms
+            if (true) {
+                for (const port of ports) {
+                    console.log('\tFound port: ' + port.path);
+                }
             }
         });
     });
