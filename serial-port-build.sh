@@ -70,4 +70,6 @@ if [[ "$os" == 'Linux' ]] ; then
     gen $version x86 linux
 elif [[ "$os" == 'Darwin' ]] ; then
     gen $version x64 darwin
+else
+    echo "Error: Unsupported OS $os"
 fi
