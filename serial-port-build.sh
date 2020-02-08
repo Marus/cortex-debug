@@ -72,5 +72,7 @@ if [[ "$os" == 'Linux' ]] ; then
 elif [[ "$os" == 'Darwin' ]] ; then
     generate $version x64 darwin
 else
-    echo "Error: Unsupported OS $os"
+    # TODO: yeah, I should check for exact type of env. Just assuming Windows 10 64 bit for now
+    echo "Assuming Window 64 bit..."
+    generate $version x64 win32
 fi
