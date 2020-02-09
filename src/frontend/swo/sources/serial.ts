@@ -5,6 +5,9 @@ import * as os from 'os';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
+declare function __webpack_require__(name: string): any;
+declare function __non_webpack_require__(name: string): any;
+
 export class SerialSWOSource extends EventEmitter implements SWOSource {
     private serialPort: any = null;
     public connected: boolean = false;
@@ -20,7 +23,8 @@ export class SerialSWOSource extends EventEmitter implements SWOSource {
 
         let SerialPort;
         try {
-            SerialPort = module.require('serialport');
+            const requireFunc = typeof __webpack_require__ === 'function' ? __non_webpack_require__ : require;
+            SerialPort = requireFunc('serialport');
         }
         catch (e) {
             // tslint:disable-next-line:max-line-length
