@@ -15,7 +15,7 @@ fi
 
 nodever=$2
 node=node@$nodever
-npm view $node | grep \.tarball
+npm view $node | grep \\.tarball
 if [[ $? -ne 0 ]] ; then
     echo "Error: node version $node does not exist"
     exit 1
