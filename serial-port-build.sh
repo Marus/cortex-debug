@@ -75,4 +75,5 @@ else
     # TODO: yeah, I should check for exact type of env. Just assuming Windows 10 64 bit for now
     echo "Assuming Window 64 bit..."
     generate $version x64 win32
+    # generate $version x86 win32
 fi

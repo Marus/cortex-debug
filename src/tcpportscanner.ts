@@ -299,8 +299,10 @@ export class TcpPortScanner {
      * @param retryTimeMs retry after that many milliseconds.
      * @param timeOutMs max timeout
      * @param fallback Fallback to using the intrusive method if proper OS command is not available
+     *
+     * NOT WORKING YET ON LINUX. MAYBE A BAD TEST
      */
-    public static waitForPortOpenOSUtil(port: number, retryTimeMs = 100, timeOutMs = 5000, fallback = true, doLog = true): Promise<void> {
+    public static waitForPortOpenOSUtil_DONOTUSE(port: number, retryTimeMs = 100, timeOutMs = 5000, fallback = true, doLog = true): Promise<void> {
         const cmd = TcpPortScanner.getOsNetProbeCmd().replace('XYZZY', port.toString());
         if (doLog) { console.log(cmd); }
         if (fallback && (cmd === '?')) {
