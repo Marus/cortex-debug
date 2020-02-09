@@ -77,7 +77,7 @@ suite('TcpPortScanner Tests', () => {
 
             if (os.platform() !== 'linux') {
                 timeit();
-                await TcpPortScanner.waitForPortOpenOSUtil(port, 50, 1000, false, doLog).then(() => {
+                await TcpPortScanner.waitForPortOpenOSUtil_DONOTUSE(port, 50, 1000, false, doLog).then(() => {
                     if (doLog) { console.log(`1.1 Success server port ${port} is ready ${timeit()}`); }
                 }, (err) => {
                     if (doLog) { console.log(`1.1 Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
