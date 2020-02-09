@@ -1,7 +1,8 @@
 out
-node_modules
+/node_modules
 *.vsix
 .vscode-test
 .DS_Store
 .sass-cache
 /dist
+/tmp
