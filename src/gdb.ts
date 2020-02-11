@@ -1325,8 +1325,10 @@ export class GDBDebugSession extends DebugSession {
                         }
                     }
                     catch (err) {
-                        this.handleMsg('stderr', `Could not create global variable ${symbol.name}\n`);
-                        this.handleMsg('stderr', `Error: ${err}\n`);
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', `Could not create global variable ${symbol.name}\n`);
+                            this.handleMsg('stderr', `Error: ${err}\n`);
+                        }
                         varObj = null;
                     }
                 }
@@ -1420,8 +1422,10 @@ export class GDBDebugSession extends DebugSession {
                         }
                     }
                     catch (err) {
-                        this.handleMsg('stderr', `Could not create static variable ${file}:${symbol.name}\n`);
-                        this.handleMsg('stderr', `Error: ${err}\n`);
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', `Could not create static variable ${file}:${symbol.name}\n`);
+                            this.handleMsg('stderr', `Error: ${err}\n`);
+                        }
                         varObj = null;
                     }
                 }
