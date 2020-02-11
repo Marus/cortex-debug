@@ -1237,16 +1237,14 @@ export class GDBDebugSession extends DebugSession {
 
                         if (line !== -1) {
                             let fname: string;
-                            let url: string;
                             if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                fname = `${symbolInfo.file}:${symbolInfo.name}.cdasm`;
-                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                                fname = `${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 fname = `${symbolInfo.name}.cdasm`;
-                                url = `disassembly:///${symbolInfo.name}.cdasm`;
                             }
                             
+                            const url = 'disassembly:///' + fname;
                             ret.push(new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
                         }
                         else {

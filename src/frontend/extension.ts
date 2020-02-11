@@ -181,7 +181,7 @@ export class CortexDebugExtension {
                         name: f.name,
                         file: f.file,
                         scope: f.scope,
-                        description: (!f.file || f.scope === SymbolScope.Global) ? 'Global Scope' : `Static in ${f.file}`
+                        description: (!f.file || (f.scope === SymbolScope.Global)) ? 'Global Scope' : `Static in ${f.file}`
                     };
                 }), {
                     ignoreFocusOut: true
