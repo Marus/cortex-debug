@@ -13,6 +13,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
    * There were some performance enhancements done for loading the Variables window when Global or Static scopes were expanded. Noticeable when single-stepping in large executables.
    * New setting `flattenAnonymous` which will flatten anonymous structs/unions. Default=false
    * New setting `registerUseNaturalFormat` which will display registers either in Natural format or Hex: Default=true
+   * The command `View Disassembly (Function)` now supports a regular expression as input. It will try an exact match for a function name first. But, it that fails treats the input string as a regular expression, and if the input string ends with `/i` it is treated as case-insensitive. As always, if there are multiple matches, you have to pick one.
 
 # V0.3.4
 
