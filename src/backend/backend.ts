@@ -58,6 +58,7 @@ export class VariableObject {
     public hasMore: boolean;
     public id: number;
     public fullExp: string;
+    public children: {[name: string]: string};
     constructor(node: any) {
         this.name = MINode.valueOf(node, 'name');
         this.exp = MINode.valueOf(node, 'exp');
@@ -68,6 +69,7 @@ export class VariableObject {
         this.frozen = !!MINode.valueOf(node, 'frozen');
         this.dynamic = !!MINode.valueOf(node, 'dynamic');
         this.displayhint = MINode.valueOf(node, 'displayhint');
+        this.children = {};
         // TODO: use has_more when it's > 0
         this.hasMore = !!MINode.valueOf(node, 'has_more');
     }

@@ -167,7 +167,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
         this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable);
+        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -176,7 +176,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
         this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable);
+        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -333,6 +333,10 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.debugOutput = !!this.args.showDevDebugOutput;
 
                 const commands = [`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`];
+                if (this.args.demangle) {
+                    commands.push('interpreter-exec console "set print demangle on"');
+                    commands.push('interpreter-exec console "set print asm-demangle on"');
+                }
                 commands.push(...this.serverController.initCommands());
                 
                 if (attach) {
@@ -648,7 +652,8 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
-        this.miDebugger.sendCommand('data-list-register-values N').then((node) => {
+        const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
+        this.miDebugger.sendCommand(`data-list-register-values ${fmt}`).then((node) => {
             if (node.resultRecords.resultClass === 'done') {
                 const rv = node.resultRecords.results[0][1];
                 response.body = rv.map((n) => {
@@ -950,11 +955,13 @@ export class GDBDebugSession extends DebugSession {
             let threadId = -1;
             let frameId = -1;
             const varRef = args.variablesReference;
-            if (varRef >= VAR_HANDLES_START) {
+            const globOrStatic = this.getFloatingVariable(varRef, name);
+            if (globOrStatic) {
+                name = globOrStatic.name;
+            } else if (varRef >= VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
-                name = `${parent.name}.${name}`;
-            } else if (varRef === GLOBAL_HANDLE_ID) {
-                name = 'global_var_' + name;
+                const fullName = parent.children[name];
+                name = fullName ? fullName : `${parent.name}.${name}`;
             } else if (varRef >= STACK_HANDLES_START && varRef < STACK_HANDLES_FINISH) {
                 const tryName = this.createStackVarName(name, varRef);
                 if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
@@ -1031,7 +1038,7 @@ export class GDBDebugSession extends DebugSession {
                     let sidx = 13;
                     if (sourcepath.startsWith('disassembly:///')) { sidx = 15; }
                     const path = sourcepath.substring(sidx, sourcepath.length - 6); // Account for protocol and extension
-                    const parts = path.split('::');
+                    const parts = path.split(':::');
                     let func: string;
                     let file: string;
 
@@ -1045,18 +1052,20 @@ export class GDBDebugSession extends DebugSession {
 
                     const symbol: SymbolInformation = await this.getDisassemblyForFunction(func, file);
                     
-                    args.breakpoints.forEach((brk) => {
-                        if (brk.line <= symbol.instructions.length) {
-                            const line = symbol.instructions[brk.line - 1];
-                            all.push(this.miDebugger.addBreakPoint({
-                                file: args.source.path,
-                                line: brk.line,
-                                condition: brk.condition,
-                                countCondition: brk.hitCondition,
-                                raw: line.address
-                            }));
-                        }
-                    });
+                    if (symbol) {
+                        args.breakpoints.forEach((brk) => {
+                            if (brk.line <= symbol.instructions.length) {
+                                const line = symbol.instructions[brk.line - 1];
+                                all.push(this.miDebugger.addBreakPoint({
+                                    file: args.source.path,
+                                    line: brk.line,
+                                    condition: brk.condition,
+                                    countCondition: brk.hitCondition,
+                                    raw: line.address
+                                }));
+                            }
+                        });
+                    }
                 }
                 else {
                     args.breakpoints.forEach((brk) => {
@@ -1208,8 +1217,8 @@ export class GDBDebugSession extends DebugSession {
                     const symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
                     let url: string;
                     if (symbolInfo) {
-                        if (symbolInfo.scope !== SymbolScope.Global) {
-                            url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                         }
                         else {
                             url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -1228,16 +1237,14 @@ export class GDBDebugSession extends DebugSession {
 
                         if (line !== -1) {
                             let fname: string;
-                            let url: string;
-                            if (symbolInfo.scope !== SymbolScope.Global) {
-                                fname = `${symbolInfo.file}::${symbolInfo.name}.cdasm`;
-                                url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                fname = `${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 fname = `${symbolInfo.name}.cdasm`;
-                                url = `disassembly:///${symbolInfo.name}.cdasm`;
                             }
                             
+                            const url = 'disassembly:///' + fname;
                             ret.push(new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
                         }
                         else {
@@ -1275,7 +1282,10 @@ export class GDBDebugSession extends DebugSession {
         const scopes = new Array<Scope>();
         scopes.push(new Scope('Local', parseInt(args.frameId as any), false));
         scopes.push(new Scope('Global', GLOBAL_HANDLE_ID, false));
-        scopes.push(new Scope('Static', STATIC_HANDLES_START + parseInt(args.frameId as any), false));
+
+        const staticId = STATIC_HANDLES_START + parseInt(args.frameId as any);
+        scopes.push(new Scope('Static', staticId, false));
+        this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
 
         response.body = {
             scopes: scopes
@@ -1304,18 +1314,29 @@ export class GDBDebugSession extends DebugSession {
                     varObj = this.variableHandles.get(varId) as any;
                 }
                 catch (err) {
-                    if (err instanceof MIError && err.message === 'Variable object not found') {
-                        varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
-                        const varId = this.findOrCreateVariable(varObj);
-                        varObj.exp = symbol.name;
-                        varObj.id = varId;
+                    try {
+                        if (err instanceof MIError && err.message === 'Variable object not found') {
+                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
+                            const varId = this.findOrCreateVariable(varObj);
+                            varObj.exp = symbol.name;
+                            varObj.id = varId;
+                        } else {
+                            throw err;
+                        }
                     }
-                    else {
-                        throw err;
+                    catch (err) {
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', `Could not create global variable ${symbol.name}\n`);
+                            this.handleMsg('stderr', `Error: ${err}\n`);
+                        }
+                        varObj = null;
                     }
                 }
 
-                globals.push(varObj.toProtocolVariable());
+                if (varObj) {
+                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
+                    globals.push(varObj.toProtocolVariable());
+                }
             }
 
             response.body = { variables: globals };
@@ -1324,6 +1345,34 @@ export class GDBDebugSession extends DebugSession {
         catch (err) {
             this.sendErrorResponse(response, 1, `Could not get global variable information: ${err}`);
         }
+    }
+
+    private createStaticVarName(fHash: string, name: string): string {
+        const varObjName = `static_var_${name}_${fHash}`;
+        return varObjName;
+    }
+
+    /*
+    // floatingVariableMap is meant for things that are not relevant to the current thread/frame.
+    // It is organized by ths scope reference and then a map is held for each simple name.
+    // Technically, we can put even non global/static variable here, but cleanup can be an issue.
+    //
+    // See also scopesRequest().
+    //
+    // Note that this becomes important in implementing set-variable where not much info is available
+    */
+    private floatingVariableMap: {[scopeId: number]: {[name: string]: VariableObject}} = {};
+
+    private putFloatingVariable(scopeId: number, name: string, varObj: VariableObject): void {
+        const scopeMap = this.floatingVariableMap[scopeId] || {};
+        scopeMap[name] = varObj;
+        this.floatingVariableMap[scopeId] = scopeMap;
+    }
+
+    private getFloatingVariable(scopeId: number, name: string): VariableObject {
+        const scopeMap = this.floatingVariableMap[scopeId];
+        const ret = scopeMap ? scopeMap[name] : null;
+        return ret;
     }
 
     private async staticVariablesRequest(
@@ -1338,9 +1387,13 @@ export class GDBDebugSession extends DebugSession {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             const file = frame.fileName;
             const staticSymbols = this.symbolTable.getStaticVariables(file);
-            
+
+            const hasher = crypto.createHash('sha256');
+            hasher.update(file);
+            const fHash = hasher.digest('hex');
+
             for (const symbol of staticSymbols) {
-                const varObjName = `${file}_static_var_${symbol.name}`;
+                const varObjName = this.createStaticVarName(fHash, symbol.name);
                 let varObj: VariableObject;
                 try {
                     const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
@@ -1355,25 +1408,39 @@ export class GDBDebugSession extends DebugSession {
                     varObj = this.variableHandles.get(varId) as any;
                 }
                 catch (err) {
-                    if (err instanceof MIError && err.message === 'Variable object not found') {
-                        varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
-                        const varId = this.findOrCreateVariable(varObj);
-                        varObj.exp = symbol.name;
-                        varObj.id = varId;
+                    try {
+                        // Not all static variables found via objdump can be found with gdb. Happens
+                        // with function/block scoped static variables (objdump uses one name and gdb uses another)
+                        // Try to report what we can. Others show up under the Locals section hopefully.
+                        if (err instanceof MIError && err.message === 'Variable object not found') {
+                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
+                            const varId = this.findOrCreateVariable(varObj);
+                            varObj.exp = symbol.name;
+                            varObj.id = varId;
+                        } else {
+                            throw err;
+                        }
                     }
-                    else {
-                        throw err;
+                    catch (err) {
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', `Could not create static variable ${file}:${symbol.name}\n`);
+                            this.handleMsg('stderr', `Error: ${err}\n`);
+                        }
+                        varObj = null;
                     }
                 }
 
-                statics.push(varObj.toProtocolVariable());
+                if (varObj) {
+                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
+                    statics.push(varObj.toProtocolVariable());
+                }
             }
 
             response.body = { variables: statics };
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 1, `Could not get global variable information: ${err}`);
+            this.sendErrorResponse(response, 1, `Could not get static variable information: ${err}`);
         }
     }
 
@@ -1496,7 +1563,27 @@ export class GDBDebugSession extends DebugSession {
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
         let id: number | string | VariableObject | ExtendedVariable;
-        
+
+        /*
+        // How to deal with multiple anonymous unions/structs in the same scope. gdb uses the same display name for
+        // all of them. VSCode requires that all children have unique display names. So, we make them unique. The next
+        // issue is should we use the programming model which essentially flattens the union/struct or the natural one.
+        // We have three objectives we have to satisfy
+        //
+        // 1. Does it display correctly?
+        // 2. Can I do 'Add to Watch' or 'Copy as Expression' in the Variables Window?
+        // 3. Can I set a value on a field?
+        //
+        // We meet all three objectives, whether we flatten or not. I believe the natural model is better
+        // because it is closely aligned with the source code. Visual Studio and Eclipse use the flattened model.
+        // So, we have a config option to let the user decide. Not many people uae multiple anonymous stuff but
+        // Zephyr OS does and since it is legal C, we have to try our best to support it.
+        //
+        // Note: VSCode has a bug where if a union member is modified by the user, it does not refresh the Variables window
+        // but it will re-evaluate everything in the Watch window. Basically, it has no concept of a union and there is no
+        // way I know of to force a refresh
+        */
+
         if (args.variablesReference === GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
         }
@@ -1519,8 +1606,9 @@ export class GDBDebugSession extends DebugSession {
 
                     // Variable members
                     let children: VariableObject[];
+                    const childMap: {[name: string]: number} = {};
                     try {
-                        children = await this.miDebugger.varListChildren(id.name);
+                        children = await this.miDebugger.varListChildren(id.name, this.args.flattenAnonymous);
                         const vars = children.map((child) => {
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
@@ -1528,7 +1616,21 @@ export class GDBDebugSession extends DebugSession {
                                 child.fullExp = `${pvar.fullExp || pvar.exp}[${child.exp}]`;
                             }
                             else {
-                                child.fullExp = `${pvar.fullExp || pvar.exp}.${child.exp}`;
+                                let suffix = '.' + child.exp;                   // A normal suffix
+                                if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
+                                    const prev = childMap[child.exp];
+                                    if (prev) {
+                                        childMap[child.exp] = prev + 1;
+                                        child.exp += '#' + prev.toString(10);
+                                    }
+                                    childMap[child.exp] = 1;
+                                    suffix = '';    // Anonymous ones don't have a suffix. Have to use parent name
+                                } else {
+                                    // The full-name is not always derivable from the parent and child info. Esp. children
+                                    // of anonymous stuff. Might as well store all of them or set-value will not work.
+                                    pvar.children[child.exp] = child.name;
+                                }
+                                child.fullExp = `${pvar.fullExp || pvar.exp}${suffix}`;
                             }
                             return child.toProtocolVariable();
                         });
@@ -1647,8 +1749,8 @@ export class GDBDebugSession extends DebugSession {
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                     let url: string;
-                    if (symbolInfo.scope !== SymbolScope.Global) {
-                        url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                     }
                     else {
                         url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -1683,8 +1785,8 @@ export class GDBDebugSession extends DebugSession {
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                     let url: string;
-                    if (symbolInfo.scope !== SymbolScope.Global) {
-                        url = `disassembly:///${symbolInfo.file}::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                     }
                     else {
                         url = `disassembly:///${symbolInfo.name}.cdasm`;

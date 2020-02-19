@@ -117,104 +117,104 @@ define ITMDWTTransferDisable
 	set language auto
 end
 
-def EnableDWTSync
+define EnableDWTSync
 	set language c
 	set *0xE0001000 |= 0x800
 	set language auto
 end
 
-def DisableDWTSync
+define DisableDWTSync
 	set language c
 	set *0xE0001000 &= ~(0x800)
 	set language auto
 end
 
-def EnablePCSample
+define EnablePCSample
 	set language c
 	set *0xE0001004 = 0x0
 	set *0xE0001000 |= 0x1201
 	set language auto
 end
 
-def DisablePCSample
+define DisablePCSample
 	set language c
 	set *0xE0001000 &= ~(0x1000)
 	set language auto
 end
 
-def EnableCycleCountEvent
+define EnableCycleCountEvent
 	set language c
 	set *0xE0001000 |= 0x400000
 	set language auto
 end
 
-def DisableCycleCountEvent
+define DisableCycleCountEvent
 	set language c
 	set *0xE0001000 &= ~(0x400000)
 	set language auto
 end
 
-def EnableFoldedEvent
+define EnableFoldedEvent
 	set language c
 	set *0xE0001000 |= 0x200000
 	set language auto
 end
 
-def DisableFoldedEvent
+define DisableFoldedEvent
 	set language c
 	set *0xE0001000 &= ~(0x200000)
 	set language auto
 end
 
-def EnableLSUCountEvent
+define EnableLSUCountEvent
 	set language c
 	set *0xE0001000 |= 0x100000
 	set language auto
 end
 
-def DisableLSUCountEvent
+define DisableLSUCountEvent
 	set language c
 	set *0xE0001000 &= ~(0x100000)
 	set language auto
 end
 
-def EnableSleepCountEvent
+define EnableSleepCountEvent
 	set language c
 	set *0xE0001000 |= 0x80000
 	set language auto
 end
 
-def DisableSleepCountEvent
+define DisableSleepCountEvent
 	set language c
 	set *0xE0001000 &= ~(0x80000)
 	set language auto
 end
 
-def EnableInterruptOverheadEvent
+define EnableInterruptOverheadEvent
 	set language c
 	set *0xE0001000 |= 0x40000
 	set language auto
 end
 
-def DisableInterruptOverheadEvent
+define DisableInterruptOverheadEvent
 	set language c
 	set *0xE0001000 &= ~(0x40000)
 	set language auto
 end
 
-def EnableCPICountEvent
+define EnableCPICountEvent
 	set language c
 	set *0xE0001000 |= 0x20000
 	set language auto
 end
 
-def DisableCPICountEvent
+define DisableCPICountEvent
 	set language c
 	set *0xE0001000 &= ~(0x20000)
 	set language auto
 end
 
-def SoftwareReset
+define SoftwareReset
 	set language c
 	set *0xE000ED0C = 0x05FA0004
 	set $busy = (*0xE000ED0C & 0x4)

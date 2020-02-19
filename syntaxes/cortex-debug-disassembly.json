@@ -15,7 +15,7 @@
         {
             "comment": "Numeric constant",
             "name": "constant.numeric",
-            "match": "(0x[0-9A-F]+)|(#[0-9]+)"
+            "match": "(0x[0-9A-Fa-f]+)|(#[0-9]+)"
         },
         {
             "comment": "Register",

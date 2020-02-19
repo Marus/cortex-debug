@@ -150,26 +150,40 @@ export class CortexDebugExtension {
         }
 
         try {
-            const funcname: string = await vscode.window.showInputBox({
+            let funcname: string = await vscode.window.showInputBox({
                 placeHolder: 'main',
                 ignoreFocusOut: true,
-                prompt: 'Function Name to Disassemble'
+                prompt: 'Function Name (exact or a regexp) to Disassemble.'
             });
+            
+            funcname = funcname ? funcname.trim() : null;
+            if (!funcname) { return ; }
 
-            const functions = this.functionSymbols.filter((s) => s.name === funcname);
+            let functions = this.functionSymbols.filter((s) => s.name === funcname);
+            if (functions.length === 0) {
+                let regExp = new RegExp(funcname);
+                if (funcname.endsWith('/i')) {
+                    // This is not the best way or UI. But this is the only flag that makes sense
+                    regExp = new RegExp(funcname.substring(0, funcname.length - 2), 'i');
+                }
+                functions = this.functionSymbols.filter((s) => regExp.test(s.name));
+            }
 
             let url: string;
 
             if (functions.length === 0) {
-                vscode.window.showErrorMessage(`No function with name ${funcname} found.`);
+                vscode.window.showErrorMessage(`No function matching name/regexp '${funcname}' found.`);
             }
             else if (functions.length === 1) {
-                if (functions[0].scope === SymbolScope.Global) {
+                if (!functions[0].file || (functions[0].scope === SymbolScope.Global)) {
                     url = `disassembly:///${functions[0].name}.cdasm`;
                 }
                 else {
-                    url = `disassembly:///${functions[0].file}::${functions[0].name}.cdasm`;
+                    url = `disassembly:///${functions[0].file}:::${functions[0].name}.cdasm`;
                 }
+            }
+            else if (functions.length > 31) { /* arbitrary limit. 31 is prime! */
+                vscode.window.showErrorMessage(`Too many(${functions.length}) functions matching '${funcname}' found.`);
             }
             else {
                 const selected = await vscode.window.showQuickPick(functions.map((f) => {
@@ -178,21 +192,23 @@ export class CortexDebugExtension {
                         name: f.name,
                         file: f.file,
                         scope: f.scope,
-                        description: f.scope === SymbolScope.Global ? 'Global Scope' : `Static in ${f.file}`
+                        description: (!f.file || (f.scope === SymbolScope.Global)) ? 'Global Scope' : `Static in ${f.file}`
                     };
                 }), {
                     ignoreFocusOut: true
                 });
 
-                if (selected.scope === SymbolScope.Global) {
+                if (!selected.file || (selected.scope === SymbolScope.Global)) {
                     url = `disassembly:///${selected.name}.cdasm`;
                 }
                 else {
-                    url = `disassembly:///${selected.file}::${selected.name}.cdasm`;
+                    url = `disassembly:///${selected.file}:::${selected.name}.cdasm`;
                 }
             }
 
-            vscode.window.showTextDocument(vscode.Uri.parse(url));
+            if (url) {
+                vscode.window.showTextDocument(vscode.Uri.parse(url));
+            }
         }
         catch (e) {
             vscode.window.showErrorMessage('Unable to show disassembly.');

@@ -267,7 +267,7 @@ export class TcpPortScanner {
              * can have multiple addresses
              */
             if (!isWin && !isMac && commandExistsSync('ss')) {
-                TcpPortScanner.OSNetProbeCmd = 'ss -nat4';
+                TcpPortScanner.OSNetProbeCmd = 'ss -nlt';
                 TcpPortScanner.OSNetProbeCmdRegexpStr = 'LISTEN\\s+[^\\n]*:XYZZY\\s+[^\\s]+[^\\n]*\\n';
             } else if (commandExistsSync('netstat')) {
                 // On windows, if you ask for tcp it will only give you ipv4. On Mac, it gives both, so we have to
@@ -300,7 +300,7 @@ export class TcpPortScanner {
      * @param timeOutMs max timeout
      * @param fallback Fallback to using the intrusive method if proper OS command is not available
      */
-    public static waitForPortOpenOSUtil(port: number, retryTimeMs = 100, timeOutMs = 5000, fallback = true, doLog = true): Promise<void> {
+    public static waitForPortOpenOSUtl(port: number, retryTimeMs = 100, timeOutMs = 5000, fallback = true, doLog = true): Promise<void> {
         const cmd = TcpPortScanner.getOsNetProbeCmd().replace('XYZZY', port.toString());
         if (doLog) { console.log(cmd); }
         if (fallback && (cmd === '?')) {
@@ -331,7 +331,7 @@ export class TcpPortScanner {
                     }
                     const t = Date.now() - startTimeMs;
                     if (t < timeOutMs) {
-                        if (doLog) { console.log(`Setting timeout for ${retryTimeMs}ms, curTime = ${t}ms`); }
+                        if (doLog) { console.log(`waitForPortOpenOSUtl: Setting timeout for ${retryTimeMs}ms, curTime = ${t}ms`); }
                         setTimeout(() => {
                             tryAgain(resolve, reject);
                         }, retryTimeMs);

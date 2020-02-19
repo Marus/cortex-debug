@@ -3,6 +3,7 @@
 
 import * as assert from 'assert';
 import * as http from 'http';
+import os = require('os');
 import { TcpPortScanner } from '../src/tcpportscanner';
 
 /**
@@ -15,11 +16,13 @@ import { TcpPortScanner } from '../src/tcpportscanner';
 suite('TcpPortScanner Tests', () => {
     test('TcpPortScanner finder/waitfor(open/close) tests', async () => {
         let hrStart = process.hrtime();
-        function timeit() {
+        function timeit(reset: boolean = false) {
             const hrEnd = process.hrtime(hrStart);
             const ms = (hrEnd[1] / 1e6).toFixed(2);
             const ret = `${hrEnd[0]}s ${ms}ms`;
-            hrStart = process.hrtime();
+            if (reset) {
+                hrStart = process.hrtime();
+            }
             return ret;
         }
         const doLog = false;
@@ -46,36 +49,35 @@ suite('TcpPortScanner Tests', () => {
 
         const port = ports[1];
         timeit();
-        await TcpPortScanner.waitForPortOpen(port, hostNameOrIp, false, 100, 400).then(() => {
+        await TcpPortScanner.waitForPortOpen(port, hostNameOrIp, false, 100, 100).then(() => {
             assert.fail(`0: Timeout expected on port ${port} ${timeit()}`);
         }, async (err) => {
             if (doLog) { console.log(`0: Timeout: Success waiting on port ${port} ${timeit()} `, err.message); }
             assert.strictEqual(err.message, 'timeout');
 
-            // Lets create a server, but don't start listening for a while. This could have been
-            // simpler just using 'net' module
+            // Lets create a server, but don't start listening for a while. In the meantime, we start looking for
+            // ports to get open
             const server = http.createServer();
             setTimeout(() => {
                 server.listen(port, (err) => {
                     if (err) {
-                        assert.fail(`Could not start http server on port ${port} ${timeit()}`);
+                        assert.fail(`Could not start http server on port ${port}`);
+                    } else {
+                        if (doLog) { console.log(`Http server is listening on ${port}`); }
                     }
                 });
-                if (doLog) { console.log(`Http server is listening on ${port} ${timeit()}`); }
-            }, 200);
-            if (doLog) { console.log(`Waiting for http server to start... ${timeit()}`); }
-
-            // See if the server started on the requested port
-            timeit();
-            await TcpPortScanner.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(() => {
+            }, 200);            // Enough time to get waitForPortOpen to get started and working
+            if (doLog) { console.log('Waiting for http server to start...'); }
+         
+            // See if the server started on the requested port. We do it two ways in (near) parallel
+            // Both should succeed with the same timeout. See above when LISTEN starts
+            TcpPortScanner.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(async () => {
                 if (doLog) { console.log(`1. Success server port ${port} is ready ${timeit()}`); }
             }, (err) => {
                 if (doLog) { console.log(`1. Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
                 assert.fail('unexpected timeout ' + err);
             });
-
-            timeit();
-            await TcpPortScanner.waitForPortOpenOSUtil(port, 50, 1000, false, doLog).then(() => {
+            await TcpPortScanner.waitForPortOpenOSUtl(port, 50, 1000, false, doLog).then(() => {
                 if (doLog) { console.log(`1.1 Success server port ${port} is ready ${timeit()}`); }
             }, (err) => {
                 if (doLog) { console.log(`1.1 Timeout: Failed waiting on port ${port} to open ${timeit()}`, err); }
@@ -85,7 +87,7 @@ suite('TcpPortScanner Tests', () => {
             // Lets see if consecutive ports request works while server is still running. It should
             // skip the port we are already using
             args.consecutive = true;
-            timeit();
+            timeit(true);
             await TcpPortScanner.findFreePorts(args, hostNameOrIp).then((ret) => {
                 if (doLog) { console.log(`Found free consecutive ports ${ret} ${timeit()}`); }
                 const newPorts = ret;
@@ -101,8 +103,6 @@ suite('TcpPortScanner Tests', () => {
                 assert.fail(`TcpPortScanner.find consecutive failed ${timeit()} ` + e);
             });
 
-            // Close the server and try again. Not sure it closes instantly. It should since it should have
-            // no one connected?!?
             server.close();
             timeit();
             await TcpPortScanner.waitForPortClosed(port, hostNameOrIp, true, 50, 1000).then(() => {
