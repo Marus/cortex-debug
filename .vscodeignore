@@ -1,6 +1,6 @@
 .vscode/**
 typings/**
-out/**
+out/test/**
 test/**
 src/**
 **/*.map
@@ -8,4 +8,3 @@ src/**
 tsconfig.json
 vsc-extension-quickstart.md
 webpack.config.js
-node_modules

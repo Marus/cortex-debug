@@ -1326,7 +1326,7 @@
                 ],
                 "extensions": [],
                 "label": "Cortex Debug",
-                "program": "./dist/debugadapter.js",
+                "program": "./out/src/gdb.js",
                 "runtime": "node",
                 "type": "cortex-debug",
                 "variables": {}
@@ -1494,7 +1494,7 @@
         "debug",
         "embedded"
     ],
-    "main": "./dist/extension",
+    "main": "./out/src/frontend/extension",
     "name": "cortex-debug",
     "preview": true,
     "publisher": "marus25",
@@ -1503,10 +1503,16 @@
         "url": "https://github.com/Marus/cortex-debug.git"
     },
     "scripts": {
+        "tsccompile": "tsc -p ./",
+        "tscwatch": "tsc -watch -p ./",
+        "webpackcompiledev": "webpack --mode development",
+        "webpackcompile": "webpack --mode production",
+        "webpackwatch": "webpack --mode development --watch",
+        
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "vscode:prepublish": "webpack --mode production",
-        "watch": "webpack --mode development --watch",
-        "compile": "webpack --mode development",
+        "vscode:prepublish": "npm run tsccompile && npm run webpackcompile",
+        "watch": "npm run tscwatch & npm run webpackwatch",
+        "compile": "npm run tsccompile && npm run webpackcompiledev",
         "test-compile": "tsc -p ./"
     },
     "version": "0.3.4"

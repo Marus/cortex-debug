@@ -5,9 +5,6 @@ import * as os from 'os';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-declare function __webpack_require__(name: string): any;
-declare function __non_webpack_require__(name: string): any;
-
 export class SerialSWOSource extends EventEmitter implements SWOSource {
     private serialPort: any = null;
     public connected: boolean = false;
@@ -15,16 +12,14 @@ export class SerialSWOSource extends EventEmitter implements SWOSource {
     constructor(private device: string, private baudRate: number, extensionPath: string) {
         super();
 
-        const binarypath = path.normalize(path.join(extensionPath, 'binary_modules', process.version, os.platform(), process.arch, 'node_modules'));
-
-        if (module.paths.indexOf(binarypath) === -1) {
-            module.paths.splice(0, 0, binarypath);
+        const binaryPath = path.normalize(path.join(extensionPath, 'binary_modules', process.version, os.platform(), process.arch, 'node_modules'));
+        if (module.paths.indexOf(binaryPath) === -1) {
+            module.paths.splice(0, 0, binaryPath);
         }
 
         let SerialPort;
         try {
-            const requireFunc = typeof __webpack_require__ === 'function' ? __non_webpack_require__ : require;
-            SerialPort = requireFunc('serialport');
+            SerialPort = module.require('serialport');
         }
         catch (e) {
             // tslint:disable-next-line:max-line-length

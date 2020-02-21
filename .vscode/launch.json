@@ -11,7 +11,8 @@
 			"stopOnEntry": false,
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/dist/*.js"
+				"${workspaceRoot}/dist/*.js",
+				"${workspaceRoot}/out/**/*.js"
 			]
 		},
 		{
@@ -24,7 +25,8 @@
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/dist/*js"
+				"${workspaceRoot}/dist/*js",
+				"${workspaceRoot}/out/**/*.js"
 			],
 			"cwd": "${workspaceRoot}"
 		},
