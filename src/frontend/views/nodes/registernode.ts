@@ -70,11 +70,19 @@ export class RegisterNode extends BaseNode {
     public setValue(newValue: string) {
         this.currentNaturalValue = newValue;
         if (this.name.toUpperCase() === 'CONTROL' || this.name.toUpperCase() === 'XPSR' || this.name.toUpperCase() === 'CPSR') {
-            const base = this.currentNaturalValue.startsWith('0x') ? 16 : 10;
-            this.currentValue = parseInt(this.currentNaturalValue, base);
-            let cv = this.currentValue.toString(16);
-            while (cv.length < 8) { cv = '0' + cv; }
-            this.currentNaturalValue = '0x' + cv;
+            if (this.currentNaturalValue.startsWith('0x')) {
+                this.currentValue = parseInt(this.currentNaturalValue, 16);
+            } else {
+                this.currentValue = parseInt(this.currentNaturalValue, 10);
+                if (this.currentValue < 0) {
+                    // convert to unsigned 32 bit quantity
+                    const tmp = (this.currentValue & 0xffffffff) >>> 0;
+                    this.currentValue = tmp;
+                }
+                let cv = this.currentValue.toString(16);
+                while (cv.length < 8) { cv = '0' + cv; }
+                this.currentNaturalValue = '0x' + cv;
+            }
         }
     }
 
