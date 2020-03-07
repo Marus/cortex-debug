@@ -1,11 +1,11 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask } from './common';
+import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, createPortName } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
 export class PyOCDServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'PyOCD';
-    public readonly portsNeeded: string[] = ['gdbPort'];
+    public readonly portsNeeded: string[] = ['gdbPort', 'consolePort'];
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
@@ -27,7 +27,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
     }
 
     public initCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
+        const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
         return [
             `target-select extended-remote localhost:${gdbport}`
@@ -100,8 +100,13 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
+        const telnetport = this.ports['consolePort'];
 
-        let serverargs = ['--persist', '--port', gdbport.toString(), '--reset-break'];
+        let serverargs = [
+            '--persist',        // Not sure we need this anymore
+            '--port', gdbport.toString(),
+            '--telnet-port', telnetport.toString()
+        ];
 
         if (this.args.boardId) {
             serverargs.push('--board');

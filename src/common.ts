@@ -118,6 +118,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
 
+    numberOfProcessors: number;
+    targetProcessor: number;
+
     // C++ specific
     demangle: boolean;
 
@@ -198,4 +201,8 @@ export function calculatePortMask(decoders: any[]) {
         }
     });
     return mask;
+}
+
+export function createPortName(procNum: number, prefix: string = 'gdbPort'): string {
+    return prefix + ((procNum === 0) ? '' : procNum.toString());
 }

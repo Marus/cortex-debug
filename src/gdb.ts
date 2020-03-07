@@ -3,7 +3,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, SWOConfigureEvent, DisassemblyInstruction } from './common';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -131,6 +131,7 @@ export class GDBDebugSession extends DebugSession {
 
     private currentFile: string;
     protected onConfigDone: EventEmitter = new EventEmitter();
+    protected configDone: boolean;
 
     public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
         super(debuggerLinesStartAt1, isServer);
@@ -165,21 +166,27 @@ export class GDBDebugSession extends DebugSession {
         this.sendResponse(response);
     }
 
-    protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
+    private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
+        if (this.args.showDevDebugOutput) {
+            this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
+        }
         this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
+        if (this.args.showDevDebugOutput) {
+            this.handleMsg('log', 'Finished reading symbols\n');
+        }
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
+    }
+
+    protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
+        this.launchAttachInit(args);
         this.processLaunchAttachRequest(response, false);
     }
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
-        this.args = this.normalizeArguments(args);
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
-        this.symbolTable.loadSymbols();
-        this.breakpointMap = new Map();
-        this.fileExistsCache = new Map();
+        this.launchAttachInit(args);
         this.processLaunchAttachRequest(response, true);
     }
 
@@ -229,13 +236,10 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = false;
         this.activeThreadIds.clear();
 
-        const portFinderOpts = { min: 50000, max: 52000, retrieve: this.serverController.portsNeeded.length };
+        const totalPortsNeeded = this.calculatePortsNeeded();
+        const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded };
         TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
-            this.ports = {};
-            this.serverController.portsNeeded.forEach((val, idx) => {
-                this.ports[val] = ports[idx];
-            });
-
+            this.createPortsMap(ports);
             this.serverController.setPorts(this.ports);
 
             const executable = this.serverController.serverExecutable();
@@ -286,7 +290,8 @@ export class GDBDebugSession extends DebugSession {
                 initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
             }
 
-            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, this.ports['gdbPort']);
+            const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
+            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort);
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {
@@ -389,17 +394,26 @@ export class GDBDebugSession extends DebugSession {
                             this.miDebugger.once('generic-stopped', launchComplete);
                             // To avoid race conditions between finishing configuration, we should stay
                             // in stopped mode. Or, we end up clobbering the stopped event that might come
-                            // during setting of any additional breakpoints.
-                            this.onConfigDone.once('done', () => {
+                            // during setting of any additional breakpoints. Note that configDone may already
+                            // have happened if there were no user breakpoints.
+                            if (this.configDone) {
                                 this.miDebugger.sendCommand('exec-continue');
-                            });
+                            } else {
+                                this.onConfigDone.once('done', () => {
+                                    this.miDebugger.sendCommand('exec-continue');
+                                });
+                            }
                         });
                     }
                     else {
                         launchComplete();
-                        this.onConfigDone.once('done', () => {
+                        if (this.configDone) {
                             this.runPostStartSessionCommands(false);
-                        });
+                        } else {
+                            this.onConfigDone.once('done', () => {
+                                this.runPostStartSessionCommands(false);
+                            });
+                        }
                     }
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
@@ -423,6 +437,40 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
             this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    // When we have a multi-core device, we have to allocate as many ports as needed
+    // for each core. As of now, we can only debug one core at a time but we have to know
+    // which one. This is true of OpenOCD and pyocd but for now, we apply the policy for all
+    // This was only needed because gdb-servers allow a port setting, but then they increment
+    // for additional cores.
+    private calculatePortsNeeded() {
+        const portsNeeded = this.serverController.portsNeeded.length;
+        const numProcs = Math.max(this.args.numberOfProcessors || 1, 1);
+        let targProc = this.args.targetProcessor || 0;
+        if ((targProc < 0) || (targProc >= numProcs)) {
+            targProc = (targProc < 0) ? 0 : (numProcs - 1);
+            this.handleMsg('log', `launch.json: 'targetProcessor' must be >= 0 && < 'numberOfProcessors'. Setting it to ${targProc}` + '\n');
+            targProc = numProcs - 1;
+        }
+        const totalPortsNeeded = portsNeeded * numProcs;
+        this.args.numberOfProcessors = numProcs;
+        this.args.targetProcessor = targProc;
+        return totalPortsNeeded;
+    }
+
+    private createPortsMap(ports: number[]) {
+        const numProcs = this.args.numberOfProcessors;
+        this.ports = {};
+        let idx = 0;
+        // Ports are allocated so that all ports of same type come consecutively, then next and
+        // so on. This is the method used by most gdb-servers.
+        for (const pName of this.serverController.portsNeeded) {
+            for (let proc = 0; proc < numProcs; proc++) {
+                const nm = createPortName(proc, pName);
+                this.ports[nm] = ports[idx++];
+            }
+        }
     }
 
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening
@@ -778,6 +826,18 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
+    protected timeStart = Date.now();
+    protected wrapTimeStamp(str: string): string {
+        if (this.args.showDevDebugOutput) {
+            const elapsed = Date.now() - this.timeStart;
+            let elapsedStr = elapsed.toString();
+            while (elapsedStr.length < 10) { elapsedStr = '0' + elapsedStr ; }
+            return elapsedStr + ': ' + str;
+        } else {
+            return str;
+        }
+    }
+
     protected handleAdapterOutput(output) {
         this.sendEvent(new AdapterOutputEvent(output, 'out'));
     }
@@ -789,7 +849,7 @@ export class GDBDebugSession extends DebugSession {
     protected handleMsg(type: string, msg: string) {
         if (type === 'target') { type = 'stdout'; }
         if (type === 'log') { type = 'stderr'; }
-        this.sendEvent(new OutputEvent(msg, type));
+        this.sendEvent(new OutputEvent(this.wrapTimeStamp(msg), type));
     }
 
     protected handleRunning(info: MINode) {
@@ -1186,8 +1246,16 @@ export class GDBDebugSession extends DebugSession {
                     const id = parseInt(MINode.valueOf(th, 'id'));
                     const tid = MINode.valueOf(th, 'target-id');
                     const details = MINode.valueOf(th, 'details');
+                    let name = MINode.valueOf(th, 'name');
 
-                    return new Thread(id, details || tid);
+                    if (name && details && (name !== details)) {
+                        // Try to emulate how gdb shows thread info. Nice for servers like pyocd.
+                        name += ` (${details})`;
+                    } else {
+                        name = name || details || tid;
+                    }
+
+                    return new Thread(id, name);
                 }
                 else {
                     return null;
@@ -1276,6 +1344,7 @@ export class GDBDebugSession extends DebugSession {
     ): void {
         this.sendResponse(response);
         this.onConfigDone.emit('done');
+        this.configDone = true;
     }
 
     protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {

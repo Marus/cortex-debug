@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask, SWOConfigureEvent } from './common';
+import { GDBServerController, ConfigurationArguments, createPortName } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -30,7 +30,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     }
     
     public initCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
+        const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
         return [
             `target-select extended-remote localhost:${gdbport}`

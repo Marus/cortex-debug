@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask } from './common';
+import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
@@ -31,7 +31,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public initCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
+        const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
         return [
             `target-select extended-remote localhost:${gdbport}`
