@@ -5,7 +5,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 1. Issues Fixed
    * Issue #232: SVD Enumerated types `derivedFrom` attribute now supported (used by ST quite a lot). Caused silent SVD parsing failures before and the Peripherals window said `No SVD File Loaded`.
    * Issue #229: Better handling of multiple anonymous unions and structs in the same data structure. Only the first one was shown previously, defect in VSCode really, but had to find a workaround.
-   * Issue #179: Depending on how the compiler was used, only static variables declared in files the current directory were being displayed. It was an issue with how `objdump` and `gdb` behaved differently. Not a perfect fix. Use Watch Window when in doubt and report any further issues and discrepancies.
+   * Issue #179: Depending on how the compiler was used, only static variables declared in files in the current directory were being displayed. It was an issue with how `objdump` and `gdb` behaved differently. Not a perfect fix. Use Watch Window when in doubt and report any further issues and discrepancies.
    * Issues with `serialport` module: Updated to work with the latest version of VSCode/Electron. This will be an ongoing problem but hopefully, we can keep up with new releases of VSCode better in the future. When VSCode moves to a new version of Electron this extension has to be updated. For those adventurous enough, there is a script you can use to generate a compatible version yourself.
 2. New Features
    * Preliminary support for C++ de-mangled names. In `launch.json`, there is now a configuration option `"demangle"` to enable de-mangling of symbols both by GDB and Cortex-Debug. We may remove this property in the future and demangle all the time. All users are encouraged to enable this to see if it affects debugging in a negative way. With C++, there can be a lot of issues related to overloading and templates. Please report issues.
@@ -15,7 +15,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
    * New setting `flattenAnonymous` which will flatten anonymous structs/unions. Default=false
    * New setting `registerUseNaturalFormat` which will display registers either in Natural format or Hex: Default=true
    * The command `View Disassembly (Function)` now supports a regular expression as input. It will try an exact match for a function name first. But, it that fails treats the input string as a regular expression, and if the input string ends with `/i` it is treated as case-insensitive. As always, if there are multiple matches, you have to pick one.
-   * You can now specify the `numberOfProcessors` and the `targetProcessor` to debug in `launch.json` where there are multiple cores/processors in the DAP chain. Cortex-Debug will allocate the required number of TCP ports and use the right one(s) for the processor. This has been tested with `pyOCD` and `OpenOCD`
+   * You can now specify the `numberOfProcessors` and the `targetProcessor` to debug in `launch.json` when there are multiple cores/processors in the DAP chain. Cortex-Debug will allocate the required number of TCP ports and use the right one(s) for the processor. This has been tested with `pyOCD` and `OpenOCD`
 
 # V0.3.4
 
