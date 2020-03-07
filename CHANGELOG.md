@@ -14,6 +14,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
    * New setting `flattenAnonymous` which will flatten anonymous structs/unions. Default=false
    * New setting `registerUseNaturalFormat` which will display registers either in Natural format or Hex: Default=true
    * The command `View Disassembly (Function)` now supports a regular expression as input. It will try an exact match for a function name first. But, it that fails treats the input string as a regular expression, and if the input string ends with `/i` it is treated as case-insensitive. As always, if there are multiple matches, you have to pick one.
+   * You can now specify the `numberOfProcessors` and the `targetProcessor` to debug in `launch.json` where there are multiple cores/processors in the DAP chain. Cortex-Debug will allocate the required number of TCP ports and use the right one(s) for the processor. This has been tested with `pyOCD` and `OpenOCD`
 
 # V0.3.4
 

@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask, SWOConfigureEvent } from './common';
+import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -30,7 +30,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     }
     
     public initCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
+        const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
         return [
             `target-select extended-remote localhost:${gdbport}`
@@ -149,7 +149,8 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public serverLaunchCompleted(): void {
         if (this.args.swoConfig.enabled) {
             if (this.args.swoConfig.source === 'probe') {
-                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports['swoPort'] }));
+                const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
+                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm] }));
             }
             else {
                 this.emit('event', new SWOConfigureEvent({
