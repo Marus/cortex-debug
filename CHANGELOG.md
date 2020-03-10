@@ -1,4 +1,4 @@
-# V0.3.5-beta1
+# V0.3.5
 
 This is a pretty big release. The biggest change is to address C++ (and maybe Rust) de-mangled names. It had a big effect on the overall code base especially with regards to how disassembly was provided. The separator `::` caused quite a few issues and there are strange and unexpected things in the symbol table. It can affect users not even using C++ or de-mangling.
 
