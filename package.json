@@ -311,7 +311,7 @@
                             "numberOfProcessors": {
                                 "description": "Number of processors/cores in the target device.",
                                 "type": "number",
-                                "multipleOf": 1.0,
+                                "multipleOf": 1,
                                 "minimum": 1,
                                 "maximum": 10,
                                 "default": 1
@@ -319,7 +319,7 @@
                             "targetProcessor": {
                                 "description": "The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors'",
                                 "type": "number",
-                                "multipleOf": 1.0,
+                                "multipleOf": 1,
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
@@ -882,7 +882,7 @@
                             "numberOfProcessors": {
                                 "description": "Number of processors/cores in the target device.",
                                 "type": "number",
-                                "multipleOf": 1.0,
+                                "multipleOf": 1,
                                 "minimum": 1,
                                 "maximum": 10,
                                 "default": 1
@@ -890,7 +890,7 @@
                             "targetProcessor": {
                                 "description": "The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors'",
                                 "type": "number",
-                                "multipleOf": 1.0,
+                                "multipleOf": 1,
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
@@ -1561,5 +1561,5 @@
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
     },
-    "version": "0.3.4"
+    "version": "0.3.5"
 }
