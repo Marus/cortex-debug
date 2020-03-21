@@ -237,7 +237,7 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
 
         const totalPortsNeeded = this.calculatePortsNeeded();
-        const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded };
+        const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
         TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
             this.createPortsMap(ports);
             this.serverController.setPorts(this.ports);
@@ -1273,6 +1273,12 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
+        if (this.stopped === false) {
+            // Mar 20, 2020: A recent change in VSCode changed order of things. It is asking for stack traces when we are running
+            // happens at the start of the session and runToMain is enabled. This causes falses popups/errors
+            this.sendResponse(response);    // Send a blank response instead of an error
+            return;
+        }
         try {
             const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
             const ret: StackFrame[] = [];
@@ -1970,7 +1976,11 @@ export class GDBDebugSession extends DebugSession {
                     result: `<${err.toString()}>`,
                     variablesReference: 0
                 };
-                this.sendErrorResponse(response, 7, err.toString());
+                this.sendResponse(response);
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('stderr', 'watch: ' + err.toString());
+                }
+                // this.sendErrorResponse(response, 7, err.toString());
             }
         }
         else if (args.context === 'hover') {
@@ -1983,7 +1993,16 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
             }
             catch (e) {
-                this.sendErrorResponse(response, 7, e.toString());
+                // We get too many of these causing popus, just return a normal but empty response
+                response.body = {
+                    variablesReference: 0,
+                    result: ''
+                };
+                this.sendResponse(response);
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('stderr', 'hover: ' + e.toString());
+                }
+                // this.sendErrorResponse(response, 7, e.toString());
             }
         }
         else {
