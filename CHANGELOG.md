@@ -1,3 +1,12 @@
+# V0.3.6-pre1
+
+Minor bug fix release
+
+* When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
+* `serialport` binary module updated for latest Node.js/Electron
+* Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed
+* When `runToMain` was enabled, it caused a popup to appear for a failed stack trace. Again something changed in VSCode where it is requesting stack traces when program is not stopped.
+
 # V0.3.5
 
 This is a pretty big release. The biggest change is to address C++ (and maybe Rust) de-mangled names. It had a big effect on the overall code base especially with regards to how disassembly was provided. The separator `::` caused quite a few issues and there are strange and unexpected things in the symbol table. It can affect users not even using C++ or de-mangling.
