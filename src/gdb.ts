@@ -171,20 +171,21 @@ export class GDBDebugSession extends DebugSession {
     private static cachedSymTable: SymbolTable;
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-        if (false) {
-            const testCase = 1;
-            const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
-            const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
-            const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
 
-            this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
-            const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
-            tmpSymbols.loadSymbols();
-            tmpSymbols.printToFile(elfFile + '.cd-dump');
-            const sym = tmpSymbols.getFunctionByName(func, file);
-            console.log(sym);
-            this.handleMsg('log', 'Finished Reading symbols\n');
-        }
+        /*
+        const testCase = 1;
+        const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
+        const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
+        const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
+
+        this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
+        const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
+        tmpSymbols.loadSymbols();
+        tmpSymbols.printToFile(elfFile + '.cd-dump');
+        const sym = tmpSymbols.getFunctionByName(func, file);
+        console.log(sym);
+        this.handleMsg('log', 'Finished Reading symbols\n');
+        */
 
         const mTimeMs = fs.existsSync(args.executable) ? fs.statSync(args.executable).mtimeMs : -1;
         if ((GDBDebugSession.cachedExeName === args.executable) && (GDBDebugSession.cachedTsMS === mTimeMs)) {
