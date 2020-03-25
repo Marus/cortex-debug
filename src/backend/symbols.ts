@@ -1,6 +1,8 @@
 import * as childProcess from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
+import * as tmp from 'tmp';
+import * as fs from 'fs';
 
 import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
 
@@ -50,28 +52,35 @@ export class SymbolTable {
             if (this.demangle) {
                 options.push('-C');
             }
-            const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable]);
-            const output = objdump.stdout.toString();
-            const lines = output.split(/[\r\n]+/g);
 
-            this.collectCompilationUnits(lines);
+            const tmpName = tmp.tmpNameSync();
+            const outFd = fs.openSync(tmpName, 'w');
+            const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
+                stdio: ['ignore', outFd, 'ignore']
+            });
+            fs.closeSync(outFd);
+
+            const lines = this.readLines(tmpName);
+            const maxLines = this.collectCompilationUnits(lines);
 
             let currentFile: string = null;
-            let currentMapped: string[] = null;
+            let currentMapped: string[] = [];
+            let lineNum = 0;
 
             for (const line of lines) {
+                if (++lineNum >= maxLines) { break ; }
                 const match = line.match(SYMBOL_REGEX);
                 if (match) {
                     if (match[7] === 'd' && match[8] === 'f') {
                         if (match[11]) {
-                            currentFile = match[11].trim();
-                            currentMapped = this.addToFileMap(currentFile.split('/').pop(), currentFile);
+                            currentFile = SymbolTable.NormalizePath(match[11].trim());
+                            currentMapped = this.addToFileMap(path.basename(currentFile), currentFile);
                         } else {
                             // This can happen with C++. Inline and template methods/variables/functions/etc. are listed with
                             // an empty file association. So, symbols after this line can come from multiple compilation
                             // units with no clear owner. These can be locals, globals or other.
                             currentFile = null;
-                            currentMapped = null;
+                            currentMapped = [];
                         }
                     }
                     const type = TYPE_MAP[match[8]];
@@ -113,7 +122,7 @@ export class SymbolTable {
                         }
                     } else if (currentFile) {
                         // Yes, you can have statics with no file association in C++. They are neither
-                        // truly global or local. Some can be considered but not sure how to filter
+                        // truly global or local. Some can be considered global but not sure how to filter
                         if (type === SymbolType.Object) {
                             this.staticVars.push(sym);
                         } else if (type === SymbolType.Function) {
@@ -133,7 +142,44 @@ export class SymbolTable {
         catch (e) { }
     }
 
+    public printSyms(cb?: (str: string) => any) {
+        cb = cb || console.log;
+        for (const sym of this.allSymbols) {
+            let str = sym.name ;
+            if (sym.type === SymbolType.Function) {
+                str += ' (f)';
+                if (this.staticFuncs.indexOf(sym) !== -1) {
+                    str += '(s)';
+                }
+            } else if (sym.type === SymbolType.Object) {
+                str += ' (o)';
+                if (this.staticVars.indexOf(sym) !== -1) {
+                    str += '(s)';
+                }
+            }
+            cb(str);
+            for (const f of sym.fileMaps) {
+                cb('    ' + f);
+            }
+        }
+    }
+
+    public printToFile(fName: string): void {
+        try {
+            const outFd = fs.openSync(fName, 'w');
+            this.printSyms((str) => {
+                fs.writeSync(outFd, str);
+                fs.writeSync(outFd, '\n');
+            });
+            fs.closeSync(outFd);
+        }
+        catch (e) {
+            console.log('printSymsToFile: failed' + e);
+        }
+    }
+
     private addToFileMap(key: string, newMap: string): string[] {
+        newMap = SymbolTable.NormalizePath(newMap);
         const value = this.fileMap[key] || [];
         if (value.indexOf(newMap) === -1) {
             value.push(newMap);
@@ -142,40 +188,65 @@ export class SymbolTable {
         return value;
     }
 
-    private collectCompilationUnits(lines: string[]): void {
+    private collectCompilationUnits(lines: string[]): number {
         // Loop over and collect the set of compilation units. This is where true file names are stored
         // Most file names listed by objdump are just the base-name and I am not sure exactly how the base
         // file-name is supposed to map to an actual compilation unit. Esp. when duplicates exist. This only
         // matters for static variables/functions
         let isCompileUnit = false;
         let curName = '';
-        let curDir = '';
         let curSimpleName = '';
-        const cUnitRexp = /^ <0>.*Abbrev Number.*\(DW_TAG_compile_unit\)/;
-        for (const line of lines) {
+        let endSymTable = 0;
+        const cUnitRexp = /^ <0>.*\(DW_TAG_compile_unit\)/;
+        const cUnitDetail = /.*DW_AT_([^\s]*).*\)\:\s(.*)/;
+        const numLines = lines.length;
+        let ix = 0;
+
+        // Rest of the code here is very CPU intensive and should try be as optimized as possible.
+        // We may be dealing with a million+ lines of data
+        try {
+            while (!lines[ix++].startsWith('C')) {}
+        }
+        catch {
+            return numLines;
+        }
+        endSymTable = ix;
+
+        while (ix < numLines) {
+            const line = lines[ix++];
             if (cUnitRexp.test(line)) {
                 isCompileUnit = true;
             }
             else if (isCompileUnit) {
-                const match = line.match(/.*DW_AT_([^\s]*).*\)\:\s(.*)/);
+                const match = line.match(cUnitDetail);
                 if (match) {
-                    if (match[1] === 'name') {
-                        curName = match[2];
-                        curSimpleName = curName.split('/').pop();
+                    const type = match[1];
+                    if (type === 'name') {
+                        curName = SymbolTable.NormalizePath(match[2]);
+                        curSimpleName = path.basename(curName);
                         this.addToFileMap(curSimpleName, curSimpleName);
                         this.addToFileMap(curSimpleName, curName);
                     }
-                    else if (match[1] === 'comp_dir') {
-                        curDir = match[2];
-                        if (curName !== '') {
-                            this.addToFileMap(curSimpleName, curDir + '/' + curName);
-                        }
+                    else if (type === 'comp_dir') {
+                        // Do not use path.join below as we can have combo slashes
+                        const fullName = match[2] + '/' + curName;
+                        this.addToFileMap(curSimpleName, fullName);
+                        isCompileUnit = false;
                     }
-                } else if (line.startsWith(' <')) {
-                    isCompileUnit = false;
-                    curSimpleName = curName = curDir = '';
                 }
             }
+        }
+        return endSymTable;
+    }
+
+    protected readLines(fileName: string): string[] {
+        try {
+            const str = fs.readFileSync(fileName, {encoding: 'utf8'});
+            const lines = str.split(/[\r\n]+/g);
+            return lines;
+        }
+        catch (e) {
+            return [];
         }
     }
 
@@ -192,6 +263,7 @@ export class SymbolTable {
     }
 
     public getStaticVariables(file: string): SymbolInformation[] {
+        file = SymbolTable.NormalizePath(file);
         let ret = this.staticsByFile[file];
         if (!ret) {
             ret = [];
@@ -207,6 +279,7 @@ export class SymbolTable {
 
     public getFunctionByName(name: string, file?: string): SymbolInformation {
         if (file) {      // Try to find static function first
+            file = SymbolTable.NormalizePath(file);
             for (const s of this.staticFuncs) {     // Try exact matches first (maybe not needed)
                 if ((s.name === name) && (s.file === file)) {
                     return s;
@@ -221,5 +294,20 @@ export class SymbolTable {
 
         // Fall back to global scope
         return this.globalFuncs.find((s) => s.name === name);
+    }
+
+    public static NormalizePath(pathName: string): string {
+        if (!pathName) { return pathName; }
+        if (os.platform() === 'win32') {
+            // Do this so path.normalize works properly
+            pathName = pathName.replace(/\//g, '\\');
+        } else {
+            pathName = pathName.replace(/\\/g, '/');
+        }
+        pathName = path.normalize(pathName);
+        if (os.platform() === 'win32') {
+            pathName = pathName.toLowerCase();
+        }
+        return pathName;
     }
 }
