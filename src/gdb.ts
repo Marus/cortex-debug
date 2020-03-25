@@ -166,15 +166,47 @@ export class GDBDebugSession extends DebugSession {
         this.sendResponse(response);
     }
 
+    private static cachedExeName = '';
+    private static cachedTsMS = 0;
+    private static cachedSymTable: SymbolTable;
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-        if (this.args.showDevDebugOutput) {
-            this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
+        if (false) {
+            const testCase = 1;
+            const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
+            const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
+            const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
+
+            this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
+            const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
+            tmpSymbols.loadSymbols();
+            tmpSymbols.printToFile(elfFile + '.cd-dump');
+            const sym = tmpSymbols.getFunctionByName(func, file);
+            console.log(sym);
+            this.handleMsg('log', 'Finished Reading symbols\n');
         }
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
-        this.symbolTable.loadSymbols();
-        if (this.args.showDevDebugOutput) {
-            this.handleMsg('log', 'Finished reading symbols\n');
+
+        const mTimeMs = fs.existsSync(args.executable) ? fs.statSync(args.executable).mtimeMs : -1;
+        if ((GDBDebugSession.cachedExeName === args.executable) && (GDBDebugSession.cachedTsMS === mTimeMs)) {
+            this.symbolTable = GDBDebugSession.cachedSymTable;
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('log', `Using cached symbols for ${args.executable}\n`);
+            }
+        } else {
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
+            }
+            this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
+            this.symbolTable.loadSymbols();
+            this.symbolTable.printToFile(args.executable + '.cd-dump');
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('log', 'Finished reading symbols\n');
+            }
+            if (mTimeMs !== -1) {
+                GDBDebugSession.cachedExeName = args.executable;
+                GDBDebugSession.cachedTsMS = mTimeMs;
+                GDBDebugSession.cachedSymTable = this.symbolTable;
+            }
         }
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
@@ -1823,14 +1855,16 @@ export class GDBDebugSession extends DebugSession {
 
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                    let url: string;
-                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo) {
+                        let url: string;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                        }
+                        else {
+                            url = `disassembly:///${symbolInfo.name}.cdasm`;
+                        }
+                        if (url === this.activeEditorPath) { assemblyMode = true; }
                     }
-                    else {
-                        url = `disassembly:///${symbolInfo.name}.cdasm`;
-                    }
-                    if (url === this.activeEditorPath) { assemblyMode = true; }
                 }
             }
 
@@ -1859,14 +1893,16 @@ export class GDBDebugSession extends DebugSession {
 
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                    let url: string;
-                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo) {
+                        let url: string;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                        }
+                        else {
+                            url = `disassembly:///${symbolInfo.name}.cdasm`;
+                        }
+                        if (url === this.activeEditorPath) { assemblyMode = true; }
                     }
-                    else {
-                        url = `disassembly:///${symbolInfo.name}.cdasm`;
-                    }
-                    if (url === this.activeEditorPath) { assemblyMode = true; }
                 }
             }
 
