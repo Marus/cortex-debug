@@ -168,22 +168,7 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-
-        /*
-        const testCase = 0;
-        const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
-        const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
-        const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
-
-        this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
-        const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
-        tmpSymbols.loadSymbols();
-        // tmpSymbols.printToFile(elfFile + '.cd-dump');
-        const sym = tmpSymbols.getFunctionByName(func, file);
-        console.log(sym);
-        this.handleMsg('log', 'Finished Reading symbols\n');
-        */
-
+        // this.dbgSymbolStuff(args);
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
         }
@@ -195,6 +180,22 @@ export class GDBDebugSession extends DebugSession {
         }
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
+    }
+
+    private dbgSymbolStuff(args: ConfigurationArguments) {
+        if (os.userInfo().username === 'hdm') {
+            const testCase = 0;
+            const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
+            const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
+            const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
+            this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
+            const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
+            tmpSymbols.loadSymbols();
+            // tmpSymbols.printToFile(elfFile + '.cd-dump');
+            const sym = tmpSymbols.getFunctionByName(func, file);
+            console.log(sym);
+            this.handleMsg('log', 'Finished Reading symbols\n');
+        }
     }
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {

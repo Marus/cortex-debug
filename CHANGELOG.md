@@ -1,11 +1,15 @@
-# V0.3.6-pre1
+# V0.3.6-pre3
 
 Minor bug fix release
 
-* When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
-* `serialport` binary module updated for latest Node.js/Electron
-* Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed
-* When `runToMain` was enabled, it caused a popup to appear for a failed stack trace. Again something changed in VSCode where it is requesting stack traces when program is not stopped.
+1. New feature
+   * A performance improvement has been made at startup. It was taking up 2.5 seconds to parse the symbols out of the elf file. It is now cut in half and the results are cached. When cached results are used, it takes a few milliseconds.
+2. Issues fixed
+   * Fixed Issue #263. Static functions were not properly detected because of the differences in how gdb and objdump reported pathnames. It made things like step/next to not work. Much thanks to @Lykkeberg and @stalyatech for reporting and testing solutions
+   * When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
+   * `serialport` binary module updated for latest Node.js/Electron
+   * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed
+   * When `runToMain` was enabled, it caused a popup to appear for a failed stack trace. Again something changed in VSCode where it is requesting stack traces when program is not stopped.
 
 # V0.3.5
 
