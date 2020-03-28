@@ -37,10 +37,10 @@ export class SymbolTable {
     // TODO: some of the arrays below should be maps. Later
     private staticsByFile: {[file: string]: SymbolInformation[]} = {};
     private globalVars: SymbolInformation[] = [];
-    private globalFuncs: SymbolInformation[] = [];
+    private globalFuncsMap: {[key: string]: SymbolInformation} = {};    // Key is function name
     private staticVars: SymbolInformation[] = [];
-    private staticFuncs: SymbolInformation[] = [];
-    private fileMap: {[key: string]: string[]} = {};        // basename of a file to a potential list of aliases we found
+    private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
+    private fileMap: {[key: string]: string[]} = {};                    // basename of a file to a potential list of aliases we found
 
     constructor(private toolchainPath: string, private toolchainPrefix: string, private executable: string, private demangle: boolean) {
     }
@@ -148,7 +148,7 @@ export class SymbolTable {
             if (scope !== SymbolScope.Local) {
                 if (type === SymbolType.Function) {
                     sym.scope = SymbolScope.Global;
-                    this.globalFuncs.push(sym);
+                    this.globalFuncsMap[sym.name] = sym;
                 } else if (type === SymbolType.Object) {
                     if (scope === SymbolScope.Global) {
                         this.globalVars.push(sym);
@@ -165,11 +165,16 @@ export class SymbolTable {
                 if (type === SymbolType.Object) {
                     this.staticVars.push(sym);
                 } else if (type === SymbolType.Function) {
-                    this.staticFuncs.push(sym);
+                    const tmp = this.staticFuncsMap[sym.name];
+                    if (tmp) {
+                        tmp.push(sym);
+                    } else {
+                        this.staticFuncsMap[sym.name] = [sym];
+                    }
                 }
             } else if (type === SymbolType.Function) {
                 sym.scope = SymbolScope.Global;
-                this.globalFuncs.push(sym);
+                this.globalFuncsMap[sym.name] = sym;
             } else if (type === SymbolType.Object) {
                 // We are currently ignoring Local objects with no file association for objects.
                 // Revisit later with care and decide how to classify them
@@ -358,14 +363,13 @@ export class SymbolTable {
     public getFunctionByName(name: string, file?: string): SymbolInformation {
         if (file) {      // Try to find static function first
             file = SymbolTable.NormalizePath(file);
-            for (const s of this.staticFuncs) {     // Try exact matches first (maybe not needed)
-                if ((s.name === name) && (s.file === file)) {
-                    return s;
+            const syms = this.staticFuncsMap[name];
+            if (syms) {
+                for (const s of syms) {                 // Try exact matches first (maybe not needed)
+                    if (s.file === file) { return s; }
                 }
-            }
-            for (const s of this.staticFuncs) {     // Try any match
-                if (s.name === name) {
-                    const maps = this.fileMap[s.file];
+                for (const s of syms) {                 // Try any match
+                    const maps = this.fileMap[s.file];  // Bunch of files/aliases that may have the same symbol name
                     if (maps && (maps.indexOf(file) !== -1)) {
                         return s;
                     }
@@ -374,7 +378,8 @@ export class SymbolTable {
         }
 
         // Fall back to global scope
-        return this.globalFuncs.find((s) => s.name === name);
+        const ret = this.globalFuncsMap[name];
+        return ret;
     }
 
     public static NormalizePath(pathName: string): string {
