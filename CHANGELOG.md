@@ -1,4 +1,4 @@
-# V0.3.6-pre3
+# V0.3.6-pre4
 
 Minor bug fix release
 
@@ -8,7 +8,7 @@ Minor bug fix release
    * Fixed Issue #263. Static functions were not properly detected because of the differences in how gdb and objdump reported pathnames. It made things like step/next to not work. Much thanks to @Lykkeberg and @stalyatech for reporting and testing solutions
    * When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
    * `serialport` binary module updated for latest Node.js/Electron
-   * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed
+   * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed. There were also popus when setting a breakpoint while program was running and single stepping too fast and these are now suppressed.
    * When `runToMain` was enabled, it caused a popup to appear for a failed stack trace. Again something changed in VSCode where it is requesting stack traces when program is not stopped.
 
 # V0.3.5
