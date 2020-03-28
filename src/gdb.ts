@@ -168,7 +168,8 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-        // this.dbgSymbolStuff(args);
+        // this.dbgSymbolStuff(args, 0);
+        // this.dbgSymbolStuff(args, 1);
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
         }
@@ -182,9 +183,8 @@ export class GDBDebugSession extends DebugSession {
         this.fileExistsCache = new Map();
     }
 
-    private dbgSymbolStuff(args: ConfigurationArguments) {
+    private dbgSymbolStuff(args: ConfigurationArguments, testCase: number) {
         if (os.userInfo().username === 'hdm') {
-            const testCase = 0;
             const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
             const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
             const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
@@ -192,7 +192,9 @@ export class GDBDebugSession extends DebugSession {
             const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
             tmpSymbols.loadSymbols();
             // tmpSymbols.printToFile(elfFile + '.cd-dump');
-            const sym = tmpSymbols.getFunctionByName(func, file);
+            let sym = tmpSymbols.getFunctionByName(func, file);
+            console.log(sym);
+            sym = tmpSymbols.getFunctionByName('memset');
             console.log(sym);
             this.handleMsg('log', 'Finished Reading symbols\n');
         }
@@ -548,15 +550,19 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
             case 'read-memory':
+                if (this.stopped === false) { return ; }
                 this.readMemoryRequestCustom(response, args['address'], args['length']);
                 break;
             case 'write-memory':
+                if (this.stopped === false) { return ; }
                 this.writeMemoryRequest(response, args['address'], args['data']);
                 break;
             case 'read-registers':
+                if (this.stopped === false) { return ; }
                 this.readRegistersRequest(response);
                 break;
             case 'read-register-list':
+                if (this.stopped === false) { return ; }
                 this.readRegisterListRequest(response);
                 break;
             case 'disassemble':
@@ -1387,6 +1393,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     private async globalVariablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        if (this.stopped === false) { return ; }
         const symbolInfo: SymbolInformation[] = this.symbolTable.getGlobalVariables();
 
         const globals: DebugProtocol.Variable[] = [];
@@ -1474,6 +1481,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        if (this.stopped === false) { return ; }
         const statics: DebugProtocol.Variable[] = [];
 
         try {
@@ -1566,6 +1574,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        if (this.stopped === false) { return ; }
         const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
@@ -1655,6 +1664,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        if (this.stopped === false) { return ; }
         let id: number | string | VariableObject | ExtendedVariable;
 
         /*
@@ -1916,6 +1926,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
+        if (this.stopped === false) { return ; }
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));
