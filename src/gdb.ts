@@ -1070,6 +1070,7 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.SetFunctionBreakpointsArguments
     ): void {
         const createBreakpoints = async (shouldContinue) => {
+            this.disableSendStoppedEvents = false;
             const all = [];
             args.breakpoints.forEach((brk) => {
                 all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
@@ -1097,6 +1098,7 @@ export class GDBDebugSession extends DebugSession {
         const process = async () => {
             if (this.stopped) { await createBreakpoints(false); }
             else {
+                this.disableSendStoppedEvents = true;
                 this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
             }
@@ -1112,6 +1114,7 @@ export class GDBDebugSession extends DebugSession {
             const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
             
             try {
+                this.disableSendStoppedEvents = false;
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
                 this.breakpointMap.set(args.source.path, []);
                 
@@ -1193,6 +1196,7 @@ export class GDBDebugSession extends DebugSession {
                 await createBreakpoints(false);
             }
             else {
+                this.disableSendStoppedEvents = true;
                 await this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
             }
