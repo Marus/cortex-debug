@@ -1,3 +1,16 @@
+# V0.3.6
+
+Minor bug fix release
+
+1. New feature
+   * A performance improvement has been made at startup. It was taking 2-3 seconds to parse the symbols out of the elf file. It is now cut in half and the results are cached. When cached results are used, it takes a few milliseconds.
+2. Issues fixed
+   * Fixed Issue [#263](https://github.com/Marus/cortex-debug/issues/263). Static functions were not properly detected because of the differences in how gdb and objdump reported pathnames. It made things like step/next to not work. Much thanks to @Lykkeberg and @stalyatech for reporting and testing solutions
+   * When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
+   * `serialport` binary module updated for latest Node.js/Electron
+   * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed. There were also popus when setting a breakpoint while program was running and single stepping too fast and these are now suppressed.
+   * When `runToMain` was enabled, it caused a popup to appear for a failed stack trace. Again something changed in VSCode where it is requesting stack traces when program is not stopped.
+
 # V0.3.5
 
 This is a pretty big release. The biggest change is to address C++ (and maybe Rust) de-mangled names. It had a big effect on the overall code base especially with regards to how disassembly was provided. The separator `::` caused quite a few issues and there are strange and unexpected things in the symbol table. It can affect users not even using C++ or de-mangling.

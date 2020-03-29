@@ -168,16 +168,36 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
+        // this.dbgSymbolStuff(args, 0);
+        // this.dbgSymbolStuff(args, 1);
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
         }
         this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
+        // this.symbolTable.printToFile(args.executable + '.cd-dump');
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Finished reading symbols\n');
         }
         this.breakpointMap = new Map();
         this.fileExistsCache = new Map();
+    }
+
+    private dbgSymbolStuff(args: ConfigurationArguments, testCase: number) {
+        if (os.userInfo().username === 'hdm') {
+            const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
+            const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
+            const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
+            this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
+            const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
+            tmpSymbols.loadSymbols();
+            // tmpSymbols.printToFile(elfFile + '.cd-dump');
+            let sym = tmpSymbols.getFunctionByName(func, file);
+            console.log(sym);
+            sym = tmpSymbols.getFunctionByName('memset');
+            console.log(sym);
+            this.handleMsg('log', 'Finished Reading symbols\n');
+        }
     }
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
@@ -237,7 +257,7 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
 
         const totalPortsNeeded = this.calculatePortsNeeded();
-        const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded };
+        const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
         TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
             this.createPortsMap(ports);
             this.serverController.setPorts(this.ports);
@@ -530,15 +550,19 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
             case 'read-memory':
+                if (this.stopped === false) { return ; }
                 this.readMemoryRequestCustom(response, args['address'], args['length']);
                 break;
             case 'write-memory':
+                if (this.stopped === false) { return ; }
                 this.writeMemoryRequest(response, args['address'], args['data']);
                 break;
             case 'read-registers':
+                if (this.stopped === false) { return ; }
                 this.readRegistersRequest(response);
                 break;
             case 'read-register-list':
+                if (this.stopped === false) { return ; }
                 this.readRegisterListRequest(response);
                 break;
             case 'disassemble':
@@ -1046,6 +1070,7 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.SetFunctionBreakpointsArguments
     ): void {
         const createBreakpoints = async (shouldContinue) => {
+            this.disableSendStoppedEvents = false;
             const all = [];
             args.breakpoints.forEach((brk) => {
                 all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
@@ -1073,6 +1098,7 @@ export class GDBDebugSession extends DebugSession {
         const process = async () => {
             if (this.stopped) { await createBreakpoints(false); }
             else {
+                this.disableSendStoppedEvents = true;
                 this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
             }
@@ -1088,6 +1114,7 @@ export class GDBDebugSession extends DebugSession {
             const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
             
             try {
+                this.disableSendStoppedEvents = false;
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
                 this.breakpointMap.set(args.source.path, []);
                 
@@ -1169,6 +1196,7 @@ export class GDBDebugSession extends DebugSession {
                 await createBreakpoints(false);
             }
             else {
+                this.disableSendStoppedEvents = true;
                 await this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
             }
@@ -1273,6 +1301,12 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
+        if (this.stopped === false) {
+            // Mar 20, 2020: A recent change in VSCode changed order of things. It is asking for stack traces when we are running
+            // happens at the start of the session and runToMain is enabled. This causes falses popups/errors
+            this.sendResponse(response);    // Send a blank response instead of an error
+            return;
+        }
         try {
             const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
             const ret: StackFrame[] = [];
@@ -1363,6 +1397,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     private async globalVariablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        if (this.stopped === false) { return ; }
         const symbolInfo: SymbolInformation[] = this.symbolTable.getGlobalVariables();
 
         const globals: DebugProtocol.Variable[] = [];
@@ -1450,6 +1485,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        if (this.stopped === false) { return ; }
         const statics: DebugProtocol.Variable[] = [];
 
         try {
@@ -1542,6 +1578,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        if (this.stopped === false) { return ; }
         const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
@@ -1631,6 +1668,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        if (this.stopped === false) { return ; }
         let id: number | string | VariableObject | ExtendedVariable;
 
         /*
@@ -1817,14 +1855,16 @@ export class GDBDebugSession extends DebugSession {
 
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                    let url: string;
-                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo) {
+                        let url: string;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                        }
+                        else {
+                            url = `disassembly:///${symbolInfo.name}.cdasm`;
+                        }
+                        if (url === this.activeEditorPath) { assemblyMode = true; }
                     }
-                    else {
-                        url = `disassembly:///${symbolInfo.name}.cdasm`;
-                    }
-                    if (url === this.activeEditorPath) { assemblyMode = true; }
                 }
             }
 
@@ -1853,14 +1893,16 @@ export class GDBDebugSession extends DebugSession {
 
                 if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                    let url: string;
-                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                        url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                    if (symbolInfo) {
+                        let url: string;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                        }
+                        else {
+                            url = `disassembly:///${symbolInfo.name}.cdasm`;
+                        }
+                        if (url === this.activeEditorPath) { assemblyMode = true; }
                     }
-                    else {
-                        url = `disassembly:///${symbolInfo.name}.cdasm`;
-                    }
-                    if (url === this.activeEditorPath) { assemblyMode = true; }
                 }
             }
 
@@ -1888,6 +1930,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
+        if (this.stopped === false) { return ; }
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));
@@ -1970,7 +2013,11 @@ export class GDBDebugSession extends DebugSession {
                     result: `<${err.toString()}>`,
                     variablesReference: 0
                 };
-                this.sendErrorResponse(response, 7, err.toString());
+                this.sendResponse(response);
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('stderr', 'watch: ' + err.toString());
+                }
+                // this.sendErrorResponse(response, 7, err.toString());
             }
         }
         else if (args.context === 'hover') {
@@ -1983,7 +2030,16 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
             }
             catch (e) {
-                this.sendErrorResponse(response, 7, e.toString());
+                // We get too many of these causing popus, just return a normal but empty response
+                response.body = {
+                    variablesReference: 0,
+                    result: ''
+                };
+                this.sendResponse(response);
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('stderr', 'hover: ' + e.toString());
+                }
+                // this.sendErrorResponse(response, 7, e.toString());
             }
         }
         else {
