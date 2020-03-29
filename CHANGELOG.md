@@ -1,11 +1,11 @@
-# V0.3.6-pre4
+# V0.3.6
 
 Minor bug fix release
 
 1. New feature
-   * A performance improvement has been made at startup. It was taking up 2.5 seconds to parse the symbols out of the elf file. It is now cut in half and the results are cached. When cached results are used, it takes a few milliseconds.
+   * A performance improvement has been made at startup. It was taking 2-3 seconds to parse the symbols out of the elf file. It is now cut in half and the results are cached. When cached results are used, it takes a few milliseconds.
 2. Issues fixed
-   * Fixed Issue #263. Static functions were not properly detected because of the differences in how gdb and objdump reported pathnames. It made things like step/next to not work. Much thanks to @Lykkeberg and @stalyatech for reporting and testing solutions
+   * Fixed Issue [#263](https://github.com/Marus/cortex-debug/issues/263). Static functions were not properly detected because of the differences in how gdb and objdump reported pathnames. It made things like step/next to not work. Much thanks to @Lykkeberg and @stalyatech for reporting and testing solutions
    * When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
    * `serialport` binary module updated for latest Node.js/Electron
    * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed. There were also popus when setting a breakpoint while program was running and single stepping too fast and these are now suppressed.
