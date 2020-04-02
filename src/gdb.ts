@@ -394,6 +394,7 @@ export class GDBDebugSession extends DebugSession {
                     this.handleMsg('log', dbgMsg);
                 }
 
+                this.disableSendStoppedEvents = this.args.runToMain ? true : false;
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
@@ -404,6 +405,7 @@ export class GDBDebugSession extends DebugSession {
                             this.stopped = true;
                             this.stoppedReason = 'start';
                             this.stoppedThreadId = this.currentThreadId;
+                            this.disableSendStoppedEvents = false;
                             this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
                             this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
                         }, 50);
@@ -1296,12 +1298,14 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (e) {
-            this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
+            if (this.stopped) {     // Between the time we asked for a info, a continue occured
+                this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
+            }
         }
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
-        if (this.stopped === false) {
+        if ((this.stopped === false) || this.disableSendStoppedEvents) {
             // Mar 20, 2020: A recent change in VSCode changed order of things. It is asking for stack traces when we are running
             // happens at the start of the session and runToMain is enabled. This causes falses popups/errors
             this.sendResponse(response);    // Send a blank response instead of an error
@@ -1368,7 +1372,9 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
+            if (this.stopped) {     // Between the time we asked for a info, a continue occured
+                this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
+            }
         }
     }
 
