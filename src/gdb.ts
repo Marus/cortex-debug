@@ -392,18 +392,18 @@ export class GDBDebugSession extends DebugSession {
                     this.handleMsg('log', dbgMsg);
                 }
 
-                this.disableSendStoppedEvents = this.args.runToMain ? true : false;
+                this.disableSendStoppedEvents = (!attach && this.args.runToMain) ? true : false;
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
                     this.sendResponse(response);
 
                     const launchComplete = () => {
+                        this.disableSendStoppedEvents = false;
                         setTimeout(() => {
                             this.stopped = true;
                             this.stoppedReason = 'start';
                             this.stoppedThreadId = this.currentThreadId;
-                            this.disableSendStoppedEvents = false;
                             this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
                             this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
                         }, 50);
@@ -1303,12 +1303,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
-        if ((this.stopped === false) || this.disableSendStoppedEvents) {
-            // Mar 20, 2020: A recent change in VSCode changed order of things. It is asking for stack traces when we are running
-            // happens at the start of the session and runToMain is enabled. This causes falses popups/errors
-            this.sendResponse(response);    // Send a blank response instead of an error
-            return;
-        }
         try {
             const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
             const ret: StackFrame[] = [];
@@ -1401,7 +1395,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     private async globalVariablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
-        if (this.stopped === false) { return ; }
         const symbolInfo: SymbolInformation[] = this.symbolTable.getGlobalVariables();
 
         const globals: DebugProtocol.Variable[] = [];
@@ -1489,7 +1482,6 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
-        if (this.stopped === false) { return ; }
         const statics: DebugProtocol.Variable[] = [];
 
         try {
@@ -1582,7 +1574,6 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
-        if (this.stopped === false) { return ; }
         const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
@@ -1632,7 +1623,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+            this.sendErrorResponse(response, 1, `Could not get stack variables: ${err}`);
         }
     }
 
@@ -1672,7 +1663,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
-        if (this.stopped === false) { return ; }
         let id: number | string | VariableObject | ExtendedVariable;
 
         /*
@@ -1934,7 +1924,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-        if (this.stopped === false) { return ; }
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));
