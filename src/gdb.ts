@@ -168,8 +168,9 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-        // this.dbgSymbolStuff(args, 0);
-        // this.dbgSymbolStuff(args, 1);
+        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/firmware.elf', 'sty_uart_init_helper', 'mods/machine_uart.c');
+        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
+        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
         }
@@ -183,11 +184,8 @@ export class GDBDebugSession extends DebugSession {
         this.fileExistsCache = new Map();
     }
 
-    private dbgSymbolStuff(args: ConfigurationArguments, testCase: number) {
+    private dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
-            const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
-            const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
-            const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
             const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
             tmpSymbols.loadSymbols();
