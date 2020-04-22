@@ -78,7 +78,19 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
     }
 
     public serverLaunchStarted(): void {}
-    public serverLaunchCompleted(): void {}
+    public serverLaunchCompleted(): void {
+        if (this.args.swoConfig.enabled) {
+            if (this.args.swoConfig.source === 'probe' && os.platform() === 'win32') {
+                this.emit('event', new SWOConfigureEvent({ type: 'file', path: this.swoPath }));
+            }
+            else if (this.args.swoConfig.source !== 'probe') {
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'fifo',
+                    path: this.args.swoConfig.swoPath
+                }));
+            }
+        }
+    }
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}
 }
