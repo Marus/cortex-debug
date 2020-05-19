@@ -41,10 +41,14 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const commands = [
             'interpreter-exec console "monitor halt"',
             'interpreter-exec console "monitor reset"',
-            'target-download',
-            'interpreter-exec console "monitor reset"',
-            'enable-pretty-printing'
+            'target-download'
         ];
+
+        if (this.args.resetAfterDownload) {
+            commands.push('interpreter-exec console "monitor reset"');
+        }
+
+        commands.push('enable-pretty-printing');
         return commands;
     }
 

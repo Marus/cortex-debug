@@ -128,6 +128,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ipAddress: string;
     serialNumber: string;
     jlinkscript: string;
+    resetAfterDownload: boolean;
     
     // OpenOCD Specific
     configFiles: string[];
