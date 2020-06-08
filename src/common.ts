@@ -108,6 +108,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     swoConfig: SWOConfiguration;
     graphConfig: any[];
     showDevDebugOutput: boolean;
+    showDevDebugTimestamps: boolean;
     cwd: string;
     extensionPath: string;
     rtos: string;

@@ -852,7 +852,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected timeStart = Date.now();
     protected wrapTimeStamp(str: string): string {
-        if (this.args.showDevDebugOutput) {
+        if (this.args.showDevDebugOutput && this.args.showDevDebugTimestamps) {
             const elapsed = Date.now() - this.timeStart;
             let elapsedStr = elapsed.toString();
             while (elapsedStr.length < 10) { elapsedStr = '0' + elapsedStr ; }
