@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 
 import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
 
-const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s([^\s]+)\s([^\s]*\s)?([0-9a-f]+)\s([^\r\n]*)/mg;
+const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]+)/mg;
 // DW_AT_name && DW_AT_comp_dir may have optional stuff that looks like '(indirect string, offset: 0xf94): '
 const COMP_UNIT_REGEX = /\n <0>.*\(DW_TAG_compile_unit\)[\s\S]*?DW_AT_name[\s]*: (\(.*\):\s)?(.*)[\r\n]+([\s\S]*?)\n </mg;
 // DW_AT_comp_dir may not exist
@@ -104,8 +104,8 @@ export class SymbolTable {
             let match: RegExpExecArray;
             while ((match = regex.exec(str)) !== null) {
                 if (match[7] === 'd' && match[8] === 'f') {
-                    if (match[12]) {
-                        currentFile = SymbolTable.NormalizePath(match[12].trim());
+                    if (match[11]) {
+                        currentFile = SymbolTable.NormalizePath(match[11].trim());
                     } else {
                         // This can happen with C++. Inline and template methods/variables/functions/etc. are listed with
                         // an empty file association. So, symbols after this line can come from multiple compilation
@@ -115,7 +115,7 @@ export class SymbolTable {
                 }
                 const type = TYPE_MAP[match[8]];
                 const scope = SCOPE_MAP[match[2]];
-                let name = match[12].trim();
+                let name = match[11].trim();
                 let hidden = false;
 
                 if (name.startsWith('.hidden')) {
