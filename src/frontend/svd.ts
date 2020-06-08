@@ -72,7 +72,12 @@ export class SVDParser {
                     const peripherials = [];
                     // tslint:disable-next-line:forin
                     for (const key in peripheralMap) {
-                        peripherials.push(SVDParser.parsePeripheral(peripheralMap[key], defaultOptions));
+                        try {
+                            peripherials.push(SVDParser.parsePeripheral(peripheralMap[key], defaultOptions));
+                        }
+                        catch (msg) {
+                            reject(msg);
+                        }
                     }
 
                     peripherials.sort((p1, p2) => {
@@ -349,12 +354,12 @@ export class SVDParser {
     }
 
     private static parsePeripheral(p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
-        const ab = p.addressBlock[0];
-        const totalLength = parseInteger(ab.size[0]);
+        const ab = p.addressBlock ? p.addressBlock[0] : null;
+        const totalLength = parseInteger(ab ? ab.size[0] : 0);
         
         const options: any = {
             name: p.name[0],
-            baseAddress: parseInteger(p.baseAddress[0]),
+            baseAddress: parseInteger(p.baseAddress ? p.baseAddress[0] : 0),
             description: this.cleanupDescription(p.description ? p.description[0] : ''),
             totalLength: totalLength
         };

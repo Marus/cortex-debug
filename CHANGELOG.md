@@ -1,3 +1,13 @@
+# V0.3.7
+Minor bug fix release
+
+1. New feature
+   * Support for IAR produced elf files which just did not work with V0.3.6. They didn't quite work with earlier releases either. They are non-standard (kinda) compared to what gcc produced or what objdump documents
+   * With the latest version of VSCode, there were too many popups coming. They are all harmless, but annoying. There were changed made to suppress these but they caused other problems. We may just have to live with those popups (that are non-modal and disappear after a while) until we figure out how VSCode has changed. May take a while
+2. Issues Fixed
+   * Fixed Issue [#273](https://github.com/Marus/cortex-debug/issues/273). Handle peripherals blocks with no addressBlocks.
+   * When runToMain was enabled there were 1-2 harmless popups when the program stopped in main. They were very frequent on Windows, less frequent on Linux and very rare if any on a Mac.
+
 # V0.3.6
 
 Minor bug fix release
