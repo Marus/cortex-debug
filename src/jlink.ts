@@ -148,9 +148,9 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public serverLaunchStarted(): void {}
     public serverLaunchCompleted(): void {
         if (this.args.swoConfig.enabled) {
-            if (this.args.swoConfig.source === 'probe') {
+            if ((this.args.swoConfig.source === 'probe') || (this.args.swoConfig.source === 'sockeet')) {
                 const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
-                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm] }));
+                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm].toString(10) }));
             }
             else {
                 this.emit('event', new SWOConfigureEvent({

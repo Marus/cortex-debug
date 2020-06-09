@@ -48,8 +48,8 @@ export class StoppedEvent extends Event implements DebugProtocol.Event {
 export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,
-        port: number,
-        path: string
+        port: string,       // [hostname:]port
+        path: string        // path to serial port, fifo, etc.
     };
     public event: string;
 
@@ -81,6 +81,8 @@ export interface SWOConfiguration {
     decoders: any[];
     profile: boolean;
     source: string;
+    swoPort: string;
+    swoPath: string;
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
