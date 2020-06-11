@@ -1098,9 +1098,10 @@ export class GDBDebugSession extends DebugSession {
         const process = async () => {
             if (this.stopped) { await createBreakpoints(false); }
             else {
-                this.disableSendStoppedEvents = true;
-                this.miDebugger.sendCommand('exec-interrupt');
+                this.disableSendStoppedEvents = true; 
+                // zhushangyuan: not working if rtos specified           
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+                this.miDebugger.sendCommand('exec-interrupt');
             }
         };
 
