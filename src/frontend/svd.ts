@@ -214,7 +214,30 @@ export class SVDParser {
     private static parseRegisters(regInfo: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
         const registers: PeripheralRegisterNode[] = [];
 
-        regInfo.forEach((r) => {
+        const registerMap = {};
+        const regNames = [];
+        for (const r of regInfo) {
+            registerMap[r.name[0]] = r;
+            regNames.push(r.name[0]);
+        };
+
+        // It is wierd to iterate this way but it can handle forward references, are they legal? not sure
+        // Or we could have done this work in the loop above. Not the best way, but it is more resilient to
+        // concatenate elements and re-parse. We are patching at XML level rather than object level
+        for (const key of regNames) {
+            const r = registerMap[key];
+            if (r.$ && r.$.derivedFrom) {
+                const base = registerMap[r.$.derivedFrom];
+                if (!base) {
+                    throw new Error(`Invalid 'derivedFrom' "${r.$.derivedFrom}" for : register "${key}"`);
+                }
+                // We are supposed to preserve all but the addressOffseet, but the following should work
+                registerMap[key] = {...base, ...r};
+            }
+        }
+
+        for (const key of regNames) {
+            const r = registerMap[key];
             const baseOptions: any = {};
             if (r.access) {
                 baseOptions.accessType = ACCESS_TYPE_MAP[r.access[0]];
@@ -272,7 +295,7 @@ export class SVDParser {
                 }
                 registers.push(register);
             }
-        });
+        }
 
         registers.sort((a, b) => {
             if (a.offset < b.offset) { return -1; }
