@@ -23,8 +23,11 @@ const ACCESS_TYPE_MAP = {
 
 export class SVDParser {
     private static enumTypeValuesMap = {};
+    private static peripheralRegisterMap = {};
+
     public static parseSVD(path: string): Promise<PeripheralNode[]> {
         SVDParser.enumTypeValuesMap = {};
+        SVDParser.peripheralRegisterMap = {};
         return new Promise((resolve, reject) => {
             fs.readFile(path, 'utf8', (err, data) => {
                 if (err) {
@@ -214,7 +217,36 @@ export class SVDParser {
     private static parseRegisters(regInfo: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
         const registers: PeripheralRegisterNode[] = [];
 
-        regInfo.forEach((r) => {
+        const localRegisterMap = {};
+        const regNames = [];
+        for (const r of regInfo) {
+            localRegisterMap[r.name[0]] = r;
+            SVDParser.peripheralRegisterMap[parent.name + '.' + r.name[0]] = r;
+            regNames.push(r.name[0]);
+        };
+
+        // It is wierd to iterate this way but it can handle forward references, are they legal? not sure
+        // Or we could have done this work in the loop above. Not the best way, but it is more resilient to
+        // concatenate elements and re-parse. We are patching at XML level rather than object level
+        for (const key of regNames) {
+            const r = localRegisterMap[key];
+            const derivedFrom = r.$ ? r.$.derivedFrom : '';
+            if (derivedFrom) {
+                const from = localRegisterMap[derivedFrom] || SVDParser.peripheralRegisterMap[derivedFrom];
+                if (!from) {
+                    throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${key}"`);
+                }
+                // We are supposed to preserve all but the addressOffseet, but the following should work
+                const combined = {...from, ...r};
+                delete combined.$.derivedFrom;          // No need to keep this anymore
+                combined.$._derivedFrom = derivedFrom;  // Save a backup for debugging
+                localRegisterMap[key] = combined;
+                SVDParser.peripheralRegisterMap[parent.name + '.' + key] = combined;
+            }
+        }
+
+        for (const key of regNames) {
+            const r = localRegisterMap[key];
             const baseOptions: any = {};
             if (r.access) {
                 baseOptions.accessType = ACCESS_TYPE_MAP[r.access[0]];
@@ -272,7 +304,7 @@ export class SVDParser {
                 }
                 registers.push(register);
             }
-        });
+        }
 
         registers.sort((a, b) => {
             if (a.offset < b.offset) { return -1; }

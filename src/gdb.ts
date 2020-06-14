@@ -1099,8 +1099,8 @@ export class GDBDebugSession extends DebugSession {
             if (this.stopped) { await createBreakpoints(false); }
             else {
                 this.disableSendStoppedEvents = true;
-                this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+                this.miDebugger.sendCommand('exec-interrupt');
             }
         };
 
@@ -1197,8 +1197,8 @@ export class GDBDebugSession extends DebugSession {
             }
             else {
                 this.disableSendStoppedEvents = true;
-                await this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+                this.miDebugger.sendCommand('exec-interrupt');
             }
         };
 
