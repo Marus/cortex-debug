@@ -49,7 +49,7 @@ Requirements:
 
 ## Usage
 
-See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help
+See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help from the community
 
 ## Acknowledgments
 
