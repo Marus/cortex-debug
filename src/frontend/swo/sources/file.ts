@@ -3,6 +3,15 @@ import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 import { SWOSource } from './common';
 
+
+function sleep(milliseconds) {
+    const date = Date.now();
+    let currentDate = null;
+    do {
+      currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
+  }
+
 export class FileSWOSource extends EventEmitter implements SWOSource {
     public connected: boolean = false;
     private fd: number = null;
@@ -10,6 +19,10 @@ export class FileSWOSource extends EventEmitter implements SWOSource {
 
     constructor(private SWOPath: string) {
         super();
+
+        // race condition, wait some time, to ensure, that the file is already created
+        sleep(500);
+
         fs.open(SWOPath, 'r', (err, fd) => {
             if (err) {
                 vscode.window.showWarningMessage(`Unable to open path: ${SWOPath} - Unable to read SWO data.`);
