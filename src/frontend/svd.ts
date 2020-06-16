@@ -214,39 +214,41 @@ export class SVDParser {
         return fields;
     }
 
-    private static parseRegisters(regInfo: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+    private static parseRegisters(regInfo_: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+        const regInfo = [...regInfo_];      // Make a shallow copy,. we will work on this
         const registers: PeripheralRegisterNode[] = [];
 
         const localRegisterMap = {};
-        const regNames = [];
         for (const r of regInfo) {
-            localRegisterMap[r.name[0]] = r;
-            SVDParser.peripheralRegisterMap[parent.name + '.' + r.name[0]] = r;
-            regNames.push(r.name[0]);
+            const nm = r.name[0];
+            localRegisterMap[nm] = r;
+            SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = r;
         };
 
         // It is wierd to iterate this way but it can handle forward references, are they legal? not sure
         // Or we could have done this work in the loop above. Not the best way, but it is more resilient to
         // concatenate elements and re-parse. We are patching at XML level rather than object level
-        for (const key of regNames) {
-            const r = localRegisterMap[key];
+        let ix = 0;
+        for (const r of regInfo) {
             const derivedFrom = r.$ ? r.$.derivedFrom : '';
             if (derivedFrom) {
+                const nm = r.name[0];
                 const from = localRegisterMap[derivedFrom] || SVDParser.peripheralRegisterMap[derivedFrom];
                 if (!from) {
-                    throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${key}"`);
+                    throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${nm}"`);
                 }
                 // We are supposed to preserve all but the addressOffseet, but the following should work
                 const combined = {...from, ...r};
                 delete combined.$.derivedFrom;          // No need to keep this anymore
                 combined.$._derivedFrom = derivedFrom;  // Save a backup for debugging
-                localRegisterMap[key] = combined;
-                SVDParser.peripheralRegisterMap[parent.name + '.' + key] = combined;
+                localRegisterMap[nm] = combined;
+                SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = combined;
+                regInfo[ix] = combined;
             }
+            ix++;
         }
 
-        for (const key of regNames) {
-            const r = localRegisterMap[key];
+        for (const r of regInfo) {
             const baseOptions: any = {};
             if (r.access) {
                 baseOptions.accessType = ACCESS_TYPE_MAP[r.access[0]];
@@ -386,8 +388,14 @@ export class SVDParser {
     }
 
     private static parsePeripheral(p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
-        const ab = p.addressBlock ? p.addressBlock[0] : null;
-        const totalLength = parseInteger(ab ? ab.size[0] : 0);
+        let totalLength = 0
+        if (p.addressBlock) {
+            for (const ab of p.addressBlock) {
+                const offset = parseInteger(ab.offset[0]);
+                const size = parseInteger(ab.size[0]);
+                totalLength = Math.max(totalLength, offset + size);
+            }
+        }
         
         const options: any = {
             name: p.name[0],
