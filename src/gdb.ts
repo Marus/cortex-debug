@@ -1304,7 +1304,9 @@ export class GDBDebugSession extends DebugSession {
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
         try {
-            const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
+            const maxDepth = await this.miDebugger.getStackDepth(args.threadId);
+            const highFrame = Math.min(maxDepth, args.startFrame + args.levels) - 1;
+            const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, highFrame);
             const ret: StackFrame[] = [];
             for (const element of stack) {
                 const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
@@ -1359,7 +1361,8 @@ export class GDBDebugSession extends DebugSession {
             }
 
             response.body = {
-                stackFrames: ret
+                stackFrames: ret,
+                totalFrames: maxDepth
             };
             this.sendResponse(response);
         }
