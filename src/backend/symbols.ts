@@ -7,8 +7,11 @@ import * as crypto from 'crypto';
 
 import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
 
-const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s([^\s]+)\s([0-9a-f]+)\s([^\r\n]*)/mg;
-const COMP_UNIT_REGEX = /\n <0>.*\(DW_TAG_compile_unit\)[\s\S]*?DW_AT_name[\s\S]*?\)\: (\S*)[\r\n]+[\s\S]*?DW_AT_comp_dir[\s\S]*?\)\: (\S*)[\r\n]+/mg;
+const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]+)/mg;
+// DW_AT_name && DW_AT_comp_dir may have optional stuff that looks like '(indirect string, offset: 0xf94): '
+const COMP_UNIT_REGEX = /\n <0>.*\(DW_TAG_compile_unit\)[\s\S]*?DW_AT_name[\s]*: (\(.*\):\s)?(.*)[\r\n]+([\s\S]*?)\n </mg;
+// DW_AT_comp_dir may not exist
+const COMP_DIR_REGEX = /DW_AT_comp_dir[\s]*: (\(.*\):\s)?(.*)[\r\n]+/m;
 const debugConsoleLogging = false;
 
 const TYPE_MAP: { [id: string]: SymbolType } = {
@@ -248,12 +251,16 @@ export class SymbolTable {
                     if (end > match.index) {
                         end = match.index;
                     }
-                    const curName = SymbolTable.NormalizePath(match[1]);
+                    const curName = SymbolTable.NormalizePath(match[2]);
                     const curSimpleName = path.basename(curName);
                     this.addToFileMap(curSimpleName, curSimpleName);
                     this.addToFileMap(curSimpleName, curName);
-                    // Do not use path.join below. Match[2] can be in non-native form. Will be fixed by addToFileMap
-                    this.addToFileMap(curSimpleName, match[2] + '/' + curName);
+                    const compDir = RegExp(COMP_DIR_REGEX);
+                    match = compDir.exec(match[3]);
+                    if (match) {
+                        // Do not use path.join below. Match[1] can be in non-native form. Will be fixed by addToFileMap
+                        this.addToFileMap(curSimpleName, match[2] + '/' + curName);
+                    }
                     counter++;
                 }
                 const diff = Date.now() - start;

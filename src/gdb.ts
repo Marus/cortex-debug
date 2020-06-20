@@ -168,8 +168,9 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-        // this.dbgSymbolStuff(args, 0);
-        // this.dbgSymbolStuff(args, 1);
+        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/firmware.elf', 'sty_uart_init_helper', 'mods/machine_uart.c');
+        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
+        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
         }
@@ -183,11 +184,8 @@ export class GDBDebugSession extends DebugSession {
         this.fileExistsCache = new Map();
     }
 
-    private dbgSymbolStuff(args: ConfigurationArguments, testCase: number) {
+    private dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
-            const elfFile = (testCase === 0) ? '/Users/hdm/Downloads/firmware.elf' : '/Users/hdm/Downloads/bme680-driver-design_585.out';
-            const func = (testCase === 0) ? 'sty_uart_init_helper' : 'setup_bme680';
-            const file = (testCase === 0) ? 'mods/machine_uart.c' : './src/bme680_test_app.c';
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
             const tmpSymbols = new SymbolTable(args.toolchainPath, args.toolchainPrefix, elfFile, true);
             tmpSymbols.loadSymbols();
@@ -394,12 +392,14 @@ export class GDBDebugSession extends DebugSession {
                     this.handleMsg('log', dbgMsg);
                 }
 
+                this.disableSendStoppedEvents = (!attach && this.args.runToMain) ? true : false;
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
                     this.sendResponse(response);
 
                     const launchComplete = () => {
+                        this.disableSendStoppedEvents = false;
                         setTimeout(() => {
                             this.stopped = true;
                             this.stoppedReason = 'start';
@@ -852,7 +852,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected timeStart = Date.now();
     protected wrapTimeStamp(str: string): string {
-        if (this.args.showDevDebugOutput) {
+        if (this.args.showDevDebugOutput && this.args.showDevDebugTimestamps) {
             const elapsed = Date.now() - this.timeStart;
             let elapsedStr = elapsed.toString();
             while (elapsedStr.length < 10) { elapsedStr = '0' + elapsedStr ; }
@@ -1099,8 +1099,8 @@ export class GDBDebugSession extends DebugSession {
             if (this.stopped) { await createBreakpoints(false); }
             else {
                 this.disableSendStoppedEvents = true;
-                this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+                this.miDebugger.sendCommand('exec-interrupt');
             }
         };
 
@@ -1197,8 +1197,8 @@ export class GDBDebugSession extends DebugSession {
             }
             else {
                 this.disableSendStoppedEvents = true;
-                await this.miDebugger.sendCommand('exec-interrupt');
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+                this.miDebugger.sendCommand('exec-interrupt');
             }
         };
 
@@ -1296,19 +1296,17 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (e) {
-            this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
+            if (this.stopped) {     // Between the time we asked for a info, a continue occured
+                this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
+            }
         }
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
-        if (this.stopped === false) {
-            // Mar 20, 2020: A recent change in VSCode changed order of things. It is asking for stack traces when we are running
-            // happens at the start of the session and runToMain is enabled. This causes falses popups/errors
-            this.sendResponse(response);    // Send a blank response instead of an error
-            return;
-        }
         try {
-            const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, args.levels);
+            const maxDepth = await this.miDebugger.getStackDepth(args.threadId);
+            const highFrame = Math.min(maxDepth, args.startFrame + args.levels) - 1;
+            const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, highFrame);
             const ret: StackFrame[] = [];
             for (const element of stack) {
                 const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
@@ -1363,12 +1361,15 @@ export class GDBDebugSession extends DebugSession {
             }
 
             response.body = {
-                stackFrames: ret
+                stackFrames: ret,
+                totalFrames: maxDepth
             };
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
+            if (this.stopped) {     // Between the time we asked for a info, a continue occured
+                this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
+            }
         }
     }
 
@@ -1397,7 +1398,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     private async globalVariablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
-        if (this.stopped === false) { return ; }
         const symbolInfo: SymbolInformation[] = this.symbolTable.getGlobalVariables();
 
         const globals: DebugProtocol.Variable[] = [];
@@ -1485,7 +1485,6 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
-        if (this.stopped === false) { return ; }
         const statics: DebugProtocol.Variable[] = [];
 
         try {
@@ -1578,7 +1577,6 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
-        if (this.stopped === false) { return ; }
         const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
@@ -1628,7 +1626,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
+            this.sendErrorResponse(response, 1, `Could not get stack variables: ${err}`);
         }
     }
 
@@ -1668,7 +1666,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
-        if (this.stopped === false) { return ; }
         let id: number | string | VariableObject | ExtendedVariable;
 
         /*
@@ -1930,7 +1927,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-        if (this.stopped === false) { return ; }
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));

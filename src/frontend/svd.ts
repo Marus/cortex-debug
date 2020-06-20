@@ -23,8 +23,11 @@ const ACCESS_TYPE_MAP = {
 
 export class SVDParser {
     private static enumTypeValuesMap = {};
+    private static peripheralRegisterMap = {};
+
     public static parseSVD(path: string): Promise<PeripheralNode[]> {
         SVDParser.enumTypeValuesMap = {};
+        SVDParser.peripheralRegisterMap = {};
         return new Promise((resolve, reject) => {
             fs.readFile(path, 'utf8', (err, data) => {
                 if (err) {
@@ -72,7 +75,12 @@ export class SVDParser {
                     const peripherials = [];
                     // tslint:disable-next-line:forin
                     for (const key in peripheralMap) {
-                        peripherials.push(SVDParser.parsePeripheral(peripheralMap[key], defaultOptions));
+                        try {
+                            peripherials.push(SVDParser.parsePeripheral(peripheralMap[key], defaultOptions));
+                        }
+                        catch (msg) {
+                            reject(msg);
+                        }
                     }
 
                     peripherials.sort((p1, p2) => {
@@ -206,10 +214,41 @@ export class SVDParser {
         return fields;
     }
 
-    private static parseRegisters(regInfo: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+    private static parseRegisters(regInfo_: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+        const regInfo = [...regInfo_];      // Make a shallow copy,. we will work on this
         const registers: PeripheralRegisterNode[] = [];
 
-        regInfo.forEach((r) => {
+        const localRegisterMap = {};
+        for (const r of regInfo) {
+            const nm = r.name[0];
+            localRegisterMap[nm] = r;
+            SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = r;
+        };
+
+        // It is wierd to iterate this way but it can handle forward references, are they legal? not sure
+        // Or we could have done this work in the loop above. Not the best way, but it is more resilient to
+        // concatenate elements and re-parse. We are patching at XML level rather than object level
+        let ix = 0;
+        for (const r of regInfo) {
+            const derivedFrom = r.$ ? r.$.derivedFrom : '';
+            if (derivedFrom) {
+                const nm = r.name[0];
+                const from = localRegisterMap[derivedFrom] || SVDParser.peripheralRegisterMap[derivedFrom];
+                if (!from) {
+                    throw new Error(`SVD error: Invalid 'derivedFrom' "${derivedFrom}" for register "${nm}"`);
+                }
+                // We are supposed to preserve all but the addressOffseet, but the following should work
+                const combined = {...from, ...r};
+                delete combined.$.derivedFrom;          // No need to keep this anymore
+                combined.$._derivedFrom = derivedFrom;  // Save a backup for debugging
+                localRegisterMap[nm] = combined;
+                SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = combined;
+                regInfo[ix] = combined;
+            }
+            ix++;
+        }
+
+        for (const r of regInfo) {
             const baseOptions: any = {};
             if (r.access) {
                 baseOptions.accessType = ACCESS_TYPE_MAP[r.access[0]];
@@ -267,7 +306,7 @@ export class SVDParser {
                 }
                 registers.push(register);
             }
-        });
+        }
 
         registers.sort((a, b) => {
             if (a.offset < b.offset) { return -1; }
@@ -349,12 +388,18 @@ export class SVDParser {
     }
 
     private static parsePeripheral(p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
-        const ab = p.addressBlock[0];
-        const totalLength = parseInteger(ab.size[0]);
+        let totalLength = 0
+        if (p.addressBlock) {
+            for (const ab of p.addressBlock) {
+                const offset = parseInteger(ab.offset[0]);
+                const size = parseInteger(ab.size[0]);
+                totalLength = Math.max(totalLength, offset + size);
+            }
+        }
         
         const options: any = {
             name: p.name[0],
-            baseAddress: parseInteger(p.baseAddress[0]),
+            baseAddress: parseInteger(p.baseAddress ? p.baseAddress[0] : 0),
             description: this.cleanupDescription(p.description ? p.description[0] : ''),
             totalLength: totalLength
         };
