@@ -1603,5 +1603,5 @@
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
     },
-    "version": "0.3.7-pre3"
+    "version": "0.3.7"
 }

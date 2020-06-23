@@ -7,6 +7,7 @@ Minor bug fix release
 2. Issues Fixed
    * Fixed Issue [#273](https://github.com/Marus/cortex-debug/issues/273). Handle peripherals blocks with no addressBlocks. Also fix issue with multiple address blocks where only the first one was being used
    * Fixed Issue [#284](https://github.com/Marus/cortex-debug/issues/284). Implement/support 'derivedFrom' at register level.
+   * Fixed Issue [#306](https://github.com/Marus/cortex-debug/issues/306). Support displaying more than 20 stack frames
    * When runToMain was enabled there were 1-2 harmless popups when the program stopped in main. They were very frequent on Windows, less frequent on Linux and very rare if any on a Mac.
 
 # V0.3.6
