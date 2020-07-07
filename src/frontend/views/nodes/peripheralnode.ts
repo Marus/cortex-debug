@@ -102,27 +102,12 @@ export class PeripheralNode extends PeripheralBaseNode {
         return new Promise((resolve, reject) => {
             if (!this.expanded) { resolve(false); return; }
 
-
             const promises = this.children.map(r => {
-                let promise = MemReadUtils.readMemory(this.baseAddress+r.offset, r.size/8, r.tempValue);
+                let promise = MemReadUtils.readMemory(this.baseAddress+r.offset, r.size/8, r.currentValueArray);
                 promise.then(() => r.updateData(), ()=>{});
                 return promise;
             })
-            return Promise.all(promises).then(() => resolve(true), reject);
-            this.readMemory().then((unused) => {
-                const promises = this.children.map((r) => r.updateData());
-
-                Promise.all(promises).then((_) => {
-                    resolve(true);
-                }).catch((e) => {
-                    const msg = e.message || 'unknown error';
-                    const str = `Failed to update peripheral ${this.name}: ${msg}`;
-                    if (vscode.debug.activeDebugConsole) {
-                        vscode.debug.activeDebugConsole.appendLine(str);
-                    }
-                    reject(new Error(str));
-                });
-            }, (e) => {
+            return Promise.all(promises).then(() => resolve(true)).catch(e => {
                 const msg = e.message || 'unknown error';
                 const str = `Failed to update peripheral ${this.name}: ${msg}`;
                 if (vscode.debug.activeDebugConsole) {

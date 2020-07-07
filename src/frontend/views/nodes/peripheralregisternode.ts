@@ -27,7 +27,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     public readonly size: number;
     public readonly resetValue: number;
     public currentValue: number;
-    public tempValue: number[];
+    public currentValueArray: number[];
 
     private maxValue: number;
     private hexLength: number;
@@ -44,7 +44,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         this.size = options.size || parent.size;
         this.resetValue = options.resetValue !== undefined ? options.resetValue : parent.resetValue;
         this.currentValue = this.resetValue;
-        this.tempValue = [];
+        this.currentValueArray = [];
         this.hexLength = Math.ceil(this.size / 4);
         
         this.maxValue = Math.pow(2, this.size);
@@ -185,7 +185,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
 
     public updateData(): Thenable<boolean> {
         const bc = this.size / 8;
-        const bytes = this.tempValue;
+        const bytes = this.currentValueArray;
         const buffer = Buffer.from(bytes);
         switch (bc) {
             case 1:

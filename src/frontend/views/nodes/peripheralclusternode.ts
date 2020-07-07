@@ -25,7 +25,7 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
     public readonly resetValue: number;
     public readonly accessType: AccessType;
     public currentValue: number;
-    public tempValue: number[];
+    public currentValueArray: number[];
 
     constructor(public parent: PeripheralNode, options: ClusterOptions) {
         super(parent);
