@@ -182,7 +182,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
 
     public updateData(): Thenable<boolean> {
         const bc = this.size / 8;
-        const bytes = this.parent.getBytes(this.offset, bc);
+        const bytes = this.tempValue;
         const buffer = Buffer.from(bytes);
         switch (bc) {
             case 1:

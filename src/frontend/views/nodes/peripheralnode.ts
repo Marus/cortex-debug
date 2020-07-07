@@ -105,8 +105,10 @@ export class PeripheralNode extends PeripheralBaseNode {
             for(let reg of this.children){
                 MemReadUtils.readMemory(this.baseAddress+reg.offset, reg.size/8, reg.tempValue).then((unused) => {
                     console.log(reg.tempValue);
+                    reg.updateData();
                 });
             }
+            return;
             this.readMemory().then((unused) => {
                 const promises = this.children.map((r) => r.updateData());
 
