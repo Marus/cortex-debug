@@ -174,8 +174,11 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
 
         return new Promise((resolve, reject) => {
             debug.activeDebugSession.customRequest('write-memory', { address: address, data: bytes.join('') }).then((result) => {
-                this.parent.updateData().then(() => {}, () => {});
-                resolve(true);
+                this.parent.updateData().then(() => {
+                    resolve(true)
+                }, () => {
+                    resolve(true)
+                });
             }, reject);
         });
     }
