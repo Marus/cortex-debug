@@ -15,6 +15,7 @@ export interface PeripheralRegisterOptions {
     accessType?: AccessType;
     size?: number;
     resetValue?: number;
+    currentValue?: number;
 }
 
 export class PeripheralRegisterNode extends PeripheralBaseNode {
@@ -25,12 +26,13 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     public readonly accessType: AccessType;
     public readonly size: number;
     public readonly resetValue: number;
-    
+    public currentValue: number;
+    public tempValue: number[];
+
     private maxValue: number;
     private hexLength: number;
     private hexRegex: RegExp;
     private binaryRegex: RegExp;
-    private currentValue: number;
     
     constructor(public parent: PeripheralNode | PeripheralClusterNode, options: PeripheralRegisterOptions) {
         super(parent);
@@ -42,7 +44,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         this.size = options.size || parent.size;
         this.resetValue = options.resetValue !== undefined ? options.resetValue : parent.resetValue;
         this.currentValue = this.resetValue;
-
+        this.tempValue = [];
         this.hexLength = Math.ceil(this.size / 4);
         
         this.maxValue = Math.pow(2, this.size);
