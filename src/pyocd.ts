@@ -36,11 +36,16 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor reset halt"',
-            'target-download',
-            'interpreter-exec console "monitor reset halt"',
-            'enable-pretty-printing'
+            'interpreter-exec console "monitor halt"',
         ];
+
+        if (this.args.targetDownload) {
+            commands.push(
+                'target-download',
+                'interpreter-exec console "monitor reset"');
+        }
+
+        commands.push('enable-pretty-printing');
         return commands;
     }
 

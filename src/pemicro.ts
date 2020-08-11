@@ -39,11 +39,15 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     public launchCommands(): string[] {
         const commands = [
             'interpreter-exec console "monitor _reset"',
-            'target-download',
-            'interpreter-exec console "monitor _reset"',
-            'enable-pretty-printing'
         ];
 
+        if (this.args.targetDownload) {
+            commands.push(
+                'target-download',
+                'interpreter-exec console "monitor _reset"');
+        }
+
+        commands.push('enable-pretty-printing');
         return commands;
     }
 

@@ -900,6 +900,11 @@
                                 "maximum": 9,
                                 "default": 0
                             },
+                            "targetDownload": {
+                                "description": "If enabled the debugger will issue a target-download command when attaching GDB.",
+                                "type": "boolean",
+                                "default": true
+                            },
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [

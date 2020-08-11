@@ -106,6 +106,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     overrideGDBServerStartedRegex: string;
     svdFile: string;
     swoConfig: SWOConfiguration;
+    targetDownload: boolean;
     graphConfig: any[];
     showDevDebugOutput: boolean;
     showDevDebugTimestamps: boolean;
