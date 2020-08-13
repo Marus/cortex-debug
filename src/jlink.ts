@@ -28,12 +28,13 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
         return false;
     }
-    
+
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
+        const remoteip = (this.args.remoteIPAddress) ? this.args.remoteIPAddress : "localhost";
 
         return [
-            `target-select extended-remote localhost:${gdbport}`
+            `target-select extended-remote ${remoteip}:${gdbport}`
         ];
     }
 
@@ -77,7 +78,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
         const swoFrequency = this.args.swoConfig.swoFrequency | 0;
         const cpuFrequency = this.args.swoConfig.cpuFrequency | 0;
-        
+
         const commands: string[] = [
             `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`,
             'DisableITMPorts 0xFFFFFFFF',
@@ -87,7 +88,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         ];
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -105,7 +106,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             }
         }
     }
-    
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const swoport = this.ports['swoPort'];
