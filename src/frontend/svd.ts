@@ -110,6 +110,10 @@ export class SVDParser {
     private static parseFields(fieldInfo: any[], parent: PeripheralRegisterNode): PeripheralFieldNode[] {
         const fields: PeripheralFieldNode[] = [];
 
+        if (fieldInfo == null) {
+            return fields;
+        }
+
         fieldInfo.map((f) => {
             let offset;
             let width;
