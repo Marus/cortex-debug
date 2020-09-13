@@ -6,7 +6,7 @@ const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-    constructor(private context: vscode.ExtensionContext) {}
+    constructor(private context: vscode.ExtensionContext) { }
 
     public resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
@@ -24,7 +24,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.debuggerArgs = config.debugger_args;
         }
         if (!config.debuggerArgs) { config.debuggerArgs = []; }
-        
+
         const type = config.servertype;
 
         let validationResponse: string = null;
@@ -59,6 +59,20 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.preRestartCommands) { config.preRestartCommands = []; }
         if (!config.postRestartCommands) { config.postRestartCommands = []; }
         if (config.request !== 'launch') { config.runToMain = false; }
+        if (!config.rttConfig) {
+            config.rttConfig = { enabled: false, host: 'localhost', decoders: [] };
+        }
+        else {
+            if (!config.rttConfig.host) { config.rttConfig.host = 'localhost'; }
+            if (!config.rttConfig.decoders) { config.rttConfig.decoders = []; }
+            config.rttConfig.decoders.forEach((d, idx) => {
+                if (d.type === 'console') {
+                    if (d.channel === undefined) {
+                        d.channel = 0;
+                    }
+                }
+            });
+        }
 
         switch (type) {
             case 'jlink':
@@ -99,7 +113,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.toolchainPrefix) {
             config.toolchainPrefix = configuration.armToolchainPrefix || 'arm-none-eabi';
         }
-        
+
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.
@@ -107,12 +121,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         config.flattenAnonymous = configuration.flattenAnonymous;
         config.registerUseNaturalFormat = configuration.registerUseNaturalFormat;
-        
+
         if (validationResponse) {
             vscode.window.showErrorMessage(validationResponse);
             return undefined;
         }
-        
+
         return config;
     }
 
@@ -128,10 +142,15 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.graphConfig = [];
         }
 
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available when using QEMU. Disabling RTT');
+            config.rttConfig = { enabled: false, channels: [] };
+        }
+
         if (config.rtos) {
             return 'RTOS support is not available when using QEMU';
         }
-        
+
         return null;
     }
 
@@ -183,10 +202,15 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'At least one OpenOCD Configuration File must be specified.';
         }
 
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available when using OpenOCD. Disabling RTT.');
+            config.rttConfig = { enabled: false, channels: [] };
+        }
+
         if (!config.searchDir || config.searchDir.length === 0) {
             config.searchDir = [];
         }
-        
+
         return null;
     }
 
@@ -199,6 +223,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.rtos) {
             return 'The st-util GDB Server does not have support for the rtos option.';
+        }
+
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available when using the ST-Util GDB server. Disabling RTT.');
+            config.rttConfig = { enabled: false, channels: [] };
         }
 
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
@@ -230,6 +259,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.graphConfig = [];
         }
 
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available when using the PyOCD GDB server. Disabling RTT.');
+            config.rttConfig = { enabled: false, channels: [] };
+        }
+
         return null;
     }
 
@@ -238,7 +272,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.powerOverBMP) { config.powerOverBMP = 'lastState'; }
         if (!config.interface) { config.interface = 'swd'; }
         if (!config.targetId) { config.targetId = 1; }
-        
+
         if (config.rtos) {
             return 'The Black Magic Probe GDB Server does not have support for the rtos option.';
         }
@@ -247,6 +281,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             vscode.window.showWarningMessage('SWO support is not available from the probe when using the BMP GDB server. Disabling SWO.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
+        }
+
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available when using the BMP GDB server. Disabling RTT.');
+            config.rttConfig = { enabled: false, channels: [] };
         }
 
         return null;
@@ -270,6 +309,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'The PE GDB Server does not have support for SWO';
         }
 
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available when using the PE GDB server. Disabling RTT.');
+            config.rttConfig = { enabled: false, channels: [] };
+        }
+
         return null;
     }
 
@@ -278,6 +322,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             vscode.window.showWarningMessage('SWO support is not available for external GDB servers. Disabling SWO support.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
+        }
+
+        if (config.rttConfig.enabled) {
+            vscode.window.showWarningMessage('RTT support is not available for external GDB servers. Disabling RTT.');
+            config.rttConfig = { enabled: false, channels: [] };
         }
 
         if (!config.gdbTarget) {

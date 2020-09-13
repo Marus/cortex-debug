@@ -45,6 +45,19 @@ export class StoppedEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
+    public body: {
+        type: string,
+        host: string
+    };
+    public event: string;
+
+    constructor(params: any) {
+        const body = params;
+        super('rtt-configure', body);
+    }
+}
+
 export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,
@@ -83,6 +96,12 @@ export interface SWOConfiguration {
     source: string;
 }
 
+export interface RTTConfiguration {
+    enabled: boolean;
+    host: string;
+    decoders: any[];
+}
+
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
     toolchainPath: string;
     toolchainPrefix: string;
@@ -106,6 +125,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     overrideGDBServerStartedRegex: string;
     svdFile: string;
     swoConfig: SWOConfiguration;
+    rttConfig: RTTConfiguration;
     graphConfig: any[];
     showDevDebugOutput: boolean;
     showDevDebugTimestamps: boolean;
@@ -129,7 +149,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ipAddress: string;
     serialNumber: string;
     jlinkscript: string;
-    
+
     // OpenOCD Specific
     configFiles: string[];
     searchDir: string[];
@@ -138,7 +158,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
     // PyOCD Specific
     boardId: string;
-    
+
     // StUtil Specific
     v1: boolean;
 
@@ -150,7 +170,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cpu: string;
     machine: string;
 
-    // External 
+    // External
     gdbTarget: string;
 
     // Hidden settings - These settings are for advanced configuration and are not exposed in the package.json file

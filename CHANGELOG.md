@@ -1,3 +1,7 @@
+# V0.x.x (Unreleased)
+1. New features
+   * Support SEGGER RTT console output.
+
 # V0.3.7
 Minor bug fix release
 
@@ -74,7 +78,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 	* `h` or `x` - format in hexadecimal
 	* `d` - format in decimal
 	* `o` - format in octal
-	
+
 	These format sepecifiers are appended to the end of the watch expression separated by a `,` - eg. `*(unsigned int *)(0x40011004),b` would display the contents at address `0x40011004` in binary.
 * Changed core registers to be displayed using their "natural" formatting:
 	* `rXX` in decimal

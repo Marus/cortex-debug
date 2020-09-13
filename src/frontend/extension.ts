@@ -8,6 +8,7 @@ import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
 import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
+import { RTTCore } from './rtt/core';
 import { NumberFormat, ConfigurationArguments } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
@@ -31,6 +32,7 @@ export class CortexDebugExtension {
     private clearAdapterOutputChannel = false;
     private swo: SWOCore = null;
     private swosource: SWOSource = null;
+    private rtt: RTTCore = null;
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -52,7 +54,7 @@ export class CortexDebugExtension {
             const dirPath = path.join(context.extensionPath, 'data', 'SVDMap.json');
             tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
         }
-        catch (e) {}
+        catch (e) { }
 
         Reporting.activate(context);
 
@@ -72,9 +74,9 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
-            
+
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
-            
+
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
@@ -155,9 +157,9 @@ export class CortexDebugExtension {
                 ignoreFocusOut: true,
                 prompt: 'Function Name (exact or a regexp) to Disassemble.'
             });
-            
+
             funcname = funcname ? funcname.trim() : null;
-            if (!funcname) { return ; }
+            if (!funcname) { return; }
 
             let functions = this.functionSymbols.filter((s) => s.name === funcname);
             if (functions.length === 0) {
@@ -226,7 +228,7 @@ export class CortexDebugExtension {
             const force = result.label === 'Forced';
             vscode.debug.activeDebugSession.customRequest('set-force-disassembly', { force: force });
             Reporting.sendEvent('Force Disassembly', 'Set', force ? 'Forced' : 'Auto');
-        }, (error) => {});
+        }, (error) => { });
     }
 
     private examineMemory() {
@@ -363,6 +365,10 @@ export class CortexDebugExtension {
             this.swo.dispose();
             this.swo = null;
         }
+        if (this.rtt) {
+            this.rtt.dispose();
+            this.rtt = null;
+        }
 
         this.functionSymbols = null;
 
@@ -373,11 +379,12 @@ export class CortexDebugExtension {
             }
 
             Reporting.beginSession(args as ConfigurationArguments);
-            
+
             this.registerProvider.debugSessionStarted();
             this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
             if (this.swosource) { this.initializeSWO(args); }
+            this.initializeRTT(args);
         }, (error) => {
             // TODO: Error handling for unable to get arguments
         });
@@ -397,6 +404,9 @@ export class CortexDebugExtension {
             this.swosource.dispose();
             this.swosource = null;
         }
+        if (this.rtt) {
+            this.rtt.debugSessionTerminated();
+        }
         this.clearAdapterOutputChannel = true;
     }
 
@@ -411,6 +421,9 @@ export class CortexDebugExtension {
                 break;
             case 'swo-configure':
                 this.receivedSWOConfigureEvent(e);
+                break;
+            case 'rtt-configure':
+                this.receivedRTTConfigureEvent(e);
                 break;
             case 'adapter-output':
                 this.receivedAdapterOutput(e);
@@ -429,12 +442,14 @@ export class CortexDebugExtension {
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
+        if (this.rtt) { this.rtt.debugStopped(); }
     }
 
     private receivedContinuedEvent(e) {
         this.peripheralProvider.debugContinued();
         this.registerProvider.debugContinued();
         if (this.swo) { this.swo.debugContinued(); }
+        if (this.rtt) { this.rtt.debugContinued(); }
     }
 
     private receivedEvent(e) {
@@ -466,6 +481,14 @@ export class CortexDebugExtension {
         }
     }
 
+    private receivedRTTConfigureEvent(e) {
+        if (vscode.debug.activeDebugSession) {
+            vscode.debug.activeDebugSession.customRequest('get-arguments').then((args) => {
+                this.initializeRTT(args);
+            });
+        }
+    }
+
     private receivedAdapterOutput(e) {
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
@@ -488,10 +511,14 @@ export class CortexDebugExtension {
 
         this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
     }
+
+    private initializeRTT(args) {
+        this.rtt = new RTTCore(args, this.context.extensionPath);
+    }
 }
 
 export function activate(context: vscode.ExtensionContext) {
     return new CortexDebugExtension(context);
 }
 
-export function deactivate() {}
+export function deactivate() { }
