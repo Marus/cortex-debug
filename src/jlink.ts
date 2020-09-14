@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent } from './common';
+import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName, SWOConfigureEvent, RTTConfigureEvent } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -28,7 +28,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
         return false;
     }
-    
+
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
@@ -77,7 +77,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
         const swoFrequency = this.args.swoConfig.swoFrequency | 0;
         const cpuFrequency = this.args.swoConfig.cpuFrequency | 0;
-        
+
         const commands: string[] = [
             `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`,
             'DisableITMPorts 0xFFFFFFFF',
@@ -87,7 +87,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         ];
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -105,7 +105,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             }
         }
     }
-    
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const swoport = this.ports['swoPort'];
@@ -145,7 +145,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         return /Waiting for GDB connection\.\.\./g;
     }
 
-    public serverLaunchStarted(): void {}
+    public serverLaunchStarted(): void { }
     public serverLaunchCompleted(): void {
         if (this.args.swoConfig.enabled) {
             if (this.args.swoConfig.source === 'probe') {
@@ -160,7 +160,10 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 }));
             }
         }
+        if (this.args.rttConfig.enabled) {
+            this.emit('event', new RTTConfigureEvent({ type: 'socket', host: this.args.rttConfig.host }));
+        }
     }
-    public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {}
+    public debuggerLaunchStarted(): void { }
+    public debuggerLaunchCompleted(): void { }
 }
