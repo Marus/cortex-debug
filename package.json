@@ -1505,6 +1505,11 @@
                     "id": "cortex-debug.registers",
                     "name": "Cortex Registers",
                     "when": "debugType == cortex-debug"
+                },
+                {
+                    "id": "cortex-debug.freertos",
+                    "name": "FreeRTOS Tasks",
+                    "when": "debugType == cortex-debug"
                 }
             ]
         }

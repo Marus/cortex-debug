@@ -51,6 +51,13 @@ Requirements:
 
 See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help from the community
 
+## Development
+
+Clone the Git repository, open the folder in VSCode and open a terminal. Run
+$ npm install
+$ npm run-script compile
+Now hit F5 to open a new VSCode window with the development extension running, you can load an existing project and launch the debugger for testing.
+
 ## Acknowledgments
 
 Parts of this extension are based upon Jan Jurzitza's (WebFreak) code-debug extension (https://github.com/WebFreak001/code-debug). His project provided an excellent base for GDB MI parsing and interaction.
