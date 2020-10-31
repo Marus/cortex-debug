@@ -5,7 +5,7 @@ import { hexFormat } from './frontend/utils';
 import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
 import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
 import { GDBServer } from './backend/server';
-import { MINode } from './backend/mi_parse';
+import { MINode, parseMI } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import * as os from 'os';
 import * as net from 'net';
@@ -28,6 +28,7 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { name } from 'commander';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -102,7 +103,7 @@ export class GDBDebugSession extends DebugSession {
     protected activeEditorPath: string = null;
     // currentThreadId is the currently selected thread or where execution has stopped. It not very
     // meaningful since the current thread id in gdb can change in many ways (when you use a --thread
-    // option on certain commands) 
+    // option on certain commands)
     protected currentThreadId: number = 0;
     protected activeThreadIds = new Set<number>();      // Used for consistency check
 
@@ -210,7 +211,7 @@ export class GDBDebugSession extends DebugSession {
 
     private normalizeArguments(args: ConfigurationArguments): ConfigurationArguments {
         args.graphConfig = args.graphConfig || [];
-        
+
         if (args.executable && !path.isAbsolute(args.executable)) {
             args.executable = path.normalize(path.join(args.cwd, args.executable));
         }
@@ -240,12 +241,12 @@ export class GDBDebugSession extends DebugSession {
             );
             return;
         }
-        
+
         const ControllerClass = SERVER_TYPE_MAP[this.args.servertype];
         this.serverController = new ControllerClass();
         this.serverController.setArguments(this.args);
         this.serverController.on('event', this.serverControllerEvent.bind(this));
-        
+
         this.quit = false;
         this.attached = false;
         this.started = false;
@@ -345,7 +346,7 @@ export class GDBDebugSession extends DebugSession {
                 }
 
                 this.serverController.serverLaunchCompleted();
-                
+
                 let gdbargs = ['-q', '--interpreter=mi2'];
                 gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
 
@@ -361,7 +362,7 @@ export class GDBDebugSession extends DebugSession {
                     commands.push('interpreter-exec console "set print asm-demangle on"');
                 }
                 commands.push(...this.serverController.initCommands());
-                
+
                 if (attach) {
                     commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
                     const attachCommands = this.args.overrideAttachCommands != null ?
@@ -378,7 +379,7 @@ export class GDBDebugSession extends DebugSession {
                     commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                     commands.push(...this.serverController.swoCommands());
                 }
-                
+
                 this.serverController.debuggerLaunchStarted();
                 this.miDebugger.once('debug-ready', () => {
                     this.debugReady = true;
@@ -452,7 +453,7 @@ export class GDBDebugSession extends DebugSession {
                 ));
                 this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
             });
-            
+
         }, (err) => {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
             this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
@@ -521,6 +522,9 @@ export class GDBDebugSession extends DebugSession {
         }
 
         switch (command) {
+            case 'read-freertos':
+                this.readFreeRTOS(response);
+                break;
             case 'set-force-disassembly':
                 response.body = { success: true };
                 this.forceDisassembly = args.force;
@@ -691,6 +695,185 @@ export class GDBDebugSession extends DebugSession {
         });
 
         return instructions;
+    }
+
+    protected async readFreeRTOSTask(address: number): Promise<any>{
+
+        // tskTCB type should be compatible with older and newer versions of FreeRTOS (as of 10.1)
+        // requires #define configRECORD_STACK_HIGH_ADDRESS 1 to calculate size of stack
+
+        function pushChange(task: any, exp: string, value: any) {
+            switch (exp) {
+                case 'pxTopOfStack':
+                    task.stackTop = parseInt(value, 16);
+                    break;
+
+                case 'pxEndOfStack':
+                    task.stackStart = parseInt(value, 16);
+                    break;
+
+                case 'pxStack':
+                    task.stackEnd = parseInt(value, 16);
+                    break;
+
+                case 'uxPriority':
+                    task.priority = parseInt(value);
+                    break;
+
+                case 'ucStaticallyAllocated':
+                    task.staticallyAllocated = parseInt(value);
+                    break;
+            }
+        }
+
+        const name = `freertos_task_${address}`;
+        const expression = `(*((tskTCB*)${address}))`;
+        const task = {};
+
+        try {
+            const taskUpdate = await this.miDebugger.varUpdate(name, -1, -1);
+            const changelist = taskUpdate.result('changelist');
+
+            changelist.forEach((change) => {
+                pushChange(task, MINode.valueOf(change, 'exp'), MINode.valueOf(change, 'value'));
+            });
+        }
+        catch (err) {
+            try {
+                if (err instanceof MIError && err.message === 'Variable object not found') {
+                    await this.miDebugger.varCreate(expression, name);
+                    const taskInfo = await this.miDebugger.varListChildren(name, false);
+
+                    for (const change of taskInfo) {
+                        // NOTE: this will only get task name once, if it is updated we will not know
+                        if (change.exp === 'pcTaskName') {
+                            const result = await this.miDebugger.evalExpression(`${expression}.pcTaskName`, -1, -1);
+                            const name = result.result('value');
+                            task['name'] = name.split('\\000')[0];
+                        }
+                        else {
+                            pushChange(task, change.exp, change.value);
+                        }
+                    }
+                } else {
+                    throw err;
+                }
+            }
+            catch (err) {
+                throw(err);
+            }
+        }
+
+        return task;
+    }
+
+    protected async readFreeRTOSList(expression: string): Promise<string[]> {
+
+        try {
+            const tasks = [];
+
+            let result = await this.miDebugger.evalExpression(`${expression}.uxNumberOfItems`, -1, -1);
+            let numItems = result.result('value');
+
+            // shouldn't need to loop on items, but doesn't hurt
+            let member: string = '.xListEnd';
+            while (numItems > 0) {
+                member += '.pxNext';
+                result = await this.miDebugger.evalExpression(`${expression}${member}.pvOwner`, -1, -1);
+
+                const taskAddress = result.result('value');
+                if (taskAddress !== '0x0') {
+                    if (this.args.showDevDebugOutput) {
+                        this.handleMsg('log', `Found FreeRTOS task in ${expression}: ${taskAddress}\n`);
+                    }
+                    tasks.push(parseInt(taskAddress, 16));
+                }
+                else {
+                    break;
+                }
+
+                numItems--;
+            }
+            return tasks;
+        }
+        catch (err) {
+            if (err instanceof MIError && err.message.startsWith('No symbol ')) {
+                return [];
+            }
+            else {
+                throw(err);
+            }
+        }
+    }
+
+    protected async readFreeRTOS(response: DebugProtocol.Response) {
+        // FreeRTOS creates a pxReadyTasksList per priority, as well as xDelayedTaskList1, xDelayedTaskList2
+        // xPendingReadyList and if enabled, xSuspendedTaskList and xTasksWaitingTermination
+
+        function pushFreeRTOSTasks(tasks: any, addresses: string[], state: string) {
+            for (const address of addresses) {
+                tasks.push({
+                    state: state,
+                    address: address
+                });
+            }
+        }
+
+        try {
+            const tasks = [];
+
+            const result = await this.miDebugger.evalExpression('sizeof(pxReadyTasksLists)/sizeof(pxReadyTasksLists[0])', -1, -1);
+            let readyListSize = result.result('value');
+
+            let addresses: string[];
+
+            while (readyListSize > 0) {
+                readyListSize--;
+                const index = `[${readyListSize}]`;
+                addresses = await this.readFreeRTOSList(`pxReadyTasksLists${index}`);
+                pushFreeRTOSTasks(tasks, addresses, 'ready');
+            }
+
+            addresses = await this.readFreeRTOSList('xDelayedTaskList1');
+            pushFreeRTOSTasks(tasks, addresses, 'delayed');
+
+            addresses = await this.readFreeRTOSList('xDelayedTaskList2');
+            pushFreeRTOSTasks(tasks, addresses, 'delayed');
+
+            addresses = await this.readFreeRTOSList('xPendingReadyList');
+            pushFreeRTOSTasks(tasks, addresses, 'pending');
+
+            // these will error and return [] if not enabled in config
+            addresses = await this.readFreeRTOSList('xSuspendedTaskList');
+            pushFreeRTOSTasks(tasks, addresses, 'suspended');
+
+            addresses = await this.readFreeRTOSList('xTasksWaitingTermination');
+            pushFreeRTOSTasks(tasks, addresses, 'terminated');
+
+            this.handleMsg('stdout', `Found FreeRTOS tasks: ${JSON.stringify(tasks)}\n`);
+
+            for (let i = 0; i < tasks.length; i++) {
+                const taskUpdate = await this.readFreeRTOSTask(tasks[i].address);
+                tasks[i] = {...tasks[i], ...taskUpdate};
+                this.handleMsg('stdout', `Task: ${JSON.stringify(tasks[i])}\n`);
+            }
+
+            this.handleMsg('stdout', `Tasks: ${JSON.stringify(tasks)}\n`);
+
+            response.body = {
+                tasks: tasks
+            };
+            this.sendResponse(response);
+
+        }
+        catch (err) {
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('stderr', `Failed to retrieve FreeRTOS task information: ${err.toString()}\n`);
+            }
+
+            response.body = { error: err };
+            this.sendErrorResponse(response, 114, `Failed to retrieve FreeRTOS task information: ${err.toString()}`);
+        }
     }
 
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
@@ -899,7 +1082,7 @@ export class GDBDebugSession extends DebugSession {
             this.handleMsg('stdout', `**** Paused Thread: not found. Using ID ${this.stoppedThreadId}. Not good\n`);
         }
     }
-    
+
     protected handleBreakpoint(info: MINode) {
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
@@ -1075,7 +1258,7 @@ export class GDBDebugSession extends DebugSession {
             args.breakpoints.forEach((brk) => {
                 all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
             });
-            
+
             try {
                 const breakpoints = await Promise.all(all);
                 const finalBrks = [];
@@ -1112,12 +1295,12 @@ export class GDBDebugSession extends DebugSession {
         const createBreakpoints = async (shouldContinue) => {
             this.debugReady = true;
             const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
-            
+
             try {
                 this.disableSendStoppedEvents = false;
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
                 this.breakpointMap.set(args.source.path, []);
-                
+
                 const all: Array<Promise<Breakpoint>> = [];
                 const sourcepath = decodeURIComponent(args.source.path);
 
@@ -1138,7 +1321,7 @@ export class GDBDebugSession extends DebugSession {
                     }
 
                     const symbol: SymbolInformation = await this.getDisassemblyForFunction(func, file);
-                    
+
                     if (symbol) {
                         args.breakpoints.forEach((brk) => {
                             if (brk.line <= symbol.instructions.length) {
@@ -1326,7 +1509,7 @@ export class GDBDebugSession extends DebugSession {
                         if (url === this.activeEditorPath) { disassemble = true; }
                     }
                 }
-                
+
                 try {
                     if (disassemble) {
                         const symbolInfo = await this.getDisassemblyForFunction(element.function, element.fileName);
@@ -1343,7 +1526,7 @@ export class GDBDebugSession extends DebugSession {
                             else {
                                 fname = `${symbolInfo.name}.cdasm`;
                             }
-                            
+
                             const url = 'disassembly:///' + fname;
                             ret.push(new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
                         }
@@ -2001,7 +2184,7 @@ export class GDBDebugSession extends DebugSession {
                         throw err;
                     }
                 }
-                
+
                 this.sendResponse(response);
             }
             catch (err) {

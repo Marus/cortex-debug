@@ -4,6 +4,7 @@ import * as path from 'path';
 
 import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
+import { FreeRTOSTreeProvider } from './views/freertos';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
 import { SWOCore } from './swo/core';
@@ -35,9 +36,11 @@ export class CortexDebugExtension {
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
     private memoryProvider: MemoryContentProvider;
+    private freeRTOSProvider: FreeRTOSTreeProvider;
 
     private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
     private registerTreeView: vscode.TreeView<BaseNode>;
+    private freeRTOSTreeView: vscode.TreeView<BaseNode>;
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
@@ -46,6 +49,7 @@ export class CortexDebugExtension {
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
+        this.freeRTOSProvider = new FreeRTOSTreeProvider();
 
         let tmp = [];
         try {
@@ -64,6 +68,11 @@ export class CortexDebugExtension {
             treeDataProvider: this.registerProvider
         });
 
+        // TODO: if FreeRTOS set as rtos option
+        this.freeRTOSTreeView = vscode.window.createTreeView('cortex-debug.freertos', {
+            treeDataProvider: this.freeRTOSProvider
+        });
+
         context.subscriptions.push(
             vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
             vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
@@ -72,9 +81,9 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
-            
+
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
-            
+
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
@@ -155,7 +164,7 @@ export class CortexDebugExtension {
                 ignoreFocusOut: true,
                 prompt: 'Function Name (exact or a regexp) to Disassemble.'
             });
-            
+
             funcname = funcname ? funcname.trim() : null;
             if (!funcname) { return ; }
 
@@ -373,8 +382,9 @@ export class CortexDebugExtension {
             }
 
             Reporting.beginSession(args as ConfigurationArguments);
-            
+
             this.registerProvider.debugSessionStarted();
+            this.freeRTOSProvider.debugSessionStarted();
             this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
             if (this.swosource) { this.initializeSWO(args); }
@@ -390,6 +400,7 @@ export class CortexDebugExtension {
 
         this.registerProvider.debugSessionTerminated();
         this.peripheralProvider.debugSessionTerminated();
+        this.freeRTOSProvider.debugSessionTerminated();
         if (this.swo) {
             this.swo.debugSessionTerminated();
         }
@@ -426,6 +437,7 @@ export class CortexDebugExtension {
     private receivedStopEvent(e) {
         this.peripheralProvider.debugStopped();
         this.registerProvider.debugStopped();
+        this.freeRTOSProvider.debugStopped();
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
@@ -434,6 +446,7 @@ export class CortexDebugExtension {
     private receivedContinuedEvent(e) {
         this.peripheralProvider.debugContinued();
         this.registerProvider.debugContinued();
+        this.freeRTOSProvider.debugContinued();
         if (this.swo) { this.swo.debugContinued(); }
     }
 
