@@ -126,6 +126,7 @@ export class GDBDebugSession extends DebugSession {
     private stoppedThreadId: number = 0;
     private stoppedEventPending = false;
 
+    protected functionBreakpoints = [];
     protected breakpointMap: Map<string, Breakpoint[]> = new Map();
     protected fileExistsCache: Map<string, boolean> = new Map();
 
@@ -1071,6 +1072,9 @@ export class GDBDebugSession extends DebugSession {
     ): void {
         const createBreakpoints = async (shouldContinue) => {
             this.disableSendStoppedEvents = false;
+            await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
+            this.functionBreakpoints = [];
+
             const all = [];
             args.breakpoints.forEach((brk) => {
                 all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
@@ -1080,6 +1084,7 @@ export class GDBDebugSession extends DebugSession {
                 const breakpoints = await Promise.all(all);
                 const finalBrks = [];
                 breakpoints.forEach((brkp) => {
+                    this.functionBreakpoints.push(brkp.number);
                     if (brkp[0]) { finalBrks.push({ line: brkp[1].line }); }
                 });
                 response.body = {
