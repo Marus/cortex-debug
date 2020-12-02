@@ -142,6 +142,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     // StUtil Specific
     v1: boolean;
 
+    // ST-LINK GDB server specific
+    stm32cubeprogrammer: string;
+
     // BMP Specific
     BMPGDBSerialPort: string;
     powerOverBMP: string;

@@ -20,6 +20,7 @@ import { EventEmitter } from 'events';
 import { JLinkServerController } from './jlink';
 import { OpenOCDServerController } from './openocd';
 import { STUtilServerController } from './stutil';
+import { STLinkServerController } from './stlink';
 import { PyOCDServerController } from './pyocd';
 import { BMPServerController } from './bmp';
 import { PEServerController } from './pemicro';
@@ -33,6 +34,7 @@ const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
     openocd: OpenOCDServerController,
     stutil: STUtilServerController,
+    stlink: STLinkServerController,
     pyocd: PyOCDServerController,
     pe: PEServerController,
     bmp: BMPServerController,

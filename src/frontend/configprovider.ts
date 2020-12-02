@@ -70,6 +70,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'stutil':
                 validationResponse = this.verifySTUtilConfiguration(folder, config);
                 break;
+            case 'stlink':
+                validationResponse = this.verifySTLinkConfiguration(folder, config);
+                break;
             case 'pyocd':
                 validationResponse = this.verifyPyOCDConfiguration(folder, config);
                 break;
@@ -87,7 +90,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 break;
             default:
                 // tslint:disable-next-line:max-line-length
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
+                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stlink", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
                 break;
         }
 
@@ -203,6 +206,26 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Util GDB server. Disabling SWO.');
+            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
+            config.graphConfig = [];
+        }
+
+        return null;
+    }
+
+    private verifySTLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+        if (config.stlinkpath && !config.serverpath) { config.serverpath = config.stlinkpath; }
+        if (!config.serverpath) {
+            const configuration = vscode.workspace.getConfiguration('cortex-debug');
+            config.serverpath = configuration.stlinkpath;
+        }
+
+        if (config.rtos) {
+            return 'The ST-Link GDB Server does not have support for the rtos option.';
+        }
+
+        if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+            vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Link GDB server. Disabling SWO.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
         }
