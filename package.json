@@ -1294,7 +1294,7 @@
                             },
                             "stm32cubeprogrammer": {
                                 "default": null,
-                                "description": "Path to the STM32CubeProgrammer tool's bin directory. Either installed as part os STM32CubeIDE or separatly.",
+                                "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here.",
                                 "type": "string"
                             },
                             "targetId": {
@@ -1375,10 +1375,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "servertype": "stlink",
-                            "armToolchainPath": "c:/ST/STM32CubeIDE_1.5.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.7-2018-q2-update.win32_1.5.0.202011040924/tools/bin",
-                            "stm32cubeprogrammer": "c:/ST/STM32CubeIDE_1.5.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_1.5.0.202011040924/tools/bin",
-                            "serverpath": "c:/ST/STM32CubeIDE_1.5.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.win32_1.5.0.202011040924/tools/bin/ST-LINK_gdbserver.exe"
+                            "servertype": "stlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STMicroelectronic's ST-LINK_gdbserver part of STM32CubeIDE",
                         "label": "Cortex Debug: ST-LINK"
