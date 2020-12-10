@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
+import { STLinkServerController } from './../stlink';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'auto'];
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];
@@ -95,6 +96,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
+
+        // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
+        if (!config.armToolchainPath && config.servertype === 'stlink') {
+           config.armToolchainPath = STLinkServerController.getArmToolchainPath();
+        }
+
         if (config.armToolchainPath) { config.toolchainPath = config.armToolchainPath; }
         if (!config.toolchainPath) {
             config.toolchainPath = configuration.armToolchainPath;
