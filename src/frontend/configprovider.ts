@@ -221,10 +221,15 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifySTLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.stlinkpath && !config.serverpath) { config.serverpath = config.stlinkpath; }
+        if (config.stlinkPath && !config.serverpath) { config.serverpath = config.stlinkPath; }
         if (!config.serverpath) {
             const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.stlinkpath;
+            config.serverpath = configuration.stlinkPath;
+        }
+
+        if (!config.stm32cubeprogrammer) {
+            const configuration = vscode.workspace.getConfiguration('cortex-debug');
+            config.stm32cubeprogrammer = configuration.stm32cubeprogrammer;
         }
 
         if (config.rtos) {

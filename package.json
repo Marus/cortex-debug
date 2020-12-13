@@ -74,6 +74,14 @@
                     "default": null,
                     "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
                 },
+                "cortex-debug.stm32cubeprogrammer": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                },
                 "cortex-debug.enableTelemetry": {
                     "type": "boolean",
                     "default": true,
@@ -1291,6 +1299,11 @@
                                 "default": false,
                                 "description": "For st-util only. Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
                                 "type": "boolean"
+                            },
+                            "stlinkPath": {
+                                "default": null,
+                                "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path.",
+                                "type": "string"
                             },
                             "stm32cubeprogrammer": {
                                 "default": null,
