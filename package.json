@@ -26,6 +26,14 @@
                     "default": "arm-none-eabi",
                     "description": "The prefix to use for the arm toolchain - the standard release from arm uses \"arm-none-eabi\" but alternative toolchains may use a different prefix. Currently the gdb and objdump tools are needed."
                 },
+                "cortex-debug.gdbPath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                },
                 "cortex-debug.JLinkGDBServerPath": {
                     "type": [
                         "string",
