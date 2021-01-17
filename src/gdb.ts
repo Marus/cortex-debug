@@ -775,6 +775,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
         const doDisconnectProcessing = () => {
+            this.miDebugger.sendCommand('break-delete');
             if (this.attached) {
                 this.attached = false;
                 this.miDebugger.detach();
