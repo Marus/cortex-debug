@@ -66,6 +66,22 @@
                     "default": null,
                     "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
                 },
+                "cortex-debug.stlinkPath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
+                },
+                "cortex-debug.stm32cubeprogrammer": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                },
                 "cortex-debug.enableTelemetry": {
                     "type": "boolean",
                     "default": true,
@@ -171,12 +187,13 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe and stutil",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
                                     "pyocd",
                                     "stutil",
+                                    "stlink",
                                     "bmp",
                                     "pe",
                                     "qemu",
@@ -657,12 +674,12 @@
                             },
                             "serialNumber": {
                                 "default": null,
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
+                                "description": "J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer",
                                 "type": "string"
                             },
                             "interface": {
                                 "default": "swd",
-                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link and BMP probes.",
+                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes.",
                                 "type": "string",
                                 "enum": [
                                     "swd",
@@ -742,12 +759,13 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe and stutil",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
                                     "pyocd",
                                     "stutil",
+                                    "stlink",
                                     "bmp",
                                     "pe",
                                     "qemu",
@@ -1229,12 +1247,12 @@
                             },
                             "serialNumber": {
                                 "default": null,
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
+                                "description": "J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer",
                                 "type": "string"
                             },
                             "interface": {
                                 "default": "swd",
-                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link and BMP probes.",
+                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes.",
                                 "type": "string",
                                 "enum": [
                                     "swd",
@@ -1279,8 +1297,18 @@
                             },
                             "v1": {
                                 "default": false,
-                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
+                                "description": "For st-util only. Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
                                 "type": "boolean"
+                            },
+                            "stlinkPath": {
+                                "default": null,
+                                "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path.",
+                                "type": "string"
+                            },
+                            "stm32cubeprogrammer": {
+                                "default": null,
+                                "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here.",
+                                "type": "string"
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
@@ -1352,6 +1380,18 @@
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)",
                         "label": "Cortex Debug: ST-Util"
+                    },
+                    {
+                        "body": {
+                            "cwd": "^\"\\${workspaceRoot}\"",
+                            "executable": "${1:./bin/executable.elf}",
+                            "name": "${6:Debug Microcontroller}",
+                            "request": "launch",
+                            "type": "cortex-debug",
+                            "servertype": "stlink"
+                        },
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STMicroelectronic's ST-LINK_gdbserver part of STM32CubeIDE",
+                        "label": "Cortex Debug: ST-LINK"
                     },
                     {
                         "body": {
