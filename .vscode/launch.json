@@ -19,12 +19,12 @@
 			"type": "node",
 			"request": "launch",
 			"runtimeArgs": [ "--nolazy" ],
-			"program": "${workspaceRoot}/src/gdb.ts",
+			"program": "${workspaceRoot}/dist/debugadapter.js",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/dist/*js"
+				"${workspaceRoot}/dist/*.js"
 			],
 			"cwd": "${workspaceRoot}"
 		},

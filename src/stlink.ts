@@ -7,7 +7,14 @@ import { EventEmitter } from 'events';
 
 
 // Path of the top-level STM32CubeIDE installation directory, os-dependant
-const ST_DIR = os.platform() === 'win32' ? 'c:\\ST' : '/opt/st';
+const ST_DIR = (
+    os.platform() === 'win32' ? 'c:\\ST' : 
+        os.platform() === 'darwin' ? '/Applications/STM32CubeIDE.app/Contents/Eclipse' : '/opt/st'
+    );
+
+const SERVER_EXECUTABLE_NAME = (
+    os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver'
+)
 
 const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/;
 // Example: c:\ST\STM32CubeIDE_1.5.0\
@@ -28,10 +35,14 @@ function resolveCubePath(dirSegments, regex, suffix, executable = '')
     let dir = path.join(...dirSegments);
     let resolvedDir;
     try {
-        for (let subDir of fs.readdirSync(dir, { withFileTypes: true }).sort()) {
-            if (!subDir.isDirectory())
+        for (let subDir of fs.readdirSync(dir).sort()) {
+            let fullPath = path.join(dir, subDir);
+            let stats = fs.statSync(fullPath)
+            if (!stats.isDirectory()) {
                 continue;
-            let match = subDir.name.match(regex);
+            }
+            
+            let match = subDir.match(regex);
             if (match) {
                 let fullPath = path.join(dir, match[0], suffix, executable);
                 if (fs.existsSync(fullPath)) {
@@ -53,12 +64,19 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
-    private static readonly stmCubeIdeDir: string = resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
+    
 
+    public static getSTMCubeIdeDir(): string {
+        if (os.platform() == 'darwin') {
+            return ST_DIR;
+        } else {
+            return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
+        }
+    }
 
     public static getArmToolchainPath(): string {
         // Try to resolve gcc location
-        return resolveCubePath([this.stmCubeIdeDir, 'plugins'], GCC_REGEX, 'tools/bin'); 
+        return resolveCubePath([this.getSTMCubeIdeDir(), 'plugins'], GCC_REGEX, 'tools/bin'); 
     }
 
     constructor() {
@@ -110,41 +128,11 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     public swoCommands(): string[] {
-        const commands = [];
-        // if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-        //     const swocommands = this.SWOConfigurationCommands();
-        //     commands.push(...swocommands);
-        // }
-        return commands;
+        return [];
     }
-
-    // private SWOConfigurationCommands(): string[] {
-    //     const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
-    //     const swoFrequency = this.args.swoConfig.swoFrequency;
-    //     const cpuFrequency = this.args.swoConfig.cpuFrequency;
-
-    //     const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-        
-    //     const commands: string[] = [
-    //         'EnableITMAccess',
-    //         `BaseSWOSetup ${ratio}`,
-    //         'SetITMId 1',
-    //         'ITMDWTTransferEnable',
-    //         'DisableITMPorts 0xFFFFFFFF',
-    //         `EnableITMPorts ${portMask}`,
-    //         'EnableDWTSync',
-    //         'ITMSyncEnable',
-    //         'ITMGlobalEnable'
-    //     ];
-
-    //     commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
-    //     return commands.map((c) => `interpreter-exec console "${c}"`);
-    // }
-
     public serverExecutable(): string {
         if (this.args.serverpath) { return this.args.serverpath; }
-        else { return resolveCubePath([STLinkServerController.stmCubeIdeDir, 'plugins'], GDB_REGEX, 'tools/bin', os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver') }
+        else { return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME) }
     }
 
     public serverArguments(): string[] {
@@ -156,11 +144,13 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (this.args.stm32cubeprogrammer) {
             serverargs.push('-cp', this.args.stm32cubeprogrammer);
         } else {
-            let stm32cubeprogrammer = resolveCubePath([STLinkServerController.stmCubeIdeDir, 'plugins'], PROG_REGEX, 'tools/bin');
+            let stm32cubeprogrammer = resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], PROG_REGEX, 'tools/bin');
             // Fallback to standalone programmer if no STMCube32IDE is installed:
             if (!stm32cubeprogrammer) {
                 if (os.platform() === 'win32') {
                     stm32cubeprogrammer = process.env.ProgramFiles + '\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin';
+                } else if (os.platform() === 'darwin') {
+                    stm32cubeprogrammer = '/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin';
                 } else {
                     stm32cubeprogrammer = '/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin';
                 }
@@ -189,13 +179,6 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public serverLaunchStarted(): void {}
     public serverLaunchCompleted(): void {
-        // if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-        //     this.emit('event', new SWOConfigureEvent({
-        //         type: 'serial',
-        //         device: this.args.swoConfig.source,
-        //         baudRate: this.args.swoConfig.swoFrequency
-        //     }));
-        // }
     }
     
     public debuggerLaunchStarted(): void {}
