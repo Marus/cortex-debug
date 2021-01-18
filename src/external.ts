@@ -37,7 +37,6 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
         const commands = [
             'interpreter-exec console "monitor reset halt"',
             'target-download',
-            'interpreter-exec console "monitor reset halt"',
             'enable-pretty-printing'
         ];
 
