@@ -111,26 +111,17 @@
             {
                 "command": "cortex-debug.peripherals.updateNode",
                 "title": "Update Value",
-                "icon": {
-                    "light": "resources/light/edit.svg",
-                    "dark": "resources/dark/edit.svg"
-                }
+                "icon": "$(pencil)"
             },
             {
                 "command": "cortex-debug.peripherals.copyValue",
                 "title": "Copy Value",
-                "icon": {
-                    "light": "resources/light/copy.svg",
-                    "dark": "resources/dark/copy.svg"
-                }
+                "icon": "$(files)"
             },
             {
                 "command": "cortex-debug.registers.copyValue",
                 "title": "Copy Value",
-                "icon": {
-                    "light": "resources/light/copy.svg",
-                    "dark": "resources/dark/copy.svg"
-                }
+                "icon": "$(files)"
             },
             {
                 "command": "cortex-debug.peripherals.setFormat",
