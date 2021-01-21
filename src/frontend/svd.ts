@@ -83,15 +83,7 @@ export class SVDParser {
                         }
                     }
 
-                    peripherials.sort((p1, p2) => {
-                        if (p1.groupName > p2.groupName) { return 1; }
-                        else if (p1.groupName < p2.groupName) { return -1; }
-                        else {
-                            if (p1.name > p2.name) { return 1; }
-                            else if (p1.name < p2.name) { return -1; }
-                            else { return 0; }
-                        }
-                    });
+                    peripherials.sort(PeripheralNode.compare);
 
                     for (const p of peripherials) {
                         p.markAddresses();

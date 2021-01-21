@@ -132,6 +132,11 @@
                 "title": "Refresh"
             },
             {
+                "command": "cortex-debug.peripherals.togglePin",
+                "title": "Toggle Pin",
+                "icon": "$(pin)"
+            },
+            {
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.examineMemory",
                 "title": "View Memory"
@@ -1448,6 +1453,10 @@
                     "when": "false"
                 },
                 {
+                    "command": "cortex-debug.peripherals.togglePin",
+                    "when": "false"
+                },
+                {
                     "command": "cortex-debug.registers.copyValue",
                     "when": "false"
                 },
@@ -1515,6 +1524,11 @@
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
                     "when": "view == cortex-debug.peripherals && viewItem == peripheral"
+                },
+                {
+                    "command": "cortex-debug.peripherals.togglePin",
+                    "when": "view == cortex-debug.peripherals && viewItem == peripheral",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
