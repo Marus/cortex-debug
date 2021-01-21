@@ -1,3 +1,11 @@
+# V0.3.8
+1. New Feature:
+   * Added initial support for STMicroelectronic's official ST-LINK GDB server. This server is currently only supported on Windows as we are having difficulties with getting it to run inside the visual studio environment on Linux and Windows. Also, this GDB server does not currently support SWO output through the probe. Big thanks to hwmaier for their PR that provided most of this support.
+2. Issues Fixed:
+   * Fixed Issue [#382](https://github.com/Marus/cortex-debug/issues/382) - GDB commands in configuration (such as postLaunchCommands) that had had quotation marks (") were not handled correctly when being passed to GDB
+   * Fixed Issue [#374](https://github.com/Marus/cortex-debug/issues/374) - Breakpoints are not cleared in GDB when exiting a debug session - this can cause issues in GDB servers like J-Link that support flash breakpoints as they would not have a chance to remove the modifications made to the flash memory to support that feature.
+   * Fixed issue with not being able to properly disable function break points
+
 # V0.3.7
 Minor bug fix release
 
