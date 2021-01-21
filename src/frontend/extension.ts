@@ -332,6 +332,8 @@ export class CortexDebugExtension {
             { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
             { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
         ]);
+        if (result === undefined)
+            return;
 
         node.format = result.value;
         this.peripheralProvider.refresh();
