@@ -5,16 +5,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
 
-
 // Path of the top-level STM32CubeIDE installation directory, os-dependant
 const ST_DIR = (
-    os.platform() === 'win32' ? 'c:\\ST' : 
+    os.platform() === 'win32' ? 'c:\\ST' :
         os.platform() === 'darwin' ? '/Applications/STM32CubeIDE.app/Contents/Eclipse' : '/opt/st'
     );
 
 const SERVER_EXECUTABLE_NAME = (
     os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver'
-)
+);
 
 const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/;
 // Example: c:\ST\STM32CubeIDE_1.5.0\
@@ -25,38 +24,36 @@ const PROG_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.cubeprogrammer\
 const GCC_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.gnu-tools-for-stm32\.(.+)/;
 // Example: c:\ST\STM32CubeIDE_1.5.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.7-2018-q2-update.win32_1.5.0.202011040924\
 
-
 /**
  * Resolves the path location of a STM32CubeIDE plugin irrespective of version number.
  * Works for most recent version STM32CubeIDE_1.4.0 and STM32CubeIDE_1.5.0.
  */
 function resolveCubePath(dirSegments, regex, suffix, executable = '')
 {
-    let dir = path.join(...dirSegments);
+    const dir = path.join(...dirSegments);
     let resolvedDir;
     try {
-        for (let subDir of fs.readdirSync(dir).sort()) {
-            let fullPath = path.join(dir, subDir);
-            let stats = fs.statSync(fullPath)
+        for (const subDir of fs.readdirSync(dir).sort()) {
+            const fullPath = path.join(dir, subDir);
+            const stats = fs.statSync(fullPath);
             if (!stats.isDirectory()) {
                 continue;
             }
             
-            let match = subDir.match(regex);
+            const match = subDir.match(regex);
             if (match) {
-                let fullPath = path.join(dir, match[0], suffix, executable);
+                const fullPath = path.join(dir, match[0], suffix, executable);
                 if (fs.existsSync(fullPath)) {
                     resolvedDir = fullPath;
                 }
             }
         }
     }
-    catch(error) {
+    catch (error) {
         // Ignore
     }
     return resolvedDir ? resolvedDir : executable;
 }
-
 
 export class STLinkServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'ST-LINK';
@@ -65,9 +62,8 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
     
-
     public static getSTMCubeIdeDir(): string {
-        if (os.platform() == 'darwin') {
+        if (os.platform() === 'darwin') {
             return ST_DIR;
         } else {
             return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
@@ -76,11 +72,11 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public static getArmToolchainPath(): string {
         // Try to resolve gcc location
-        return resolveCubePath([this.getSTMCubeIdeDir(), 'plugins'], GCC_REGEX, 'tools/bin'); 
+        return resolveCubePath([this.getSTMCubeIdeDir(), 'plugins'], GCC_REGEX, 'tools/bin');
     }
 
     constructor() {
-        super();        
+        super();
     }
 
     public setPorts(ports: { [name: string]: number }): void {
@@ -107,7 +103,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             'interpreter-exec console "monitor reset halt"',
             'target-download',
             'interpreter-exec console "monitor reset halt"',
-            'enable-pretty-printing'       
+            'enable-pretty-printing'
         ];
         return commands;
     }
@@ -132,7 +128,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
     public serverExecutable(): string {
         if (this.args.serverpath) { return this.args.serverpath; }
-        else { return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME) }
+        else { return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME); }
     }
 
     public serverArguments(): string[] {
