@@ -132,9 +132,14 @@
                 "title": "Refresh"
             },
             {
-                "command": "cortex-debug.peripherals.togglePin",
-                "title": "Toggle Pin",
+                "command": "cortex-debug.peripherals.pin",
+                "title": "Pin",
                 "icon": "$(pin)"
+            },
+            {
+                "command": "cortex-debug.peripherals.unpin",
+                "title": "Unpin",
+                "icon": "$(pinned)"
             },
             {
                 "category": "Cortex-Debug",
@@ -1453,7 +1458,11 @@
                     "when": "false"
                 },
                 {
-                    "command": "cortex-debug.peripherals.togglePin",
+                    "command": "cortex-debug.peripherals.pin",
+                    "when": "false"
+                },
+                {
+                    "command": "cortex-debug.peripherals.unpin",
                     "when": "false"
                 },
                 {
@@ -1523,11 +1532,16 @@
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem == peripheral"
+                    "when": "view == cortex-debug.peripherals && viewItem =~ /peripheral.*/"
                 },
                 {
-                    "command": "cortex-debug.peripherals.togglePin",
+                    "command": "cortex-debug.peripherals.pin",
                     "when": "view == cortex-debug.peripherals && viewItem == peripheral",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.peripherals.unpin",
+                    "when": "view == cortex-debug.peripherals && viewItem == peripheral.pinned",
                     "group": "inline"
                 },
                 {

@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from 'vscode';
+import { TreeItem, TreeItemCollapsibleState } from 'vscode';
 import { AccessType } from '../../svd';
 import { PeripheralBaseNode } from './basenode';
 import { AddrRange, AddressRangesInUse } from '../../addrranges';
@@ -56,11 +56,8 @@ export class PeripheralNode extends PeripheralBaseNode {
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const label = `${this.name} @ ${hexFormat(this.baseAddress)}`;
         const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
-        item.contextValue = 'peripheral';
+        item.contextValue = this.pinned ? 'peripheral.pinned' : 'peripheral';
         item.tooltip = this.description;
-        if (this.pinned)
-            // TODO: requires to update vscode to new typing dependency
-            item.iconPath = new ThemeIcon('pinned');
         return item;
     }
 
