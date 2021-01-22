@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState } from 'vscode';
+import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from 'vscode';
 import { AccessType } from '../../svd';
 import { PeripheralBaseNode } from './basenode';
 import { AddrRange, AddressRangesInUse } from '../../addrranges';
@@ -52,13 +52,18 @@ export class PeripheralNode extends PeripheralBaseNode {
     public getPeripheral(): PeripheralBaseNode {
         return this;
     }
+
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const label = `${this.name} @ ${hexFormat(this.baseAddress)}`;
         const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
-        item.contextValue = 'peripheral';
+        item.contextValue = this.pinned ? 'peripheral.pinned' : 'peripheral';
         item.tooltip = this.description;
+        if (this.pinned) {
+            item.iconPath = new ThemeIcon('pinned');
+        }
         return item;
     }
+
     public getCopyValue(): string {
         throw new Error('Method not implemented.');
     }
@@ -166,8 +171,13 @@ export class PeripheralNode extends PeripheralBaseNode {
     public saveState(path?: string): NodeSetting[] {
         const results: NodeSetting[] = [];
 
-        if (this.format !== NumberFormat.Auto || this.expanded) {
-            results.push({ node: `${this.name}`, expanded: this.expanded, format: this.format });
+        if (this.format !== NumberFormat.Auto || this.expanded || this.pinned) {
+            results.push({
+                node: `${this.name}`,
+                expanded: this.expanded,
+                format: this.format,
+                pinned: this.pinned
+            });
         }
 
         this.children.forEach((c) => {
@@ -188,5 +198,19 @@ export class PeripheralNode extends PeripheralBaseNode {
 
     public performUpdate(): Thenable<any> {
         throw new Error('Method not implemented.');
+    }
+
+    public static compare(p1: PeripheralNode, p2: PeripheralNode): number {
+        if ((p1.pinned && p2.pinned) || (!p1.pinned && !p2.pinned)) {
+            // none or both peripherals are pinned, sort by name prioritizing groupname
+            if (p1.groupName !== p2.groupName)
+                return p1.groupName > p2.groupName ? 1 : -1;
+            else if (p1.name !== p2.name)
+                return p1.name > p2.name ? 1 : -1;
+            else
+                return 0;
+        } else {
+            return p1.pinned ? -1 : 1;
+        }
     }
 }

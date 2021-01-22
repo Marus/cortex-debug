@@ -132,6 +132,16 @@
                 "title": "Refresh"
             },
             {
+                "command": "cortex-debug.peripherals.pin",
+                "title": "Pin",
+                "icon": "$(pin)"
+            },
+            {
+                "command": "cortex-debug.peripherals.unpin",
+                "title": "Unpin",
+                "icon": "$(pinned)"
+            },
+            {
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.examineMemory",
                 "title": "View Memory"
@@ -1448,6 +1458,14 @@
                     "when": "false"
                 },
                 {
+                    "command": "cortex-debug.peripherals.pin",
+                    "when": "false"
+                },
+                {
+                    "command": "cortex-debug.peripherals.unpin",
+                    "when": "false"
+                },
+                {
                     "command": "cortex-debug.registers.copyValue",
                     "when": "false"
                 },
@@ -1514,7 +1532,17 @@
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem == peripheral"
+                    "when": "view == cortex-debug.peripherals && viewItem =~ /peripheral.*/"
+                },
+                {
+                    "command": "cortex-debug.peripherals.pin",
+                    "when": "view == cortex-debug.peripherals && viewItem == peripheral",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.peripherals.unpin",
+                    "when": "view == cortex-debug.peripherals && viewItem == peripheral.pinned",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
@@ -1564,7 +1592,7 @@
         "safe-buffer": "^5.2.1",
         "tcp-port-used": "^1.0.2",
         "tmp": "0.0.33",
-        "universal-analytics": "^0.4.23",
+        "universal-analytics": "0.4.16",
         "uuid": "^3.4.0",
         "vscode-debugadapter": "^1.42.0",
         "vscode-debugprotocol": "^1.42.0",
@@ -1610,5 +1638,5 @@
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
     },
-    "version": "0.3.8"
+    "version": "0.3.9"
 }

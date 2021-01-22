@@ -54,7 +54,7 @@ const STATIC_HANDLES_START = 0x010000;
 const STATIC_HANDLES_FINISH = 0x01FFFF;
 const VAR_HANDLES_START = 0x020000;
 
-const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${ c.replaceAll('"', '\\"') }"`;
+const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${ c.replace(/"/g, '\\"') }"`;
 
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
