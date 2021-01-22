@@ -55,7 +55,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public refresh(): void {
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
     }
 
     public getTreeItem(element: PeripheralBaseNode): vscode.TreeItem | Promise<vscode.TreeItem> {
@@ -80,10 +80,10 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public debugSessionStarted(svdfile: string): Thenable<any> {
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             this.peripherials = [];
             this.loaded = false;
-            this._onDidChangeTreeData.fire();
+            this._onDidChangeTreeData.fire(undefined);
             
             if (svdfile) {
                 setTimeout(() => {
@@ -101,19 +101,19 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                                             node.format = s.format;
                                         }
                                     });
-                                    this._onDidChangeTreeData.fire();
+                                    this._onDidChangeTreeData.fire(undefined);
                                 }
                             }, (error) => {
 
                             });
-                            this._onDidChangeTreeData.fire();
+                            this._onDidChangeTreeData.fire(undefined);
                             resolve();
                             reporting.sendEvent('Peripheral View', 'Used', svdfile);
                         },
                         (e) => {
                             this.peripherials = [];
                             this.loaded = false;
-                            this._onDidChangeTreeData.fire();
+                            this._onDidChangeTreeData.fire(undefined);
                             const msg = `Unable to parse SVD file: ${e.toString()}`;
                             vscode.window.showErrorMessage(msg);
                             if (vscode.debug.activeDebugConsole) {
@@ -140,14 +140,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         
         this.peripherials = [];
         this.loaded = false;
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
         return Promise.resolve(true);
     }
 
     public debugStopped() {
         if (this.loaded) {
             const promises = this.peripherials.map((p) => p.updateData());
-            Promise.all(promises).then((_) => { this._onDidChangeTreeData.fire(); }, (_) => { this._onDidChangeTreeData.fire(); });
+            Promise.all(promises).then((_) => { this._onDidChangeTreeData.fire(undefined); }, (_) => { this._onDidChangeTreeData.fire(undefined); });
         }
     }
 

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { expandValue, isExpandable } from '../src/backend/gdb_expansion';
+import { expandValue, isExpandable } from '../../src/backend/gdb_expansion';
 
 suite("GDB Value Expansion", () => {
 	let variableCreate = (variable) => { return { expanded: variable }; };

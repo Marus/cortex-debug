@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import {FixedBitSet} from '../src/frontend/fixedbitset';
-import {AddrRange, AddressRangesInUse} from '../src/frontend/addrranges';
+import {FixedBitSet} from '../../src/frontend/fixedbitset';
+import {AddrRange, AddressRangesInUse} from '../../src/frontend/addrranges';
 
 FixedBitSet.doAsserts = true;
 
