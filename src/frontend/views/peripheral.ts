@@ -98,9 +98,11 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                                         const node = this.findNodeByPath(s.node);
                                         if (node) {
                                             node.expanded = s.expanded || false;
+                                            node.pinned = s.pinned || false;
                                             node.format = s.format;
                                         }
                                     });
+                                    this.peripherials.sort(PeripheralNode.compare);
                                     this._onDidChangeTreeData.fire();
                                 }
                             }, (error) => {
@@ -153,5 +155,10 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
     public debugContinued() {
         
+    }
+
+    public togglePinPeripheral(node: PeripheralBaseNode) {
+        node.pinned = !node.pinned;
+        this.peripherials.sort(PeripheralNode.compare);
     }
 }
