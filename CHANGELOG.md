@@ -1,3 +1,15 @@
+# V0.3.10
+This feature upgrades our VSCode dependency for the extension - as a result V0.3.10 will only support the Visual Studio Code version 1.52 and above.
+
+New Features:
+   * Added support for Linux ARM hosts (both aarch64 and armhf) to the binary modules
+   * Added the ability to pin certain perhiperals in the Perhiperal Register view so they remain at the top of the view. Thanks to [manuargue](https://github.com/manuargue) for the PR. This provides an alterate solution to issue [#370](https://github.com/Marus/cortex-debug/issues/370)
+
+
+# V0.3.9
+
+Bug fix
+
 # V0.3.8
 1. New Feature:
    * Added initial support for STMicroelectronic's official ST-LINK GDB server. This server is currently only supported on Windows as we are having difficulties with getting it to run inside the visual studio environment on Linux and Windows. Also, this GDB server does not currently support SWO output through the probe. Big thanks to hwmaier for their PR that provided most of this support.
