@@ -270,8 +270,8 @@ export class GDBDebugSession extends DebugSession {
             if (this.args.toolchainPath) {
                 gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
             }
-            if (this.args.gdbpath) {
-                gdbExePath = this.args.gdbpath;
+            if (this.args.gdbPath) {
+                gdbExePath = this.args.gdbPath;
             }
 
             // Check to see if gdb exists.
@@ -281,7 +281,7 @@ export class GDBDebugSession extends DebugSession {
                         response,
                         103,
                         `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
-                            'Please configure "cortex-debug.armToolchainPath" correctly.'
+                            'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
                     );
                     return;
                 }
@@ -292,7 +292,7 @@ export class GDBDebugSession extends DebugSession {
                         response,
                         103,
                         `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
-                            'Please configure "cortex-debug.armToolchainPath" correctly.'
+                            'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
                     );
                     return;
                 }

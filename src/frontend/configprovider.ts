@@ -111,8 +111,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.toolchainPrefix = configuration.armToolchainPrefix || 'arm-none-eabi';
         }
         
-        config.gdbpath = configuration.gdbPath;
-        
+        if (!config.gdbPath) {
+            config.gdbPath = configuration.gdbPath;
+        }
+
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.

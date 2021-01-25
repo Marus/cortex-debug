@@ -90,6 +90,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     executable: string;
     servertype: string;
     serverpath: string;
+    gdbPath: string;
     serverArgs: string[];
     device: string;
     debuggerArgs: string[];
@@ -156,9 +157,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
     // External 
     gdbTarget: string;
-
-    // Hidden settings - These settings are for advanced configuration and are not exposed in the package.json file
-    gdbpath: string;
 }
 
 export interface DisassemblyInstruction {
