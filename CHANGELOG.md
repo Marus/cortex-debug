@@ -1,7 +1,12 @@
+# V0.3.11
+
+New Features:
+   * Enable ChibiOS RTOS support for the J-Link server
+
 # V0.3.10
 This feature upgrades our VSCode dependency for the extension - as a result V0.3.10 will only support the Visual Studio Code version 1.52 and above.
 
-Also wanted to call out the `gdbPath` user setting that was introduced at V0.3.8(but not included in the changelog - this allows users to override the complete path to GDB including the executable name - allowing the use of `gdb-multiarch`.
+Also wanted to call out the `gdbPath` user setting that was introduced at V0.3.8 (but not included in the changelog) - this allows users to override the complete path to GDB including the executable name - allowing the use of `gdb-multiarch`.
 
 New Features:
    * Added support for Linux ARM hosts (both aarch64 and armhf) to the binary modules

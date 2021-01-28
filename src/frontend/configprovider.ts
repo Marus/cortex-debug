@@ -4,7 +4,7 @@ import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'auto'];
-const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];
+const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private context: vscode.ExtensionContext) {}
