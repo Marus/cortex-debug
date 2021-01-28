@@ -2,7 +2,7 @@
 
 New Features:
    * Enable ChibiOS RTOS support for the J-Link server
-
+   * Added additional details to the the register and field level hover tooltips in the peripheral register view.
 # V0.3.10
 This feature upgrades our VSCode dependency for the extension - as a result V0.3.10 will only support the Visual Studio Code version 1.52 and above.
 

@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState, window, debug } from 'vscode';
+import { TreeItem, TreeItemCollapsibleState, window, debug, MarkdownString, TreeItemLabel } from 'vscode';
 import { PeripheralBaseNode } from './basenode';
 import { AccessType } from '../../svd';
 import { PeripheralRegisterNode } from './peripheralregisternode';
@@ -74,49 +74,123 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
-        const value = this.parent.extractBits(this.offset, this.width);
+        const isReserved = this.name.toLowerCase() === 'reserved';
+
+        const context = isReserved ? 'field-res' : (this.parent.accessType === AccessType.ReadOnly ? 'field-ro' : 'field');
+
         const rangestart = this.offset;
         const rangeend = this.offset + this.width - 1;
-
-        const label = `${this.name} [${rangeend}:${rangestart}]`;
-
-        const context = this.name.toLowerCase() === 'reserved' ? 'field-res' : (this.parent.accessType === AccessType.ReadOnly ? 'field-ro' : 'field');
         
-        const item = new TreeItem(label, TreeItemCollapsibleState.None);
+        const item = new TreeItem(`${this.name} [${rangeend}:${rangestart}]`, TreeItemCollapsibleState.None);
+        
         item.contextValue = context;
-        item.tooltip = this.description;
-
-        if (this.name.toLowerCase() !== 'reserved') {
-            if (this.accessType === AccessType.WriteOnly) {
-                item.description = '<Write Only>';
-            }
-            else {
-                let formatted = '';
-                switch (this.getFormat()) {
-                    case NumberFormat.Decimal:
-                        formatted = value.toString();
-                        break;
-                    case NumberFormat.Binary:
-                        formatted = binaryFormat(value, this.width);
-                        break;
-                    case NumberFormat.Hexidecimal:
-                        formatted = hexFormat(value, Math.ceil(this.width / 4), true);
-                        break;
-                    default:
-                        formatted = this.width >= 4 ? hexFormat(value, Math.ceil(this.width / 4), true) : binaryFormat(value, this.width);
-                        break;
-                }
-
-                if (this.enumeration && this.enumeration[value]) {
-                    item.description = `${this.enumeration[value].name} (${formatted})`;
-                }
-                else {
-                    item.description = formatted;
-                }
-            }
-        }
+        item.tooltip = this.generateTooltipMarkdown(isReserved);
+        item.description = this.getFormattedValue(this.getFormat());
 
         return item;
+    }
+
+    private generateTooltipMarkdown(isReserved: boolean): MarkdownString | null {
+        const mds = new MarkdownString('', true);
+        mds.isTrusted = true;
+
+        const address = `${ hexFormat(this.parent.getAddress()) }${ this.getFormattedRange() }`;
+        
+        if (isReserved) {
+            mds.appendMarkdown(`| ${this.name }@${address} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *Reserved* |\n`);
+            mds.appendMarkdown('|:---|:---:|---:|');
+            return mds;
+        }
+
+        const formattedValue = this.getFormattedValue(this.getFormat(), true);
+
+        mds.appendMarkdown(`| ${this.name }@${address} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *${formattedValue}* |\n`);
+        mds.appendMarkdown('|:---|:---:|---:|');
+
+        mds.appendMarkdown('\n____\n\n');
+        mds.appendMarkdown(this.description);
+
+        mds.appendMarkdown('\n_____\n\n');
+
+        // Don't try to display current value table for write only fields
+        if (this.accessType === AccessType.WriteOnly) {
+            return mds;
+        }
+
+        const value = this.parent.extractBits(this.offset, this.width);
+        const hex = hexFormat(value, Math.ceil(this.width / 4), true);
+        const decimal = value.toString();
+        const binary = binaryFormat(value, this.width);
+
+        if (this.enumeration) {
+            mds.appendMarkdown('| Enumeration Value &nbsp;&nbsp; | Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
+            mds.appendMarkdown('|:---|:---|:---|:---|\n');
+            let ev = 'Unknown';
+            if (this.enumeration[value]) {
+                ev = this.enumeration[value].name;
+            }
+
+            mds.appendMarkdown(`| ${ ev } &nbsp;&nbsp; | ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
+            if (this.enumeration[value].description) {
+                mds.appendMarkdown(this.enumeration[value].description);
+            }
+        } else {
+            mds.appendMarkdown('| Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
+            mds.appendMarkdown('|:---|:---|:---|\n');
+            mds.appendMarkdown(`| ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n`);
+        }
+
+        return mds;
+    }
+
+    public getFormattedRange(): string {
+        const rangestart = this.offset;
+        const rangeend = this.offset + this.width - 1;
+        return `[${rangeend}:${rangestart}]`;
+    }
+
+    public getFormattedValue(format: NumberFormat, includeEnumeration: boolean = true): string {
+        if (this.accessType === AccessType.WriteOnly) {
+            return '<Write Only>';
+        }
+        
+        let formatted = '';
+        const value = this.parent.extractBits(this.offset, this.width);
+
+        switch (format) {
+            case NumberFormat.Decimal:
+                formatted = value.toString();
+                break;
+            case NumberFormat.Binary:
+                formatted = binaryFormat(value, this.width);
+                break;
+            case NumberFormat.Hexidecimal:
+                formatted = hexFormat(value, Math.ceil(this.width / 4), true);
+                break;
+            default:
+                formatted = this.width >= 4 ? hexFormat(value, Math.ceil(this.width / 4), true) : binaryFormat(value, this.width);
+                break;
+        }
+
+        if (includeEnumeration && this.enumeration) {
+            if (this.enumeration[value]) {
+                formatted = `${this.enumeration[value].name} (${formatted})`;
+            } else {
+                formatted = `Unkown Enumeration Value (${formatted})`;
+            }
+        }
+        
+        return formatted;
+    }
+
+    public getEnumerationValue(value: number): string | null {
+        if (!this.enumeration) {
+            return null;
+        }
+
+        if (this.enumeration[value]) {
+            return this.enumeration[value].name;
+        }
     }
 
     public getChildren(): PeripheralBaseNode[] | Promise<PeripheralBaseNode[]> {
