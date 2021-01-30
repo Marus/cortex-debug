@@ -98,9 +98,15 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
 
         const formattedValue = this.getFormattedValue(this.getFormat());
 
-        mds.appendMarkdown(`| ${this.name }@${address} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *${formattedValue}* |\n`);
-        mds.appendMarkdown('|:---|:---:|---:|\n');
+        const roLabel = this.accessType === AccessType.ReadOnly ? '(Read Only)' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 
+        mds.appendMarkdown(`| ${ this.name }@${ address } | ${ roLabel } | *${ formattedValue }* |\n`);
+        mds.appendMarkdown('|:---|:---:|---:|\n\n');
+
+        if (this.accessType !== AccessType.WriteOnly) {
+            mds.appendMarkdown(`**Reset Value:** ${ this.getFormattedResetValue(this.getFormat()) }\n`);
+        }
+        
         mds.appendMarkdown('\n____\n\n');
         mds.appendMarkdown(this.description);
 
@@ -134,10 +140,17 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     }
 
     public getFormattedValue(format: NumberFormat): string {
+        return this.formatValue(this.currentValue, format);
+    }
+
+    public getFormattedResetValue(format: NumberFormat): string {
+        return this.formatValue(this.resetValue, format);
+    }
+
+    private formatValue(value: number, format: NumberFormat): string {
         if (this.accessType === AccessType.WriteOnly) {
-            return '<Write Only>';
+            return '(Write Only)';
         }
-        const value = this.currentValue;
 
         switch (format) {
             case NumberFormat.Decimal:
@@ -147,6 +160,10 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
             default:
                 return hexFormat(value, this.hexLength, true);
         }
+    }
+
+    public extractBitsFromReset(offset: number, width: number): number {
+        return extractBits(this.resetValue, offset, width);
     }
 
     public getChildren(): PeripheralFieldNode[] {

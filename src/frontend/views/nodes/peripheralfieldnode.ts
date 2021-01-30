@@ -97,15 +97,21 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         const address = `${ hexFormat(this.parent.getAddress()) }${ this.getFormattedRange() }`;
         
         if (isReserved) {
-            mds.appendMarkdown(`| ${this.name }@${address} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *Reserved* |\n`);
+            mds.appendMarkdown(`| ${ this.name }@${ address } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *Reserved* |\n`);
             mds.appendMarkdown('|:---|:---:|---:|');
             return mds;
         }
 
         const formattedValue = this.getFormattedValue(this.getFormat(), true);
 
-        mds.appendMarkdown(`| ${this.name }@${address} | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | *${formattedValue}* |\n`);
-        mds.appendMarkdown('|:---|:---:|---:|');
+        const roLabel = this.accessType === AccessType.ReadOnly ? '(Read Only)' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+
+        mds.appendMarkdown(`| ${ this.name }@${ address } | ${ roLabel } | *${ formattedValue }* |\n`);
+        mds.appendMarkdown('|:---|:---:|---:|\n\n');
+
+        if (this.accessType !== AccessType.WriteOnly) {
+            mds.appendMarkdown(`**Reset Value:** ${ this.formatValue(this.getResetValue(), this.getFormat()) }\n`);
+        }
 
         mds.appendMarkdown('\n____\n\n');
         mds.appendMarkdown(this.description);
@@ -149,13 +155,24 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         return `[${rangeend}:${rangestart}]`;
     }
 
+    private getCurrentValue(): number {
+        return this.parent.extractBits(this.offset, this.width);
+    }
+
+    private getResetValue(): number {
+        return this.parent.extractBitsFromReset(this.offset, this.width);
+    }
+
     public getFormattedValue(format: NumberFormat, includeEnumeration: boolean = true): string {
+        return this.formatValue(this.getCurrentValue(), format, includeEnumeration);
+    }
+
+    private formatValue(value: number, format: NumberFormat, includeEnumeration: boolean = true): string {
         if (this.accessType === AccessType.WriteOnly) {
-            return '<Write Only>';
+            return '(Write Only)';
         }
         
         let formatted = '';
-        const value = this.parent.extractBits(this.offset, this.width);
 
         switch (format) {
             case NumberFormat.Decimal:

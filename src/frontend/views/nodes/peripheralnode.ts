@@ -203,12 +203,15 @@ export class PeripheralNode extends PeripheralBaseNode {
     public static compare(p1: PeripheralNode, p2: PeripheralNode): number {
         if ((p1.pinned && p2.pinned) || (!p1.pinned && !p2.pinned)) {
             // none or both peripherals are pinned, sort by name prioritizing groupname
-            if (p1.groupName !== p2.groupName)
+            if (p1.groupName !== p2.groupName) {
                 return p1.groupName > p2.groupName ? 1 : -1;
-            else if (p1.name !== p2.name)
+            }
+            else if (p1.name !== p2.name) {
                 return p1.name > p2.name ? 1 : -1;
-            else
+               }
+            else {
                 return 0;
+            }
         } else {
             return p1.pinned ? -1 : 1;
         }
