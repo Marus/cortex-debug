@@ -412,6 +412,16 @@ export class GDBDebugSession extends DebugSession {
                         }, 50);
                     };
 
+                    const runPostStartSession = () => {
+                        if (this.configDone) {
+                            this.runPostStartSessionCommands(false);
+                        } else {
+                            this.onConfigDone.once('done', () => {
+                                this.runPostStartSessionCommands(false);
+                            });
+                        }
+                    };
+
                     if (this.args.runToMain) {
                         this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
                             this.miDebugger.once('generic-stopped', launchComplete);
@@ -426,17 +436,17 @@ export class GDBDebugSession extends DebugSession {
                                     this.miDebugger.sendCommand('exec-continue');
                                 });
                             }
+                        }, (err) => {
+                            // If failed to set the temporary breakpoint (e.g. function main does not exist),
+                            // complete the launch as if the breakpoint had not being defined
+                            this.handleMsg('log', `launch.json: "runToMain" enabled but "main" function does not exist? '${err.toString()}\n`);
+                            launchComplete();
+                            runPostStartSession();
                         });
                     }
                     else {
                         launchComplete();
-                        if (this.configDone) {
-                            this.runPostStartSessionCommands(false);
-                        } else {
-                            this.onConfigDone.once('done', () => {
-                                this.runPostStartSessionCommands(false);
-                            });
-                        }
+                        runPostStartSession();
                     }
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
