@@ -2,9 +2,10 @@ import { TreeItem, TreeItemCollapsibleState } from 'vscode';
 
 import { BaseNode } from './basenode';
 import { FieldNode } from './fieldnode';
-import { NodeSetting } from '../../../common';
+import { NumberFormat, NodeSetting } from '../../../common';
 
 import { hexFormat, binaryFormat, createMask, extractBits } from '../../utils';
+import { parse } from 'commander';
 
 export interface RegisterValue {
     number: number;
@@ -12,14 +13,20 @@ export interface RegisterValue {
 }
 
 export class RegisterNode extends BaseNode {
-    private fields: FieldNode[];
-    private currentValue: number;
+    public formatOverride: NumberFormat;
+    public canSetFormat: boolean; // TODO(harrison): make this not settable publicly
     private currentNaturalValue: string;
+    private currentNumericValue: number;
+    private currentDisplayValue: string;
+
+    private fields: FieldNode[];
 
     constructor(public name: string, public index: number) {
         super(null);
         
         this.name = this.name;
+        this.formatOverride = NumberFormat.Auto;
+        this.canSetFormat = true;
 
         if (name.toUpperCase() === 'XPSR' || name.toUpperCase() === 'CPSR') {
             this.fields = [
@@ -34,6 +41,8 @@ export class RegisterNode extends BaseNode {
                 new FieldNode('ICI/IT', 10, 6, this),
                 new FieldNode('Thumb State (T)', 24, 1, this)
             ];
+
+            this.canSetFormat = false;
         }
         else if (name.toUpperCase() === 'CONTROL') {
             this.fields = [
@@ -41,14 +50,17 @@ export class RegisterNode extends BaseNode {
                 new FieldNode('SPSEL', 1, 1, this),
                 new FieldNode('nPRIV', 0, 1, this)
             ];
+
+            this.canSetFormat = false;
+        } else if (name.startsWith('f')) {
+            this.canSetFormat = false;
         }
 
-        this.currentValue = 0x00;
         this.currentNaturalValue = '0x00000000';
     }
 
     public extractBits(offset: number, width: number): number {
-        return extractBits(this.currentValue, offset, width);
+        return extractBits(this.currentNumericValue, offset, width);
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
@@ -57,7 +69,7 @@ export class RegisterNode extends BaseNode {
             : TreeItemCollapsibleState.None;
         
         const item = new TreeItem(this.name, state);
-        item.description = this.currentNaturalValue;
+        item.description = this.getCopyValue();
         item.contextValue = 'register';
 
         return item;
@@ -69,25 +81,28 @@ export class RegisterNode extends BaseNode {
 
     public setValue(newValue: string) {
         this.currentNaturalValue = newValue;
-        if (this.name.toUpperCase() === 'CONTROL' || this.name.toUpperCase() === 'XPSR' || this.name.toUpperCase() === 'CPSR') {
-            if (this.currentNaturalValue.startsWith('0x')) {
-                this.currentValue = parseInt(this.currentNaturalValue, 16);
-            } else {
-                this.currentValue = parseInt(this.currentNaturalValue, 10);
-                if (this.currentValue < 0) {
-                    // convert to unsigned 32 bit quantity
-                    const tmp = (this.currentValue & 0xffffffff) >>> 0;
-                    this.currentValue = tmp;
-                }
-                let cv = this.currentValue.toString(16);
-                while (cv.length < 8) { cv = '0' + cv; }
-                this.currentNaturalValue = '0x' + cv;
-            }
+
+        // 1. get numeric value of currentNaturalValue
+        let value: number = 0;
+
+        if (this.currentNaturalValue.startsWith('0x')) {
+            value = parseInt(this.currentNaturalValue, 16)
+        } else {
+            value = parseInt(this.currentNaturalValue, 10);
+        }
+
+        this.currentNumericValue = value;
+
+        // 2. create ui-facing properly formatted version
+        if (this.formatOverride != NumberFormat.Auto) {
+            this.currentDisplayValue = this.doFormat(this.currentNumericValue, this.formatOverride);
+        } else {
+            this.currentDisplayValue = this.currentNaturalValue;
         }
     }
 
     public getCopyValue(): string {
-        return this.currentNaturalValue;
+        return this.currentDisplayValue;
     }
 
     public _saveState(): NodeSetting[] {
@@ -97,5 +112,16 @@ export class RegisterNode extends BaseNode {
         }
 
         return settings;
+    }
+
+    private doFormat(value: number, format: NumberFormat) : string {
+        switch (format) {
+            case NumberFormat.Decimal:
+                return value.toString();
+            case NumberFormat.Binary:
+                return binaryFormat(value, 8 * 4); // TODO(harrison): don't hard code this
+            default:
+                return hexFormat(value, 8); // TODO(harrison): or this
+        }
     }
 }

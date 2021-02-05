@@ -20,6 +20,7 @@ import { SerialSWOSource } from './swo/sources/serial';
 import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
 import { Cluster } from 'cluster';
+import { RegisterNode } from './views/nodes/registernode';
 
 interface SVDInfo {
     expression: RegExp;
@@ -76,6 +77,7 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.peripherals.unpin', this.peripheralsTogglePin.bind(this)),
             
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.registers.setFormat', this.registersSetFormat.bind(this)),
             
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
@@ -330,7 +332,7 @@ export class CortexDebugExtension {
     private async peripheralsSetFormat(node: PeripheralBaseNode): Promise<void> {
         const result = await vscode.window.showQuickPick([
             { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
-            { label: 'Hex', description: 'Format value in hexidecimal', value: NumberFormat.Hexidecimal },
+            { label: 'Hex', description: 'Format value in hexadecimal', value: NumberFormat.Hexidecimal },
             { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
             { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
         ]);
@@ -340,6 +342,27 @@ export class CortexDebugExtension {
         node.format = result.value;
         this.peripheralProvider.refresh();
         Reporting.sendEvent('Peripheral View', 'Set Format', result.label);
+    }
+
+    private async registersSetFormat(node: RegisterNode): Promise<void> {
+        if (!node.canSetFormat) {
+            vscode.window.showErrorMessage("You can't set the format of this node!");
+            return;
+        }
+
+        const result = await vscode.window.showQuickPick([
+            { label: 'Auto', description: 'Automatically choose format (Defaults to the ARM specs suggestion)', value: NumberFormat.Auto },
+            { label: 'Hex', description: 'Format value in hexadecimal', value: NumberFormat.Hexidecimal },
+            { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
+            { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
+        ]);
+
+        if (result === undefined)
+            return;
+
+        node.formatOverride = result.value;
+        this.registerProvider.refresh();
+        Reporting.sendEvent('Registers View', 'Set Format', result.label);
     }
 
     private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
