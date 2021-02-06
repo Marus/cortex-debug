@@ -100,8 +100,8 @@ export class PEServerController extends EventEmitter implements GDBServerControl
             serverargs.push(`-kernal=${this.args.rtos}`);
         }
 
-        if (this.args.interface) {
-            serverargs.push(`-interface=${this.args.interface}`);
+        if (this.args.interface === 'jtag') {
+            serverargs.push(`-usejtag`);
         }
 
         if (this.args.configFiles) {
