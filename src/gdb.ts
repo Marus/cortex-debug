@@ -395,7 +395,7 @@ export class GDBDebugSession extends DebugSession {
                     this.handleMsg('log', dbgMsg);
                 }
 
-                this.disableSendStoppedEvents = (!attach && this.args.runToMain) ? true : false;
+                this.disableSendStoppedEvents = (!attach && this.args.runToEntryPoint) ? true : false;
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
@@ -422,8 +422,8 @@ export class GDBDebugSession extends DebugSession {
                         }
                     };
 
-                    if (this.args.runToMain) {
-                        this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
+                    if (this.args.runToEntryPoint) {
+                        this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
                             this.miDebugger.once('generic-stopped', launchComplete);
                             // To avoid race conditions between finishing configuration, we should stay
                             // in stopped mode. Or, we end up clobbering the stopped event that might come
@@ -437,9 +437,9 @@ export class GDBDebugSession extends DebugSession {
                                 });
                             }
                         }, (err) => {
-                            // If failed to set the temporary breakpoint (e.g. function main does not exist),
+                            // If failed to set the temporary breakpoint (e.g. function does not exist)
                             // complete the launch as if the breakpoint had not being defined
-                            this.handleMsg('log', `launch.json: "runToMain" enabled but "main" function does not exist? '${err.toString()}\n`);
+                            this.handleMsg('log', `launch.json: "runToEntryPoint" enabled but function "${this.args.runToEntryPoint}" does not exist? '${err.toString()}\n`);
                             launchComplete();
                             runPostStartSession();
                         });
