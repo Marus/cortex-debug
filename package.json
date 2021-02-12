@@ -8,7 +8,7 @@
     "contributes": {
         "configuration": {
             "type": "object",
-            "title": "Cortex-Debug Configuration",
+            "title": "Cortex-Debug",
             "properties": {
                 "cortex-debug.armToolchainPath": {
                     "type": [
@@ -191,6 +191,26 @@
                 "language": "cortex-debug.memoryview",
                 "scopeName": "source.cortex-debug-memoryview",
                 "path": "./syntaxes/cortex-debug-memoryview.json"
+            }
+        ],
+        "breakpoints": [
+            {
+                "language": "c"
+            },
+            {
+                "language": "cpp"
+            },
+            {
+                "language": "rust"
+            },
+            {
+                "language": "arm"
+            },
+            {
+                "language": "asm"
+            },
+            {
+                "language": "cortex-debug.disassembly"
             }
         ],
         "debuggers": [
@@ -1429,16 +1449,6 @@
                         "label": "Cortex Debug: PyOCD"
                     }
                 ],
-                "enableBreakpointsFor": {
-                    "languageIds": [
-                        "c",
-                        "cpp",
-                        "asm",
-                        "arm",
-                        "cortex-debug.disassembly",
-                        "rust"
-                    ]
-                },
                 "initialConfigurations": [
                     {
                         "name": "Cortex Debug",
@@ -1656,5 +1666,5 @@
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
     },
-    "version": "0.3.11"
+    "version": "0.3.12-pre1"
 }
