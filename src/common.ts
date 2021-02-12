@@ -117,7 +117,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     interface: string;
     targetId: string | number;
     cmsisPack: string;
-    runToMain: boolean;
+    runToMain: boolean;         // Deprecated: kept here for backwards compatibility
+    runToEntryPoint: string;
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
 

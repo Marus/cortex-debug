@@ -278,7 +278,7 @@
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToMain is false."
+                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToEntryPoint is not specified."
                             },
                             "postRestartSessionCommands": {
                                 "default": [],
@@ -855,7 +855,7 @@
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToMain is false."
+                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToEntryPoint is not specified."
                             },
                             "postRestartSessionCommands": {
                                 "default": [],
@@ -932,9 +932,14 @@
                                 "type": "string"
                             },
                             "runToMain": {
-                                "description": "If enabled the debugger will run until it the start of the main function.",
+                                "description": "Deprecated: please use 'runToEntryPoint' instead.",
                                 "type": "boolean",
                                 "default": false
+                            },
+                            "runToEntryPoint": {
+                                "description": "If enabled the debugger will run until the start of the given function.",
+                                "type": "string",
+                                "default": "main"
                             },
                             "demangle": {
                                 "description": "Experimental: If enabled the debugger will demangle C++ names.",
