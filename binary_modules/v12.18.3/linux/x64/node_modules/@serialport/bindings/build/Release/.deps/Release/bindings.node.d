@@ -1,0 +1,1 @@
+cmd_Release/bindings.node := ln -f "Release/obj.target/bindings.node" "Release/bindings.node" 2>/dev/null || (rm -rf "Release/bindings.node" && cp -af "Release/obj.target/bindings.node" "Release/bindings.node")
