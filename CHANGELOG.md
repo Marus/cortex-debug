@@ -1,3 +1,12 @@
+# V0.3.12
+
+New Features:
+   * Added a new `runToEntryPoint` `launch.json` option that takes a configurable name for the entry point instead of assuming main. This change deprecates  `runToMain` (while `runToMain` will still function currently it will likely be removed in the future; it is recommended to replace `"runToMain": true` with `"runToEntryPoint": "main"` in your `launch.json` configurations). This addresses issue [#389](https://github.com/Marus/cortex-debug/issues/389) - thanks to [manuargue](https://github.com/manuargue) for yet another contribution to the project.
+
+Bug Fixes:
+   * Fixed issues with P&E Micro GDB support when using SWD connection to the target - thanks [adamkulpa](https://github.com/adamkulpa) for the PR.
+   * Fixed issues with being unable to set breakpoints in rust, assembly, and cortex-debug disassembly views on Visual Studio Code version 1.53
+
 # V0.3.11
 
 New Features:
