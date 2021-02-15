@@ -7,7 +7,7 @@ import { ConfigurationArguments } from './common';
 const ua = require('universal-analytics');
 const uuidv4 = require('uuid/v4');
 
-const extension = vscode.extensions.getExtension('marus25.cortex-debug');
+const extension = vscode.extensions.getExtension('comp2300-anu.cortex-debug');
 const extensionId = extension.id;
 const extensionVersion = extension.packageJSON.version;
 const trackingId = 'UA-113901869-1';
