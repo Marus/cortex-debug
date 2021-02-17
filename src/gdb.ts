@@ -274,6 +274,10 @@ export class GDBDebugSession extends DebugSession {
                 gdbExePath = this.args.gdbPath;
             }
 
+            if (this.args.pathsRelativeToHome) {
+                gdbExePath = path.normalize(path.join(os.homedir(), gdbExePath));
+            }
+
             // Check to see if gdb exists.
             if (path.isAbsolute(gdbExePath)) {
                 if (fs.existsSync(gdbExePath) === false) {

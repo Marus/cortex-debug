@@ -3,6 +3,7 @@ import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calcula
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 
@@ -97,10 +98,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public serverExecutable(): string {
-        if (this.args.serverpath) { return this.args.serverpath; }
-        else {
-            return os.platform() === 'win32' ? 'openocd.exe' : 'openocd';
+        let p = this.args.serverpath;
+
+        if (p) {
+            p = path.normalize(path.join(os.homedir(), p));
+        } else {
+            p = os.platform() === 'win32' ? 'openocd.exe' : 'openocd';
         }
+
+        return p;
     }
 
     public serverArguments(): string[] {

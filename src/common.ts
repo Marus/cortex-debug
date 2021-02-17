@@ -85,6 +85,7 @@ export interface SWOConfiguration {
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
+    pathsRelativeToHome: boolean
     toolchainPath: string;
     toolchainPrefix: string;
     executable: string;

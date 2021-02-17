@@ -10,6 +10,11 @@
             "type": "object",
             "title": "Cortex-Debug",
             "properties": {
+                "cortex-debug.pathsRelativeToHome": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Should the paths (specifically armToolchainPath and openocdPath) be interpreted as beginning in the users home directory."
+                },
                 "cortex-debug.armToolchainPath": {
                     "type": [
                         "string",
