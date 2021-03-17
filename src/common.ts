@@ -121,6 +121,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     runToEntryPoint: string;
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
+    variablesFormat: string;
 
     numberOfProcessors: number;
     targetProcessor: number;

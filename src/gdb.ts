@@ -1438,7 +1438,7 @@ export class GDBDebugSession extends DebugSession {
                 catch (err) {
                     try {
                         if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
+                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName, this.args.variablesFormat);
                             const varId = this.findOrCreateVariable(varObj);
                             varObj.exp = symbol.name;
                             varObj.id = varId;
@@ -1535,7 +1535,7 @@ export class GDBDebugSession extends DebugSession {
                         // with function/block scoped static variables (objdump uses one name and gdb uses another)
                         // Try to report what we can. Others show up under the Locals section hopefully.
                         if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName);
+                            varObj = await this.miDebugger.varCreate(symbol.name, varObjName, this.args.variablesFormat);
                             const varId = this.findOrCreateVariable(varObj);
                             varObj.exp = symbol.name;
                             varObj.id = varId;
@@ -1619,7 +1619,7 @@ export class GDBDebugSession extends DebugSession {
                     catch (err) {
                         if (err instanceof MIError && err.message === 'Variable object not found') {
                             // Create variable in current frame/thread context. Matters when we have to set the variable */
-                            varObj = await this.miDebugger.varCreate(variable.name, varObjName, '*');
+                            varObj = await this.miDebugger.varCreate(variable.name, varObjName,  this.args.variablesFormat, '*');
                             const varId = this.findOrCreateVariable(varObj);
                             varObj.exp = variable.name;
                             varObj.id = varId;
@@ -2006,7 +2006,7 @@ export class GDBDebugSession extends DebugSession {
                 }
                 catch (err) {
                     if (err instanceof MIError && err.message === 'Variable object not found') {
-                        varObj = await this.miDebugger.varCreate(exp, varObjName, '@');  // Create floating variable
+                        varObj = await this.miDebugger.varCreate(exp, varObjName, this.args.variablesFormat, '@');  // Create floating variable
                         const varId = findOrCreateVariable(varObj);
                         varObj.exp = exp;
                         varObj.id = varId;

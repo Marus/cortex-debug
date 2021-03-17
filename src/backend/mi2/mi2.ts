@@ -556,11 +556,10 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(expression: string, name: string = '-', scope: string = '@'): Promise<VariableObject> {
+    public async varCreate(expression: string, name: string = '-', fmt: string = 'h', scope: string = '@'): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
-        let fmt = null;
         expression = expression.trim();
         if (/,[bdhonx]$/i.test(expression)) {
             fmt = expression.substring(expression.length - 1).toLocaleLowerCase();
