@@ -556,7 +556,7 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(expression: string, name: string = '-', fmt: string = 'h', scope: string = '@'): Promise<VariableObject> {
+    public async varCreate(expression: string, name: string = '-', fmt: string = 'n', scope: string = '@'): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
