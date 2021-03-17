@@ -108,7 +108,7 @@
                 "cortex-debug.variablesFormat": {
                     "type": "string",
                     "default": "n",
-                    "description": "Default value is h\nIf you want to change the format the vairables use below keys\n b: binary \n d: decimal \n h: hexadecimal \n x: hexadecimal \n o: octal \n n: natural"
+                    "description": "Default value is n\nIf you want to change the format the vairables use below keys\n b: binary \n d: decimal \n h: hexadecimal \n x: hexadecimal \n o: octal \n n: natural"
                 }
             }
         },
