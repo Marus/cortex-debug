@@ -556,7 +556,7 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(expression: string, name: string = '-', fmt: string = 'n', scope: string = '@'): Promise<VariableObject> {
+    public async varCreate(expression: string, name: string = '-', fmt: string = null, scope: string = '@'): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
@@ -564,13 +564,14 @@ export class MI2 extends EventEmitter implements IBackend {
         if (/,[bdhonx]$/i.test(expression)) {
             fmt = expression.substring(expression.length - 1).toLocaleLowerCase();
             expression = expression.substring(0, expression.length - 2);
+            fmt = MI2.FORMAT_SPEC_MAP[fmt];
         }
         expression = expression.replace(/"/g, '\\"');
 
         const createResp = await this.sendCommand(`var-create ${name} ${scope} "${expression}"`);
         let overrideVal = null;
         if (fmt && name !== '-') {
-            const formatResp = await this.sendCommand(`var-set-format ${name} ${MI2.FORMAT_SPEC_MAP[fmt]}`);
+            const formatResp = await this.sendCommand(`var-set-format ${name} ${fmt}`);
             overrideVal = formatResp.result('value');
         }
 

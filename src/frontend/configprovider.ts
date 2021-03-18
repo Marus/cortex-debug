@@ -125,7 +125,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config.flattenAnonymous = configuration.flattenAnonymous;
         config.registerUseNaturalFormat = configuration.registerUseNaturalFormat;
         config.variablesFormat = configuration.variablesFormat;
-        
+        if(config.variablesFormat === 'natural') {
+            config.variablesFormat = null;
+        }
+
         if (validationResponse) {
             vscode.window.showErrorMessage(validationResponse);
             return undefined;
