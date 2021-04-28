@@ -4,7 +4,7 @@ import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'auto'];
-const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS'];
+const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS', 'Zephyr'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private context: vscode.ExtensionContext) {}
@@ -165,7 +165,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
                 if (!fs.existsSync(config.rtos)) {
                     // tslint:disable-next-line:max-line-length
-                    return 'The following RTOS values are supported by J-Link: FreeRTOS or embOS. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
+                    return `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.`;
                 }
             }
             else {
