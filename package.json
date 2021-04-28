@@ -316,7 +316,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
@@ -893,7 +893,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
