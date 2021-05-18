@@ -1396,6 +1396,8 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "runToEntryPoint": "",
+                            "showDevDebugOutput": false,
                             "servertype": "jlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink",
@@ -1408,6 +1410,8 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "runToEntryPoint": "",
+                            "showDevDebugOutput": false,
                             "servertype": "openocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
@@ -1420,6 +1424,8 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "runToEntryPoint": "",
+                            "showDevDebugOutput": false,
                             "servertype": "stutil"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)",
@@ -1432,6 +1438,8 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "runToEntryPoint": "",
+                            "showDevDebugOutput": false,
                             "servertype": "stlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STMicroelectronic's ST-LINK_gdbserver part of STM32CubeIDE",
@@ -1444,6 +1452,8 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "runToEntryPoint": "",
+                            "showDevDebugOutput": false,
                             "servertype": "pyocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD",
@@ -1460,7 +1470,6 @@
                         "servertype": "jlink"
                     }
                 ],
-                "extensions": [],
                 "label": "Cortex Debug",
                 "program": "./dist/debugadapter.js",
                 "runtime": "node",
