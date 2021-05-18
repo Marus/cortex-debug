@@ -1396,7 +1396,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "runToEntryPoint": "",
                             "showDevDebugOutput": false,
                             "servertype": "jlink"
                         },
@@ -1410,7 +1409,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "runToEntryPoint": "",
                             "showDevDebugOutput": false,
                             "servertype": "openocd"
                         },
@@ -1424,7 +1422,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "runToEntryPoint": "",
                             "showDevDebugOutput": false,
                             "servertype": "stutil"
                         },
@@ -1438,7 +1435,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "runToEntryPoint": "",
                             "showDevDebugOutput": false,
                             "servertype": "stlink"
                         },
@@ -1452,7 +1448,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "runToEntryPoint": "",
                             "showDevDebugOutput": false,
                             "servertype": "pyocd"
                         },
