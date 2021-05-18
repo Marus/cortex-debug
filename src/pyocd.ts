@@ -94,19 +94,35 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
+    private useServerArg = true;
     public serverExecutable(): string {
-        return this.args.serverpath ? this.args.serverpath : 'pyocd-gdbserver';
+        const exeName = 'pyocd';
+        const ret = this.args.serverpath ? this.args.serverpath : exeName;
+        try {       // NB: Remove this block in a year or so & use of this.useServerArg
+            const tail = ret.split(/[\/\\]+/).filter(item => (item !== '')).slice(-1).pop().toLowerCase();
+            const oldExeName = 'pyocd-gdbserver';
+            if (tail === oldExeName) {
+                this.useServerArg = false;
+            } else if ((os.platform() === 'win32') && (tail === (oldExeName + '.exe'))) {
+                this.useServerArg = false;
+            }
+        }
+        finally {}
+        return ret;
     }
 
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const telnetport = this.ports['consolePort'];
 
-        let serverargs = [
-            '--persist',        // Not sure we need this anymore
+        let serverargs = this.useServerArg ? [ 'gdbserver' ] : [];
+        const regulars = [
             '--port', gdbport.toString(),
             '--telnet-port', telnetport.toString()
         ];
+        for (const item of regulars) {
+            serverargs.push(item);
+        }
 
         if (this.args.boardId) {
             serverargs.push('--board');
