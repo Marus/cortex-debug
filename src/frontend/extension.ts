@@ -452,7 +452,7 @@ export class CortexDebugExtension {
 
     private receivedSWOConfigureEvent(e) {
         if (e.body.type === 'socket') {
-            this.swosource = new SocketSWOSource(e.body.port);
+            this.swosource = new SocketSWOSource(!e.body.host ? 'localhost' : e.body.host, e.body.port);
             Reporting.sendEvent('SWO', 'Source', 'Socket');
         }
         else if (e.body.type === 'fifo') {

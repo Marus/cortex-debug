@@ -50,7 +50,8 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,
         port: number,
-        path: string
+        path: string,
+        host: string
     };
     public event: string;
 

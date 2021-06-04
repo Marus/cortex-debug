@@ -317,7 +317,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
     private verifyExternalConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
-            vscode.window.showWarningMessage('SWO support is not available for external GDB servers. Disabling SWO support.');
+            vscode.window.showWarningMessage('SWO source must be configured either as a "hostname:port" combination or a serial port. Disabling SWO support.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
         }
