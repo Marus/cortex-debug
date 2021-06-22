@@ -13,14 +13,19 @@ export class SWOConsoleProcessor implements SWODecoder {
     public readonly format: string = 'console';
     private port: number;
     private encoding: string;
+    private showOutputTimer: any = null;
     
     constructor(config: SWOConsoleDecoderConfig) {
         this.port = config.port;
         this.encoding = config.encoding || 'utf8';
         this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, type: console]`);
 
-        if (config.showOnStartup) {
-            this.output.show(true);
+        // A work-around. A blank display will appear if the output is shown immediately 
+        if (config.showOnStartup) {       
+            this.showOutputTimer = setTimeout(() => {
+                this.output.show(true);
+                this.showOutputTimer = null;
+            }, 1);
         }
     }
 
