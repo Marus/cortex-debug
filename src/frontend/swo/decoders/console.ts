@@ -25,7 +25,7 @@ export class SWOConsoleProcessor implements SWODecoder {
             this.showOutputTimer = setTimeout(() => {
                 this.output.show(true);
                 this.showOutputTimer = null;
-            }, 1000);
+            }, 1);
         }
     }
 
