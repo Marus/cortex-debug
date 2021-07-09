@@ -3,19 +3,17 @@ import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calcula
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
-import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
-    public portsNeeded = ['gdbPort'];
+    // We wont need all of these ports but reserve them anyways
+    public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort' /*, 'rttPort' */];
     public name = 'OpenOCD';
-    private swoPath: string;
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
 
     constructor() {
         super();
-        this.swoPath = tmp.tmpNameSync();
     }
 
     public setPorts(ports: { [name: string]: number }): void {
@@ -104,11 +102,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public serverArguments(): string[] {
-        const gdbport = this.ports['gdbPort'];
-
         let serverargs = [];
 
-        serverargs.push('-c', `gdb_port ${gdbport}`);
+        // Regardless of the target processor, we will only supply the processor '0's port#
+        // OpenOcd will increment and assign the right port-numer to the right processor
+        serverargs.push('-c', `gdb_port ${this.ports['gdbPort']}`);
+        serverargs.push('-c', `tcl_port ${this.ports['tclPort']}`);
+        serverargs.push('-c', `telnet_port ${this.ports['telnetPort']}`);
 
         this.args.searchDir.forEach((cs, idx) => {
             serverargs.push('-s', cs);
@@ -139,18 +139,21 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
 
         if (this.args.swoConfig.enabled) {
-            let tpiuIntExt;
-            if (os.platform() === 'win32') {
-                this.swoPath = this.swoPath.replace(/\\/g, '/');
-            }
-            if (this.args.swoConfig.source === 'probe') {
-                tpiuIntExt = `internal ${this.swoPath}`;
-            }
-            else {
+            let tpiuIntExt = undefined;
+            const source = this.args.swoConfig.source;
+            if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
+                const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
+                tpiuIntExt = `internal :${this.ports[swoPortNm]}`;
+            } else if (source === 'serial') {
                 tpiuIntExt = 'external';
             }
-            // tslint:disable-next-line:max-line-length
-            commands.push(`tpiu config ${tpiuIntExt} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
+
+            if (tpiuIntExt) {
+                // tslint:disable-next-line:max-line-length
+                commands.push(`tpiu config ${tpiuIntExt} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
+            } else {
+                this.args.swoConfig.enabled = false;
+            }
         }
 
         if (commands.length > 0) {
@@ -175,18 +178,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public serverLaunchStarted(): void {
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source === 'probe' && os.platform() !== 'win32') {
-            const mkfifoReturn = ChildProcess.spawnSync('mkfifo', [this.swoPath]);
-            this.emit('event', new SWOConfigureEvent({ type: 'fifo', path: this.swoPath }));
-        }
     }
 
     public serverLaunchCompleted(): void {
         if (this.args.swoConfig.enabled) {
-            if (this.args.swoConfig.source === 'probe' && os.platform() === 'win32') {
-                this.emit('event', new SWOConfigureEvent({ type: 'file', path: this.swoPath }));
-            }
-            else if (this.args.swoConfig.source !== 'probe') {
+            const source = this.args.swoConfig.source;
+            if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
+                const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
+                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm].toString(10) }));
+            } else if (source === 'serial') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
                     device: this.args.swoConfig.source,

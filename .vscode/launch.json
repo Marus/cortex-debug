@@ -18,13 +18,13 @@
 			"name": "Debug Server",
 			"type": "node",
 			"request": "launch",
-			"runtimeArgs": [ "--nolazy" ],
+			// "runtimeArgs": [ "--nolazy" ],
 			"program": "${workspaceRoot}/src/gdb.ts",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outFiles": [
-				"${workspaceRoot}/dist/*js"
+				"${workspaceRoot}/dist/*.js"
 			],
 			"cwd": "${workspaceRoot}"
 		},

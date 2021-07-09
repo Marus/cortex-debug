@@ -42,7 +42,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
                 const regNode = this.registerMap[index];
                 if (regNode) { regNode.setValue(reg.value); }
             });
-            this._onDidChangeTreeData.fire();
+            this._onDidChangeTreeData.fire(undefined);
         });
     }
 
@@ -85,13 +85,13 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
                         }
                     }
                 });
-                this._onDidChangeTreeData.fire();
+                this._onDidChangeTreeData.fire(undefined);
             }
         }, (error) => {
 
         });
 
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
     }
 
     public updateRegisterValues(values: RegisterValue[]) {
@@ -100,7 +100,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
             node.setValue(reg.value);
         });
 
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
     }
 
     public getChildren(element?: BaseNode): ProviderResult<BaseNode[]> {
@@ -133,14 +133,14 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
         this.loaded = false;
         this.registers = [];
         this.registerMap = {};
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
     }
 
     public debugSessionStarted() {
         this.loaded = false;
         this.registers = [];
         this.registerMap = {};
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
     }
 
     public debugStopped() {
