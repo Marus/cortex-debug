@@ -26,6 +26,14 @@
                     "default": "arm-none-eabi",
                     "description": "The prefix to use for the arm toolchain - the standard release from arm uses \"arm-none-eabi\" but alternative toolchains may use a different prefix. Currently the gdb and objdump tools are needed."
                 },
+                "cortex-debug.gdbPath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                },
                 "cortex-debug.JLinkGDBServerPath": {
                     "type": [
                         "string",
@@ -66,6 +74,22 @@
                     "default": null,
                     "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
                 },
+                "cortex-debug.stlinkPath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
+                },
+                "cortex-debug.stm32cubeprogrammer": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                },
                 "cortex-debug.enableTelemetry": {
                     "type": "boolean",
                     "default": true,
@@ -87,26 +111,17 @@
             {
                 "command": "cortex-debug.peripherals.updateNode",
                 "title": "Update Value",
-                "icon": {
-                    "light": "resources/light/edit.svg",
-                    "dark": "resources/dark/edit.svg"
-                }
+                "icon": "$(pencil)"
             },
             {
                 "command": "cortex-debug.peripherals.copyValue",
                 "title": "Copy Value",
-                "icon": {
-                    "light": "resources/light/copy.svg",
-                    "dark": "resources/dark/copy.svg"
-                }
+                "icon": "$(files)"
             },
             {
                 "command": "cortex-debug.registers.copyValue",
                 "title": "Copy Value",
-                "icon": {
-                    "light": "resources/light/copy.svg",
-                    "dark": "resources/dark/copy.svg"
-                }
+                "icon": "$(files)"
             },
             {
                 "command": "cortex-debug.peripherals.setFormat",
@@ -115,6 +130,16 @@
             {
                 "command": "cortex-debug.peripherals.forceRefresh",
                 "title": "Refresh"
+            },
+            {
+                "command": "cortex-debug.peripherals.pin",
+                "title": "Pin",
+                "icon": "$(pin)"
+            },
+            {
+                "command": "cortex-debug.peripherals.unpin",
+                "title": "Unpin",
+                "icon": "$(pinned)"
             },
             {
                 "category": "Cortex-Debug",
@@ -172,16 +197,16 @@
                 "language": "cpp"
             },
             {
-                "language": "asm"
+                "language": "rust"
             },
             {
                 "language": "arm"
             },
             {
-                "language": "cortex-debug.disassembly"
+                "language": "asm"
             },
             {
-                "language": "rust"
+                "language": "cortex-debug.disassembly"
             }
         ],
         "debuggers": [
@@ -191,12 +216,13 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe and stutil",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
                                     "pyocd",
                                     "stutil",
+                                    "stlink",
                                     "bmp",
                                     "pe",
                                     "qemu",
@@ -252,7 +278,7 @@
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToMain is false."
+                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToEntryPoint is not specified."
                             },
                             "postRestartSessionCommands": {
                                 "default": [],
@@ -290,7 +316,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
@@ -306,6 +332,11 @@
                             "serverpath": {
                                 "default": null,
                                 "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
+                                "type": "string"
+                            },
+                            "gdbPath": {
+                                "default": null,
+                                "description": "This setting can be used to overrride the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
                                 "type": "string"
                             },
                             "serverArgs": {
@@ -693,12 +724,12 @@
                             },
                             "serialNumber": {
                                 "default": null,
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
+                                "description": "J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer",
                                 "type": "string"
                             },
                             "interface": {
                                 "default": "swd",
-                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link and BMP probes.",
+                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes.",
                                 "type": "string",
                                 "enum": [
                                     "swd",
@@ -778,12 +809,13 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe and stutil",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
                                     "pyocd",
                                     "stutil",
+                                    "stlink",
                                     "bmp",
                                     "pe",
                                     "qemu",
@@ -839,7 +871,7 @@
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToMain is false."
+                                "description": "Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToEntryPoint is not specified."
                             },
                             "postRestartSessionCommands": {
                                 "default": [],
@@ -877,7 +909,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
@@ -893,6 +925,11 @@
                             "serverpath": {
                                 "default": null,
                                 "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
+                                "type": "string"
+                            },
+                            "gdbPath": {
+                                "default": null,
+                                "description": "This setting can be used to overrride the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
                                 "type": "string"
                             },
                             "serverArgs": {
@@ -911,9 +948,14 @@
                                 "type": "string"
                             },
                             "runToMain": {
-                                "description": "If enabled the debugger will run until it the start of the main function.",
+                                "description": "Deprecated: please use 'runToEntryPoint' instead.",
                                 "type": "boolean",
                                 "default": false
+                            },
+                            "runToEntryPoint": {
+                                "description": "If enabled the debugger will run until the start of the given function.",
+                                "type": "string",
+                                "default": "main"
                             },
                             "demangle": {
                                 "description": "Experimental: If enabled the debugger will demangle C++ names.",
@@ -1281,12 +1323,12 @@
                             },
                             "serialNumber": {
                                 "default": null,
-                                "description": "J-Link Serial Number - only needed if multiple J-Links are connected to the computer",
+                                "description": "J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer",
                                 "type": "string"
                             },
                             "interface": {
                                 "default": "swd",
-                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link and BMP probes.",
+                                "description": "Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes.",
                                 "type": "string",
                                 "enum": [
                                     "swd",
@@ -1331,8 +1373,18 @@
                             },
                             "v1": {
                                 "default": false,
-                                "description": "Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
+                                "description": "For st-util only. Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
                                 "type": "boolean"
+                            },
+                            "stlinkPath": {
+                                "default": null,
+                                "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path.",
+                                "type": "string"
+                            },
+                            "stm32cubeprogrammer": {
+                                "default": null,
+                                "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here.",
+                                "type": "string"
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
@@ -1376,6 +1428,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "jlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink",
@@ -1388,6 +1441,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "openocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
@@ -1400,6 +1454,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "stutil"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)",
@@ -1412,6 +1467,20 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
+                            "servertype": "stlink"
+                        },
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STMicroelectronic's ST-LINK_gdbserver part of STM32CubeIDE",
+                        "label": "Cortex Debug: ST-LINK"
+                    },
+                    {
+                        "body": {
+                            "cwd": "^\"\\${workspaceRoot}\"",
+                            "executable": "${1:./bin/executable.elf}",
+                            "name": "${6:Debug Microcontroller}",
+                            "request": "launch",
+                            "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "pyocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD",
@@ -1447,6 +1516,14 @@
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
+                    "when": "false"
+                },
+                {
+                    "command": "cortex-debug.peripherals.pin",
+                    "when": "false"
+                },
+                {
+                    "command": "cortex-debug.peripherals.unpin",
                     "when": "false"
                 },
                 {
@@ -1516,7 +1593,17 @@
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem == peripheral"
+                    "when": "view == cortex-debug.peripherals && viewItem =~ /peripheral.*/"
+                },
+                {
+                    "command": "cortex-debug.peripherals.pin",
+                    "when": "view == cortex-debug.peripherals && viewItem == peripheral",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.peripherals.unpin",
+                    "when": "view == cortex-debug.peripherals && viewItem == peripheral.pinned",
+                    "group": "inline"
                 },
                 {
                     "command": "cortex-debug.registers.copyValue",
@@ -1551,45 +1638,45 @@
         }
     },
     "dependencies": {
-        "ajv": "^6.10.0",
-        "binary-parser": "^1.4.0",
+        "ajv": "^6.12.6",
+        "binary-parser": "^1.7.0",
         "bindings": "^1.5.0",
-        "command-exists": "^1.2.2",
-        "commander": "^2.20.0",
-        "d3": "^5.9.2",
-        "debug": "^4.1.1",
+        "command-exists": "^1.2.9",
+        "commander": "^2.20.3",
+        "d3": "^5.16.0",
+        "debug": "^4.3.1",
         "hasbin": "^1.2.3",
-        "nan": "^2.14.0",
-        "prebuild-install": "^5.3.0",
+        "nan": "^2.14.2",
+        "prebuild-install": "^5.3.6",
         "promirepl": "^1.0.1",
         "ringbufferjs": "^1.1.0",
-        "safe-buffer": "^5.1.1",
-        "tcp-port-used": "^1.0.1",
+        "safe-buffer": "^5.2.1",
+        "tcp-port-used": "^1.0.2",
         "tmp": "0.0.33",
-        "universal-analytics": "^0.4.16",
-        "uuid": "^3.2.1",
-        "vscode-debugadapter": "^1.47.0",
-        "vscode-debugprotocol": "^1.47.0",
+        "universal-analytics": "0.4.16",
+        "uuid": "^3.4.0",
+        "vscode-debugadapter": "^1.42.0",
+        "vscode-debugprotocol": "^1.42.0",
         "vscode-extension-telemetry": "0.1.1",
-        "vscode-test": "^1.5.2",
-        "xml2js": "^0.4.19"
+        "xml2js": "^0.4.23"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
     "devDependencies": {
-        "@types/binary-parser": "^1.3.1",
-        "@types/vscode": "^1.57.1",
+        "@types/binary-parser": "^1.5.0",
         "@types/mocha": "^5.2.7",
-        "@types/node": "^10.14.9",
+        "@types/node": "^10.17.51",
+        "@types/vscode": "^1.52.0",
         "mocha": "^5.2.0",
-        "ts-loader": "^6.0.3",
-        "tslint": "^5.17.0",
-        "typescript": "^3.5.2",
-        "webpack": "^4.35.0",
-        "webpack-cli": "^3.3.4"
+        "ts-loader": "^6.2.2",
+        "tslint": "^5.20.1",
+        "typescript": "^3.9.7",
+        "vscode-test": "^1.4.1",
+        "webpack": "^4.46.0",
+        "webpack-cli": "^3.3.12"
     },
     "displayName": "Cortex-Debug",
     "engines": {
-        "vscode": "^1.57.0"
+        "vscode": "^1.52.0"
     },
     "icon": "images/icon.png",
     "keywords": [
@@ -1612,5 +1699,5 @@
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
     },
-    "version": "0.3.7"
+    "version": "0.3.12-pre1"
 }
