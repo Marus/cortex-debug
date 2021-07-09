@@ -1,4 +1,8 @@
-import { DebugSession, InitializedEvent, TerminatedEvent, ContinuedEvent, OutputEvent, Thread, ThreadEvent, StackFrame, Scope, Source, Handles, Event } from 'vscode-debugadapter';
+import {
+    DebugSession, InitializedEvent, TerminatedEvent,
+    ContinuedEvent, OutputEvent, Thread, ThreadEvent,
+    StackFrame, Scope, Source, Handles, Event
+} from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';

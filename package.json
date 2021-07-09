@@ -529,8 +529,24 @@
                                     },
                                     "source": {
                                         "type": "string",
+                                        "enum": [
+                                            "probe",
+                                            "socket",
+                                            "serial",
+                                            "file"
+                                        ],
                                         "default": "probe",
                                         "description": "Source for SWO data. Can either be \"probe\" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe."
+                                    },
+                                    "swoPath": {
+                                        "type": "string",
+                                        "default": "",
+                                        "description": "Path name when source != \"socket\". Typically a file-name or a serial-port-name"
+                                    },
+                                    "swoPort": {
+                                        "type": "string",
+                                        "default": "",
+                                        "description": "When server is \"external\" && source is \"socket\", port to connect to. Format [host:]port"
                                     },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",
@@ -1116,8 +1132,24 @@
                                     },
                                     "source": {
                                         "type": "string",
+                                        "enum": [
+                                            "probe",
+                                            "socket",
+                                            "serial",
+                                            "file"
+                                        ],
                                         "default": "probe",
                                         "description": "Source for SWO data. Can either be \"probe\" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe."
+                                    },
+                                    "swoPath": {
+                                        "type": "string",
+                                        "default": "",
+                                        "description": "Path name when source != \"socket\". Typically a file-name or a serial-port-name"
+                                    },
+                                    "swoPort": {
+                                        "type": "string",
+                                        "default": "",
+                                        "description": "When server is \"external\" && source is \"socket\", port to connect to. Format [host:]port"
                                     },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",

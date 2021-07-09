@@ -110,7 +110,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
                             });
                             this._onDidChangeTreeData.fire(undefined);
-                            resolve();
+                            resolve(undefined);
                             reporting.sendEvent('Peripheral View', 'Used', svdfile);
                         },
                         (e) => {
@@ -122,14 +122,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                             if (vscode.debug.activeDebugConsole) {
                                 vscode.debug.activeDebugConsole.appendLine(msg);
                             }
-                            resolve();
+                            resolve(undefined);
                             reporting.sendEvent('Peripheral View', 'Error', e.toString());
                         }
                     );
                 }, 150);
             }
             else {
-                resolve();
+                resolve(undefined);
                 reporting.sendEvent('Peripheral View', 'No SVD');
             }
         });
