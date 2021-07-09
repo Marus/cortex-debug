@@ -1,3 +1,14 @@
+ChangeLog
+# V0.3.12
+* `"external"` server type now supports SWO. It works in the following way depending on `"source"`
+  * `"source": "probe"` -- We do not recommend this method as there are issues with File I/O buffering causing delays and stalls, especially on Windows. Use a `"socket"` instead. It will use a auto-created temporary file name.
+    * On Windows, it will use normal file-io
+    * On Linux/Mac, it will use an OS supported FIFO which is more efficient than a normal file
+  * `"source": "socket"` (best option if available)
+    * You MUST specify the `"swoPort": "[host:]port"` option in the `"swoConfig"`
+  * `"source": "file"`, then the file specified by `"swoPath"` will be used. Same caveats as when`"source"` is `"probe"` but you have control over the file-name
+* `"openocd"` server type will now use a TCP connection for SWO instead of file/fifo for a more reliable connection across all platforms. Port selection happens automatically. You can still use a serial port in which case, `"source": "serial"`.
+* Many other minor fixes
 # V0.3.11
 
 New Features:
