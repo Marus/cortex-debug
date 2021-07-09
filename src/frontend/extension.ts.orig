@@ -9,7 +9,6 @@ import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 import { SWOCore } from './swo/core';
 import { SWOSource } from './swo/sources/common';
 import { NumberFormat, ConfigurationArguments } from '../common';
-import { MemoryVSCodeHexEditors } from './memory_content_provider2';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -20,12 +19,13 @@ import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
 import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
+import { Cluster } from 'cluster';
+
 interface SVDInfo {
     expression: RegExp;
     path: string;
 }
 
-const MEM_VIEWER_PROP_NAME = "memViewer";
 export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private clearAdapterOutputChannel = false;
@@ -34,15 +34,7 @@ export class CortexDebugExtension {
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
-    private cortexMemoryProvider: MemoryContentProvider;
-    private msHexEditorProvider: MemoryVSCodeHexEditors;
-
-    private configuration: vscode.WorkspaceConfiguration;
-
-    public currentMemoryProvider: string = "";
-    public useMSHexEditor() {
-        return this.currentMemoryProvider.toLowerCase() === "MSHexEditor".toLowerCase();
-    }
+    private memoryProvider: MemoryContentProvider;
 
     private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
     private registerTreeView: vscode.TreeView<BaseNode>;
@@ -53,10 +45,7 @@ export class CortexDebugExtension {
     constructor(private context: vscode.ExtensionContext) {
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
-        this.msHexEditorProvider = new MemoryVSCodeHexEditors();
-        this.cortexMemoryProvider = new MemoryContentProvider();
-        this.configuration = vscode.workspace.getConfiguration("cortex-debug");
-        this.currentMemoryProvider = this.configuration.get(MEM_VIEWER_PROP_NAME, "");
+        this.memoryProvider = new MemoryContentProvider();
 
         let tmp = [];
         try {
@@ -75,9 +64,8 @@ export class CortexDebugExtension {
             treeDataProvider: this.registerProvider
         });
 
-
         context.subscriptions.push(
-            vscode.workspace.registerTextDocumentContentProvider('examinememory', this.cortexMemoryProvider),
+            vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
             vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
 
             vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)),
@@ -98,9 +86,7 @@ export class CortexDebugExtension {
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)),
             vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
-                if (!this.useMSHexEditor() && e && e.textEditor.document.fileName.endsWith('.cdmem')) {
-                    this.cortexMemoryProvider.handleSelection(e);
-                }
+                if (e && e.textEditor.document.fileName.endsWith('.cdmem')) { this.memoryProvider.handleSelection(e); }
             }),
 
             vscode.debug.registerDebugConfigurationProvider('cortex-debug', new CortexDebugConfigurationProvider(context)),
@@ -270,65 +256,25 @@ export class CortexDebugExtension {
             return;
         }
 
-        this.currentMemoryProvider = this.configuration.get(MEM_VIEWER_PROP_NAME, "");
-        if (this.currentMemoryProvider !== "") {
-            showMemoryWindow();
-        } else {
-            const choices: string[] = [
-                "Use Microsoft HexEditor (experimental)",
-                "Use Cortex-Debug Memory Viewer",
-                "Always use Microsoft HexEditor",
-                "Always use Cortex-Debug Memory Viewer"
-            ]
-            vscode.window.showQuickPick(choices).then((choice) => {
-                const ix = choices.findIndex((v,ix) => v === choices[ix]);
-                let editor = "MSHexEditor";
-                switch (ix) {
-                    case 0: {
-                        editor = "MSHexEditor";
-                        break;
-                    }
-                    case 1: {
-                        editor = "Cortex-Debug";
-                        break;
-                    }
-                    case 2: {
-                        editor = "MSHexEditor";
-                        this.configuration.update(MEM_VIEWER_PROP_NAME, editor);
-                        break;
-                    }
-                    case 3: {
-                        editor = "Cortex-Debug";
-                        this.configuration.update(MEM_VIEWER_PROP_NAME, editor);
-                        break;
-                    }
+        vscode.window.showInputBox({
+            placeHolder: 'Enter a valid C/gdb expression. Use 0x prefix for hexidecimal numbers',
+            ignoreFocusOut: true,
+            prompt: 'Memory Address'
+        }).then(
+            (address) => {
+                address = address.trim();
+                if (!validateAddress(address)) {
+                    vscode.window.showErrorMessage('Invalid memory address entered');
+                    Reporting.sendEvent('Examine Memory', 'Invalid Address', address);
+                    return;
                 }
-                this.currentMemoryProvider = editor;
-                showMemoryWindow();
-            });
-        }
 
-        function showMemoryWindow() {
-            vscode.window.showInputBox({
-                placeHolder: 'Enter a valid C/gdb expression. Use 0x prefix for hexidecimal numbers',
-                ignoreFocusOut: true,
-                prompt: 'Memory Address',
-                value: "0x10002898"
-            }).then(
-                (address) => {
-                    address = address.trim();
-                    if (!validateAddress(address)) {
-                        vscode.window.showErrorMessage('Invalid memory address entered');
-                        Reporting.sendEvent('Examine Memory', 'Invalid Address', address);
-                        return;
-                    }
-
-                    vscode.window.showInputBox({
-                        placeHolder: 'Enter a constant value. Prefix with 0x for hexidecimal format.',
-                        ignoreFocusOut: true,
-                        prompt: 'Length',
-                        value: "256"
-                    }).then((length) => {
+                vscode.window.showInputBox({
+                    placeHolder: 'Enter a constant value. Prefix with 0x for hexidecimal format.',
+                    ignoreFocusOut: true,
+                    prompt: 'Length'
+                }).then(
+                    (length) => {
                         length = length.trim();
                         if (!validateValue(length)) {
                             vscode.window.showErrorMessage('Invalid length entered');
@@ -337,30 +283,27 @@ export class CortexDebugExtension {
                         }
 
                         Reporting.sendEvent('Examine Memory', 'Valid', `${address}-${length}`);
-                        if (this.useMSHexEditor()) {
-                            this.msHexEditorProvider.Add(address, length);
-                        } else {
-                            const timestamp = new Date().getTime();
-                            const addrEnc = encodeURIComponent(`${address}`);
-                            // tslint:disable-next-line:max-line-length
-                            vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`))
-                                .then((doc) => {
-                                    vscode.window.showTextDocument(doc, { viewColumn: 2, preview: false });
-                                    Reporting.sendEvent('Examine Memory', 'Used');
-                                }, (error) => {
-                                    vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
-                                    Reporting.sendEvent('Examine Memory', 'Error', error.toString());
-                                });
-                        }
+                        const timestamp = new Date().getTime();
+                        const addrEnc = encodeURIComponent(`${address}`);
+                        // tslint:disable-next-line:max-line-length
+                        vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`))
+                            .then((doc) => {
+                                vscode.window.showTextDocument(doc, { viewColumn: 2, preview: false });
+                                Reporting.sendEvent('Examine Memory', 'Used');
+                            }, (error) => {
+                                vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
+                                Reporting.sendEvent('Examine Memory', 'Error', error.toString());
+                            });
                     },
-                        (error) => {
-                        }
-                    );
-                },
-                (error) => {
-                }
-            );
-        }
+                    (error) => {
+
+                    }
+                );
+            },
+            (error) => {
+
+            }
+        );
     }
 
     // Peripherals
@@ -492,12 +435,8 @@ export class CortexDebugExtension {
     private receivedStopEvent(e) {
         this.peripheralProvider.debugStopped();
         this.registerProvider.debugStopped();
-        if (this.useMSHexEditor()) {
-            this.msHexEditorProvider.updateMemWindows();
-        } else {
-            vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
-                .forEach((doc) => { this.cortexMemoryProvider.update(doc); });
-        }
+        vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
+            .forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
     }
 

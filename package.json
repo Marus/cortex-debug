@@ -10,6 +10,16 @@
             "type": "object",
             "title": "Cortex-Debug",
             "properties": {
+                "cortex-debug.memoryViewer": {
+                    "type": "string",
+                    "default": "",
+                    "enum": [
+                        "MSHexEditor",
+                        "Cortex-Debug",
+                        ""
+                    ],
+                    "description": "Set editor to examine memory. Empty string prompts for which one to use"
+                },
                 "cortex-debug.armToolchainPath": {
                     "type": [
                         "string",
