@@ -25,11 +25,13 @@ export abstract class BaseNode {
 
 export abstract class PeripheralBaseNode extends BaseNode {
     public format: NumberFormat;
+    public pinned: boolean;
     public readonly name: string;
     
     constructor(protected readonly parent?: PeripheralBaseNode) {
         super(parent);
         this.format = NumberFormat.Auto;
+        this.pinned = false;
     }
 
     public selected(): Thenable<boolean> {

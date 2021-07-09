@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
+import { STLinkServerController } from './../stlink';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'auto'];
-const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS'];
+const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS', 'Zephyr'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private context: vscode.ExtensionContext) {}
@@ -58,7 +59,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.postAttachCommands) { config.postAttachCommands = []; }
         if (!config.preRestartCommands) { config.preRestartCommands = []; }
         if (!config.postRestartCommands) { config.postRestartCommands = []; }
-        if (config.request !== 'launch') { config.runToMain = false; }
+        if (config.request !== 'launch') { config.runToEntryPoint = null; }
+        else if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); }
+        else if (config.runToMain) { config.runToEntryPoint = 'main'; }
 
         switch (type) {
             case 'jlink':
@@ -69,6 +72,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 break;
             case 'stutil':
                 validationResponse = this.verifySTUtilConfiguration(folder, config);
+                break;
+            case 'stlink':
+                validationResponse = this.verifySTLinkConfiguration(folder, config);
                 break;
             case 'pyocd':
                 validationResponse = this.verifyPyOCDConfiguration(folder, config);
@@ -87,19 +93,30 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 break;
             default:
                 // tslint:disable-next-line:max-line-length
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
+                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stlink", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
                 break;
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
+
+        // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
+        if (!config.armToolchainPath && config.servertype === 'stlink') {
+           config.armToolchainPath = STLinkServerController.getArmToolchainPath();
+        }
+
         if (config.armToolchainPath) { config.toolchainPath = config.armToolchainPath; }
         if (!config.toolchainPath) {
             config.toolchainPath = configuration.armToolchainPath;
         }
+        
         if (!config.toolchainPrefix) {
             config.toolchainPrefix = configuration.armToolchainPrefix || 'arm-none-eabi';
         }
         
+        if (!config.gdbPath) {
+            config.gdbPath = configuration.gdbPath;
+        }
+
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.
@@ -148,7 +165,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
                 if (!fs.existsSync(config.rtos)) {
                     // tslint:disable-next-line:max-line-length
-                    return 'The following RTOS values are supported by J-Link: FreeRTOS or embOS. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
+                    return `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.`;
                 }
             }
             else {
@@ -203,6 +220,31 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Util GDB server. Disabling SWO.');
+            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
+            config.graphConfig = [];
+        }
+
+        return null;
+    }
+
+    private verifySTLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+        if (config.stlinkPath && !config.serverpath) { config.serverpath = config.stlinkPath; }
+        if (!config.serverpath) {
+            const configuration = vscode.workspace.getConfiguration('cortex-debug');
+            config.serverpath = configuration.stlinkPath;
+        }
+
+        if (!config.stm32cubeprogrammer) {
+            const configuration = vscode.workspace.getConfiguration('cortex-debug');
+            config.stm32cubeprogrammer = configuration.stm32cubeprogrammer;
+        }
+
+        if (config.rtos) {
+            return 'The ST-Link GDB Server does not have support for the rtos option.';
+        }
+
+        if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+            vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Link GDB server. Disabling SWO.');
             config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
             config.graphConfig = [];
         }

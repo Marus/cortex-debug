@@ -72,6 +72,8 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.peripherals.pin', this.peripheralsTogglePin.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.peripherals.unpin', this.peripheralsTogglePin.bind(this)),
             
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
             
@@ -332,6 +334,8 @@ export class CortexDebugExtension {
             { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
             { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
         ]);
+        if (result === undefined)
+            return;
 
         node.format = result.value;
         this.peripheralProvider.refresh();
@@ -342,6 +346,11 @@ export class CortexDebugExtension {
         node.getPeripheral().updateData().then((e) => {
             this.peripheralProvider.refresh();
         });
+    }
+
+    private async peripheralsTogglePin(node: PeripheralBaseNode): Promise<void> {
+        this.peripheralProvider.togglePinPeripheral(node);
+        this.peripheralProvider.refresh();
     }
 
     // Registers

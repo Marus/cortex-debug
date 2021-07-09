@@ -13,6 +13,7 @@ export interface NodeSetting {
     node: string;
     expanded?: boolean;
     format?: NumberFormat;
+    pinned?: boolean;
 }
 
 export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
@@ -91,6 +92,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     executable: string;
     servertype: string;
     serverpath: string;
+    gdbPath: string;
     serverArgs: string[];
     device: string;
     debuggerArgs: string[];
@@ -117,7 +119,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     interface: string;
     targetId: string | number;
     cmsisPack: string;
-    runToMain: boolean;
+    runToMain: boolean;         // Deprecated: kept here for backwards compatibility
+    runToEntryPoint: string;
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
 
@@ -144,6 +147,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     // StUtil Specific
     v1: boolean;
 
+    // ST-LINK GDB server specific
+    stm32cubeprogrammer: string;
+
     // BMP Specific
     BMPGDBSerialPort: string;
     powerOverBMP: string;
@@ -154,9 +160,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
     // External 
     gdbTarget: string;
-
-    // Hidden settings - These settings are for advanced configuration and are not exposed in the package.json file
-    gdbpath: string;
 }
 
 export interface DisassemblyInstruction {

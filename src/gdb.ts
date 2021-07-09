@@ -24,6 +24,7 @@ import { EventEmitter } from 'events';
 import { JLinkServerController } from './jlink';
 import { OpenOCDServerController } from './openocd';
 import { STUtilServerController } from './stutil';
+import { STLinkServerController } from './stlink';
 import { PyOCDServerController } from './pyocd';
 import { BMPServerController } from './bmp';
 import { PEServerController } from './pemicro';
@@ -37,6 +38,7 @@ const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
     openocd: OpenOCDServerController,
     stutil: STUtilServerController,
+    stlink: STLinkServerController,
     pyocd: PyOCDServerController,
     pe: PEServerController,
     bmp: BMPServerController,
@@ -56,7 +58,7 @@ const STATIC_HANDLES_START = 0x010000;
 const STATIC_HANDLES_FINISH = 0x01FFFF;
 const VAR_HANDLES_START = 0x020000;
 
-const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c}"`;
+const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${ c.replace(/"/g, '\\"') }"`;
 
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
@@ -130,6 +132,7 @@ export class GDBDebugSession extends DebugSession {
     private stoppedThreadId: number = 0;
     private stoppedEventPending = false;
 
+    protected functionBreakpoints = [];
     protected breakpointMap: Map<string, Breakpoint[]> = new Map();
     protected fileExistsCache: Map<string, boolean> = new Map();
 
@@ -271,8 +274,8 @@ export class GDBDebugSession extends DebugSession {
             if (this.args.toolchainPath) {
                 gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
             }
-            if (this.args.gdbpath) {
-                gdbExePath = this.args.gdbpath;
+            if (this.args.gdbPath) {
+                gdbExePath = this.args.gdbPath;
             }
 
             // Check to see if gdb exists.
@@ -282,7 +285,7 @@ export class GDBDebugSession extends DebugSession {
                         response,
                         103,
                         `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
-                            'Please configure "cortex-debug.armToolchainPath" correctly.'
+                            'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
                     );
                     return;
                 }
@@ -293,7 +296,7 @@ export class GDBDebugSession extends DebugSession {
                         response,
                         103,
                         `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
-                            'Please configure "cortex-debug.armToolchainPath" correctly.'
+                            'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
                     );
                     return;
                 }
@@ -396,7 +399,7 @@ export class GDBDebugSession extends DebugSession {
                     this.handleMsg('log', dbgMsg);
                 }
 
-                this.disableSendStoppedEvents = (!attach && this.args.runToMain) ? true : false;
+                this.disableSendStoppedEvents = (!attach && this.args.runToEntryPoint) ? true : false;
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
@@ -413,8 +416,18 @@ export class GDBDebugSession extends DebugSession {
                         }, 50);
                     };
 
-                    if (this.args.runToMain) {
-                        this.miDebugger.sendCommand('break-insert -t --function main').then(() => {
+                    const runPostStartSession = () => {
+                        if (this.configDone) {
+                            this.runPostStartSessionCommands(false);
+                        } else {
+                            this.onConfigDone.once('done', () => {
+                                this.runPostStartSessionCommands(false);
+                            });
+                        }
+                    };
+
+                    if (this.args.runToEntryPoint) {
+                        this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
                             this.miDebugger.once('generic-stopped', launchComplete);
                             // To avoid race conditions between finishing configuration, we should stay
                             // in stopped mode. Or, we end up clobbering the stopped event that might come
@@ -427,17 +440,17 @@ export class GDBDebugSession extends DebugSession {
                                     this.miDebugger.sendCommand('exec-continue');
                                 });
                             }
+                        }, (err) => {
+                            // If failed to set the temporary breakpoint (e.g. function does not exist)
+                            // complete the launch as if the breakpoint had not being defined
+                            this.handleMsg('log', `launch.json: "runToEntryPoint" enabled but function "${this.args.runToEntryPoint}" does not exist? '${err.toString()}\n`);
+                            launchComplete();
+                            runPostStartSession();
                         });
                     }
                     else {
                         launchComplete();
-                        if (this.configDone) {
-                            this.runPostStartSessionCommands(false);
-                        } else {
-                            this.onConfigDone.once('done', () => {
-                                this.runPostStartSessionCommands(false);
-                            });
-                        }
+                        runPostStartSession();
                     }
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
@@ -777,6 +790,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
         const doDisconnectProcessing = () => {
+            this.miDebugger.sendCommand('break-delete');
             if (this.attached) {
                 this.attached = false;
                 this.miDebugger.detach();
@@ -1075,6 +1089,9 @@ export class GDBDebugSession extends DebugSession {
     ): void {
         const createBreakpoints = async (shouldContinue) => {
             this.disableSendStoppedEvents = false;
+            await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
+            this.functionBreakpoints = [];
+
             const all = [];
             args.breakpoints.forEach((brk) => {
                 all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
@@ -1084,6 +1101,7 @@ export class GDBDebugSession extends DebugSession {
                 const breakpoints = await Promise.all(all);
                 const finalBrks = [];
                 breakpoints.forEach((brkp) => {
+                    this.functionBreakpoints.push(brkp.number);
                     if (brkp[0]) { finalBrks.push({ line: brkp[1].line }); }
                 });
                 response.body = {

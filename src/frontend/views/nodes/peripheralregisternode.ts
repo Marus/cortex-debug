@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState, window, debug } from 'vscode';
+import { TreeItem, TreeItemCollapsibleState, window, debug, MarkdownString } from 'vscode';
 import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import { PeripheralBaseNode } from './basenode';
@@ -7,6 +7,7 @@ import { AccessType } from '../../svd';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../../common';
 import { AddressRangesInUse } from '../../addrranges';
+import { MessageChannel } from 'worker_threads';
 
 export interface PeripheralRegisterOptions {
     name: string;
@@ -83,26 +84,86 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
 
         const item = new TreeItem(label, collapseState);
         item.contextValue = this.accessType === AccessType.ReadWrite ? 'registerRW' : (this.accessType === AccessType.ReadOnly ? 'registerRO' : 'registerWO');
-        item.tooltip = this.description;
-
-        if (this.accessType === AccessType.WriteOnly) {
-            item.description = '<Write Only>';
-        }
-        else {
-            switch (this.getFormat()) {
-                case NumberFormat.Decimal:
-                    item.description = this.currentValue.toString();
-                    break;
-                case NumberFormat.Binary:
-                    item.description = binaryFormat(this.currentValue, this.hexLength * 4, false, true);
-                    break;
-                default:
-                    item.description = hexFormat(this.currentValue, this.hexLength);
-                    break;
-            }
-        }
+        item.tooltip = this.generateTooltipMarkdown();
+        item.description = this.getFormattedValue(this.getFormat());
 
         return item;
+    }
+
+    private generateTooltipMarkdown(): MarkdownString | null {
+        const mds = new MarkdownString('', true);
+        mds.isTrusted = true;
+
+        const address = `${ hexFormat(this.getAddress()) }`;
+
+        const formattedValue = this.getFormattedValue(this.getFormat());
+
+        const roLabel = this.accessType === AccessType.ReadOnly ? '(Read Only)' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+
+        mds.appendMarkdown(`| ${ this.name }@${ address } | ${ roLabel } | *${ formattedValue }* |\n`);
+        mds.appendMarkdown('|:---|:---:|---:|\n\n');
+
+        if (this.accessType !== AccessType.WriteOnly) {
+            mds.appendMarkdown(`**Reset Value:** ${ this.getFormattedResetValue(this.getFormat()) }\n`);
+        }
+        
+        mds.appendMarkdown('\n____\n\n');
+        mds.appendMarkdown(this.description);
+
+        mds.appendMarkdown('\n_____\n\n');
+
+        // Don't try to display current value table for write only fields
+        if (this.accessType === AccessType.WriteOnly) {
+            return mds;
+        }
+
+        const hex = this.getFormattedValue(NumberFormat.Hexidecimal);
+        const decimal = this.getFormattedValue(NumberFormat.Decimal);
+        const binary = this.getFormattedValue(NumberFormat.Binary);
+        
+        mds.appendMarkdown('| Hex &nbsp;&nbsp; | Decimal &nbsp;&nbsp; | Binary &nbsp;&nbsp; |\n');
+        mds.appendMarkdown('|:---|:---|:---|\n');
+        mds.appendMarkdown(`| ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
+
+        const children = this.getChildren();
+        if (children.length === 0) { return mds; }
+
+        mds.appendMarkdown('**Fields**\n\n');
+        mds.appendMarkdown('| Field | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Bit-Range | Value |\n');
+        mds.appendMarkdown('|:---|:---:|:---|:---|\n');
+
+        children.forEach((field) => {
+            mds.appendMarkdown(`| ${ field.name } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${ field.getFormattedRange() } | ${ field.getFormattedValue(field.getFormat(), true) } |\n`);
+        });
+
+        return mds;
+    }
+
+    public getFormattedValue(format: NumberFormat): string {
+        return this.formatValue(this.currentValue, format);
+    }
+
+    public getFormattedResetValue(format: NumberFormat): string {
+        return this.formatValue(this.resetValue, format);
+    }
+
+    private formatValue(value: number, format: NumberFormat): string {
+        if (this.accessType === AccessType.WriteOnly) {
+            return '(Write Only)';
+        }
+
+        switch (format) {
+            case NumberFormat.Decimal:
+                return value.toString();
+            case NumberFormat.Binary:
+                return binaryFormat(value, this.hexLength * 4);
+            default:
+                return hexFormat(value, this.hexLength, true);
+        }
+    }
+
+    public extractBitsFromReset(offset: number, width: number): number {
+        return extractBits(this.resetValue, offset, width);
     }
 
     public getChildren(): PeripheralFieldNode[] {
@@ -155,6 +216,10 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
                 this.updateValueInternal(numval).then(resolve, reject);
             });
         });
+    }
+
+    public getAddress(): number {
+        return this.parent.getAddress(this.offset);
     }
 
     private updateValueInternal(value: number): Thenable<boolean> {

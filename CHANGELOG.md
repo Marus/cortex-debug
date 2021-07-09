@@ -1,3 +1,32 @@
+# V0.3.11
+
+New Features:
+   * Enable ChibiOS RTOS support for the J-Link server
+   * Added additional details to the the register and field level hover tooltips in the peripheral register view.
+# V0.3.10
+This feature upgrades our VSCode dependency for the extension - as a result V0.3.10 will only support the Visual Studio Code version 1.52 and above.
+
+Also wanted to call out the `gdbPath` user setting that was introduced at V0.3.8 (but not included in the changelog) - this allows users to override the complete path to GDB including the executable name - allowing the use of `gdb-multiarch`.
+
+New Features:
+   * Added support for Linux ARM hosts (both aarch64 and armhf) to the binary modules
+   * Added the ability to pin certain perhiperals in the Perhiperal Register view so they remain at the top of the view. Thanks to [manuargue](https://github.com/manuargue) for the PR. This provides an alterate solution to issue [#370](https://github.com/Marus/cortex-debug/issues/370)
+   * Added the ability to set `gdbPath` as an override in your launch.json file.
+
+# V0.3.9
+
+Bug fix
+
+# V0.3.8
+1. New Feature:
+   * Added initial support for STMicroelectronic's official ST-LINK GDB server. This server is currently only supported on Windows as we are having difficulties with getting it to run inside the visual studio environment on Linux and Windows. Also, this GDB server does not currently support SWO output through the probe. Big thanks to hwmaier for their PR that provided most of this support.
+   * Added a `gdbPath` user setting (settings.json) - this allows you to override the full GDB path including the executable name - allowing the use of `gdb-multiarch` for example. Note that currently this only exists in user settings.
+2. Issues Fixed:
+   * Updated binary modules to support current versions of VS Code, fixing the support for serial based SWO output - some older versions were also removed to download size. Currently this is supported on macOS (x64), Linux (x64) and Windows (x64, x86); support for Linux AArch64 and armhf architectures is coming soon.
+   * Fixed Issue [#382](https://github.com/Marus/cortex-debug/issues/382) - GDB commands in configuration (such as postLaunchCommands) that had had quotation marks (") were not handled correctly when being passed to GDB
+   * Fixed Issue [#374](https://github.com/Marus/cortex-debug/issues/374) - Breakpoints are not cleared in GDB when exiting a debug session - this can cause issues in GDB servers like J-Link that support flash breakpoints as they would not have a chance to remove the modifications made to the flash memory to support that feature.
+   * Fixed issue with not being able to properly disable function break points
+
 # V0.3.7
 Minor bug fix release
 

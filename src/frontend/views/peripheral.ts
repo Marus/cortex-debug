@@ -72,7 +72,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             }
         }
         else if (!this.loaded) {
-            return [new MessageNode('No SVD File Loaded: ' + this.svdFileName || 'None', null)];
+            return [new MessageNode('Unable to load SVD File: ' + (this.svdFileName || 'Not specified'), null)];
         }
         else {
             return [];
@@ -80,7 +80,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public debugSessionStarted(svdfile: string): Thenable<any> {
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             this.peripherials = [];
             this.loaded = false;
             this._onDidChangeTreeData.fire(undefined);
@@ -98,9 +98,12 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                                         const node = this.findNodeByPath(s.node);
                                         if (node) {
                                             node.expanded = s.expanded || false;
+                                            node.pinned = s.pinned || false;
                                             node.format = s.format;
                                         }
                                     });
+
+                                    this.peripherials.sort(PeripheralNode.compare);
                                     this._onDidChangeTreeData.fire(undefined);
                                 }
                             }, (error) => {
@@ -153,5 +156,10 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
     public debugContinued() {
         
+    }
+
+    public togglePinPeripheral(node: PeripheralBaseNode) {
+        node.pinned = !node.pinned;
+        this.peripherials.sort(PeripheralNode.compare);
     }
 }

@@ -8,7 +8,7 @@
     "contributes": {
         "configuration": {
             "type": "object",
-            "title": "Cortex-Debug Configuration",
+            "title": "Cortex-Debug",
             "properties": {
                 "cortex-debug.armToolchainPath": {
                     "type": [
