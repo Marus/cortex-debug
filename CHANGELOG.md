@@ -8,6 +8,7 @@ ChangeLog
     * You MUST specify the `"swoPort": "[host:]port"` option in the `"swoConfig"`
   * `"source": "file"`, then the file specified by `"swoPath"` will be used. Same caveats as when`"source"` is `"probe"` but you have control over the file-name
 * `"openocd"` server type will now use a TCP connection for SWO instead of file/fifo for a more reliable connection across all platforms. Port selection happens automatically. You can still use a serial port in which case, `"source": "serial"`.
+* Use the `pyocd gdbserver` to start the gdb-server instead of the `pyocd-gdbserver` executable. However, if you are using `serverpath` to specify path name to `pyocd-gdbserver` that will still work. Support for this backwards compatibility will be removed in the future. We recommend using the path-name to the `pyocd` itself or to have it in your PATH.
 * Many other minor fixes
 
 # V0.3.12
