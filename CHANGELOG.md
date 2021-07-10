@@ -13,7 +13,7 @@ New Features:
    * Support for `pyoocd` SWO over a TCP port. You can specify the SWO source as `probe`. This is rather new for `pyocd`, so it hasn't been extensively tested.
 
 Bug fixes and minor changes:
-   * Use the `pyocd` executable with `gdbserver` as first aregument instead of the `pyocd-gdbserver` executable. This is a potentially breaking change but long overdue as the old use model has been deprecated by `pyocd` long ago.
+   * Use the `pyocd` executable with `gdbserver` as first aregument instead of the `pyocd-gdbserver` executable. This is a potentially breaking change but long overdue as the old use model has been deprecated by `pyocd`.
    * Few other minor changes
 
 # V0.3.12
