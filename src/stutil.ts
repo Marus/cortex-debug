@@ -111,6 +111,10 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
             serverargs = serverargs.concat(this.args.serverArgs);
         }
 
+        if (this.args.serialNumber) {
+            serverargs.push('--serial', this.args.serialNumber);
+        }
+
         return serverargs;
     }
 
