@@ -306,7 +306,8 @@
                                 "description": "Machine Type Selection - used for QEMU server type",
                                 "enum": [
                                     "lm3s811evb",
-                                    "lm3s6965evb"
+                                    "lm3s6965evb",
+                                    "mps2-an385"
                                 ]
                             },
                             "device": {
@@ -316,7 +317,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, uCOS-III, or nuttx.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
@@ -1699,5 +1700,5 @@
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
     },
-    "version": "0.3.12-pre2"
+    "version": "0.3.13-pre1"
 }
