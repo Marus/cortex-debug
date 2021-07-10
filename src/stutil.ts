@@ -107,6 +107,10 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
             serverargs.push('--stlinkv1');
         }
 
+        if (this.args.serialNumber) {
+            serverargs.push('--serial', this.args.serialNumber);
+        }
+
         if (this.args.serverArgs) {
             serverargs = serverargs.concat(this.args.serverArgs);
         }
