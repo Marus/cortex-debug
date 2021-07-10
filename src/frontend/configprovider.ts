@@ -266,12 +266,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.board && !config.boardId) { config.boardId = config.board; }
         if (config.target && !config.targetId) { config.targetId = config.target; }
 
-        if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
-            vscode.window.showWarningMessage('SWO support is not available from the probe when using the PyOCD GDB server. Disabling SWO.');
-            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
-            config.graphConfig = [];
-        }
-
         return null;
     }
 
