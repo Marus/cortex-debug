@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 
 export class PyOCDServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'PyOCD';
-    public readonly portsNeeded: string[] = ['gdbPort', 'consolePort'];
+    public readonly portsNeeded: string[] = ['gdbPort', 'consolePort', 'swoPort'];
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
@@ -30,7 +30,10 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
         return [
-            `target-select extended-remote localhost:${gdbport}`
+            `target-select extended-remote localhost:${gdbport}`,
+            // Following needed for SWO and accessing some peripherals.
+            // Generally not a good thing to do
+            'interpreter-exec console "set mem inaccessible-by-default off"'
         ];
     }
 
@@ -45,8 +48,6 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
     }
 
     public attachCommands(): string[] {
-        const gdbport = this.ports['gdbPort'];
-
         const commands = [
             'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
@@ -63,7 +64,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 
     public swoCommands(): string[] {
         const commands = [];
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
+        if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
@@ -94,20 +95,9 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
-    private useServerArg = true;
     public serverExecutable(): string {
         const exeName = 'pyocd';
         const ret = this.args.serverpath ? this.args.serverpath : exeName;
-        try {       // NB: Remove this block in a year or so & use of this.useServerArg
-            const tail = ret.split(/[\/\\]+/).filter(item => (item !== '')).slice(-1).pop().toLowerCase();
-            const oldExeName = 'pyocd-gdbserver';
-            if (tail === oldExeName) {
-                this.useServerArg = false;
-            } else if ((os.platform() === 'win32') && (tail === (oldExeName + '.exe'))) {
-                this.useServerArg = false;
-            }
-        }
-        finally {}
         return ret;
     }
 
@@ -115,14 +105,11 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const gdbport = this.ports['gdbPort'];
         const telnetport = this.ports['consolePort'];
 
-        let serverargs = this.useServerArg ? [ 'gdbserver' ] : [];
-        const regulars = [
+        let serverargs = [
+            'gdbserver',
             '--port', gdbport.toString(),
             '--telnet-port', telnetport.toString()
         ];
-        for (const item of regulars) {
-            serverargs.push(item);
-        }
 
         if (this.args.boardId) {
             serverargs.push('--board');
@@ -139,6 +126,21 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             serverargs.push(this.args.cmsisPack.toString());
         }
 
+        if (this.args.swoConfig.enabled) {
+            const source = this.args.swoConfig.source;
+            if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
+                const swoPort = this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
+                const cpuF = this.args.swoConfig.cpuFrequency;
+                const swoF = this.args.swoConfig.swoFrequency || '1';
+                const args = [
+                    '-O', 'swv_raw_enable=true',
+                    '-O', `swv_raw_port=${swoPort}`,
+                    '-O', `swv_system_clock=${cpuF}`,
+                    '-O', `swv_clock=${swoF}`];
+                serverargs.push(...args);
+            }
+        }
+
         if (this.args.serverArgs) {
             serverargs = serverargs.concat(this.args.serverArgs);
         }
@@ -151,12 +153,18 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 
     public serverLaunchStarted(): void {}
     public serverLaunchCompleted(): void {
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            this.emit('event', new SWOConfigureEvent({
-                type: 'serial',
-                device: this.args.swoConfig.source,
-                baudRate: this.args.swoConfig.swoFrequency
-            }));
+        if (this.args.swoConfig.enabled) {
+            const source = this.args.swoConfig.source;
+            if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
+                const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
+                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm].toString(10) }));
+            } else if (source === 'serial') {
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'serial',
+                    device: this.args.swoConfig.source,
+                    baudRate: this.args.swoConfig.swoFrequency
+                }));
+            }
         }
     }
     
