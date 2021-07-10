@@ -1,5 +1,5 @@
 ChangeLog
-# V0.3.12
+# V0.3.13
 * `"external"` server type now supports SWO. It works in the following way depending on `"source"`
   * `"source": "probe"` -- We do not recommend this method as there are issues with File I/O buffering causing delays and stalls, especially on Windows. Use a `"socket"` instead. It will use a auto-created temporary file name.
     * On Windows, it will use normal file-io
@@ -9,6 +9,16 @@ ChangeLog
   * `"source": "file"`, then the file specified by `"swoPath"` will be used. Same caveats as when`"source"` is `"probe"` but you have control over the file-name
 * `"openocd"` server type will now use a TCP connection for SWO instead of file/fifo for a more reliable connection across all platforms. Port selection happens automatically. You can still use a serial port in which case, `"source": "serial"`.
 * Many other minor fixes
+
+# V0.3.12
+
+New Features:
+   * Added a new `runToEntryPoint` `launch.json` option that takes a configurable name for the entry point instead of assuming main. This change deprecates  `runToMain` (while `runToMain` will still function currently it will likely be removed in the future; it is recommended to replace `"runToMain": true` with `"runToEntryPoint": "main"` in your `launch.json` configurations). This addresses issue [#389](https://github.com/Marus/cortex-debug/issues/389) - thanks to [manuargue](https://github.com/manuargue) for yet another contribution to the project.
+
+Bug Fixes:
+   * Fixed issues with P&E Micro GDB support when using SWD connection to the target - thanks [adamkulpa](https://github.com/adamkulpa) for the PR.
+   * Fixed issues with being unable to set breakpoints in rust, assembly, and cortex-debug disassembly views on Visual Studio Code version 1.53
+
 # V0.3.11
 
 New Features:
