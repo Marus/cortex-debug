@@ -134,7 +134,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ipAddress: string;
     serialNumber: string;
     jlinkscript: string;
-    
+    remoteIPAddress: string;
+
     // OpenOCD Specific
     configFiles: string[];
     searchDir: string[];
@@ -143,7 +144,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
     // PyOCD Specific
     boardId: string;
-    
+
     // StUtil Specific
     v1: boolean;
 
