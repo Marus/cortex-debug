@@ -7,7 +7,7 @@ const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['JLinkGDBServerCLExe', 'JLinkGDBServerCL', 'JLinkGDBServer'];
 
 export class JLinkServerController extends EventEmitter implements GDBServerController {
-    public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort'];
+    public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort', 'rttPort'];
     public name: 'J-Link';
 
     private args: ConfigurationArguments;
@@ -110,12 +110,14 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const gdbport = this.ports['gdbPort'];
         const swoport = this.ports['swoPort'];
         const consoleport = this.ports['consolePort'];
+        const rttport = this.ports['rttPort'];
 
         let cmdargs = [
             '-if', this.args.interface,
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),
             '-telnetport', consoleport.toString(),
+            '-rtttelnetport', rttport.toString(),
             '-device', this.args.device
         ];
 

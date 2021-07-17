@@ -52,6 +52,24 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 }
             });
         }
+        if (!config.rttConfig) {
+            config.rttConfig = { enabled: false, decoders: [] };
+        }
+        else {
+            if (!config.rttConfig.decoders) { config.rttConfig.decoders = []; }
+            config.rttConfig.decoders.forEach((d, idx) => {
+                if (d.type === 'advanced') {
+                    if (d.ports === undefined && d.number !== undefined) {
+                        d.ports = [d.number];
+                    }
+                }
+                else {
+                    if (d.port === undefined && d.number !== undefined) {
+                        d.port = d.number;
+                    }
+                }
+            });
+        }
         if (!config.graphConfig) { config.graphConfig = []; }
         if (!config.preLaunchCommands) { config.preLaunchCommands = []; }
         if (!config.postLaunchCommands) { config.postLaunchCommands = []; }

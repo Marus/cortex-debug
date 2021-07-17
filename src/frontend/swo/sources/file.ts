@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
-import { SWOSource } from './common';
+import { SWORTTSource } from './common';
 
-export class FileSWOSource extends EventEmitter implements SWOSource {
+export class FileSWOSource extends EventEmitter implements SWORTTSource {
     public connected: boolean = false;
     private fd: number = null;
     private interval: any = null;

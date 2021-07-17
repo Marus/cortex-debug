@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 
-export interface SWOSource extends EventEmitter {
+export interface SWORTTSource extends EventEmitter {
     connected: boolean;
     dispose();
 }

@@ -6,7 +6,7 @@ import { SWOConsoleProcessor } from './decoders/console';
 import { SWOBinaryProcessor } from './decoders/binary';
 import { SWOGraphProcessor } from './decoders/graph';
 import { SWODecoder } from './decoders/common';
-import { SWOSource } from './sources/common';
+import { SWORTTSource } from './sources/common';
 import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig, SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig, SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './common';
 import { SWOAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
@@ -247,7 +247,7 @@ export class SWOCore {
 
     private webview: SWOWebview;
 
-    constructor(private source: SWOSource, args: ConfigurationArguments, extensionPath: string) {
+    constructor(private source: SWORTTSource, args: ConfigurationArguments, extensionPath: string) {
         this.itmDecoder = new ITMDecoder();
         vscode.debug.activeDebugSession.customRequest('load-function-symbols').then((result) => {
             this.functionSymbols = result.functionSymbols;

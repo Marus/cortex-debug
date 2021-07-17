@@ -389,6 +389,27 @@ export class SymbolTable {
         return ret;
     }
 
+    public getGlobalOrStaticVarByName(name: string, file?: string): SymbolInformation {
+        if (file) {      // If a file is given only search for static variables by file
+            file = SymbolTable.NormalizePath(file);
+            for (const s of this.staticVars) {
+                if ((s.name === name) && (s.file === file)) {
+                    return s;
+                }
+            }
+            return null;
+        }
+
+        // Try globals first and then statics
+        for (const s of this.globalVars.concat(this.staticVars)) {
+            if (s.name === name) {
+                return s;
+            }
+        }
+
+        return null;
+    }    
+
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }
         if (os.platform() === 'win32') {

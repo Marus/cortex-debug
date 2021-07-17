@@ -7,8 +7,8 @@ import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
 import { SWOCore } from './swo/core';
-import { SWOSource } from './swo/sources/common';
-import { NumberFormat, ConfigurationArguments } from '../common';
+import { SWORTTSource } from './swo/sources/common';
+import { NumberFormat, ConfigurationArguments, RTTDecoderOpts } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -19,8 +19,9 @@ import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
 import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
-import { Cluster } from 'cluster';
+import { RTTTerminal } from './rtt_terminal';
 
+const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
     expression: RegExp;
     path: string;
@@ -30,7 +31,9 @@ export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private clearAdapterOutputChannel = false;
     private swo: SWOCore = null;
-    private swosource: SWOSource = null;
+    private swosource: SWORTTSource = null;
+    private rttTerminals: RTTTerminal[] = [];
+    private testRttTerminal: vscode.Terminal = null;
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -41,6 +44,7 @@ export class CortexDebugExtension {
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
+    private nodeExecExists = false;
 
     constructor(private context: vscode.ExtensionContext) {
         this.peripheralProvider = new PeripheralTreeProvider();
@@ -85,6 +89,7 @@ export class CortexDebugExtension {
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)),
+            vscode.window.onDidCloseTerminal(this.terminalClosed.bind(this)),
             vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
                 if (e && e.textEditor.document.fileName.endsWith('.cdmem')) { this.memoryProvider.handleSelection(e); }
             }),
@@ -375,6 +380,11 @@ export class CortexDebugExtension {
 
         this.functionSymbols = null;
 
+        // Mark all terminals as unused
+        for (const terminal of this.rttTerminals) {
+            terminal.inUse = false;
+        }
+
         session.customRequest('get-arguments').then((args) => {
             let svdfile = args.svdFile;
             if (!svdfile) {
@@ -420,6 +430,9 @@ export class CortexDebugExtension {
                 break;
             case 'swo-configure':
                 this.receivedSWOConfigureEvent(e);
+                break;
+            case 'rtt-configure':
+                this.receivedRTTConfigureEvent(e);
                 break;
             case 'adapter-output':
                 this.receivedAdapterOutput(e);
@@ -475,6 +488,57 @@ export class CortexDebugExtension {
         }
     }
 
+    private receivedRTTConfigureEvent(e) {
+        if (e.body.type === 'socket') {
+            Reporting.sendEvent('RTT', 'Source', 'Socket');
+            const options = e.body.decoder;
+            for (const terminal of this.rttTerminals) {
+                if (terminal.Match(options)) {
+                    terminal.inUse = true;
+                    return;
+                }
+            }
+            if (!this.nodeExecExists) {
+                // try again. following may launch an external command to determine existence
+                this.nodeExecExists = commandExistsSync('node');
+            }
+            if (!this.nodeExecExists) {
+                vscode.window.showErrorMessage('RTT terminal needs "node" installed. Visit\nhttps://nodejs.org\nto doanload and install')
+            } else {
+                const newTerminal = new RTTTerminal(this.context, options);
+                if (newTerminal.startTerminal()) {
+                    this.rttTerminals.push(newTerminal);
+                }
+            }
+        } else if (e.body.type === 'cleanup') {
+            for (var ix = this.rttTerminals.length - 1; ix >= 0; ix = ix - 1) {
+                const terminal = this.rttTerminals[ix];
+                if (!terminal.inUse) {
+                    this.rttTerminals.splice(ix, 1);
+                    terminal.dispose();
+                }
+            }
+        } else {
+            console.error('receivedRTTConfigureEvent: unknown rt type: ' + e.body.type);
+        }
+    }
+
+    private terminalClosed(terminal: vscode.Terminal) {
+        for (var ix = this.rttTerminals.length - 1; ix >= 0; ix = ix - 1) {
+            const rttTerminal = this.rttTerminals[ix];
+            if (rttTerminal.rttTerminal === terminal) {
+                if (vscode.debug.activeDebugSession) {
+                    vscode.window.showWarningMessage(
+                        `Closed terminal for RTT channel ${rttTerminal.options.port}, tcpPort ${rttTerminal.options.tcpPort}\n` +
+                        `Firmware on device can hang if it is using blocking input or output`,
+                        {/*modal: true*/}
+                    )
+                }
+                this.rttTerminals.slice(ix,1);
+            }
+        }
+    }
+
     private receivedAdapterOutput(e) {
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
@@ -496,6 +560,27 @@ export class CortexDebugExtension {
         }
 
         this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
+    }
+
+    private initializeRTTX() {
+        const script = path.join(this.context.extensionPath, 'dist', 'tcpCat.bundle.js');
+        const args = {
+            name: 'RTT Term',
+            // shellPath: 'bash',
+            // shellArgs: ['-c', `node "${script}" --port 2340`]
+            shellPath: 'node',
+            shellArgs: [script, "--port", "2340"]
+        };
+        try {
+            this.testRttTerminal = vscode.window.createTerminal(args);
+            this.testRttTerminal.show();
+        }
+        catch (e) {
+            console.log(e);
+        }
+        setTimeout(() => {
+            console.log(this.testRttTerminal);
+        }, 1000);
     }
 }
 

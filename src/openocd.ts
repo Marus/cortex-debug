@@ -1,16 +1,18 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName } from './common';
+import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, RTTConfigureEvent, calculatePortMask, createPortName, getAnyFreePortSync as getAnyFreePort, RTTConfiguration } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
-
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
     public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort' /*, 'rttPort' */];
     public name = 'OpenOCD';
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
+
+    // Channel numbers previously used on the localhost
+    public static rttLocalPortMap: { [channel: number]: number} = {};
 
     constructor() {
         super();
@@ -22,6 +24,22 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
+        OpenOCDServerController.GetRTTPorts(args.rttConfig);
+    }
+
+    public static GetRTTPorts(cfg: RTTConfiguration) {
+        if (cfg && cfg.enabled) {
+            for (const dec of cfg.decoders) {
+                const preferred = OpenOCDServerController.rttLocalPortMap[dec.port] || -1;
+                dec.tcpPort = '';
+                getAnyFreePort(preferred).then((num) => {
+                    OpenOCDServerController.rttLocalPortMap[dec.port] = num;
+                    dec.tcpPort = num.toString();
+                }).catch(() => {
+                    console.log(`Could not get free tcp port for RTT channel ${dec.port}`);
+                });
+            }
+        }
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -61,13 +79,29 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
+    public rttCommands(): string[] {
+        const commands = [];
+        if (this.args.rttConfig.enabled) {
+            const cfg = this.args.rttConfig;
+            commands.push(`interpreter-exec console "monitor rtt setup ${cfg.address} ${cfg.searchSize} ${cfg.searchId}"`);
+            commands.push(`interpreter-exec console "monitor rtt start"`);
+
+            for (const dec of this.args.rttConfig.decoders) {
+                if (dec.tcpPort) {
+                    commands.push(`interpreter-exec console "monitor rtt server start ${dec.tcpPort} ${dec.port}"`);
+                }
+            }
+        }
+        return commands;
+    }
+
     public swoCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-        return commands;
+        return commands.concat(this.rttCommands());
     }
 
     private SWOConfigurationCommands(): string[] {
@@ -192,6 +226,21 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     device: this.args.swoConfig.source,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));
+            }
+        }
+
+        if (this.args.rttConfig.enabled) {
+            for (const dec of this.args.rttConfig.decoders) {
+                if (dec.type === 'console') {
+                    if (dec.tcpPort) {
+                        this.emit('event', new RTTConfigureEvent({
+                            type: 'socket',
+                            decoder: dec
+                        }));
+                    } else {
+                        console.error(`What the hell. No tcpport for RTT`);
+                    }
+                }
             }
         }
     }

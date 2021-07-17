@@ -41,6 +41,22 @@
 				"${workspaceRoot}/out/test/**/*.js"
 			],
 			"preLaunchTask": "test-compile"
+		},
+		{
+			"name": "Debug tcpCat",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [ "--nolazy" ],
+			// Run something like 'netcat -lk 2340' to test this module with a server going
+			"args": ["--port", "2340"],
+			"program": "${workspaceRoot}/dist/tcpCat.bundle.js",
+			"console": "integratedTerminal",
+			"stopOnEntry": false,
+			"sourceMaps": true,
+			"outFiles": [
+				"${workspaceRoot}/dist/*.js"
+			],
+			"cwd": "${workspaceRoot}"
 		}
 	],
 	"compounds": [

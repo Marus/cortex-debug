@@ -7,7 +7,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName, RTTConfigureEvent } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -183,6 +183,21 @@ export class GDBDebugSession extends DebugSession {
         }
         this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
+
+        if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
+            const symName = '_SEGGER_RTT';
+            const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
+            if (!rttSym) {
+                this.args.rttConfig.enabled = false;
+                this.handleMsg('stderr', `Could not find symbol ${symName} in executable. " + 
+                    "Make sure you complile/link with debug ON or you can specify your own RTT address to search\n`);
+            } else {
+                this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
+                this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, 32);
+                this.args.rttConfig.searchId = this.args.rttConfig.searchId || '{SEGGER RTT}';
+            }
+        }
+
         // this.symbolTable.printToFile(args.executable + '.cd-dump');
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Finished reading symbols\n');
@@ -228,6 +243,15 @@ export class GDBDebugSession extends DebugSession {
 
         if (args.swoConfig && args.swoConfig.decoders) {
             args.swoConfig.decoders = args.swoConfig.decoders.map((dec) => {
+                if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
+                    dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
+                }
+                return dec;
+            });
+        }
+
+        if (args.rttConfig && args.rttConfig.decoders) {
+            args.rttConfig.decoders = args.rttConfig.decoders.map((dec) => {
                 if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
                     dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
                 }
@@ -403,6 +427,9 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
+                    // We clear the rtt windows regardless of which controller cleared them previously
+                    this.serverController.emit('event', new RTTConfigureEvent({type: 'cleanup', deoder:{}}));
+
                     this.sendResponse(response);
 
                     const launchComplete = () => {

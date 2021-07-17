@@ -1,4 +1,4 @@
-import { SWOSource } from './common';
+import { SWORTTSource } from './common';
 import { EventEmitter } from 'events';
 import * as net from 'net';
 import * as os from 'os';
@@ -8,7 +8,7 @@ import * as path from 'path';
 declare function __webpack_require__(name: string): any;
 declare function __non_webpack_require__(name: string): any;
 
-export class SerialSWOSource extends EventEmitter implements SWOSource {
+export class SerialSWOSource extends EventEmitter implements SWORTTSource {
     private serialPort: any = null;
     public connected: boolean = false;
 

@@ -1,6 +1,8 @@
 import { Event } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { EventEmitter } from 'events';
+import { TcpPortScanner } from './tcpportscanner';
+import { GDBServer } from './backend/server';
 
 export enum NumberFormat {
     Auto = 0,
@@ -60,6 +62,28 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+export interface RTTDecoderOpts {
+    tcpPort: string;  // [hostname:]port
+    label: string;    // label for window
+    port: number;     // RTT Channel number
+    type: string;     // 'console', ...
+    encoding: string; // Console Only: 'utf8', 'ascii', ...
+    prompt: string;   // Console Only: Prompt to use
+}
+
+export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
+    public body: {
+        type: string,   // Currently, only 'socket' is supported
+        decoder: RTTDecoderOpts;
+    };
+    public event: string;
+
+    constructor(params: any) {
+        const body = params;
+        super('rtt-configure', body);
+    }
+}
+
 export class TelemetryEvent extends Event implements DebugProtocol.Event {
     public body: {
         category: string,
@@ -86,6 +110,14 @@ export interface SWOConfiguration {
     swoPath: string;
 }
 
+export interface RTTConfiguration {
+    enabled: boolean;
+    address: string;
+    searchSize: number;
+    searchId: string;
+    decoders: any[];
+}
+
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
     toolchainPath: string;
     toolchainPrefix: string;
@@ -109,6 +141,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     postRestartSessionCommands: string[];
     overrideGDBServerStartedRegex: string;
     svdFile: string;
+    rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
     graphConfig: any[];
     showDevDebugOutput: boolean;
@@ -211,4 +244,27 @@ export function calculatePortMask(decoders: any[]) {
 
 export function createPortName(procNum: number, prefix: string = 'gdbPort'): string {
     return prefix + ((procNum === 0) ? '' : procNum.toString());
+}
+
+export function getAnyFreePortSync(preferred: number): Promise<number> {
+    return new Promise(async (resolve, reject) => {
+        if (preferred > 0) {
+            await TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST).then((inuse) => {
+                if (!inuse) {
+                    resolve(preferred);
+                } else {
+                    preferred = -1;
+                }
+            });
+        }
+
+        if (preferred <= 0) {
+            const portFinderOpts = { min: 60000, max: 62000, retrieve: 1, consecutive: true };
+            await TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
+                resolve(ports[0]);
+            }).catch((e) => {
+                reject(e);
+            });
+        }
+    });
 }
