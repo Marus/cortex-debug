@@ -102,7 +102,7 @@ const grapherConfig = {
 const tcpCatConfig = {
   target: 'node',
   entry: {
-    'tcpCat': './src/tcpCat.ts'
+    'tcp_cat': './src/tcp_cat.ts'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

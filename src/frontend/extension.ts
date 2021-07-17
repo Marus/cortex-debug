@@ -33,7 +33,6 @@ export class CortexDebugExtension {
     private swo: SWOCore = null;
     private swosource: SWORTTSource = null;
     private rttTerminals: RTTTerminal[] = [];
-    private testRttTerminal: vscode.Terminal = null;
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -380,7 +379,7 @@ export class CortexDebugExtension {
 
         this.functionSymbols = null;
 
-        // Mark all terminals as unused
+        // Mark all terminals as unused. We could do this when session terminates
         for (const terminal of this.rttTerminals) {
             terminal.inUse = false;
         }
@@ -491,10 +490,15 @@ export class CortexDebugExtension {
     private receivedRTTConfigureEvent(e) {
         if (e.body.type === 'socket') {
             Reporting.sendEvent('RTT', 'Source', 'Socket');
-            const options = e.body.decoder;
+            const options: RTTDecoderOpts = e.body.decoder;
             for (const terminal of this.rttTerminals) {
                 if (terminal.Match(options)) {
                     terminal.inUse = true;
+                    if (vscode.debug.activeDebugConsole) {
+                        vscode.debug.activeDebugConsole.appendLine(
+                            `Reusing RTT terminal for channel ${options.port} on tcp port ${options.tcpPort}`
+                        )
+                    }
                     return;
                 }
             }
@@ -508,18 +512,23 @@ export class CortexDebugExtension {
                 const newTerminal = new RTTTerminal(this.context, options);
                 if (newTerminal.startTerminal()) {
                     this.rttTerminals.push(newTerminal);
+                    if (vscode.debug.activeDebugConsole) {
+                        vscode.debug.activeDebugConsole.appendLine(
+                            `Created RTT terminal for channel ${options.port} on tcp port ${options.tcpPort}`
+                        )
+                    }
                 }
             }
         } else if (e.body.type === 'cleanup') {
             for (var ix = this.rttTerminals.length - 1; ix >= 0; ix = ix - 1) {
                 const terminal = this.rttTerminals[ix];
                 if (!terminal.inUse) {
-                    this.rttTerminals.splice(ix, 1);
+                    this.rttTerminals = this.rttTerminals.splice(ix, 1);
                     terminal.dispose();
                 }
             }
         } else {
-            console.error('receivedRTTConfigureEvent: unknown rt type: ' + e.body.type);
+            console.error('receivedRTTConfigureEvent: unknown type: ' + e.body.type);
         }
     }
 
@@ -534,7 +543,7 @@ export class CortexDebugExtension {
                         {/*modal: true*/}
                     )
                 }
-                this.rttTerminals.slice(ix,1);
+                this.rttTerminals = this.rttTerminals.slice(ix,1);
             }
         }
     }
@@ -560,27 +569,6 @@ export class CortexDebugExtension {
         }
 
         this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
-    }
-
-    private initializeRTTX() {
-        const script = path.join(this.context.extensionPath, 'dist', 'tcpCat.bundle.js');
-        const args = {
-            name: 'RTT Term',
-            // shellPath: 'bash',
-            // shellArgs: ['-c', `node "${script}" --port 2340`]
-            shellPath: 'node',
-            shellArgs: [script, "--port", "2340"]
-        };
-        try {
-            this.testRttTerminal = vscode.window.createTerminal(args);
-            this.testRttTerminal.show();
-        }
-        catch (e) {
-            console.log(e);
-        }
-        setTimeout(() => {
-            console.log(this.testRttTerminal);
-        }, 1000);
     }
 }
 

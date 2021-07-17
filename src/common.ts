@@ -69,6 +69,9 @@ export interface RTTDecoderOpts {
     type: string;     // 'console', ...
     encoding: string; // Console Only: 'utf8', 'ascii', ...
     prompt: string;   // Console Only: Prompt to use
+    noprompt: boolean;// Console Only: disable prompt
+    clear: boolean;   // Console Only: Clear screen buffer on connect
+    logfile: string;  // Console Only: log IO to file
 }
 
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
@@ -115,10 +118,12 @@ export interface RTTConfiguration {
     address: string;
     searchSize: number;
     searchId: string;
+    clearSearch: boolean;
     decoders: any[];
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
+    request: string,
     toolchainPath: string;
     toolchainPrefix: string;
     executable: string;
@@ -267,4 +272,8 @@ export function getAnyFreePortSync(preferred: number): Promise<number> {
             });
         }
     });
+}
+
+function parseHexOrDecInt(str: string): number {
+    return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
 }

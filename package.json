@@ -1184,6 +1184,21 @@
                                                             "type": "string",
                                                             "default": ""
                                                         },
+                                                        "noprompt": {
+                                                            "description": "disable prompt for RTT Console",
+                                                            "type": "boolean",
+                                                            "default": false
+                                                        },
+                                                        "clear": {
+                                                            "description": "clear screen/logfile when connection is made",
+                                                            "type": "boolean",
+                                                            "default": false                                                            
+                                                        },
+                                                        "logfile": {
+                                                            "description": "log all data (input and output) to specified file",
+                                                            "type": "string",
+                                                            "default": ""
+                                                        },
                                                         "encoding": {
                                                             "type": "string",
                                                             "default": "utf8",

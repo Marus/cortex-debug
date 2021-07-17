@@ -24,6 +24,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
+
+        // We get/reserve the ports here because it is an async. operation and it wll be done
+        // way before a server has even started
         OpenOCDServerController.GetRTTPorts(args.rttConfig);
     }
 
@@ -83,9 +86,18 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
         if (this.args.rttConfig.enabled) {
             const cfg = this.args.rttConfig;
+            if ((this.args.request === 'launch') && cfg.clearSearch) {
+                // The RTT control block may contain a valid search string from a previous run
+                // and RTT ends up outputting garbage. Or, the server could read garbage and
+                // misconfigure itself. Following will clear the RTT header which
+                // will cause the server to wait for the server to actually be initialized
+                commands.push(`interpreter-exec console "monitor mwb ${cfg.address} 0 ${cfg.searchId.length}"`);
+            }
             commands.push(`interpreter-exec console "monitor rtt setup ${cfg.address} ${cfg.searchSize} ${cfg.searchId}"`);
             commands.push(`interpreter-exec console "monitor rtt start"`);
 
+            // It is perfectly acceptable to have no decoders but just have the RTT enabled
+            // They can use JLinks utilities for RTT operations
             for (const dec of this.args.rttConfig.decoders) {
                 if (dec.tcpPort) {
                     commands.push(`interpreter-exec console "monitor rtt server start ${dec.tcpPort} ${dec.port}"`);

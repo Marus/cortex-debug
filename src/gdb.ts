@@ -195,6 +195,7 @@ export class GDBDebugSession extends DebugSession {
                 this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
                 this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, 32);
                 this.args.rttConfig.searchId = this.args.rttConfig.searchId || '{SEGGER RTT}';
+                this.args.rttConfig.clearSearch = true;
             }
         }
 
