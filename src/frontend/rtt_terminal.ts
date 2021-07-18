@@ -45,7 +45,10 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         const args = {
             name: this.name,
             shellPath: 'node',
-            shellArgs: [script, "--port", this.options.tcpPort]   // Can be [host:]port
+            shellArgs: [script,
+                "--port", this.options.tcpPort,   // Can be [host:]port
+                "--encoding", this.options.encoding || 'utf8'
+            ]
         };
 
         if (this.options.noprompt) {

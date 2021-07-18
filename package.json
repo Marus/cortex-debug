@@ -1168,7 +1168,7 @@
                                                             "type": "string"
                                                         },
                                                         "port": {
-                                                            "description": "RTT Channel Number",
+                                                            "description": "RTT Channel Number (0 to 15)",
                                                             "maximum": 15,
                                                             "minimum": 0,
                                                             "type": "number"
@@ -1185,17 +1185,17 @@
                                                             "default": ""
                                                         },
                                                         "noprompt": {
-                                                            "description": "disable prompt for RTT Console",
+                                                            "description": "Don't use a prompt for RTT Console",
                                                             "type": "boolean",
                                                             "default": false
                                                         },
                                                         "clear": {
-                                                            "description": "clear screen/logfile when connection is made",
+                                                            "description": "clear screen/logfile when another connection is made",
                                                             "type": "boolean",
                                                             "default": false                                                            
                                                         },
                                                         "logfile": {
-                                                            "description": "log all data (input and output) to specified file",
+                                                            "description": "log all raw data (input and output) to specified file",
                                                             "type": "string",
                                                             "default": ""
                                                         },

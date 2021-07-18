@@ -10,6 +10,7 @@ export class RTTNetCat extends EventEmitter {
     public logFile: string = '';
     private logFd: number = -1;
     private firstConnect = true;
+    public encoding; string = 'utf8';
     private done = false;
 
     constructor (
@@ -154,7 +155,7 @@ export class RTTNetCat extends EventEmitter {
             this.didPrompt = false;
         }
 
-        process.stdout.write(data);
+        process.stdout.write(data, this.encoding);
 
         const type = typeof data;
         if (false) {
@@ -184,12 +185,14 @@ export class RTTNetCat extends EventEmitter {
 
 function main() {
     const args = process.argv.slice(2);
+    const encodings: string[] = ["ascii", "utf8", "ucs2", "utf16le"];
     const opts = new GetOpt([
         ['',    'port=ARG',     'tcpPort number with format "[host:]port'],
         ['',    'prompt=ARG',   'Optional prompt for terminal'],
         ['',    'noprompt',     'Do not display a prompt'],
         ['',    'clear',        'Clear screen on new connection'],
         ['',    'logfile=ARG',  'Log all IO to file'],
+        ['',    'encoding=ARG', `Encoding for input and output. One of ${encodings.join(", ")}`],
         ['h',   'help',         'display this help']
     ]);
     
@@ -197,6 +200,13 @@ function main() {
     let port = opts.options.port;
     let host = '127.0.0.1';
     if (!port || opts.options.help || (opts.options.prompt && opts.options.noprompt)) {
+        opts.showHelp();
+        return;
+    }
+
+    const enc = opts.options.encoding;
+    if (enc && (encodings.findIndex((str) => (str === enc)) < 0)) {
+        console.error(`Unknown encoding ${enc}`);
         opts.showHelp();
         return;
     }
@@ -227,6 +237,10 @@ function main() {
 
     if (opts.options.logfile) {
         netCat.logFile = opts.options.logfile;
+    }
+
+    if (enc) {
+        netCat.encoding = enc;
     }
 
     netCat.start();
