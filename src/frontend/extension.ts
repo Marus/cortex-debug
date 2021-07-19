@@ -492,7 +492,7 @@ export class CortexDebugExtension {
             Reporting.sendEvent('RTT', 'Source', 'Socket');
             const options: RTTDecoderOpts = e.body.decoder;
             for (const terminal of this.rttTerminals) {
-                if (terminal.Match(options)) {
+                if (terminal.canReuse(options)) {
                     terminal.inUse = true;
                     if (vscode.debug.activeDebugConsole) {
                         vscode.debug.activeDebugConsole.appendLine(

@@ -93,24 +93,12 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         return ret;
     }
 
-    public Match(options: RTTDecoderOpts) {
-        return (
-            (options.tcpPort === this.options.tcpPort) &&
-            (options.port === this.options.port) &&
-            (options.prompt === this.options.prompt) &&
-            (RTTTerminal.createTermName(options) == RTTTerminal.createTermName(this.options))
-        );
+    public canReuse(options: RTTDecoderOpts) {
+        for (const prop of ['tcpPort', 'port', 'label', 'prompt', 'noprompt', 'logfile', 'clear']) {
+            if (options[prop] !== this.options[prop]) {
+                return false;
+            }
+        }
+        return true;
     }
 }
-
-//
-// adapter allocates the tcpPort
-// extenstion start a terminal on tcpPort
-//
-// Debug session ends:
-//   Mark all terminals are unused
-// Debug session start:
-//   Mark all terminals are unused (doesn't hurt?)
-//   foreach rtt console
-//      
-//
