@@ -1147,15 +1147,15 @@
                                     },
                                     "searchSize": {
                                         "type": "number",
-                                        "description": "Number of bytes to search for the RTT control block",
+                                        "description": "Number of bytes to search for the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation",
                                         "multipleOf": 1,
                                         "minimum": 16,
                                         "default": 16
                                     },
                                     "searchId": {
                                         "type": "string",
-                                        "description": "A string to search for to find the RTT control block",
-                                        "default": "{SEGGER RTT}"
+                                        "description": "A string to search for to find the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation",
+                                        "default": "SEGGER RTT"
                                     },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",

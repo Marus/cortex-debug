@@ -523,7 +523,8 @@ export class CortexDebugExtension {
             for (var ix = this.rttTerminals.length - 1; ix >= 0; ix = ix - 1) {
                 const terminal = this.rttTerminals[ix];
                 if (!terminal.inUse) {
-                    this.rttTerminals = this.rttTerminals.splice(ix, 1);
+                    // terminalClosed() will be called after disposal which modifies
+                    // the array we are iterating over. Why we iterate backwards
                     terminal.dispose();
                 }
             }
@@ -533,19 +534,7 @@ export class CortexDebugExtension {
     }
 
     private terminalClosed(terminal: vscode.Terminal) {
-        for (var ix = this.rttTerminals.length - 1; ix >= 0; ix = ix - 1) {
-            const rttTerminal = this.rttTerminals[ix];
-            if (rttTerminal.rttTerminal === terminal) {
-                if (vscode.debug.activeDebugSession) {
-                    vscode.window.showWarningMessage(
-                        `Closed terminal for RTT channel ${rttTerminal.options.port}, tcpPort ${rttTerminal.options.tcpPort}\n` +
-                        `Firmware on device can hang if it is using blocking input or output`,
-                        {/*modal: true*/}
-                    )
-                }
-                this.rttTerminals = this.rttTerminals.slice(ix,1);
-            }
-        }
+        this.rttTerminals = this.rttTerminals.filter(t => t.rttTerminal !== terminal);
     }
 
     private receivedAdapterOutput(e) {

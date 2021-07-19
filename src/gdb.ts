@@ -189,12 +189,13 @@ export class GDBDebugSession extends DebugSession {
             const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
             if (!rttSym) {
                 this.args.rttConfig.enabled = false;
-                this.handleMsg('stderr', `Could not find symbol ${symName} in executable. " + 
-                    "Make sure you complile/link with debug ON or you can specify your own RTT address to search\n`);
+                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. " + 
+                    "Make sure you complile/link with debug ON or you can specify your own RTT address\n`);
             } else {
+                const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
                 this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
-                this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, 32);
-                this.args.rttConfig.searchId = this.args.rttConfig.searchId || '{SEGGER RTT}';
+                this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
+                this.args.rttConfig.searchId = searchStr;
                 this.args.rttConfig.clearSearch = true;
             }
         }

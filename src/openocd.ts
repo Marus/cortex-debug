@@ -93,7 +93,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 // will cause the server to wait for the server to actually be initialized
                 commands.push(`interpreter-exec console "monitor mwb ${cfg.address} 0 ${cfg.searchId.length}"`);
             }
-            commands.push(`interpreter-exec console "monitor rtt setup ${cfg.address} ${cfg.searchSize} ${cfg.searchId}"`);
+            commands.push(`interpreter-exec console "monitor rtt setup ${cfg.address} ${cfg.searchSize} {${cfg.searchId}}"`);
             commands.push(`interpreter-exec console "monitor rtt start"`);
 
             // It is perfectly acceptable to have no decoders but just have the RTT enabled

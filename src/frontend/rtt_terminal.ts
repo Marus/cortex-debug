@@ -54,7 +54,7 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         if (this.options.noprompt) {
             args.shellArgs.push('--noprompt');
         } else {
-            args.shellArgs.push('--prompt', this.options.prompt || `RTT-${this.options.port}>`);
+            args.shellArgs.push('--prompt', this.options.prompt || `RTT-${this.options.port}> `);
         }
 
         if (this.options.clear) {
