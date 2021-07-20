@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { RTTDecoderOpts } from '../common';
+import { RTTDecoderOpts, TerminalInputMode } from '../common';
 import { SWORTTSource } from './swo/sources/common';
 import EventEmitter = require('events');
 export class RTTTerminal extends EventEmitter implements SWORTTSource   {
@@ -59,6 +59,11 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
 
         if (this.options.clear) {
             args.shellArgs.push('--clear');
+        }
+        if (this.options.inputmode === TerminalInputMode.RAW) {
+            args.shellArgs.push('--raw');
+        } else if (this.options.inputmode === TerminalInputMode.RAWECHO) {
+            args.shellArgs.push('--rawecho');
         }
 
         if (this.options.logfile) {

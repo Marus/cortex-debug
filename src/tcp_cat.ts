@@ -1,17 +1,16 @@
-import NetcatClient = require('netcat/client');
 import { EventEmitter } from 'stream';
 import GetOpt = require('node-getopt');
+import * as net from 'net';
 import * as fs from 'fs';
 
-export class RTTNetCat extends EventEmitter {
-    protected ncClient: NetcatClient = null;
+export class TcpCat extends EventEmitter {
     protected waiting: false;
     protected connected = false;
     public logFile: string = '';
     private logFd: number = -1;
     private firstConnect = true;
     public encoding; string = 'utf8';
-    private done = false;
+    public echoChars = false;
 
     constructor (
         public readonly host: string,
@@ -22,7 +21,6 @@ export class RTTNetCat extends EventEmitter {
             this.sendData(data);
         });
         process.stdin.on('end', () => {
-            this.done = true;
             process.exit(0);
         });
 
@@ -31,9 +29,20 @@ export class RTTNetCat extends EventEmitter {
 
     private sendData(data: string) {
         if (this.connected) {
-            this.ncClient.send(data);
-            this.writePrompt();
+            // On the send side, maybe it should ways be 'ascii' or 'utf8'
+            this.tcpClient.write(data, this.encoding);
             this.logData(data);
+
+            if (process.stdin.isRaw && this.echoChars) {
+                if (this.endsWithNl(data)) {
+                    this.writeAndFlush('\r\n');
+                    this.writePrompt();
+                } else {
+                    this.writeAndFlush(data);
+                }
+            } else {
+                this.writePrompt();
+            }
         } else {
             // Yes, we choose to lose any data that came in before the connection was ready
         }        
@@ -41,32 +50,14 @@ export class RTTNetCat extends EventEmitter {
 
     public start() {
         this.writeAndFlush(`Waiting for connection on port ${this.host}:${this.port}...`);
-        this.ncClient = new NetcatClient();
-
         // Wait for the connection happen. Keep trying until we get a connection
         const wiatForPort = setInterval(() => {
-            this.ncClient.addr(this.host).port(this.port).connect(() => {
+            this.setupCbsAndConnect(() => {
+                this.connected = true;
                 clearInterval(wiatForPort);                
                 this.writeAndFlush('Connected.\n')
-                this.ncClient.once('close', () => {
-                    this.onCloseCb();
-                });
-
                 this.clearAndPrompt();
                 this.openLogFile();
-                this.connected = true;
-                this.firstConnect = false;
-
-                // this.ncClient.on('data', ...) does not work -- it has a bug
-                this.ncClient.client.on('data', (data) => {
-                    try {
-                        this.writeData(data);
-                        this.logData(data);
-                    }
-                    catch (e) {
-                        console.error(e);
-                    }
-                });
             });
         }, 100);
     }
@@ -84,6 +75,7 @@ export class RTTNetCat extends EventEmitter {
                 console.error(`Could not open file ${this.logFile} for writing. ${e.toString()}`);
             }
         }
+        this.firstConnect = false;
     }
     
     private clearAndPrompt() {
@@ -93,23 +85,50 @@ export class RTTNetCat extends EventEmitter {
         this.writePrompt();
     }
 
-    private onCloseCb() {
-        this.writeAndFlush('\nConnection ended. ');
-        if (this.logFd >= 0) {
-            try {
-                fs.closeSync(this.logFd);
+    protected tcpClient: net.Socket = null;
+    protected setupCbsAndConnect(cb: () => void) {
+        this.tcpClient = new net.Socket();
+        this.tcpClient.setEncoding(this.encoding);
+        this.tcpClient.on('data', this.onDataCb.bind(this));
+        this.tcpClient.once('close', this.onCloseCb.bind(this));
+        this.tcpClient.once('error', (e) => {
+            if ((e as any).code === 'ECONNREFUSED') {
+                // We expect this when there is no server running. Do nothing
+            } else {
+                console.log(e);
+                process.exit(0);
             }
-            finally {
-                this.logFd = -1;
-            }
-        }
+        });
+        this.tcpClient.connect(this.port, this.host, cb);
+    }
 
-        this.connected = false;
-        this.ncClient = null;
-        if (!this.done) {
+    private onCloseCb() {
+        if (this.connected) {
+            this.connected = false;
+            this.tcpClient = null;
+            this.writeAndFlush('\nConnection ended. ');
+            if (this.logFd >= 0) {
+                try {
+                    fs.closeSync(this.logFd);
+                }
+                finally {
+                    this.logFd = -1;
+                }
+            }
             process.nextTick(() => {
                 this.start();
             });
+        }
+    }
+
+    private onDataCb(data)
+    {
+        try {
+            this.writeData(data);
+            this.logData(data);
+        }
+        catch (e) {
+            console.error(e);
         }
     }
 
@@ -157,6 +176,16 @@ export class RTTNetCat extends EventEmitter {
 
         process.stdout.write(data, this.encoding);
 
+        // If we have a partial line or even a prompt from the server end,
+        // do not print a prompt
+        if (this.endsWithNl(data)) {
+            this.writePrompt();
+        } else {
+            process.stdout.uncork();
+        }
+    }
+
+    private endsWithNl(data: any) {
         const type = typeof data;
         if (false) {
             // We are sometimes getting a string and others a Uint8Array
@@ -164,22 +193,15 @@ export class RTTNetCat extends EventEmitter {
             console.error(type);
         }
 
-        // Unnessarily complicated to figure out input ends with a newline
         let endsWithNl = false;
         if (type === 'string') {
             endsWithNl = (data as string).endsWith('\n');
         } else {
             const ary = (data as unknown as Uint8Array);
-            endsWithNl = ary[data.length-1] === 10;
+            const chr = ary[data.length - 1];
+            endsWithNl = (chr === 10) || (chr === 13);
         }
-
-        // If we have a partial line or even a prompt from the server end,
-        // do not print a prompt
-        if (endsWithNl) {
-            this.writePrompt();
-        } else {
-            process.stdout.uncork();
-        }
+        return endsWithNl;
     }
 }
 
@@ -193,6 +215,8 @@ function main() {
         ['',    'clear',        'Clear screen on new connection'],
         ['',    'logfile=ARG',  'Log all IO to file'],
         ['',    'encoding=ARG', `Encoding for input and output. One of ${encodings.join(", ")}`],
+        ['',    'raw',          'Input will not be buffered, raw mode'],
+        ['',    'rawecho',      'Input will not be buffered, raw mode. Will echo chars and carriage returns'],
         ['h',   'help',         'display this help']
     ]);
     
@@ -224,26 +248,35 @@ function main() {
         return;
     }
 
-    const netCat = new RTTNetCat(host, parseInt(port));
+    const tcpCat = new TcpCat(host, parseInt(port));
     if (opts.options.prompt) {
-        netCat.setPrompt(opts.options.prompt);
+        tcpCat.setPrompt(opts.options.prompt);
     } else if (opts.options.noprompt) {
-        netCat.setPrompt('');
+        tcpCat.setPrompt('');
     }
 
     if (opts.options.clear) {
-        netCat.clearOnConnect = true;
+        tcpCat.clearOnConnect = true;
     }
 
     if (opts.options.logfile) {
-        netCat.logFile = opts.options.logfile;
+        tcpCat.logFile = opts.options.logfile;
     }
 
     if (enc) {
-        netCat.encoding = enc;
+        tcpCat.encoding = enc;
+        process.stdin.setEncoding(enc);
+        process.stdout.setEncoding(enc);
     }
 
-    netCat.start();
+    if (process.stdin.isTTY && (opts.options.raw || opts.options.rawecho)) {
+        if (opts.options.rawecho) {
+            tcpCat.echoChars = true;
+        }
+        process.stdin.setRawMode(true);
+    }
+
+    tcpCat.start();
 }
 
 try {

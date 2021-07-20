@@ -123,7 +123,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         return commands;
     }
 
-    public swoCommands(): string[] {
+    public swoAndRTTCommands(): string[] {
         return [];
     }
     public serverExecutable(): string {

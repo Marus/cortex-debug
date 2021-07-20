@@ -401,7 +401,7 @@ export class GDBDebugSession extends DebugSession {
                         this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
                     commands.push(...attachCommands);
                     commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.swoCommands());
+                    commands.push(...this.serverController.swoAndRTTCommands());
                 }
                 else {
                     commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
@@ -409,7 +409,7 @@ export class GDBDebugSession extends DebugSession {
                         this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
                     commands.push(...launchCommands);
                     commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.swoCommands());
+                    commands.push(...this.serverController.swoAndRTTCommands());
                 }
                 
                 this.serverController.debuggerLaunchStarted();
@@ -870,7 +870,7 @@ export class GDBDebugSession extends DebugSession {
                 this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
             commands.push(...restartCommands);
             commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
-            commands.push(...this.serverController.swoCommands());
+            commands.push(...this.serverController.swoAndRTTCommands());
 
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);

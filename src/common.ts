@@ -62,6 +62,11 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+export enum TerminalInputMode {
+    COOKED = 'cooked',
+    RAW = 'raw',
+    RAWECHO = 'rawecho'
+}
 export interface RTTDecoderOpts {
     tcpPort: string;  // [hostname:]port
     label: string;    // label for window
@@ -72,6 +77,7 @@ export interface RTTDecoderOpts {
     noprompt: boolean;// Console Only: disable prompt
     clear: boolean;   // Console Only: Clear screen buffer on connect
     logfile: string;  // Console Only: log IO to file
+    inputmode: TerminalInputMode; // Console Only:
 }
 
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
@@ -119,6 +125,7 @@ export interface RTTConfiguration {
     searchSize: number;
     searchId: string;
     clearSearch: boolean;
+    polling_interval: number;
     decoders: any[];
 }
 
@@ -220,7 +227,7 @@ export interface GDBServerController extends EventEmitter {
     launchCommands(): string[];
     attachCommands(): string[];
     restartCommands(): string[];
-    swoCommands(): string[];
+    swoAndRTTCommands(): string[];
     serverExecutable(): string;
     serverArguments(): string[];
     initMatch(): RegExp;

@@ -81,7 +81,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         return commands;
     }
 
-    public swoCommands(): string[]{
+    public swoAndRTTCommands(): string[]{
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();

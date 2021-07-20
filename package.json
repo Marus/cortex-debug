@@ -1157,6 +1157,12 @@
                                         "description": "A string to search for to find the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation",
                                         "default": "SEGGER RTT"
                                     },
+                                    "polling_interval": {
+                                        "type": "number",
+                                        "description": "number of milliseconds (> 0) to wait for check for data on out channels",
+                                        "default": 0,
+                                        "minimum": 1
+                                    },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",
                                         "items": {
@@ -1207,6 +1213,16 @@
                                                                 "utf8",
                                                                 "ucs2",
                                                                 "utf16le"
+                                                            ]
+                                                        },
+                                                        "inputmode": {
+                                                            "type": "string",
+                                                            "description": "Experimental: 'raw' and 'rawecho' sends chars as they are typed. 'rawecho' will echo chars and process RETURN keys. Even CTRL-C CTRL-D are passed on",
+                                                            "default": "cooked",
+                                                            "enum": [
+                                                                "cooked",
+                                                                "raw",
+                                                                "rawecho"
                                                             ]
                                                         }
                                                     },
@@ -1863,7 +1879,6 @@
         "debug": "^4.3.1",
         "hasbin": "^1.2.3",
         "nan": "^2.14.2",
-        "netcat": "^1.5.0",
         "node-getopt": "^0.3.2",
         "prebuild-install": "^5.3.6",
         "promirepl": "^1.0.1",

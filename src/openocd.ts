@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { EventEmitter } from 'events';
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
-    public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort' /*, 'rttPort' */];
+    public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort'];
     public name = 'OpenOCD';
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
@@ -94,8 +94,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 commands.push(`interpreter-exec console "monitor mwb ${cfg.address} 0 ${cfg.searchId.length}"`);
             }
             commands.push(`interpreter-exec console "monitor rtt setup ${cfg.address} ${cfg.searchSize} {${cfg.searchId}}"`);
-            commands.push(`interpreter-exec console "monitor rtt start"`);
-
+            if (cfg.polling_interval > 0) {
+                commands.push(`interpreter-exec console "monitor rtt polling_interval ${cfg.polling_interval}"`);
+            }
             // It is perfectly acceptable to have no decoders but just have the RTT enabled
             // They can use JLinks utilities for RTT operations
             for (const dec of this.args.rttConfig.decoders) {
@@ -103,11 +104,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     commands.push(`interpreter-exec console "monitor rtt server start ${dec.tcpPort} ${dec.port}"`);
                 }
             }
+
+            // We are starting way too early before the FW has a chance to initialize itself
+            // but there is no other handshake mechanism
+            commands.push(`interpreter-exec console "monitor rtt start"`);
         }
         return commands;
     }
 
-    public swoCommands(): string[] {
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();

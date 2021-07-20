@@ -62,7 +62,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         return commands;
     }
 
-    public swoCommands(): string[] {
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();

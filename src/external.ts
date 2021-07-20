@@ -62,7 +62,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
         return commands;
     }
 
-    public swoCommands(): string[] {
+    public swoAndRTTCommands(): string[] {
         return [];
     }
 
