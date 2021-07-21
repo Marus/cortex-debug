@@ -1198,7 +1198,7 @@
                                                         "clear": {
                                                             "description": "clear screen/logfile when another connection is made",
                                                             "type": "boolean",
-                                                            "default": false                                                            
+                                                            "default": false
                                                         },
                                                         "logfile": {
                                                             "description": "log all raw data (input and output) to specified file",
