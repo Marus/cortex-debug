@@ -1,10 +1,15 @@
 import { EventEmitter } from 'stream';
 import GetOpt = require('node-getopt');
-import ReadLine = require('readline');
+import readline = require('readline');
 // import * as ReadLine from 'readline';
 import * as net from 'net';
 import * as fs from 'fs';
 
+export enum InputMode {
+    COOKED = 0,
+    RAW,
+    RAWECHO
+}
 export class TcpCat extends EventEmitter {
     protected waiting: false;
     protected connected = false;
@@ -17,20 +22,17 @@ export class TcpCat extends EventEmitter {
     constructor (
         public readonly host: string,
         private readonly port: number,
-        private readonly raw = false,
-        private readonly rawecho = false,
+        private readonly inputMode: InputMode,
         public clearOnConnect = false) {
         super();
-        if (raw) {
+        if ((this.inputMode !== InputMode.COOKED) && !process.stdin.isTTY) {
+            this.inputMode = InputMode.COOKED;
+        }
+        if (this.inputMode != InputMode.COOKED) {
             process.stdin.setRawMode(true);
         }
-        process.stdin.on('data', (data) => {
-            this.sendData(data);
-        });
-        process.stdin.on('end', () => {
-            process.exit(0);
-        });
-
+        process.stdin.on('data', (data) => { this.sendData(data); });
+        process.stdin.on('end', () => { process.exit(0); });
         this.setPrompt(`${this.host}:${this.port}> `);
     }
 
@@ -219,67 +221,95 @@ export class TcpCatReadLine extends EventEmitter {
     private logFd: number = -1;
     private firstConnect = true;
     public encoding; string = 'utf8';
-    protected rlIF: ReadLine.Interface;
+    protected rlIF: readline.Interface = null;
 
     constructor (
         public readonly host: string,
         private readonly port: number,
-        private readonly raw = false,
-        private readonly rawecho = false,
+        private readonly inputMode: InputMode,
         public clearOnConnect?: boolean) {
         super();
-
-        this.rlIF = ReadLine.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: process.stdout.isTTY
-        });
-        if (raw && process.stdin.isTTY) {
-            ReadLine.emitKeypressEvents(process.stdin, this.rlIF);
+        if ((this.inputMode !== InputMode.COOKED) && !process.stdin.isTTY) {
+            this.inputMode = InputMode.COOKED;
         }
-
-        this.rlIF.on('line',  (line) => { this.sendData(line); });
-        this.rlIF.on('close', () => { process.exit(0); });
-
+        this.initLineReader();
         this.setPrompt(`${this.host}:${this.port}> `);
     }
 
-    private sendData(data: string) {
+    private initLineReader() {
+        if (this.inputMode !== InputMode.COOKED) {
+            process.stdin.setRawMode(true);
+            process.stdin.on('data', (data) => { this.sendDataRaw(data); });
+            process.stdin.on('end', () => { process.exit(0); });
+        } else {
+            this.rlIF = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout,
+                terminal: process.stdout.isTTY
+            });
+            this.rlIF.on('line', (line) => { this.sendData(line); });
+            this.rlIF.on('close', () => { process.exit(0); });
+        }
+    }
+
+    private sendDataRaw(data: string) {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
-            if (!this.raw) {
-                data = data + '\n';
-            }
             this.tcpClient.write(data, this.encoding);
             this.logData(data);
 
-            if (process.stdin.isRaw && this.rawecho) {
+            if (this.inputMode === InputMode.RAWECHO) {
                 if (this.endsWithNl(data)) {
                     this.writeAndFlush('\r\n');
                     this.writePrompt();
                 } else {
                     this.writeAndFlush(data);
                 }
-            } else {
-                this.writePrompt();
             }
+        } else {
+            // Yes, we choose to lose any data that came in before the connection was ready
+        }
+    }
+
+    private sendData(data: string) {
+        if (this.connected) {
+            // On the send side, maybe it should ways be 'ascii' or 'utf8'
+            data = data + '\n';     // readline strips the line ending
+            this.tcpClient.write(data, this.encoding);
+            this.logData(data);
+            this.writePrompt();
         } else {
             // Yes, we choose to lose any data that came in before the connection was ready
         }        
     }
 
+    private pause() {
+        if (this.rlIF) {
+            this.rlIF.pause();
+        } else {
+            process.stdin.pause();
+        }        
+    }
+    private resume() {
+        if (this.rlIF) {
+            this.rlIF.resume();
+        } else {
+            process.stdin.resume();
+        }        
+    }
+
     public start() {
-        this.rlIF.pause();
+        this.pause();
         this.writeAndFlush(`Waiting for connection on port ${this.host}:${this.port}...`);
         // Wait for the connection happen. Keep trying until we get a connection
         const wiatForPort = setInterval(() => {
             this.setupCbsAndConnect(() => {
                 this.connected = true;
                 clearInterval(wiatForPort);                
-                this.writeAndFlush('Connected.\n')
-                this.clearAndPrompt();
+                this.writeAndFlush('Connected.\n');
                 this.openLogFile();
-                this.rlIF.resume();
+                this.resume();
+                this.clearAndPrompt();
             });
         }, 100);
     }
@@ -287,6 +317,7 @@ export class TcpCatReadLine extends EventEmitter {
     readonly ESC = '\x1b';              // ASCII escape character
     readonly CSI = this.ESC + '[';      // control sequence introducer
     readonly KILLLINE = this.CSI + 'K';
+    readonly CLEARBUFFER = this.CSI + '3J';
     readonly BOLD = this.CSI + '1m';
     readonly RESET = this.CSI + '0m';
     readonly BACKSPACE = '\x08';
@@ -305,10 +336,12 @@ export class TcpCatReadLine extends EventEmitter {
     
     private clearAndPrompt() {
         if (this.clearOnConnect) {
-            // I am not sure why have to do both of these lines. The first line should be enough
-            // it it is not working to clear the whole buffer
-            process.stdout.write(this.CSI + '3J');
-            this.rlIF.write('', {ctrl: true, name: 'l'});
+            process.stdout.write(this.CLEARBUFFER);
+            if (this.rlIF) {
+                // I am not sure why have to Ctrl-L as well. Sending CLEARBUFFER should be enough, but
+                // it is not working. Tried many combinations and this is the only thing that works
+                this.rlIF.write('', {ctrl: true, name: 'l'});   // This will reset the cursor
+            }
         }
         this.writePrompt();
     }
@@ -334,6 +367,7 @@ export class TcpCatReadLine extends EventEmitter {
         if (this.connected) {
             this.connected = false;
             this.tcpClient = null;
+            readline.clearLine(process.stdout, 0);
             this.writeAndFlush('\nConnection ended. ');
             if (this.logFd >= 0) {
                 try {
@@ -377,8 +411,10 @@ export class TcpCatReadLine extends EventEmitter {
     private didPrompt: boolean;
     public setPrompt(p: string) {
         this.prompt = p;
-        this.rlIF.setPrompt(this.prompt);
         this.unPrompt = '\x08'.repeat(p.length) + this.KILLLINE;
+        if (this.rlIF) {
+            this.rlIF.setPrompt(this.prompt);
+        }
     }
 
     private writeAndFlush(msg: string) {
@@ -388,11 +424,15 @@ export class TcpCatReadLine extends EventEmitter {
 
     private writePrompt() {
         this.didPrompt = true;
-        this.rlIF.prompt(true);
+        if (this.rlIF) {
+            this.rlIF.prompt(true);
+        } else {
+            this.writeAndFlush(this.prompt);
+        }
     }
 
     private writeData(data: any) {
-        let erase = '\x08'.repeat(this.rlIF.line.length);
+        let erase = this.rlIF ? '\x08'.repeat(this.rlIF.line.length) : '';
         if (this.didPrompt) {
             erase += this.unPrompt;
             this.didPrompt = false;
@@ -469,8 +509,15 @@ function main() {
         return;
     }
 
-    const isRaw = process.stdin.isTTY && (opts.options.raw || opts.options.rawecho);
-    const tcpCat = new useClass(host, parseInt(port), isRaw, isRaw && opts.options.rawecho, !!opts.options.clear);
+    let inputMode = InputMode.COOKED;
+    if (process.stdin.isTTY) {
+        if (opts.options.rawecho) {
+            inputMode = InputMode.RAWECHO;
+        } else if (opts.options.raw) {
+            inputMode = InputMode.RAW;
+        }
+    }
+    const tcpCat = new useClass(host, parseInt(port), inputMode, !!opts.options.clear);
 
     if (opts.options.prompt) {
         tcpCat.setPrompt(opts.options.prompt);
