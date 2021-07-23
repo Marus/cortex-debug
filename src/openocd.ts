@@ -30,26 +30,31 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         this.args = args;
 
         // We get/reserve the ports here because it is an async. operation and it wll be done
-        // way before a server has even started
+        // way before a server has even started. Hopefully
         this.allocateRTTPorts(args.rttConfig);
     }
 
     // For openocd, you cannot have have duplicate ports and neither can
     // a multple clients connect to the same channel. Perhaps in the future
     // it wil
-    public async allocateRTTPorts(cfg: RTTConfiguration) {
+    private rttPortsPending: number = 0;
+    public allocateRTTPorts(cfg: RTTConfiguration) {
+        this.rttPortsPending = 0;
         if (cfg && cfg.enabled) {
             for (const dec of cfg.decoders) {
                 if (dec.ports && (dec.ports.length > 0)) {
-                    dec.tcpPorts = [];
+                    this.rttPortsPending = this.rttPortsPending + dec.ports.length;
                     for (const p of dec.ports) {
-                        const ret = await this.allocateOnePort(p);
-                        if (ret) {
-                            dec.tcpPorts.push(ret);
-                        }
+                        this.allocateOnePort(p).then((ret) => {
+                            this.rttPortsPending = this.rttPortsPending - 1;
+                        });
                     }
                 } else {
-                    dec.tcpPort = await this.allocateOnePort(dec.port);
+                    this.rttPortsPending = this.rttPortsPending + 1;
+                    this.allocateOnePort(dec.port).then((ret) => {
+                        this.rttPortsPending = this.rttPortsPending - 1;
+                        dec.tcpPort = ret;
+                    });
                 }
             }
         }
@@ -116,6 +121,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
         if (this.args.rttConfig.enabled) {
             const cfg = this.args.rttConfig;
+            if (this.rttPortsPending > 0) {
+                // If we are getting here, we will need some serious re-factoring
+                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
+            }
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
                 // and RTT ends up outputting garbage. Or, the server could read garbage and
@@ -133,16 +142,16 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             // Cleanup any port arrays that are partially filled. Very unlikely but check anyways
             for (const dec of cfg.decoders) {
                 if (dec.ports && dec,this.ports.length > 0) {
-                    if (dec.ports.length !== dec.tcpPorts.length) {
-                        for (const p of dec.ports) {
-                            delete this.rttLocalPortMap[p];
+                    dec.tcpPorts = [];      // We create this array here to ensure we have a matched set
+                    for (const p of dec.ports) {
+                        const tcpPort = this.rttLocalPortMap[p];
+                        if (!tcpPort) {
+                            throw new Error('All TCP ports for Advanced RTT decoder could not be allocated');
                         }
-                        dec.ports = null
-                        dec.tcpPorts = null;
-                        throw new Error('All TCP ports for Advanced RTT decoder could not be allocated')
-                    } else if (!dec.port) {
-                        throw new Error('TCP port for RTT decoder could not be allocated')
+                        dec.tcpPorts.push(tcpPort);
                     }
+                } else if (!dec.tcpPort) {
+                    throw new Error('TCP port for RTT decoder could not be allocated')
                 }
             }
             for (const channel in this.rttLocalPortMap) {

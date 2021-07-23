@@ -522,7 +522,14 @@ export class CortexDebugExtension {
                 this.rttCreateTerninal(decoder as RTTConsoleDecoderOpts);
             } else {
                 Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
-                this.rttSources.push(new SocketRTTSource(decoder.tcpPort, decoder.port));
+                if (!decoder.ports) {
+                    this.rttSources.push(new SocketRTTSource(decoder.tcpPort, decoder.port));
+                } else {
+                    for (var ix = 0; ix < decoder.ports.length; ix = ix + 1) {
+                        // Hopefully ports and tcpPorts are a matched set
+                        this.rttSources.push(new SocketRTTSource(decoder.tcpPorts[ix], decoder.ports[ix]));
+                    }
+                }
             }
         } else {
             console.error('receivedRTTConfigureEvent: unknown type: ' + e.body.type);
