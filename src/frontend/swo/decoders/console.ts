@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 
-import { SWODecoder } from './common';
+import { SWORTTDecoder } from './common';
 import { parseUnsigned } from './utils';
 import { SWOConsoleDecoderConfig } from '../common';
 import { Packet } from '../common';
 
-export class SWOConsoleProcessor implements SWODecoder {
+export class SWOConsoleProcessor implements SWORTTDecoder {
     private positionCount: number;
     private output: vscode.OutputChannel;
     private position: number = 0;

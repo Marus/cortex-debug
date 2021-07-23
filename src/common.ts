@@ -67,23 +67,26 @@ export enum TerminalInputMode {
     RAW = 'raw',
     RAWECHO = 'rawecho'
 }
-export interface RTTDecoderOpts {
+export interface RTTCommonDecoderOpts {
+    type: string;     // 'console', 'graph', ...
     tcpPort: string;  // [hostname:]port
-    label: string;    // label for window
     port: number;     // RTT Channel number
-    type: string;     // 'console', ...
-    encoding: string; // Console Only: 'utf8', 'ascii', ...
+}
+
+export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
+    // Console only options
+    encoding: string; // 'utf8', 'ascii', etc.
+    label: string;    // label for window
     prompt: string;   // Console Only: Prompt to use
     noprompt: boolean;// Console Only: disable prompt
     clear: boolean;   // Console Only: Clear screen buffer on connect
     logfile: string;  // Console Only: log IO to file
-    inputmode: TerminalInputMode; // Console Only:
+    inputmode: TerminalInputMode; // Console Only
 }
-
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,   // Currently, only 'socket' is supported
-        decoder: RTTDecoderOpts;
+        decoder: RTTCommonDecoderOpts;
     };
     public event: string;
 
@@ -126,7 +129,7 @@ export interface RTTConfiguration {
     searchId: string;
     clearSearch: boolean;
     polling_interval: number;
-    decoders: any[];
+    decoders: RTTCommonDecoderOpts[];
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {

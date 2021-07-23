@@ -1,6 +1,6 @@
 import { Packet } from '../common';
 
-export interface SWODecoder {
+export interface SWORTTDecoder {
     format: string;
 
     softwareEvent(buffer: Packet);

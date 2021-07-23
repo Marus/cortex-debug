@@ -6,14 +6,14 @@ import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
-import { SWOCore } from './swo/core';
+import { RTTCore, SWOCore } from './swo/core';
 import { SWORTTSource } from './swo/sources/common';
-import { NumberFormat, ConfigurationArguments, RTTDecoderOpts } from '../common';
+import { NumberFormat, ConfigurationArguments, RTTCommonDecoderOpts, RTTConsoleDecoderOpts } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import { CortexDebugConfigurationProvider } from './configprovider';
-import { SocketSWOSource } from './swo/sources/socket';
+import { SocketRTTSource, SocketSWOSource } from './swo/sources/socket';
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
@@ -31,7 +31,9 @@ export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private clearAdapterOutputChannel = false;
     private swo: SWOCore = null;
-    private swosource: SWORTTSource = null;
+    private rtt: RTTCore = null;
+    private swoSource: SWORTTSource = null;
+    private rttSources: SocketRTTSource[] = [];
     private rttTerminals: RTTTerminal[] = [];
 
     private peripheralProvider: PeripheralTreeProvider;
@@ -376,13 +378,12 @@ export class CortexDebugExtension {
             this.swo.dispose();
             this.swo = null;
         }
+        if (this.rtt) {
+            this.rtt.dispose();
+            this.rtt = null;
+        }
 
         this.functionSymbols = null;
-
-        // Mark all terminals as unused. We could do this when session terminates
-        for (const terminal of this.rttTerminals) {
-            terminal.inUse = false;
-        }
 
         session.customRequest('get-arguments').then((args) => {
             let svdfile = args.svdFile;
@@ -395,7 +396,9 @@ export class CortexDebugExtension {
             this.registerProvider.debugSessionStarted();
             this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
-            if (this.swosource) { this.initializeSWO(args); }
+            if (this.swoSource) { this.initializeSWO(args); }
+            if (this.rttSources.length > 0) { this.initializeRTT(args); }
+            this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments
         });
@@ -411,10 +414,18 @@ export class CortexDebugExtension {
         if (this.swo) {
             this.swo.debugSessionTerminated();
         }
-        if (this.swosource) {
-            this.swosource.dispose();
-            this.swosource = null;
+        if (this.rtt) {
+            this.rtt.debugSessionTerminated();
         }
+        if (this.swoSource) {
+            this.swoSource.dispose();
+            this.swoSource = null;
+        }
+
+        this.rttSources.forEach((s) => s.dispose())
+        this.rttSources = [];
+        this.rttTerminals.forEach((t) => t.inUse = false);
+
         this.clearAdapterOutputChannel = true;
     }
 
@@ -450,12 +461,14 @@ export class CortexDebugExtension {
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
+        if (this.rtt) { this.rtt.debugStopped(); }
     }
 
     private receivedContinuedEvent(e) {
         this.peripheralProvider.debugContinued();
         this.registerProvider.debugContinued();
         if (this.swo) { this.swo.debugContinued(); }
+        if (this.rtt) { this.rtt.debugContinued(); }
     }
 
     private receivedEvent(e) {
@@ -464,22 +477,23 @@ export class CortexDebugExtension {
 
     private receivedSWOConfigureEvent(e) {
         if (e.body.type === 'socket') {
-            this.swosource = new SocketSWOSource(e.body.port);
+            this.swoSource = new SocketSWOSource(e.body.port);
             Reporting.sendEvent('SWO', 'Source', 'Socket');
         }
         else if (e.body.type === 'fifo') {
-            this.swosource = new FifoSWOSource(e.body.path);
+            this.swoSource = new FifoSWOSource(e.body.path);
             Reporting.sendEvent('SWO', 'Source', 'FIFO');
         }
         else if (e.body.type === 'file') {
-            this.swosource = new FileSWOSource(e.body.path);
+            this.swoSource = new FileSWOSource(e.body.path);
             Reporting.sendEvent('SWO', 'Source', 'File');
         }
         else if (e.body.type === 'serial') {
-            this.swosource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
+            this.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
             Reporting.sendEvent('SWO', 'Source', 'Serial');
         }
 
+        // I don't think the following is needed as we already initialize SWO when the session finally starts
         if (vscode.debug.activeDebugSession) {
             vscode.debug.activeDebugSession.customRequest('get-arguments').then((args) => {
                 this.initializeSWO(args);
@@ -487,49 +501,59 @@ export class CortexDebugExtension {
         }
     }
 
-    private receivedRTTConfigureEvent(e) {
+    private receivedRTTConfigureEvent(e: any) {
         if (e.body.type === 'socket') {
-            Reporting.sendEvent('RTT', 'Source', 'Socket');
-            const options: RTTDecoderOpts = e.body.decoder;
-            for (const terminal of this.rttTerminals) {
-                if (terminal.canReuse(options)) {
-                    terminal.inUse = true;
-                    if (vscode.debug.activeDebugConsole) {
-                        vscode.debug.activeDebugConsole.appendLine(
-                            `Reusing RTT terminal for channel ${options.port} on tcp port ${options.tcpPort}`
-                        )
-                    }
-                    return;
-                }
-            }
-            if (!this.nodeExecExists) {
-                // try again. following may launch an external command to determine existence
-                this.nodeExecExists = commandExistsSync('node');
-            }
-            if (!this.nodeExecExists) {
-                vscode.window.showErrorMessage('RTT terminal needs "node" installed. Visit\nhttps://nodejs.org\nto doanload and install')
+            const decoder: RTTCommonDecoderOpts = e.body.decoder;
+            if (decoder.type === 'console') {
+                Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
+                this.rttCreateTerninal(decoder as RTTConsoleDecoderOpts);
             } else {
-                const newTerminal = new RTTTerminal(this.context, options);
-                if (newTerminal.startTerminal()) {
-                    this.rttTerminals.push(newTerminal);
-                    if (vscode.debug.activeDebugConsole) {
-                        vscode.debug.activeDebugConsole.appendLine(
-                            `Created RTT terminal for channel ${options.port} on tcp port ${options.tcpPort}`
-                        )
-                    }
-                }
-            }
-        } else if (e.body.type === 'cleanup') {
-            for (var ix = this.rttTerminals.length - 1; ix >= 0; ix = ix - 1) {
-                const terminal = this.rttTerminals[ix];
-                if (!terminal.inUse) {
-                    // terminalClosed() will be called after disposal which modifies
-                    // the array we are iterating over. Why we iterate backwards
-                    terminal.dispose();
-                }
+                Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
+                this.rttSources.push(new SocketRTTSource(decoder.tcpPort, decoder.port));
             }
         } else {
             console.error('receivedRTTConfigureEvent: unknown type: ' + e.body.type);
+        }
+    }
+
+    private cleanupRTTTerminals() {
+        this.rttTerminals = this.rttTerminals.filter((t) => {
+            if (!t.inUse) {
+                t.dispose();
+                return false;
+            }
+            return true;
+        });
+    }
+
+    private rttCreateTerninal(decoder: RTTConsoleDecoderOpts) {
+        for (const terminal of this.rttTerminals) {
+            if (terminal.canReuse(decoder)) {
+                terminal.inUse = true;
+                if (vscode.debug.activeDebugConsole) {
+                    vscode.debug.activeDebugConsole.appendLine(
+                        `Reusing RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+                    )
+                }
+                return;
+            }
+        }
+        if (!this.nodeExecExists) {
+            // try again. following may launch an external command to determine existence
+            this.nodeExecExists = commandExistsSync('node');
+        }
+        if (!this.nodeExecExists) {
+            vscode.window.showErrorMessage('RTT terminal needs "node" to be installed. Visit\nhttps://nodejs.org\nto doanload and install')
+        } else {
+            const newTerminal = new RTTTerminal(this.context, decoder);
+            if (newTerminal.startTerminal()) {
+                this.rttTerminals.push(newTerminal);
+                if (vscode.debug.activeDebugConsole) {
+                    vscode.debug.activeDebugConsole.appendLine(
+                        `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+                    )
+                }
+            }
         }
     }
 
@@ -552,12 +576,24 @@ export class CortexDebugExtension {
     }
 
     private initializeSWO(args) {
-        if (!this.swosource) {
+        if (!this.swoSource) {
             vscode.window.showErrorMessage('Tried to initialize SWO Decoding without a SWO data source');
             return;
         }
 
-        this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
+        if (!this.swo) {
+            this.swo = new SWOCore(this.swoSource, args, this.context.extensionPath);
+        }
+    }
+
+    private initializeRTT(args) {
+        if (!this.rttSources.length) {
+            vscode.window.showErrorMessage('Tried to initialize RTT Decoding without a RTT data source');
+            return;            
+        }
+        if (!this.rtt) {
+            this.rtt = new RTTCore(this.rttSources, args, this.context.extensionPath);
+        }
     }
 }
 

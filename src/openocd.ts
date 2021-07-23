@@ -1,7 +1,9 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent,
+import {
+    GDBServerController, ConfigurationArguments, SWOConfigureEvent,
     RTTConfigureEvent, calculatePortMask, createPortName, 
-    getAnyFreePort, RTTConfiguration } from './common';
+    getAnyFreePort, RTTConfiguration
+} from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
@@ -250,15 +252,11 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         if (this.args.rttConfig.enabled) {
             for (const dec of this.args.rttConfig.decoders) {
-                if (dec.type === 'console') {
-                    if (dec.tcpPort) {
-                        this.emit('event', new RTTConfigureEvent({
-                            type: 'socket',
-                            decoder: dec
-                        }));
-                    } else {
-                        console.error(`What the hell. No tcpport for RTT`);
-                    }
+                if (dec.tcpPort) {
+                    this.emit('event', new RTTConfigureEvent({
+                        type: 'socket',
+                        decoder: dec
+                    }));
                 }
             }
         }

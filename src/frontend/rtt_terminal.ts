@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { RTTDecoderOpts, TerminalInputMode } from '../common';
+import { RTTCommonDecoderOpts, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
 import { SWORTTSource } from './swo/sources/common';
 import EventEmitter = require('events');
 export class RTTTerminal extends EventEmitter implements SWORTTSource   {
@@ -26,7 +26,7 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
 
     constructor(
         protected context: vscode.ExtensionContext,
-        public options: RTTDecoderOpts) {
+        public options: RTTConsoleDecoderOpts) {
         super();
     }
     dispose() {
@@ -92,13 +92,13 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         }     
     }
 
-    static createTermName(options: RTTDecoderOpts): string {
+    static createTermName(options: RTTConsoleDecoderOpts): string {
         const channel = options.port || 0;
         const ret = options.label || `RTT Ch:${channel}`;
         return ret;
     }
 
-    public canReuse(options: RTTDecoderOpts) {
+    public canReuse(options: RTTConsoleDecoderOpts) {
         for (const prop of ['tcpPort', 'port', 'label', 'prompt', 'noprompt', 'logfile', 'clear']) {
             if (options[prop] !== this.options[prop]) {
                 return false;

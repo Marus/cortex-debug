@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SWODecoder } from './common';
+import { SWORTTDecoder } from './common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
 import { SWOGraphDecoderConfig, GrapherDataMessage } from '../common';
@@ -9,7 +9,7 @@ function parseEncoded(buffer: Buffer, encoding: string) {
     return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
 }
 
-export class SWOGraphProcessor extends EventEmitter implements SWODecoder {
+export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder {
     public readonly format: string = 'graph';
     private port: number;
     private scale: number;

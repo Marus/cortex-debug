@@ -89,6 +89,9 @@ function beginSession(opts: ConfigurationArguments) {
     if (opts.swoConfig.enabled) {
         analytics.event('SWO', 'Used');
     }
+    if (opts.rttConfig.enabled) {
+        analytics.event('RTT', 'Used');
+    }
     if (opts.graphConfig.length > 0) {
         analytics.event('Graphing', 'Used');
     }

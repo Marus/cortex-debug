@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SWODecoder } from './common';
+import { SWORTTDecoder } from './common';
 import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
 import { Packet } from '../common';
@@ -8,19 +8,21 @@ function parseEncoded(buffer: Buffer, encoding: string) {
     return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
 }
 
-export class SWOBinaryProcessor implements SWODecoder {
+export class SWOBinaryProcessor implements SWORTTDecoder {
     private output: vscode.OutputChannel;
     public readonly format: string = 'binary';
     private port: number;
     private scale: number;
     private encoding: string;
 
-    constructor(config: SWOBinaryDecoderConfig) {
+    constructor(config: SWOBinaryDecoderConfig, prefix: string = 'SWO') {
         this.port = config.port;
         this.scale = config.scale || 1;
         this.encoding = (config.encoding || 'unsigned').replace('.', '_');
 
-        this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, encoding: ${this.encoding}]`);
+        const source = (prefix !== 'SWO') ? 'channel' : 'port';
+        const chName = `${prefix}: ${config.label || ''} [${source}: ${this.port}, encoding: ${this.encoding}]`;
+        this.output = vscode.window.createOutputChannel(chName);
     }
 
     public softwareEvent(packet: Packet) {

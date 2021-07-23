@@ -253,7 +253,7 @@ export class GDBDebugSession extends DebugSession {
         }
 
         if (args.rttConfig && args.rttConfig.decoders) {
-            args.rttConfig.decoders = args.rttConfig.decoders.map((dec) => {
+            args.rttConfig.decoders = args.rttConfig.decoders.map((dec: any) => {
                 if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
                     dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
                 }
@@ -429,8 +429,6 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
-                    // We clear the rtt windows regardless of which controller cleared them previously
-                    this.serverController.emit('event', new RTTConfigureEvent({type: 'cleanup', deoder:{}}));
 
                     this.sendResponse(response);
 
