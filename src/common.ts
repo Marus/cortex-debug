@@ -272,9 +272,9 @@ export function createPortName(procNum: number, prefix: string = 'gdbPort'): str
 
 export function getAnyFreePort(preferred: number): Promise<number> {
     return new Promise(async (resolve, reject) => {
-        async function findFreePorts() {
-            const portFinderOpts = { min: 60000, max: 62000, retrieve: 1, consecutive: true };
-            await TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
+        function findFreePorts() {
+            const portFinderOpts = { min: 60000, max: 62000, retrieve: 1, consecutive: false };
+            TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
                 resolve(ports[0]);
             }).catch((e) => {
                 reject(e);
@@ -282,7 +282,7 @@ export function getAnyFreePort(preferred: number): Promise<number> {
         }
         
         if (preferred > 0) {
-            await TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST).then((inuse) => {
+            TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST).then((inuse) => {
                 if (!inuse) {
                     resolve(preferred);
                 } else {
