@@ -358,7 +358,7 @@
                             "demangle": {
                                 "description": "Experimental: If enabled the debugger will demangle C++ names.",
                                 "type": "boolean",
-                                "default": false
+                                "default": true
                             },
                             "numberOfProcessors": {
                                 "description": "Number of processors/cores in the target device.",
@@ -961,7 +961,7 @@
                             "demangle": {
                                 "description": "Experimental: If enabled the debugger will demangle C++ names.",
                                 "type": "boolean",
-                                "default": false
+                                "default": true
                             },
                             "numberOfProcessors": {
                                 "description": "Number of processors/cores in the target device.",

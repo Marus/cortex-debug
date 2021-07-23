@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { parseHexOrDecInt } from '../common';
 import { hexFormat } from './utils';
 
 export class MemoryContentProvider implements vscode.TextDocumentContentProvider {
@@ -12,11 +13,11 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
             const query = this.parseQuery(uri.query);
             
             const addressExpr = query['address'];
-            const length: number = this.parseHexOrDecInt(query['length']);
+            const length: number = parseHexOrDecInt(query['length']);
 
             vscode.debug.activeDebugSession.customRequest('read-memory', { address: addressExpr, length: length || 32 }).then((data) => {
                 const bytes = data.bytes;
-                const address = this.parseHexOrDecInt(data.startAddress);
+                const address = parseHexOrDecInt(data.startAddress);
                 let lineAddress = address - (address % 16);
                 const lineLength = 16;
                 const offset = address - lineAddress;
@@ -82,10 +83,6 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         addToQuery(pairs.pop());            // get length
         addToQuery(pairs.join('&'));        // Rest is the addr-expression
         return query;
-    }
-
-    private parseHexOrDecInt(str: string): number {
-        return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
     }
 
     /**

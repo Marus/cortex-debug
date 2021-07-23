@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { RTTCommonDecoderOpts, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
+import { RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
 import { SWORTTSource } from './swo/sources/common';
 import EventEmitter = require('events');
 export class RTTTerminal extends EventEmitter implements SWORTTSource   {
@@ -66,6 +66,13 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
             args.shellArgs.push('--rawecho');
         }
 
+        if (this.options.type === 'binary') {
+            args.shellArgs.push('--binary');
+            if (this.options.scale) {
+                args.shellArgs.push('--scale', `${this.options.scale}`);
+            }
+        }
+
         if (this.options.logfile) {
             try {
                 fs.writeFileSync(this.options.logfile, "");
@@ -94,12 +101,18 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
 
     static createTermName(options: RTTConsoleDecoderOpts): string {
         const channel = options.port || 0;
-        const ret = options.label || `RTT Ch:${channel}`;
+        const orig = options.label || `RTT Ch:${channel}`;
+        let ret = orig;
+        let count = 1;
+        while (vscode.window.terminals.findIndex((t) => t.name === ret) >= 0) {
+            ret = `${orig}-${count}`;
+            count = count + 1;
+        }
         return ret;
     }
 
     public canReuse(options: RTTConsoleDecoderOpts) {
-        for (const prop of ['tcpPort', 'port', 'label', 'prompt', 'noprompt', 'logfile', 'clear']) {
+        for (const prop of ['type', 'tcpPort', 'port', 'label', 'prompt', 'noprompt', 'logfile', 'clear', 'scale']) {
             if (options[prop] !== this.options[prop]) {
                 return false;
             }

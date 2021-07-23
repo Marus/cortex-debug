@@ -71,18 +71,26 @@ export interface RTTCommonDecoderOpts {
     type: string;     // 'console', 'graph', ...
     tcpPort: string;  // [hostname:]port
     port: number;     // RTT Channel number
+
+    // Following two used for 'Advanced' catefory
+    tcpPorts: string[];
+    ports: number[];
 }
 
 export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
-    // Console only options
+    // Console  options
     encoding: string; // 'utf8', 'ascii', etc.
     label: string;    // label for window
-    prompt: string;   // Console Only: Prompt to use
-    noprompt: boolean;// Console Only: disable prompt
-    clear: boolean;   // Console Only: Clear screen buffer on connect
-    logfile: string;  // Console Only: log IO to file
+    prompt: string;   // Prompt to use
+    noprompt: boolean;// disable prompt
+    clear: boolean;   // Clear screen buffer on connect
+    logfile: string;  // log IO to file
     inputmode: TerminalInputMode; // Console Only
+
+    // Binary only options
+    scale: number;
 }
+
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,   // Currently, only 'socket' is supported
@@ -130,6 +138,7 @@ export interface RTTConfiguration {
     clearSearch: boolean;
     polling_interval: number;
     decoders: RTTCommonDecoderOpts[];
+    allowSharedTcp: boolean;
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
@@ -286,6 +295,6 @@ export function getAnyFreePort(preferred: number): Promise<number> {
     });
 }
 
-function parseHexOrDecInt(str: string): number {
+export function parseHexOrDecInt(str: string): number {
     return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
 }

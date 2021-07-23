@@ -1,6 +1,7 @@
 import { SWORTTSource } from './common';
 import { EventEmitter } from 'events';
 import * as net from 'net';
+import { parseHostPort } from '../common';
 
 export class SocketSWOSource extends EventEmitter implements SWORTTSource {
     private client: net.Socket = null;
@@ -8,16 +9,8 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
 
     constructor(private SWOPort: string) {
         super();
-        let port: number;
-        let host = 'localhost';
-        const match = this.SWOPort.match(/(.*)\:([0-9]+)/);
-        if (match) {
-            host = match[1] ? match[1] : host;
-            port = parseInt(match[2], 10);
-        } else {
-            port = parseInt(SWOPort, 10);
-        }
-        this.client = net.createConnection({ port: port, host: host }, () => { this.connected = true; this.emit('connected'); });
+        const obj = parseHostPort(SWOPort);
+        this.client = net.createConnection(obj, () => { this.connected = true; this.emit('connected'); });
         this.client.on('data', (buffer) => { this.emit('data', buffer); });
         this.client.on('end', () => { this.emit('disconnected'); });
     }

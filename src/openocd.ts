@@ -2,7 +2,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import {
     GDBServerController, ConfigurationArguments, SWOConfigureEvent,
     RTTConfigureEvent, calculatePortMask, createPortName, 
-    getAnyFreePort, RTTConfiguration
+    getAnyFreePort, RTTConfiguration, RTTCommonDecoderOpts
 } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
@@ -16,7 +16,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     private ports: { [name: string]: number };
 
     // Channel numbers previously used on the localhost
-    public static rttLocalPortMap: { [channel: number]: number} = {};
+    public rttLocalPortMap: { [channel: number]: string} = {};
 
     constructor() {
         super();
@@ -31,22 +31,56 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         // We get/reserve the ports here because it is an async. operation and it wll be done
         // way before a server has even started
-        OpenOCDServerController.GetRTTPorts(args.rttConfig);
+        this.allocateRTTPorts(args.rttConfig);
     }
 
-    public static GetRTTPorts(cfg: RTTConfiguration) {
+    // For openocd, you cannot have have duplicate ports and neither can
+    // a multple clients connect to the same channel. Perhaps in the future
+    // it wil
+    private rttPortsNeeded = 0;
+    public allocateRTTPorts(cfg: RTTConfiguration) {
         if (cfg && cfg.enabled) {
+            const chanelByPortmap = {};
             for (const dec of cfg.decoders) {
-                const preferred = OpenOCDServerController.rttLocalPortMap[dec.port] || -1;
-                dec.tcpPort = '';
-                getAnyFreePort(preferred).then((num) => {
-                    OpenOCDServerController.rttLocalPortMap[dec.port] = num;
-                    dec.tcpPort = num.toString();
-                }).catch(() => {
-                    console.log(`Could not get free tcp port for RTT channel ${dec.port}`);
-                });
+                if (dec.ports && (dec.ports.length > 0)) {
+                    this.rttPortsNeeded = this.rttPortsNeeded + dec.ports.length;
+                    dec.tcpPorts = [];
+                    for (const p of dec.ports) {
+                        this.allocateOnePort(p).then((ret) => {
+                            if (ret) { dec.tcpPorts.push(tmp) };
+                            this.rttPortsNeeded = this.rttPortsNeeded - 1;
+                        }).catch((e) => {});
+                    }
+                } else {
+                    this.rttPortsNeeded = this.rttPortsNeeded + 1;
+                    this.allocateOnePort(dec.port).then((ret) => {
+                        dec.tcpPort = ret;
+                        this.rttPortsNeeded = this.rttPortsNeeded - 1;
+                    }).catch((e) => {});
+                }
             }
         }
+    }
+
+    private allocateOnePort(channel: number): Promise<string> {
+        return new Promise(async (resolve) => {
+            if (this.rttLocalPortMap[channel]) {
+                resolve(this.rttLocalPortMap[channel]);
+            } else {
+                await getAnyFreePort(-1).then((num) => {
+                    // If we already had a port assigned to this channel, must reuse it
+                    let ret = this.rttLocalPortMap[channel];
+                    if (!ret) {
+                        ret = num.toString();
+                        this.rttLocalPortMap[channel] = ret;
+                    }
+                    resolve(ret);
+                }).catch(() => {
+                    console.log(`Could not get free tcp port for RTT channel ${channel}`);
+                    resolve('');
+                });
+            }
+        });
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -89,6 +123,11 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     public rttCommands(): string[] {
         const commands = [];
         if (this.args.rttConfig.enabled) {
+            if (this.rttPortsNeeded > 0) {
+                // We are not done allocating the ports. The call to this method does not allow it
+                // to return a promise or set timers.
+                throw new Error('Could not allocate all the RTT ports. There was a race condition');
+            }
             const cfg = this.args.rttConfig;
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
@@ -102,12 +141,26 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 commands.push(`interpreter-exec console "monitor rtt polling_interval ${cfg.polling_interval}"`);
             }
             // It is perfectly acceptable to have no decoders but just have the RTT enabled
-            // They can use JLinks utilities for RTT operations
-            for (const dec of this.args.rttConfig.decoders) {
-                if (dec.tcpPort) {
-                    commands.push(`interpreter-exec console "monitor rtt server start ${dec.tcpPort} ${dec.port}"`);
+            // Users can use SEGGER's utilities and start their own servers for RTT operations
+
+            // Cleanup any port arrays that are partially filled
+            for (const dec of cfg.decoders) {
+                if (dec.ports && dec,this.ports.length > 0) {
+                    if (dec.ports.length !== dec.tcpPorts.length) {
+                        for (const p of dec.ports) {
+                            delete this.rttLocalPortMap[p];
+                        }
+                        dec.ports = null
+                        dec.tcpPorts = null;
+                    }
                 }
             }
+            for (const channel in this.rttLocalPortMap) {
+                const tcpPort = this.rttLocalPortMap[channel];
+                commands.push(`interpreter-exec console "monitor rtt server start ${tcpPort} ${channel}"`);
+            }
+
+            cfg.allowSharedTcp = false;     // OpenOCD does not 'yet' allow this
 
             // We are starting way too early before the FW has a chance to initialize itself
             // but there is no other handshake mechanism
@@ -252,7 +305,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         if (this.args.rttConfig.enabled) {
             for (const dec of this.args.rttConfig.decoders) {
-                if (dec.tcpPort) {
+                if (dec.tcpPort || dec.tcpPorts) {
                     this.emit('event', new RTTConfigureEvent({
                         type: 'socket',
                         decoder: dec

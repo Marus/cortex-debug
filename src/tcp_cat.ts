@@ -4,12 +4,29 @@ import readline = require('readline');
 // import * as ReadLine from 'readline';
 import * as net from 'net';
 import * as fs from 'fs';
+import { decoders as DECODER_MAP } from '../src/frontend/swo/decoders/utils';
+
+const encodings: string[] = ["ascii", "utf8", "ucs2", "utf16le"];
+const bencodings: string[] = ["signed", "unsigned", "Q16.16", "float"];
+
+function parseEncoded(buffer: Buffer, encoding: string) {
+    return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
+}
+
+function padLeft(str: string, len: number, chr = ' '): string {
+    if (str.length >= len) {
+        return str;
+    }
+    str = chr.repeat(len - str.length) + str;
+    return str;
+}
 
 export enum InputMode {
     COOKED = 0,
     RAW,
     RAWECHO
 }
+/*
 export class TcpCat extends EventEmitter {
     protected waiting: false;
     protected connected = false;
@@ -213,7 +230,7 @@ export class TcpCat extends EventEmitter {
         return endsWithNl;
     }
 }
-
+*/
 export class TcpCatReadLine extends EventEmitter {
     protected waiting: false;
     protected connected = false;
@@ -225,13 +242,16 @@ export class TcpCatReadLine extends EventEmitter {
 
     constructor (
         public readonly host: string,
-        private readonly port: number,
-        private readonly inputMode: InputMode,
+        public readonly port: number,
+        public readonly inputMode: InputMode,
+        public readonly binary: boolean,
+        public readonly scale: number,
         public clearOnConnect?: boolean) {
         super();
         if ((this.inputMode !== InputMode.COOKED) && !process.stdin.isTTY) {
             this.inputMode = InputMode.COOKED;
         }
+        this.encoding = !binary ? 'utf8' : 'unsigned';
         this.initLineReader();
         this.setPrompt(`${this.host}:${this.port}> `);
     }
@@ -252,10 +272,10 @@ export class TcpCatReadLine extends EventEmitter {
         }
     }
 
-    private sendDataRaw(data: string) {
+    private sendDataRaw(data: string | Buffer) {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
-            this.tcpClient.write(data, this.encoding);
+            this.tcpClient.write(data, this.binary ? 'utf8' : this.encoding);
             this.logData(data);
 
             if (this.inputMode === InputMode.RAWECHO) {
@@ -275,7 +295,7 @@ export class TcpCatReadLine extends EventEmitter {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
             data = data + '\n';     // readline strips the line ending
-            this.tcpClient.write(data, this.encoding);
+            this.tcpClient.write(data, this.binary ? 'utf8' : this.encoding);
             this.logData(data);
             this.writePrompt();
         } else {
@@ -349,7 +369,9 @@ export class TcpCatReadLine extends EventEmitter {
     protected tcpClient: net.Socket = null;
     protected setupCbsAndConnect(cb: () => void) {
         this.tcpClient = new net.Socket();
-        this.tcpClient.setEncoding(this.encoding);
+        if (!this.binary) {
+            this.tcpClient.setEncoding(this.encoding);
+        }
         this.tcpClient.on('data', this.onDataCb.bind(this));
         this.tcpClient.once('close', this.onCloseCb.bind(this));
         this.tcpClient.once('error', (e) => {
@@ -383,7 +405,7 @@ export class TcpCatReadLine extends EventEmitter {
         }
     }
 
-    private onDataCb(data)
+    private onDataCb(data: string | Buffer)
     {
         try {
             this.writeData(data);
@@ -394,7 +416,7 @@ export class TcpCatReadLine extends EventEmitter {
         }
     }
 
-    private logData(data) {
+    private logData(data: string | Buffer) {
         if (this.logFd >= 0) {
             try {
                 fs.writeSync(this.logFd, data);
@@ -417,7 +439,7 @@ export class TcpCatReadLine extends EventEmitter {
         }
     }
 
-    private writeAndFlush(msg: string) {
+    private writeAndFlush(msg: string | Buffer) {
         process.stdout.write(msg);
         process.stdout.uncork();        
     }
@@ -432,20 +454,48 @@ export class TcpCatReadLine extends EventEmitter {
     }
 
     private writeData(data: any) {
+        data = Buffer.from(data);
         let erase = this.rlIF ? '\x08'.repeat(this.rlIF.line.length) : '';
         if (this.didPrompt) {
             erase += this.unPrompt;
             this.didPrompt = false;
         }
 
-        process.stdout.write(erase + data);
+        process.stdout.write(erase);
 
-        if (this.endsWithNl(data)) {
-            this.writePrompt();
+        if (this.binary) {
+            this.writeBinary(data);
+        } else {
+            process.stdout.write(data);
+            if (this.endsWithNl(data)) {
+                this.writePrompt();
+            }
         }
     }
 
-    private endsWithNl(data: any) {
+    private readonly bytesNeeded = 4;
+    private buffer = Buffer.alloc(4);
+    private bytesRead = 0;
+    private writeBinary(input: string | Buffer) {
+        let data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ;
+        const date = new Date();
+        for (let ix = 0; ix < data.length; ix = ix + 1) {
+            this.buffer[this.bytesRead] = data[ix];
+            this.bytesRead = this.bytesRead + 1;
+            if (this.bytesRead === this.bytesNeeded) {
+                const hexvalue = padLeft(this.buffer.toString('hex'), 8, '0');
+                const decodedValue = parseEncoded(this.buffer, this.encoding);
+                const decodedStr = padLeft(`${decodedValue}`, 12);
+                const scaledValue = padLeft(`${decodedValue * this.scale}`, 12);
+                
+                process.stdout.write(`[${date.toISOString()}]  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
+                this.bytesRead = 0;
+            }
+        }
+        this.writePrompt();
+    }
+
+    private endsWithNl(data: string | Buffer) {
         const type = typeof data;
         if (false) {
             // We are sometimes getting a string and others a Uint8Array
@@ -457,8 +507,10 @@ export class TcpCatReadLine extends EventEmitter {
         if (type === 'string') {
             endsWithNl = (data as string).endsWith('\n');
         } else {
-            const ary = (data as unknown as Uint8Array);
-            const chr = ary[data.length - 1];
+            const buf = (data as Buffer);
+            const chr = buf[data.length - 1];
+            // Revisit: This may not work for all encodings. We may want to convert everything to
+            // a string
             endsWithNl = (chr === 10) || (chr === 13);
         }
         return endsWithNl;
@@ -467,17 +519,17 @@ export class TcpCatReadLine extends EventEmitter {
 
 function main() {
     const args = process.argv.slice(2);
-    const useClass = false ? TcpCat : TcpCatReadLine;
-    const encodings: string[] = ["ascii", "utf8", "ucs2", "utf16le"];
     const opts = new GetOpt([
         ['',    'port=ARG',     'tcpPort number with format "[host:]port'],
         ['',    'prompt=ARG',   'Optional prompt for terminal'],
         ['',    'noprompt',     'Do not display a prompt'],
         ['',    'clear',        'Clear screen/logfile on new connection'],
         ['',    'logfile=ARG',  'Log all IO to file'],
-        ['',    'encoding=ARG', `Encoding for input and output. One of ${encodings.join(", ")}`],
+        ['',    'encoding=ARG', `Encoding for input and output. One of ${encodings.join(", ")}. For binary, ${bencodings.join(", ")}`],
         ['',    'raw',          'Input will not be buffered, raw mode'],
         ['',    'rawecho',      'Input will not be buffered, raw mode. Will echo chars and carriage returns'],
+        ['',    'binary',       'Convert output to binary data with. Encoding must be signed, unsigned'],
+        ['',    'scale=ARG,',   'Multiply binary data with given scale (float)'],
         ['h',   'help',         'display this help']
     ]);
     
@@ -490,8 +542,13 @@ function main() {
     }
 
     const enc = opts.options.encoding;
-    if (enc && (encodings.findIndex((str) => (str === enc)) < 0)) {
-        console.error(`Unknown encoding ${enc}`);
+    if (enc && !opts.options.binary && (encodings.findIndex((str) => (str === enc)) < 0)) {
+        console.error(`Unknown encoding ${enc} for console. Must be ${encodings.join(', ')}`);
+        opts.showHelp();
+        return;
+    }
+    if (enc && opts.options.binary && (bencodings.findIndex((str) => (str === enc)) < 0)) {
+        console.error(`Unknown encoding ${enc} for binary. Must be ${bencodings.join(', ')}`);
         opts.showHelp();
         return;
     }
@@ -517,7 +574,10 @@ function main() {
             inputMode = InputMode.RAW;
         }
     }
-    const tcpCat = new useClass(host, parseInt(port), inputMode, !!opts.options.clear);
+    const tcpCat = new TcpCatReadLine(
+        host, parseInt(port), inputMode,
+        !!opts.options.binary, parseFloat(opts.options.scale || '1'),
+        !!opts.options.clear);
 
     if (opts.options.prompt) {
         tcpCat.setPrompt(opts.options.prompt);
@@ -530,8 +590,10 @@ function main() {
 
     if (enc) {
         tcpCat.encoding = enc;
-        process.stdin.setEncoding(enc);
-        process.stdout.setEncoding(enc);
+        if (!tcpCat.binary) {
+            process.stdin.setEncoding(enc);
+            process.stdout.setEncoding(enc);
+        }
     }
 
     tcpCat.start();

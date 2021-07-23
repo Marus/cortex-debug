@@ -393,23 +393,32 @@ export class GDBDebugSession extends DebugSession {
                     commands.push('interpreter-exec console "set print demangle on"');
                     commands.push('interpreter-exec console "set print asm-demangle on"');
                 }
-                commands.push(...this.serverController.initCommands());
-                
-                if (attach) {
-                    commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
-                    const attachCommands = this.args.overrideAttachCommands != null ?
-                        this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
-                    commands.push(...attachCommands);
-                    commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.swoAndRTTCommands());
+
+                try {
+                    commands.push(...this.serverController.initCommands());
+                    
+                    if (attach) {
+                        commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
+                        const attachCommands = this.args.overrideAttachCommands != null ?
+                            this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
+                        commands.push(...attachCommands);
+                        commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
+                        commands.push(...this.serverController.swoAndRTTCommands());
+                    }
+                    else {
+                        commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
+                        const launchCommands = this.args.overrideLaunchCommands != null ?
+                            this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
+                        commands.push(...launchCommands);
+                        commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
+                        commands.push(...this.serverController.swoAndRTTCommands());
+                    }
                 }
-                else {
-                    commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
-                    const launchCommands = this.args.overrideLaunchCommands != null ?
-                        this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
-                    commands.push(...launchCommands);
-                    commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.swoAndRTTCommands());
+                catch (err) {
+                    const msg = err.toString() + '\n' + err.stack.toString();
+                    this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `ailed to generate gdb init commands: ${msg}`));
+                    this.sendErrorResponse(response, 104, `Failed to generate gdb init commands: ${msg}`);
+                    throw err;
                 }
                 
                 this.serverController.debuggerLaunchStarted();

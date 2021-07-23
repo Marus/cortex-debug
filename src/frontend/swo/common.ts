@@ -121,3 +121,16 @@ export interface Packet {
     size: number;
     data: Buffer;
 }
+
+export function parseHostPort(hostPort: string) {
+    let port: number;
+    let host = 'localhost';
+    const match = hostPort.match(/(.*)\:([0-9]+)/);
+    if (match) {
+        host = match[1] ? match[1] : host;
+        port = parseInt(match[2], 10);
+    } else {
+        port = parseInt(hostPort, 10);
+    }
+    return { port: port, host: host };
+}

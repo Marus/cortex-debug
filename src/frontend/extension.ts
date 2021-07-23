@@ -35,6 +35,8 @@ export class CortexDebugExtension {
     private swoSource: SWORTTSource = null;
     private rttSources: SocketRTTSource[] = [];
     private rttTerminals: RTTTerminal[] = [];
+    private rttPortMap: { [channel: number]: string} = {};
+
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -425,6 +427,7 @@ export class CortexDebugExtension {
         this.rttSources.forEach((s) => s.dispose())
         this.rttSources = [];
         this.rttTerminals.forEach((t) => t.inUse = false);
+        this.rttPortMap = {};
 
         this.clearAdapterOutputChannel = true;
     }
@@ -504,7 +507,17 @@ export class CortexDebugExtension {
     private receivedRTTConfigureEvent(e: any) {
         if (e.body.type === 'socket') {
             const decoder: RTTCommonDecoderOpts = e.body.decoder;
-            if (decoder.type === 'console') {
+            if (!e.body.allowSharedTcp) {
+                const channels = decoder.ports ? decoder.ports : [decoder.port];
+                for (const channel of channels) {
+                    if (this.rttPortMap[decoder.port]) {
+                        vscode.window.showErrorMessage(`Duplicate RTT channel ${decoder.port}. Ignoring decoder.`)
+                        return;
+                    }
+                    this.rttPortMap[decoder.port] = decoder.tcpPort;
+                }
+            }
+            if ((decoder.type === 'console') || (decoder.type === 'binary')) {
                 Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
                 this.rttCreateTerninal(decoder as RTTConsoleDecoderOpts);
             } else {
