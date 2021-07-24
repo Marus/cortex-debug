@@ -1129,8 +1129,7 @@
                                         {
                                             "label": "",
                                             "port": 0,
-                                            "type": "console",
-                                            "encoding": "utf8"
+                                            "type": "console"
                                         }
                                     ]
                                 },
@@ -1181,8 +1180,11 @@
                                                         },
                                                         "type": {
                                                             "enum": [
-                                                                "console"
+                                                                "console",
+                                                                "binary"
                                                             ],
+                                                            "default": "console",
+                                                            "description": "'console' with text input/output, 'binary' is for converting byte stream to other data types",
                                                             "type": "string"
                                                         },
                                                         "prompt": {
@@ -1207,13 +1209,23 @@
                                                         },
                                                         "encoding": {
                                                             "type": "string",
-                                                            "default": "utf8",
+                                                            "description": "ascii, utf8, ucs2, utf16le are for 'console', rest are for 'binary' type data",
+                                                            "default": "",
                                                             "enum": [
                                                                 "ascii",
                                                                 "utf8",
                                                                 "ucs2",
-                                                                "utf16le"
+                                                                "utf16le",
+                                                                "unsigned",
+                                                                "signed",
+                                                                "Q16.16",
+                                                                "float"
                                                             ]
+                                                        },
+                                                        "scale": {
+                                                            "default": 1,
+                                                            "description": "Binary only: This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "type": "number"
                                                         },
                                                         "inputmode": {
                                                             "type": "string",
@@ -1224,46 +1236,6 @@
                                                                 "raw",
                                                                 "rawecho"
                                                             ]
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "port"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "properties": {
-                                                        "encoding": {
-                                                            "default": "unsigned",
-                                                            "description": "This property is only used for binary and graph output formats.",
-                                                            "enum": [
-                                                                "unsigned",
-                                                                "signed",
-                                                                "Q16.16",
-                                                                "float"
-                                                            ],
-                                                            "type": "string"
-                                                        },
-                                                        "label": {
-                                                            "description": "A label for the output window.",
-                                                            "type": "string"
-                                                        },
-                                                        "port": {
-                                                            "description": "RTT Channel Number",
-                                                            "maximum": 15,
-                                                            "minimum": 0,
-                                                            "type": "number"
-                                                        },
-                                                        "scale": {
-                                                            "default": 1,
-                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
-                                                            "type": "number"
-                                                        },
-                                                        "type": {
-                                                            "enum": [
-                                                                "binary"
-                                                            ],
-                                                            "type": "string"
                                                         }
                                                     },
                                                     "required": [
