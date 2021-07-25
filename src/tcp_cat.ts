@@ -373,14 +373,14 @@ export class TcpCatReadLine extends EventEmitter {
             this.tcpClient.setEncoding(this.encoding);
         }
         this.tcpClient.on('data', this.onDataCb.bind(this));
-        this.tcpClient.once('close', this.onCloseCb.bind(this));
-        this.tcpClient.once('error', (e) => {
-            if ((e as any).code === 'ECONNREFUSED') {
-                // We expect this when there is no server running. Do nothing
-            } else {
-                console.log(e);
-                process.exit(0);
-            }
+        this.tcpClient.on('close', this.onCloseCb.bind(this));
+        this.tcpClient.on('error', (e) => {
+            // It is normal to get 'ECONNREFUSED' but on Windows you may also get
+            // ECONNRESET. We expect 'ECONNREFUSED' if the server has not yet started.
+            // Just ignore the errors as the connection fails or closes anyways
+            
+            // const code = (e as any).code;
+            // console.log(`Error code = ${code}`);
         });
         this.tcpClient.connect(this.port, this.host, cb);
     }
@@ -605,4 +605,9 @@ try {
 }
 catch (e) {
     console.error(e);
+    console.error(e.stack);
+    console.error('tcpCat crashed... Use Ctrl-C to exit');
+    setInterval(() => {
+        console.error('tcpCat crashed... Use Ctrl-C to exit');
+    }, 1000);
 }
