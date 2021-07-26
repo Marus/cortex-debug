@@ -410,27 +410,33 @@ export class CortexDebugExtension {
     private debugSessionTerminated(session: vscode.DebugSession) {
         if (session.type !== 'cortex-debug') { return; }
 
-        Reporting.endSession();
+        try {
+            Reporting.endSession();
 
-        this.registerProvider.debugSessionTerminated();
-        this.peripheralProvider.debugSessionTerminated();
-        if (this.swo) {
-            this.swo.debugSessionTerminated();
-        }
-        if (this.rtt) {
-            this.rtt.debugSessionTerminated();
-        }
-        if (this.swoSource) {
-            this.swoSource.dispose();
-            this.swoSource = null;
-        }
+            this.registerProvider.debugSessionTerminated();
+            this.peripheralProvider.debugSessionTerminated();
+            if (this.swo) {
+                this.swo.debugSessionTerminated();
+            }
+            if (this.rtt) {
+                this.rtt.debugSessionTerminated();
+            }
+            if (this.swoSource) {
+                this.swoSource.dispose();
+                this.swoSource = null;
+            }
 
-        this.rttSources.forEach((s) => s.dispose())
-        this.rttSources = [];
-        this.rttTerminals.forEach((t) => t.inUse = false);
-        this.rttPortMap = {};
+            this.rttSources.forEach((s) => s.dispose())
+            this.rttSources = [];
+            this.rttTerminals.forEach((t) => t.inUse = false);
+            this.rttPortMap = {};
 
-        this.clearAdapterOutputChannel = true;
+            this.clearAdapterOutputChannel = true;
+        }
+        catch (e) {
+            vscode.window.showInformationMessage('Debug session did not terminate cleanly ${e}. Please report this problem');
+        }
+        
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {

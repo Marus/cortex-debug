@@ -29,7 +29,12 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             state.push(... p.saveState());
         });
         
-        fs.writeFileSync(path, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+        try {
+            fs.writeFileSync(path, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+        }
+        catch (e) {
+            vscode.window.showWarningMessage(`Unable to save periperal preferences ${e}`);
+        }
     }
     
     private loadSVD(SVDFile: string): Thenable<any> {
