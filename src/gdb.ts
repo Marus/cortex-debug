@@ -390,6 +390,7 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.once('debug-ready', () => {
                     this.debugReady = true;
                     this.attached = attach;
+                    this.stopped = true;
                 });
 
                 if (true) {
