@@ -19,7 +19,7 @@ import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
 import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
-import { RTTTerminal } from './rtt_terminal';
+import { RTTTerminal, TerminalServer } from './rtt_terminal';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -36,6 +36,7 @@ export class CortexDebugExtension {
     private rttSources: SocketRTTSource[] = [];
     private rttTerminals: RTTTerminal[] = [];
     private rttPortMap: { [channel: number]: string} = {};
+    private rttTermServer = new TerminalServer();
 
 
     private peripheralProvider: PeripheralTreeProvider;
@@ -546,10 +547,10 @@ export class CortexDebugExtension {
         });
     }
 
-    private rttCreateTerninal(decoder: RTTConsoleDecoderOpts) {
+    private async rttCreateTerninal(decoder: RTTConsoleDecoderOpts) {
         for (const terminal of this.rttTerminals) {
-            if (terminal.canReuse(decoder)) {
-                terminal.inUse = true;
+            const success = await terminal.tryReuse(decoder);
+            if (success) {
                 if (vscode.debug.activeDebugConsole) {
                     vscode.debug.activeDebugConsole.appendLine(
                         `Reusing RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
@@ -565,7 +566,7 @@ export class CortexDebugExtension {
         if (!this.nodeExecExists) {
             vscode.window.showErrorMessage('RTT terminal needs "node" to be installed. Visit\nhttps://nodejs.org\nto doanload and install')
         } else {
-            const newTerminal = new RTTTerminal(this.context, decoder);
+            const newTerminal = new RTTTerminal(this.context, decoder, this.rttTermServer);
             if (newTerminal.startTerminal()) {
                 this.rttTerminals.push(newTerminal);
                 if (vscode.debug.activeDebugConsole) {

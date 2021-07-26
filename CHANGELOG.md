@@ -1,4 +1,11 @@
 ChangeLog
+
+# V0.3.14.pre1
+New Features:
+   * Support for RTT (SEGGER RealTimeTrace) with OpenOCD. JLink is not supported yet
+     See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
+   * `demangle` is by default true. You can turn it off in `launch.json`
+   
 # V0.3.13
 
 New Features:

@@ -10,7 +10,8 @@ import { SWORTTSource } from './sources/common';
 import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig,
     SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
     SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage,
-    GrapherProgramCounterMessage } from './common';
+    GrapherProgramCounterMessage, 
+    getNonce} from './common';
 import { SWORTTAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
 import { PacketType, Packet } from './common';
@@ -204,21 +205,12 @@ class SWOWebview {
 
     private getHTML() {
         const scriptUri = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js')).with({ scheme: 'vscode-resource' });
-        const nonce = this.getNonce();
+        const nonce = getNonce();
 
         let html = fs.readFileSync(path.join(this.extensionPath, 'resources', 'grapher.html'), { encoding: 'utf8', flag: 'r' });
         html = html.replace(/\$\{nonce\}/g, nonce).replace(/\$\{scriptUri\}/g, scriptUri.toString());
 
         return html;
-    }
-
-    private getNonce() {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
     }
 
     private processors: Array<SWORTTGraphProcessor | SWORTTAdvancedProcessor> = [];

@@ -5,6 +5,9 @@ import readline = require('readline');
 import * as net from 'net';
 import * as fs from 'fs';
 import { decoders as DECODER_MAP } from '../src/frontend/swo/decoders/utils';
+import { TerminalInputMode } from './common';
+import { parseHostPort } from './frontend/swo/common';
+import { IRTTTerminalOptions } from './frontend/rtt_terminal';
 
 const encodings: string[] = ["ascii", "utf8", "ucs2", "utf16le"];
 const bencodings: string[] = ["signed", "unsigned", "Q16.16", "float"];
@@ -21,264 +24,59 @@ function padLeft(str: string, len: number, chr = ' '): string {
     return str;
 }
 
-export enum InputMode {
-    COOKED = 0,
-    RAW,
-    RAWECHO
-}
-/*
-export class TcpCat extends EventEmitter {
-    protected waiting: false;
-    protected connected = false;
-    public logFile: string = '';
-    private logFd: number = -1;
-    private firstConnect = true;
-    public encoding; string = 'utf8';
-    public echoChars = false;
-
-    constructor (
-        public readonly host: string,
-        private readonly port: number,
-        private readonly inputMode: InputMode,
-        public clearOnConnect = false) {
-        super();
-        if ((this.inputMode !== InputMode.COOKED) && !process.stdin.isTTY) {
-            this.inputMode = InputMode.COOKED;
-        }
-        if (this.inputMode != InputMode.COOKED) {
-            process.stdin.setRawMode(true);
-        }
-        process.stdin.on('data', (data) => { this.sendData(data); });
-        process.stdin.on('end', () => { process.exit(0); });
-        this.setPrompt(`${this.host}:${this.port}> `);
-    }
-
-    private sendData(data: string) {
-        if (this.connected) {
-            // On the send side, maybe it should ways be 'ascii' or 'utf8'
-            this.tcpClient.write(data, this.encoding);
-            this.logData(data);
-
-            if (process.stdin.isRaw && this.echoChars) {
-                if (this.endsWithNl(data)) {
-                    this.writeAndFlush('\r\n');
-                    this.writePrompt();
-                } else {
-                    this.writeAndFlush(data);
-                }
-            } else {
-                this.writePrompt();
-            }
-        } else {
-            // Yes, we choose to lose any data that came in before the connection was ready
-        }        
-    }
-
-    public start() {
-        this.writeAndFlush(`Waiting for connection on port ${this.host}:${this.port}...`);
-        // Wait for the connection happen. Keep trying until we get a connection
-        const wiatForPort = setInterval(() => {
-            this.setupCbsAndConnect(() => {
-                this.connected = true;
-                clearInterval(wiatForPort);                
-                this.writeAndFlush('Connected.\n')
-                this.clearAndPrompt();
-                this.openLogFile();
-            });
-        }, 100);
-    }
-
-    readonly ESC = '\x1b';              // ASCII escape character
-    readonly CSI = this.ESC + '[';      // control sequence introducer
-    readonly KILLLINE = this.CSI + 'K';
-    
-    private openLogFile() {
-        if (this.logFile) {
-            try {
-                this.logFd = fs.openSync(this.logFile, (this.clearOnConnect || this.firstConnect) ? 'w' : 'a');
-            }
-            catch (e) {
-                console.error(`Could not open file ${this.logFile} for writing. ${e.toString()}`);
-            }
-        }
-        this.firstConnect = false;
-    }
-    
-    private clearAndPrompt() {
-        if (this.clearOnConnect) {
-            process.stdout.write(this.CSI + '3J');
-        }
-        this.writePrompt();
-    }
-
-    protected tcpClient: net.Socket = null;
-    protected setupCbsAndConnect(cb: () => void) {
-        this.tcpClient = new net.Socket();
-        this.tcpClient.setEncoding(this.encoding);
-        this.tcpClient.on('data', this.onDataCb.bind(this));
-        this.tcpClient.once('close', this.onCloseCb.bind(this));
-        this.tcpClient.once('error', (e) => {
-            if ((e as any).code === 'ECONNREFUSED') {
-                // We expect this when there is no server running. Do nothing
-            } else {
-                console.log(e);
-                process.exit(0);
-            }
-        });
-        this.tcpClient.connect(this.port, this.host, cb);
-    }
-
-    private onCloseCb() {
-        if (this.connected) {
-            this.connected = false;
-            this.tcpClient = null;
-            this.writeAndFlush('\nConnection ended. ');
-            if (this.logFd >= 0) {
-                try {
-                    fs.closeSync(this.logFd);
-                }
-                finally {
-                    this.logFd = -1;
-                }
-            }
-            process.nextTick(() => {
-                this.start();
-            });
-        }
-    }
-
-    private onDataCb(data)
-    {
-        try {
-            this.writeData(data);
-            this.logData(data);
-        }
-        catch (e) {
-            console.error(e);
-        }
-    }
-
-    private logData(data) {
-        if (this.logFd >= 0) {
-            try {
-                fs.writeSync(this.logFd, data);
-            }
-            catch (e) {
-                console.error(`Write error on ${this.logFile}. Writing disabled: ${e.toString()}`);
-                this.logFd = -1;
-            }
-        }
-    }
-
-    private prompt = '';
-    private unPrompt = '';
-    private didPrompt: boolean;
-    public setPrompt(p: string) {
-        this.prompt = p;
-        this.unPrompt = '';
-        if (p.length) {
-            for (let x = 0; x < p.length; x = x + 1) {
-                this.unPrompt = this.unPrompt + '\x08';
-            }
-            this.unPrompt = this.unPrompt + this.KILLLINE;
-        }
-    }
-
-    private writeAndFlush(msg: string) {
-        process.stdout.write(msg);
-        process.stdout.uncork();        
-    }
-
-    private writePrompt() {
-        this.didPrompt = true;
-        this.writeAndFlush(this.prompt);
-    }
-
-    private writeData(data: any) {
-        if (this.didPrompt) {
-            data = this.unPrompt + data;
-            this.didPrompt = false;
-        }
-
-        process.stdout.write(data, this.encoding);
-
-        // If we have a partial line or even a prompt from the server end,
-        // do not print a prompt
-        if (this.endsWithNl(data)) {
-            this.writePrompt();
-        } else {
-            process.stdout.uncork();
-        }
-    }
-
-    private endsWithNl(data: any) {
-        const type = typeof data;
-        if (false) {
-            // We are sometimes getting a string and others a Uint8Array
-            console.error(Object.prototype.toString.call(data));
-            console.error(type);
-        }
-
-        let endsWithNl = false;
-        if (type === 'string') {
-            endsWithNl = (data as string).endsWith('\n');
-        } else {
-            const ary = (data as unknown as Uint8Array);
-            const chr = ary[data.length - 1];
-            endsWithNl = (chr === 10) || (chr === 13);
-        }
-        return endsWithNl;
-    }
-}
-*/
 export class TcpCatReadLine extends EventEmitter {
+    protected host: string;
+    protected port: number;
     protected waiting: false;
     protected connected = false;
-    public logFile: string = '';
     private logFd: number = -1;
     private firstConnect = true;
-    public encoding; string = 'utf8';
     protected rlIF: readline.Interface = null;
+    protected closingRlIF: boolean;
 
-    constructor (
-        public readonly host: string,
-        public readonly port: number,
-        public readonly inputMode: InputMode,
-        public readonly binary: boolean,
-        public readonly scale: number,
-        public clearOnConnect?: boolean) {
+    constructor(public options: IRTTTerminalOptions, public usingServer) {
         super();
-        if ((this.inputMode !== InputMode.COOKED) && !process.stdin.isTTY) {
-            this.inputMode = InputMode.COOKED;
+        if ((this.options.inputmode !== TerminalInputMode.COOKED) && !process.stdin.isTTY) {
+            this.options.inputmode = TerminalInputMode.COOKED;
         }
-        this.encoding = !binary ? 'utf8' : 'unsigned';
         this.initLineReader();
-        this.setPrompt(`${this.host}:${this.port}> `);
+        const obj = parseHostPort(this.options.port);
+        this.port = obj.port;
+        this.host = obj.host;
+        if (!this.options.prompt) {
+            this.options.prompt = `${this.host}:${this.port}> `;
+        }
+        this.setPrompt(this.options.noprompt ? '' : this.options.prompt);
     }
 
     private initLineReader() {
-        if (this.inputMode !== InputMode.COOKED) {
+        if (this.options.inputmode !== TerminalInputMode.COOKED) {
             process.stdin.setRawMode(true);
             process.stdin.on('data', (data) => { this.sendDataRaw(data); });
             process.stdin.on('end', () => { process.exit(0); });
         } else {
+            this.closingRlIF = false;
             this.rlIF = readline.createInterface({
                 input: process.stdin,
                 output: process.stdout,
                 terminal: process.stdout.isTTY
             });
             this.rlIF.on('line', (line) => { this.sendData(line); });
-            this.rlIF.on('close', () => { process.exit(0); });
+            this.rlIF.on('close', () => {
+                if (!this.closingRlIF) {    // We are not the ones closing it
+                    process.exit(0);
+                }
+            });
         }
     }
 
     private sendDataRaw(data: string | Buffer) {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
-            this.tcpClient.write(data, this.binary ? 'utf8' : this.encoding);
+            this.tcpClient.write(data, this.options.binary ? 'utf8' : this.options.encoding);
             this.logData(data);
 
-            if (this.inputMode === InputMode.RAWECHO) {
+            if (this.options.inputmode === TerminalInputMode.RAWECHO) {
                 if (this.endsWithNl(data)) {
                     this.writeAndFlush('\r\n');
                     this.writePrompt();
@@ -295,7 +93,7 @@ export class TcpCatReadLine extends EventEmitter {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
             data = data + '\n';     // readline strips the line ending
-            this.tcpClient.write(data, this.binary ? 'utf8' : this.encoding);
+            this.tcpClient.write(data, this.options.binary ? 'utf8' : this.options.encoding);
             this.logData(data);
             this.writePrompt();
         } else {
@@ -343,19 +141,19 @@ export class TcpCatReadLine extends EventEmitter {
     readonly BACKSPACE = '\x08';
     
     private openLogFile() {
-        if (this.logFile) {
+        if (this.options.logfile) {
             try {
-                this.logFd = fs.openSync(this.logFile, (this.clearOnConnect || this.firstConnect) ? 'w' : 'a');
+                this.logFd = fs.openSync(this.options.logfile, (this.options.clear || this.firstConnect) ? 'w' : 'a');
             }
             catch (e) {
-                console.error(`Could not open file ${this.logFile} for writing. ${e.toString()}`);
+                console.error(`Could not open file ${this.options.logfile} for writing. ${e.toString()}`);
             }
         }
         this.firstConnect = false;
     }
     
     private clearAndPrompt() {
-        if (this.clearOnConnect) {
+        if (this.options.clear) {
             process.stdout.write(this.CLEARBUFFER);
             if (this.rlIF) {
                 // I am not sure why have to Ctrl-L as well. Sending CLEARBUFFER should be enough, but
@@ -369,8 +167,8 @@ export class TcpCatReadLine extends EventEmitter {
     protected tcpClient: net.Socket = null;
     protected setupCbsAndConnect(cb: () => void) {
         this.tcpClient = new net.Socket();
-        if (!this.binary) {
-            this.tcpClient.setEncoding(this.encoding);
+        if (!this.options.binary) {
+            this.tcpClient.setEncoding(this.options.encoding);
         }
         this.tcpClient.on('data', this.onDataCb.bind(this));
         this.tcpClient.on('close', this.onCloseCb.bind(this));
@@ -399,9 +197,19 @@ export class TcpCatReadLine extends EventEmitter {
                     this.logFd = -1;
                 }
             }
-            process.nextTick(() => {
-                this.start();
-            });
+            if (!this.usingServer) {
+                process.nextTick(() => {
+                    this.start();
+                });
+            } else {
+                if (this.rlIF) {
+                    this.closingRlIF = true;
+                    this.rlIF.close();
+                    this.rlIF = null;
+                }
+                process.stdin.setRawMode(false);
+            }
+            this.emit('close');
         }
     }
 
@@ -422,7 +230,7 @@ export class TcpCatReadLine extends EventEmitter {
                 fs.writeSync(this.logFd, data);
             }
             catch (e) {
-                console.error(`Write error on ${this.logFile}. Writing disabled: ${e.toString()}`);
+                console.error(`Write error on ${this.options.logfile}. Writing disabled: ${e.toString()}`);
                 this.logFd = -1;
             }
         }
@@ -463,7 +271,7 @@ export class TcpCatReadLine extends EventEmitter {
 
         process.stdout.write(erase);
 
-        if (this.binary) {
+        if (this.options.binary) {
             this.writeBinary(data);
         } else {
             process.stdout.write(data);
@@ -484,9 +292,9 @@ export class TcpCatReadLine extends EventEmitter {
             this.bytesRead = this.bytesRead + 1;
             if (this.bytesRead === this.bytesNeeded) {
                 const hexvalue = padLeft(this.buffer.toString('hex'), 8, '0');
-                const decodedValue = parseEncoded(this.buffer, this.encoding);
+                const decodedValue = parseEncoded(this.buffer, this.options.encoding);
                 const decodedStr = padLeft(`${decodedValue}`, 12);
-                const scaledValue = padLeft(`${decodedValue * this.scale}`, 12);
+                const scaledValue = padLeft(`${decodedValue * this.options.scale}`, 12);
                 
                 process.stdout.write(`[${date.toISOString()}]  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
                 this.bytesRead = 0;
@@ -517,7 +325,99 @@ export class TcpCatReadLine extends EventEmitter {
     }
 }
 
+// Connection back to VSCode
+export class serverConnection {
+    protected tcpClient = new net.Socket();
+    protected options: IRTTTerminalOptions = null;
+    protected gdbServer: TcpCatReadLine = null;
+    protected interval: NodeJS.Timeout = null;
+    protected oldData: string = '';
+
+    constructor(protected port: number, protected nonce: string) {
+        process.stdin.pause();
+        // If nonce is not given, it will never match
+        this.nonce = this.nonce || Math.floor(Math.random() * 1e6).toString();
+        this.tcpClient = new net.Socket();
+        this.tcpClient.on('data', this.onDataCb.bind(this));
+        this.tcpClient.on('close', () => {process.exit(0)});
+        this.tcpClient.on('error', (e) => {
+            // We should not get any errors at all
+            const code = (e as any).code;
+            console.error(`Error code = ${code}`);
+            process.exit(101);
+        });
+        this.tcpClient.connect(this.port, '127.0.0.1', () => {
+            process.stdout.write('Connected to VSCode.\n');
+            this.tcpClient.write(this.nonce + '\n');
+            this.tcpClient.uncork();
+        });
+        this.doWaitMsg()
+    }
+
+    protected doWaitMsg() {
+        process.stdout.write('Waiting for VSCode session options...');
+        const intervalMs = 10;
+        let waitMs = 0;
+        this.interval = setInterval(() => {
+            // Do nothing for now
+            if (!this.gdbServer) {
+                waitMs = waitMs + intervalMs;
+                if (waitMs > 1000) {
+                    // process.stdout.write('.');
+                    // process.stdout.uncork();
+                    waitMs = 0;
+                }
+            } else if (this.interval) {
+                clearInterval(this.interval);
+            }
+        }, intervalMs);
+    }
+
+    protected onDataCb(data: string | Buffer) {
+        clearInterval(this.interval);
+        this.interval = null;
+
+        let str = data.toString('utf8');
+        let options: any;
+        try {
+            str = this.oldData + str;
+            if (str.endsWith('\n')) {
+                process.stdout.write(str);
+                process.stdout.uncork();
+                options = JSON.parse(str);
+            } else {
+                this.oldData = str;
+                return;
+            }
+        }
+        catch (e) {
+            console.error(`invalide JSON '${str}` + e.toString());
+            return;
+        }
+
+        if (this.nonce === options.nonce) {
+            if (this.gdbServer) {
+                // We are not expecting a new message while the gdb server is already running.
+                const msg = `Invalide message ${str} while gdb connection is still active`
+                console.error(msg);
+                throw Error(msg);
+            }
+            this.options = options;
+            process.stdin.resume();
+            this.gdbServer = new TcpCatReadLine(this.options, true);
+            this.gdbServer.on('close', () => {
+                this.gdbServer = null;
+                this.doWaitMsg();
+            });
+            this.gdbServer.start();
+        } else {
+            console.error(`Invalid message ${str} from VSCode. Nonce mismatch`);
+        }
+    }
+}
+
 function main() {
+    let server: serverConnection;
     const args = process.argv.slice(2);
     const opts = new GetOpt([
         ['',    'port=ARG',     'tcpPort number with format "[host:]port'],
@@ -530,13 +430,24 @@ function main() {
         ['',    'rawecho',      'Input will not be buffered, raw mode. Will echo chars and carriage returns'],
         ['',    'binary',       'Convert output to binary data with. Encoding must be signed, unsigned'],
         ['',    'scale=ARG,',   'Multiply binary data with given scale (float)'],
-        ['h',   'help',         'display this help']
+        ['h',   'help',         'display this help'],
+        ['',    'useserver=ARG','Reserved: all other options ignored. Options passed on socket'],
+        ['',    'nonce=ARG',    'Reserved: a unique string id to indentify this instance']
     ]);
     
     opts.parse(process.argv.slice(2));
-    let port = opts.options.port;
-    let host = '127.0.0.1';
-    if (!port || opts.options.help || (opts.options.prompt && opts.options.noprompt)) {
+
+    if (opts.options.useserver) {
+        if (!opts.options.nonce || (opts.options.nonce.length !== 32)) {
+            console.error(`Invalid nonce ${opts.options.nonce}`);
+            process.exit(102);
+        }
+        const port = parseInt(opts.options.useserver);
+        server = new serverConnection(port, opts.options.nonce);
+        return;
+    }
+
+    if (!opts.options.port || opts.options.help || (opts.options.prompt && opts.options.noprompt)) {
         opts.showHelp();
         return;
     }
@@ -553,49 +464,28 @@ function main() {
         return;
     }
 
-    let match = port.trim().match(/(.+):([0-9]+)/);
-    if (!match) {
-        match = port.trim().match(/:?([0-9]+)/);
-        port = match ? match[1] : '';
-    } else {
-        port = match[2];
-        host = match[1];
-    }
-    if (!port) {
-        opts.showHelp();
-        return;
-    }
-
-    let inputMode = InputMode.COOKED;
+    let inpMode: TerminalInputMode = TerminalInputMode.COOKED;
     if (process.stdin.isTTY) {
         if (opts.options.rawecho) {
-            inputMode = InputMode.RAWECHO;
+            inpMode = TerminalInputMode.RAWECHO;
         } else if (opts.options.raw) {
-            inputMode = InputMode.RAW;
-        }
-    }
-    const tcpCat = new TcpCatReadLine(
-        host, parseInt(port), inputMode,
-        !!opts.options.binary, parseFloat(opts.options.scale || '1'),
-        !!opts.options.clear);
-
-    if (opts.options.prompt) {
-        tcpCat.setPrompt(opts.options.prompt);
-    } else if (opts.options.noprompt) {
-        tcpCat.setPrompt('');
-    }
-    if (opts.options.logfile) {
-        tcpCat.logFile = opts.options.logfile;
-    }
-
-    if (enc) {
-        tcpCat.encoding = enc;
-        if (!tcpCat.binary) {
-            process.stdin.setEncoding(enc);
-            process.stdout.setEncoding(enc);
+            inpMode = TerminalInputMode.RAW;
         }
     }
 
+    const options: IRTTTerminalOptions = {
+        port      : opts.options.port,
+        prompt    : opts.options.prompt || '',
+        noprompt  : !!opts.options.noprompt,
+        clear     : !!opts.options.clear,
+        logfile   : opts.options.logFile || '',
+        inputmode : inpMode,
+        binary    : !!opts.options.binary,
+        scale     : opts.options.scale,
+        encoding  : opts.options.encoding,
+        nonce     : 'cmd-line'
+    };
+    const tcpCat = new TcpCatReadLine(options, false);
     tcpCat.start();
 }
 
