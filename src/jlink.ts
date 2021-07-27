@@ -117,7 +117,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),
             '-telnetport', consoleport.toString(),
-            '-rtttelnetport', rttport.toString(),
+            // '-rtttelnetport', rttport.toString(),
             '-device', this.args.device
         ];
 
