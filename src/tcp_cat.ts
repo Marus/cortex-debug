@@ -72,7 +72,7 @@ export class TcpCatReadLine extends EventEmitter {
     private sendDataRaw(data: string | Buffer) {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
-            this.tcpClient.write(data, this.options.binary ? 'utf8' : this.options.encoding);
+            this.tcpClient.write(data);
             this.logData(data);
 
             if (this.options.inputmode === TerminalInputMode.RAWECHO) {
@@ -92,7 +92,7 @@ export class TcpCatReadLine extends EventEmitter {
         if (this.connected) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
             data = data + '\n';     // readline strips the line ending
-            this.tcpClient.write(data, this.options.binary ? 'utf8' : this.options.encoding);
+            this.tcpClient.write(data, this.options.encoding);
             this.logData(data);
             this.writePrompt();
         } else {
@@ -184,9 +184,6 @@ export class TcpCatReadLine extends EventEmitter {
     protected tcpClient: net.Socket = null;
     protected setupCbsAndConnect(cb: () => void) {
         this.tcpClient = new net.Socket();
-        if (!this.options.binary) {
-            this.tcpClient.setEncoding(this.options.encoding);
-        }
         this.tcpClient.on  ('data', this.onDataCb.bind(this));
         this.tcpClient.once('close', this.onCloseCb.bind(this, false));
         this.tcpClient.on  ('error', (e) => {
@@ -230,14 +227,37 @@ export class TcpCatReadLine extends EventEmitter {
         }
     }
 
-    private onDataCb(data: string | Buffer)
+    private onDataCb(buf: Buffer)
     {
         try {
-            this.writeData(data);
-            this.logData(data);
+            this.logData(buf);
+            if (!this.options.binary) {
+                // Accorting to the protocol, SEGGER supports a SetTerminal() API which sends two chars
+                // to indicate that the viewer should switch to a virtual terminal. The first char is 0xff
+                // and the second char is 0-9 or A-F (16 virt. terinals). We don't do anything with it
+                // except to let the user know that a terminal switch occured. Note that if the two chars
+                // come in separate packets, we won't recognize the switch. This is a silly feature anyways
+                let start = 0;
+                for (let ix = 1; ix < buf.length; ix++ ) {
+                    if (buf[ix-1] !== 0xff) { continue; }
+                    const chr = String.fromCharCode(buf[ix]);
+                    if (chr.match(/[0-9A-F]/)) {
+                        if (ix > 1) {
+                            this.writeData(buf.slice(start, ix-1));
+                        }
+                        this.writeData(`<switch to vTerm#${chr}>\n`);
+                        buf = buf.slice(ix+1);
+                        ix = 0;
+                        start = 0;
+                    }
+                }
+            }
+            if (buf.length > 0) {
+                this.writeData(buf);
+            }
         }
         catch (e) {
-            console.error(e);
+            reportCrash(e, false);
         }
     }
 
@@ -302,18 +322,27 @@ export class TcpCatReadLine extends EventEmitter {
     private buffer = Buffer.alloc(4);
     private bytesRead = 0;
     private writeBinary(input: string | Buffer) {
-        let data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ;
+        let data: Buffer = Buffer.from(input);
         const date = new Date();
         for (let ix = 0; ix < data.length; ix = ix + 1) {
             this.buffer[this.bytesRead] = data[ix];
             this.bytesRead = this.bytesRead + 1;
             if (this.bytesRead === this.bytesNeeded) {
+                let chars = '';
+                for (const byte of this.buffer) {
+                    if (byte <= 32 || (byte >= 127 && byte <= 159)) {
+                        chars += '.';
+                    } else {
+                        chars	+= String.fromCharCode(byte);
+                    }                    
+                }
+                const blah = this.buffer.toString();
                 const hexvalue = padLeft(this.buffer.toString('hex'), 8, '0');
                 const decodedValue = parseEncoded(this.buffer, this.options.encoding);
                 const decodedStr = padLeft(`${decodedValue}`, 12);
                 const scaledValue = padLeft(`${decodedValue * this.options.scale}`, 12);
                 
-                process.stdout.write(`[${date.toISOString()}]  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
+                process.stdout.write(`[${date.toISOString()}]  ${chars}  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
                 this.bytesRead = 0;
             }
         }

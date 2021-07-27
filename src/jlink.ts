@@ -28,16 +28,10 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
 
-        if (this.args.rttConfig.enabled) {
-            // We need to change this so we allocate in bulk for the actual ports needed. Currently,
-            // only channel#0 work so revisit this so if needed
-            const preferred: { [channel: number]: string} = {};
-            for (var ix = 0; ix < 16; ix++) {
-                preferred[ix] = (this.defaultRttPort + ix).toString();
-            }
-            this.rttHelper.setPreferredPorts(preferred)
-            this.rttHelper.allocateRTTPorts(args.rttConfig);
-        }
+        // JLink only support one TCP port and that too for channel 0 only. The config provider
+        // makes sure that the rttConfig conforms.
+        this.rttHelper.setPreferredPorts({0: this.defaultRttPort.toString()})
+        this.rttHelper.allocateRTTPorts(args.rttConfig);
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -156,11 +150,11 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const rttport = this.ports['rttPort'];
 
         let cmdargs = [
+            '-singlerun', '-nogui',  // -strict -timeout 0 
             '-if', this.args.interface,
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),
             '-telnetport', consoleport.toString(),
-            // '-rtttelnetport', rttport.toString(),
             '-device', this.args.device
         ];
 
