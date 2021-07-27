@@ -1,10 +1,10 @@
 ChangeLog
 
-# V0.3.14.pre1
+# V0.3.14.pre2
 New Features:
-   * Support for RTT (SEGGER RealTimeTrace) with OpenOCD. JLink is not supported yet
-     See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
-   * `demangle` is by default true. You can turn it off in `launch.json`
+   * Support for RTT (SEGGER RealTimeTrace) with OpenOCD and JLink. See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
+     * JLink RTT has a limitation that it can ONLY work with one channel (channel 0). We are not sure why yet. There is another artifact with channel 0 where you may see output from a previous run at the very beginning.
+   * `demangle` is on by default. You can turn it off in `launch.json`
    
 # V0.3.13
 

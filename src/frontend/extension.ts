@@ -430,6 +430,7 @@ export class CortexDebugExtension {
             this.rttSources = [];
             this.rttTerminals.forEach((t) => t.inUse = false);
             this.rttPortMap = {};
+            this.rttTermServer.broadcastExit();
 
             this.clearAdapterOutputChannel = true;
         }

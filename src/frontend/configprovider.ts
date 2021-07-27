@@ -30,6 +30,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         let validationResponse: string = null;
 
+        if (config.demangle === undefined) {
+            config.demangle = true;
+        }
+
         if (!config.swoConfig) {
             config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: 'probe' };
         }
@@ -55,21 +59,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.rttConfig) {
             config.rttConfig = { enabled: false, decoders: [] };
         }
-        else {
-            if (!config.rttConfig.decoders) { config.rttConfig.decoders = []; }
-            config.rttConfig.decoders.forEach((d, idx) => {
-                if (d.type === 'advanced') {
-                    if (d.ports === undefined && d.number !== undefined) {
-                        d.ports = [d.number];
-                    }
-                }
-                else {
-                    if (d.port === undefined && d.number !== undefined) {
-                        d.port = d.number;
-                    }
-                }
-            });
+        else if (!config.rttConfig.decoders) {
+            config.rttConfig.decoders = [];
         }
+
         if (!config.graphConfig) { config.graphConfig = []; }
         if (!config.preLaunchCommands) { config.preLaunchCommands = []; }
         if (!config.postLaunchCommands) { config.postLaunchCommands = []; }
@@ -198,6 +191,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.interface === 'jtag' && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             return 'SWO Decoding cannot be performed through the J-Link Probe in JTAG mode.';
+        }
+
+        if ((config.rttConfig.decoders.length > 1) || (config.rttConfig.decoders[0].port != 0)) {
+            return 'Currently, JLink RTT can have a maximum of one decoder and it has to be port/channel 0';
         }
 
         return null;

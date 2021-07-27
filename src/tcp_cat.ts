@@ -27,8 +27,7 @@ function padLeft(str: string, len: number, chr = ' '): string {
 export class TcpCatReadLine extends EventEmitter {
     protected host: string;
     protected port: number;
-    protected waiting: false;
-    protected connected = false;
+    public connected = false;
     private logFd: number = -1;
     private firstConnect = true;
     protected rlIF: readline.Interface = null;
@@ -116,20 +115,38 @@ export class TcpCatReadLine extends EventEmitter {
         }        
     }
 
+    private wiatForPort: NodeJS.Timeout = null;
     public start() {
         this.pause();
         this.writeAndFlush(`Waiting for connection on port ${this.host}:${this.port}...`);
         // Wait for the connection happen. Keep trying until we get a connection
-        const wiatForPort = setInterval(() => {
+        this.wiatForPort = setInterval(() => {
             this.setupCbsAndConnect(() => {
                 this.connected = true;
-                clearInterval(wiatForPort);                
+                clearInterval(this.wiatForPort);
+                this.wiatForPort = null;
                 this.writeAndFlush('Connected.\n');
                 this.openLogFile();
                 this.resume();
                 this.clearAndPrompt();
             });
         }, 100);
+    }
+
+    public end() {
+        if (this.wiatForPort) {
+            clearInterval(this.wiatForPort);
+            this.onCloseCb(true);
+        } else if (this.connected) {
+            this.tcpClient.destroy();
+
+            // If a close even neer happened, try to do it manually
+            setTimeout(() => {
+                if (this.connected) {   // Still connected. Nuke it
+                    this.onCloseCb(true);
+                }
+            }, 2);
+        }
     }
 
     readonly ESC = '\x1b';              // ASCII escape character
@@ -170,9 +187,9 @@ export class TcpCatReadLine extends EventEmitter {
         if (!this.options.binary) {
             this.tcpClient.setEncoding(this.options.encoding);
         }
-        this.tcpClient.on('data', this.onDataCb.bind(this));
-        this.tcpClient.on('close', this.onCloseCb.bind(this));
-        this.tcpClient.on('error', (e) => {
+        this.tcpClient.on  ('data', this.onDataCb.bind(this));
+        this.tcpClient.once('close', this.onCloseCb.bind(this, false));
+        this.tcpClient.on  ('error', (e) => {
             // It is normal to get 'ECONNREFUSED' but on Windows you may also get
             // ECONNRESET. We expect 'ECONNREFUSED' if the server has not yet started.
             // Just ignore the errors as the connection fails or closes anyways
@@ -183,8 +200,8 @@ export class TcpCatReadLine extends EventEmitter {
         this.tcpClient.connect(this.port, this.host, cb);
     }
 
-    private onCloseCb() {
-        if (this.connected) {
+    private onCloseCb(forced: boolean = false) {
+        if (this.connected || forced) {
             this.connected = false;
             this.tcpClient = null;
             readline.clearLine(process.stdout, 0);
@@ -344,6 +361,7 @@ export class serverConnection {
             // We should not get any errors at all
             const code = (e as any).code;
             console.error(`Error code = ${code}`);
+            reportCrash(e, true);
             process.exit(101);
         });
         this.tcpClient.connect(this.port, '127.0.0.1', () => {
@@ -382,8 +400,6 @@ export class serverConnection {
         try {
             str = this.oldData + str;
             if (str.endsWith('\n')) {
-                process.stdout.write(str);
-                process.stdout.uncork();
                 options = JSON.parse(str);
             } else {
                 this.oldData = str;
@@ -392,26 +408,51 @@ export class serverConnection {
         }
         catch (e) {
             console.error(`invalide JSON '${str}` + e.toString());
+            reportCrash(e, false);
             return;
         }
 
-        if (this.nonce === options.nonce) {
-            if (this.gdbServer) {
-                // We are not expecting a new message while the gdb server is already running.
-                const msg = `Invalide message ${str} while gdb connection is still active`
-                console.error(msg);
-                throw Error(msg);
+        if (options.nonce === 'broadcast') {
+            if (options.data === 'exit') {
+                this.closeClient();
             }
-            this.options = options;
-            process.stdin.resume();
-            this.gdbServer = new TcpCatReadLine(this.options, true);
-            this.gdbServer.on('close', () => {
-                this.gdbServer = null;
-                this.doWaitMsg();
-            });
-            this.gdbServer.start();
         } else {
-            console.error(`Invalid message ${str} from VSCode. Nonce mismatch`);
+            process.stdout.write(str);
+            process.stdout.uncork();            
+            if (this.nonce === options.nonce) {
+                if (this.gdbServer) {
+                    if (this.gdbServer.connected) {
+                        // We are not expecting a new message while the gdb server is already running.
+                        const msg = `Invalid message ${str} while gdb connection is still active`;
+                        reportCrash(new Error(msg), true);
+                    } else {
+                        this.closeClient();
+                    }
+                }
+                this.options = options;
+                process.stdin.resume();
+                this.gdbServer = new TcpCatReadLine(this.options, true);
+                this.gdbServer.on('close', () => {
+                    this.gdbServer = null;
+                    this.doWaitMsg();
+                });
+                this.gdbServer.start();
+            } else {
+                console.error(`Invalid message ${str} from VSCode. Nonce mismatch`);
+            }
+        }
+    }
+
+    private closeClient() {
+        try {
+            if (this.gdbServer) {
+                this.gdbServer.end();
+                this.gdbServer = null;
+            }
+        }
+        catch (e) {
+            console.error('gdb connection close failed');
+            reportCrash(e, false);
         }
     }
 }
@@ -438,6 +479,7 @@ function main() {
     opts.parse(process.argv.slice(2));
 
     if (opts.options.useserver) {
+        
         if (!opts.options.nonce || (opts.options.nonce.length !== 32)) {
             console.error(`Invalid nonce ${opts.options.nonce}`);
             process.exit(102);
@@ -489,15 +531,28 @@ function main() {
     tcpCat.start();
 }
 
+function reportCrash(e: any, hang: boolean = false) {
+    console.error(e);
+    if (e.stack) {
+        console.error(e.stack);
+    }
+    if (hang) {
+        console.error('tcpCat crashed... Use Ctrl-C to exit');
+        setInterval(() => {
+            console.error('tcpCat crashed... Use Ctrl-C to exit');
+        }, 5000);
+    }
+}
+
 try {
+    process.on('uncaughtException', function(err) {
+        reportCrash(err, true);
+    });
+
     console.log('RTT Console: ' + process.argv.slice(2).join(' '));
     main();
 }
 catch (e) {
-    console.error(e);
-    console.error(e.stack);
-    console.error('tcpCat crashed... Use Ctrl-C to exit');
-    setInterval(() => {
-        console.error('tcpCat crashed... Use Ctrl-C to exit');
-    }, 1000);
+    reportCrash(e, true);
 }
+

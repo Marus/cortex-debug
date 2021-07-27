@@ -2,7 +2,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import {
     GDBServerController, ConfigurationArguments, SWOConfigureEvent,
     RTTConfigureEvent, calculatePortMask, createPortName, 
-    getAnyFreePort, RTTConfiguration, RTTCommonDecoderOpts
+    getAnyFreePort, RTTConfiguration, RTTCommonDecoderOpts, RTTServerHelper
 } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
@@ -14,9 +14,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     public name = 'OpenOCD';
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
-
-    // Channel numbers previously used on the localhost
-    public rttLocalPortMap: { [channel: number]: string} = {};
+    private rttHelper: RTTServerHelper = new RTTServerHelper();
 
     constructor() {
         super();
@@ -31,53 +29,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         // We get/reserve the ports here because it is an async. operation and it wll be done
         // way before a server has even started. Hopefully
-        this.allocateRTTPorts(args.rttConfig);
-    }
-
-    // For openocd, you cannot have have duplicate ports and neither can
-    // a multple clients connect to the same channel. Perhaps in the future
-    // it wil
-    private rttPortsPending: number = 0;
-    public allocateRTTPorts(cfg: RTTConfiguration) {
-        this.rttPortsPending = 0;
-        if (cfg && cfg.enabled) {
-            for (const dec of cfg.decoders) {
-                if (dec.ports && (dec.ports.length > 0)) {
-                    this.rttPortsPending = this.rttPortsPending + dec.ports.length;
-                    for (const p of dec.ports) {
-                        this.allocateOnePort(p).then((ret) => {
-                            this.rttPortsPending = this.rttPortsPending - 1;
-                        });
-                    }
-                } else {
-                    this.rttPortsPending = this.rttPortsPending + 1;
-                    this.allocateOnePort(dec.port).then((ret) => {
-                        this.rttPortsPending = this.rttPortsPending - 1;
-                        dec.tcpPort = ret;
-                    });
-                }
-            }
-        }
-    }
-
-    private allocateOnePort(channel: number): Promise<string> {
-        return new Promise((resolve) => {
-            if (this.rttLocalPortMap[channel]) {
-                resolve(this.rttLocalPortMap[channel]);
-            } else {
-                getAnyFreePort(-1).then((num) => {
-                    let ret = this.rttLocalPortMap[channel];
-                    if (!ret) {     // If we already had a port assigned to this channel, must reuse it
-                        ret = num.toString();
-                        this.rttLocalPortMap[channel] = ret;
-                    }
-                    resolve(ret);
-                }).catch(() => {
-                    console.error(`Could not get free tcp port for RTT channel ${channel}`);
-                    resolve('');
-                });
-            }
-        });
+        this.rttHelper.allocateRTTPorts(args.rttConfig);
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -121,7 +73,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
         if (this.args.rttConfig.enabled) {
             const cfg = this.args.rttConfig;
-            if (this.rttPortsPending > 0) {
+            if (this.rttHelper.rttPortsPending > 0) {
                 // If we are getting here, we will need some serious re-factoring
                 throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
             }
@@ -144,7 +96,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 if (dec.ports && dec,this.ports.length > 0) {
                     dec.tcpPorts = [];      // We create this array here to ensure we have a matched set
                     for (const p of dec.ports) {
-                        const tcpPort = this.rttLocalPortMap[p];
+                        const tcpPort = this.rttHelper.rttLocalPortMap[p];
                         if (!tcpPort) {
                             throw new Error('All TCP ports for Advanced RTT decoder could not be allocated');
                         }
@@ -154,8 +106,8 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     throw new Error('TCP port for RTT decoder could not be allocated')
                 }
             }
-            for (const channel in this.rttLocalPortMap) {
-                const tcpPort = this.rttLocalPortMap[channel];
+            for (const channel in this.rttHelper.rttLocalPortMap) {
+                const tcpPort = this.rttHelper.rttLocalPortMap[channel];
                 commands.push(`interpreter-exec console "monitor rtt server start ${tcpPort} ${channel}"`);
             }
 
@@ -301,16 +253,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             }
         }
 
-        if (this.args.rttConfig.enabled) {
-            for (const dec of this.args.rttConfig.decoders) {
-                if (dec.tcpPort || dec.tcpPorts) {
-                    this.emit('event', new RTTConfigureEvent({
-                        type: 'socket',
-                        decoder: dec
-                    }));
-                }
-            }
-        }
+        this.rttHelper.emitConfigures(this.args.rttConfig, this);
     }
 
     public debuggerLaunchStarted(): void {}

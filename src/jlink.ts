@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent } from './common';
+import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent, getAnyFreePort, parseHexOrDecInt, RTTConfigureEvent, RTTServerHelper } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -7,11 +7,14 @@ const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['JLinkGDBServerCLExe', 'JLinkGDBServerCL', 'JLinkGDBServer'];
 
 export class JLinkServerController extends EventEmitter implements GDBServerController {
-    public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort', 'rttPort'];
+    public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort'];
     public name: 'J-Link';
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
+    private rttHelper: RTTServerHelper = new RTTServerHelper();
+
+    public rttLocalPortMap: { [channel: number]: string} = {};
 
     constructor() {
         super();
@@ -21,8 +24,20 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         this.ports = ports;
     }
 
+    public readonly defaultRttPort = 19021;
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
+
+        if (this.args.rttConfig.enabled) {
+            // We need to change this so we allocate in bulk for the actual ports needed. Currently,
+            // only channel#0 work so revisit this so if needed
+            const preferred: { [channel: number]: string} = {};
+            for (var ix = 0; ix < 16; ix++) {
+                preferred[ix] = (this.defaultRttPort + ix).toString();
+            }
+            this.rttHelper.setPreferredPorts(preferred)
+            this.rttHelper.allocateRTTPorts(args.rttConfig);
+        }
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -64,13 +79,41 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         return commands;
     }
 
+    public rttCommands(): string[] {
+        const commands = [];
+        if (this.args.rttConfig.enabled) {
+            const cfg = this.args.rttConfig;
+            if (this.rttHelper.rttPortsPending > 0) {
+                // If we are getting here, we will need some serious re-factoring
+                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
+            }
+            if ((this.args.request === 'launch') && cfg.clearSearch) {
+                // The RTT control block may contain a valid search string from a previous run
+                // and RTT ends up outputting garbage. Or, the server could read garbage and
+                // misconfigure itself. Following will clear the RTT header which
+                // will cause the server to wait for the server to actually be initialized
+                let addr = parseHexOrDecInt(cfg.address);
+                for (var bytes = 0; bytes < cfg.searchId.length; bytes += 4) {
+                    commands.push(`interpreter-exec console "monitor exec memU32 0x${addr.toString(16)} = 0"`);
+                    addr += 4;
+                }
+            }
+            commands.push(`interpreter-exec console "monitor exec SetRTTAddr ${cfg.address}"`);
+            if (this.rttLocalPortMap[0] && (this.rttLocalPortMap[0] !== this.defaultRttPort.toString())) {
+                commands.push(`interpreter-exec console "monitor exec SetRTTTelnetPort ${this.rttHelper.rttLocalPortMap[0]}"`);
+            }
+            cfg.allowSharedTcp = false;     // Not sure if client port sharing is allowed
+        }
+        return commands;
+    }    
+
     public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-        return commands;
+        return commands.concat(this.rttCommands());
     }
 
     private SWOConfigurationCommands(): string[] {
@@ -162,6 +205,8 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 }));
             }
         }
+
+        this.rttHelper.emitConfigures(this.args.rttConfig, this);
     }
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}

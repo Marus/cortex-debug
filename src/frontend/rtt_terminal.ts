@@ -256,4 +256,24 @@ export class TerminalServer {
         console.log(`adding client ${nonce}`);
         this.socketByNonce.set(nonce, null);
     }
+
+    public broadcast(msg: string) {
+        const obj = {
+            nonce: 'broadcast',
+            data: msg
+        }
+        msg = JSON.stringify(obj) + '\n';
+        this.socketByNonce.forEach((socket,nonce,map) => {
+            try {
+                socket.write(msg);   
+                socket.uncork();   
+            }
+            catch (e) {
+            }
+        });
+    }
+
+    public broadcastExit() {
+        this.broadcast('exit');
+    }
 }

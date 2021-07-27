@@ -249,6 +249,78 @@ export interface GDBServerController extends EventEmitter {
     debuggerLaunchCompleted(): void;
 }
 
+export class RTTServerHelper {
+    public rttPreferredPorts:  { [channel: number]: string} = {};
+    // Channel numbers previously used on the localhost
+    public rttLocalPortMap: { [channel: number]: string} = {};
+
+    // For openocd, you cannot have have duplicate ports and neither can
+    // a multple clients connect to the same channel. Perhaps in the future
+    // it wil
+    public rttPortsPending: number = 0;
+    public allocateRTTPorts(cfg: RTTConfiguration) {
+        this.rttPortsPending = 0;
+        if (cfg && cfg.enabled) {
+            for (const dec of cfg.decoders) {
+                if (dec.ports && (dec.ports.length > 0)) {
+                    this.rttPortsPending = this.rttPortsPending + dec.ports.length;
+                    for (const p of dec.ports) {
+                        this.allocateOnePort(p).then((ret) => {
+                            this.rttPortsPending = this.rttPortsPending - 1;
+                        });
+                    }
+                } else {
+                    this.rttPortsPending = this.rttPortsPending + 1;
+                    this.allocateOnePort(dec.port).then((ret) => {
+                        this.rttPortsPending = this.rttPortsPending - 1;
+                        dec.tcpPort = ret;
+                    });
+                }
+            }
+        }
+    }
+
+    public allocateOnePort(channel: number): Promise<string> {
+        return new Promise((resolve) => {
+            if (this.rttLocalPortMap[channel]) {
+                resolve(this.rttLocalPortMap[channel]);
+            } else {
+                const preferred = this.rttPreferredPorts[channel] ? parseInt(this.rttPreferredPorts[channel]) : -1;
+                getAnyFreePort(preferred).then((num) => {
+                    let ret = this.rttLocalPortMap[channel];
+                    if (!ret) {     // If we already had a port assigned to this channel, must reuse it
+                        ret = num.toString();
+                        this.rttLocalPortMap[channel] = ret;
+                    }
+                    resolve(ret);
+                }).catch(() => {
+                    console.error(`Could not get free tcp port for RTT channel ${channel}`);
+                    resolve('');
+                });
+            }
+        });
+    }
+
+    public setPreferredPorts(map: { [channel: number]: string} ) {
+        if (map) {
+            this.rttPreferredPorts = map;
+        }
+    }
+
+    public emitConfigures(cfg: RTTConfiguration, obj: EventEmitter) {
+        if (cfg.enabled) {
+            for (const dec of cfg.decoders) {
+                if (dec.tcpPort || dec.tcpPorts) {
+                    obj.emit('event', new RTTConfigureEvent({
+                        type: 'socket',
+                        decoder: dec
+                    }));
+                }
+            }
+        }        
+    }
+}
+
 export function calculatePortMask(decoders: any[]) {
     if (!decoders) { return 0; }
 
