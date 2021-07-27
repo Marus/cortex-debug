@@ -193,8 +193,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'SWO Decoding cannot be performed through the J-Link Probe in JTAG mode.';
         }
 
-        if ((config.rttConfig.decoders.length > 1) || (config.rttConfig.decoders[0].port != 0)) {
-            return 'Currently, JLink RTT can have a maximum of one decoder and it has to be port/channel 0';
+        if (config.rttConfig && config.rttConfig.enabled && config.rttConfig.decoders && (config.rttConfig.decoders.length !== 0)) {
+            if ((config.rttConfig.decoders.length > 1) || (config.rttConfig.decoders[0].port !== 0)) {
+                return 'Currently, JLink RTT can have a maximum of one decoder and it has to be port/channel 0';
+            }
         }
 
         return null;
