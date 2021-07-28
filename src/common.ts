@@ -3,6 +3,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { EventEmitter } from 'events';
 import { TcpPortScanner } from './tcpportscanner';
 import { GDBServer } from './backend/server';
+import { time } from 'console';
 
 export enum NumberFormat {
     Auto = 0,
@@ -65,7 +66,8 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
 export enum TerminalInputMode {
     COOKED = 'cooked',
     RAW = 'raw',
-    RAWECHO = 'rawecho'
+    RAWECHO = 'rawecho',
+    DISABLED = 'disabled'
 }
 export interface RTTCommonDecoderOpts {
     type: string;     // 'console', 'graph', ...
@@ -85,8 +87,7 @@ export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     noprompt: boolean;// disable prompt
     clear: boolean;   // Clear screen buffer on connect
     logfile: string;  // log IO to file
-    inputmode: TerminalInputMode; // Console Only
-
+    inputmode: TerminalInputMode;
     // Binary only options
     scale: number;
 }
@@ -369,4 +370,64 @@ export function getAnyFreePort(preferred: number): Promise<number> {
 
 export function parseHexOrDecInt(str: string): number {
     return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
+}
+
+export class ResettableInterval {
+    protected intervalId: NodeJS.Timeout;
+    protected args: any[];
+
+    constructor(protected cb: (...args) => void, protected interval:number, runNow: boolean = false, ...args) {
+        this.args = args;
+        if (runNow) {
+            this.cb(...this.args);
+        }
+        this.intervalId = setInterval(this.cb, this.interval, ...this.args);
+    }
+
+    public kill() {
+        if (this.isRunning()) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+    }
+
+    public reset(interval?: number) {
+        this.kill();
+        if (interval !== undefined) { this.interval = interval; }
+        this.intervalId = setInterval(this.cb, this.interval, ...this.args);
+    }
+
+    public isRunning() {
+        return this.intervalId != null;
+    }
+}
+
+export class ResettableTimeout {
+    protected timeoutId: NodeJS.Timeout = null;
+    protected args: any[];
+
+    constructor(protected cb: (...args: any) => void, protected interval:number, ...args: any[]) {
+        this.args = args;
+        this.timeoutId = setTimeout((...args) => {
+            this.timeoutId = null;
+            this.cb(...this.args);
+        } , this.interval, ...this.args);
+    }
+
+    public kill() {
+        if (this.isRunning()) {
+            clearTimeout(this.timeoutId);
+            this.timeoutId = null;
+        }
+    }
+
+    public reset(interval?: number) {
+        this.kill();
+        if (interval !== undefined) { this.interval = interval; }
+        this.timeoutId = setTimeout(this.cb, this.interval, ...this.args);
+    }
+
+    public isRunning() {
+        return this.timeoutId !== null;
+    }
 }

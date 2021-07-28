@@ -73,7 +73,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
     public rttCommands(): string[] {
         const commands = [];
-        if (this.args.rttConfig.enabled) {
+        if (this.args.rttConfig.enabled && !(this.args as any).pvtRestart) {
             const cfg = this.args.rttConfig;
             if (this.rttHelper.rttPortsPending > 0) {
                 // If we are getting here, we will need some serious re-factoring

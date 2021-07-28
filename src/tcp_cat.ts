@@ -5,7 +5,7 @@ import readline = require('readline');
 import * as net from 'net';
 import * as fs from 'fs';
 import { decoders as DECODER_MAP } from '../src/frontend/swo/decoders/utils';
-import { TerminalInputMode } from './common';
+import { ResettableInterval, ResettableTimeout, TerminalInputMode } from './common';
 import { parseHostPort } from './frontend/swo/common';
 import { IRTTTerminalOptions } from './frontend/rtt_terminal';
 
@@ -24,7 +24,7 @@ function padLeft(str: string, len: number, chr = ' '): string {
     return str;
 }
 
-export class TcpCatReadLine extends EventEmitter {
+export class TcpConsole extends EventEmitter {
     protected host: string;
     protected port: number;
     public connected = false;
@@ -70,7 +70,7 @@ export class TcpCatReadLine extends EventEmitter {
     }
 
     private sendDataRaw(data: string | Buffer) {
-        if (this.connected) {
+        if (this.connected && (this.options.inputmode !==TerminalInputMode.DISABLED)) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
             this.tcpClient.write(data);
             this.logData(data);
@@ -100,46 +100,33 @@ export class TcpCatReadLine extends EventEmitter {
         }        
     }
 
-    private pause() {
-        if (this.rlIF) {
-            this.rlIF.pause();
-        } else {
-            process.stdin.pause();
-        }        
-    }
-    private resume() {
-        if (this.rlIF) {
-            this.rlIF.resume();
-        } else {
-            process.stdin.resume();
-        }        
-    }
-
-    private wiatForPort: NodeJS.Timeout = null;
+    private wiatForPort: ResettableInterval = null;
     public start() {
-        this.pause();
         this.writeAndFlush(`Waiting for connection on port ${this.host}:${this.port}...`);
         // Wait for the connection happen. Keep trying until we get a connection
-        this.wiatForPort = setInterval(() => {
-            this.setupCbsAndConnect(() => {
+        this.wiatForPort = new ResettableInterval(() => {
+            this.setupCbsAndConnect().then(() => {
                 this.connected = true;
-                clearInterval(this.wiatForPort);
+                this.wiatForPort.kill();
                 this.wiatForPort = null;
                 this.writeAndFlush('Connected.\n');
                 this.openLogFile();
-                this.resume();
                 this.clearAndPrompt();
-            });
-        }, 100);
+            }).catch((e) => {});
+        }, 100, false);
     }
 
     public end() {
-        if (this.wiatForPort) {
-            clearInterval(this.wiatForPort);
+        if (this.promptTimer) {
+            this.promptTimer.kill();
+            this.promptTimer = null;
+        }
+        if (this.wiatForPort && this.wiatForPort.isRunning()) {
+            this.wiatForPort.kill();
+            this.wiatForPort = null;
             this.onCloseCb(true);
         } else if (this.connected) {
             this.tcpClient.destroy();
-
             // If a close even neer happened, try to do it manually
             setTimeout(() => {
                 if (this.connected) {   // Still connected. Nuke it
@@ -182,49 +169,71 @@ export class TcpCatReadLine extends EventEmitter {
     }
 
     protected tcpClient: net.Socket = null;
-    protected setupCbsAndConnect(cb: () => void) {
-        this.tcpClient = new net.Socket();
-        this.tcpClient.on  ('data', this.onDataCb.bind(this));
-        this.tcpClient.once('close', this.onCloseCb.bind(this, false));
-        this.tcpClient.on  ('error', (e) => {
-            // It is normal to get 'ECONNREFUSED' but on Windows you may also get
-            // ECONNRESET. We expect 'ECONNREFUSED' if the server has not yet started.
-            // Just ignore the errors as the connection fails or closes anyways
-            
-            // const code = (e as any).code;
-            // console.log(`Error code = ${code}`);
+    protected setupCbsAndConnect(): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            this.tcpClient = new net.Socket();
+            this.tcpClient.on  ('data', this.onDataCb.bind(this));
+            this.tcpClient.once('close', this.onCloseCb.bind(this, false));
+            this.tcpClient.on  ('error', (e) => {
+                // It is normal to get 'ECONNREFUSED' but on Windows you may also get
+                // ECONNRESET. We expect 'ECONNREFUSED' if the server has not yet started.
+                // Just ignore the errors as the connection fails or closes anyways
+                
+                // const code = (e as any).code;
+                // console.log(`Error code = ${code}`);
+                reject(e);
+            });
+            this.tcpClient.connect(this.port, this.host, () => {
+                resolve(true);
+            });
         });
-        this.tcpClient.connect(this.port, this.host, cb);
     }
 
     private onCloseCb(forced: boolean = false) {
-        if (this.connected || forced) {
-            this.connected = false;
-            this.tcpClient = null;
-            readline.clearLine(process.stdout, 0);
-            this.writeAndFlush('\nConnection ended. ');
-            if (this.logFd >= 0) {
-                try {
-                    fs.closeSync(this.logFd);
-                }
-                finally {
-                    this.logFd = -1;
-                }
-            }
-            if (!this.usingServer) {
-                process.nextTick(() => {
-                    this.start();
+        if (this.connected && !forced) {
+            // JLink drops connection if it is not expecting input but user enters something
+            // try to re-connect once and give up
+            this.writeAndFlush('\nConnection ended...');
+            setTimeout(() => {
+                this.setupCbsAndConnect().then((v) => {
+                    this.writeAndFlush('reconnected.\n');
+                }).catch(() => {
+                    this.writeAndFlush('reconnect failed\n');
+                    this.finishClose();
                 });
-            } else {
-                if (this.rlIF) {
-                    this.closingRlIF = true;
-                    this.rlIF.close();
-                    this.rlIF = null;
-                }
-                process.stdin.setRawMode(false);
+            }, 10);
+        } else if (this.connected || forced) {
+            if (forced) {
+                this.writeAndFlush('\nConnection ended (forced).');
             }
-            this.emit('close');
+            this.finishClose();
         }
+    }
+
+    private finishClose() {
+        this.connected = false;
+        this.tcpClient = null;
+        if (this.logFd >= 0) {
+            try {
+                fs.closeSync(this.logFd);
+            }
+            finally {
+                this.logFd = -1;
+            }
+        }
+        if (!this.usingServer) {
+            process.nextTick(() => {
+                this.start();
+            });
+        } else {
+            if (this.rlIF) {
+                this.closingRlIF = true;
+                this.rlIF.close();
+                this.rlIF = null;
+            }
+            process.stdin.setRawMode(false);
+        }
+        this.emit('close');
     }
 
     private onDataCb(buf: Buffer)
@@ -289,12 +298,23 @@ export class TcpCatReadLine extends EventEmitter {
         process.stdout.uncork();        
     }
 
+    //
+    // writePrompt will delay the actual writing of the prompt in case new things
+    // are being written. This is to avoid flashing due to rapid writes and erases
+    //
+    protected promptTimer: ResettableTimeout = null;
     private writePrompt() {
-        this.didPrompt = true;
-        if (this.rlIF) {
-            this.rlIF.prompt(true);
+        if (this.promptTimer === null) {
+            this.promptTimer = new ResettableTimeout(() => {
+                this.didPrompt = true;
+                if (this.rlIF) {
+                    this.rlIF.prompt(true);
+                } else {
+                    this.writeAndFlush(this.prompt);
+                }   
+            }, 100);
         } else {
-            this.writeAndFlush(this.prompt);
+            this.promptTimer.reset();
         }
     }
 
@@ -311,9 +331,11 @@ export class TcpCatReadLine extends EventEmitter {
         if (this.options.binary) {
             this.writeBinary(data);
         } else {
-            process.stdout.write(data);
+            process.stdout.write(data, this.options.encoding);
             if (this.endsWithNl(data)) {
                 this.writePrompt();
+            } else {
+                this.promptTimer.kill();
             }
         }
     }
@@ -361,8 +383,7 @@ export class TcpCatReadLine extends EventEmitter {
         if (type === 'string') {
             endsWithNl = (data as string).endsWith('\n');
         } else {
-            const buf = (data as Buffer);
-            const chr = buf[data.length - 1];
+            const chr = data[data.length - 1];
             // Revisit: This may not work for all encodings. We may want to convert everything to
             // a string
             endsWithNl = (chr === 10) || (chr === 13);
@@ -375,12 +396,11 @@ export class TcpCatReadLine extends EventEmitter {
 export class serverConnection {
     protected tcpClient = new net.Socket();
     protected options: IRTTTerminalOptions = null;
-    protected gdbServer: TcpCatReadLine = null;
+    protected gdbServer: TcpConsole = null;
     protected interval: NodeJS.Timeout = null;
     protected oldData: string = '';
 
     constructor(protected port: number, protected nonce: string) {
-        process.stdin.pause();
         // If nonce is not given, it will never match
         this.nonce = this.nonce || Math.floor(Math.random() * 1e6).toString();
         this.tcpClient = new net.Socket();
@@ -459,8 +479,7 @@ export class serverConnection {
                     }
                 }
                 this.options = options;
-                process.stdin.resume();
-                this.gdbServer = new TcpCatReadLine(this.options, true);
+                this.gdbServer = new TcpConsole(this.options, true);
                 this.gdbServer.on('close', () => {
                     this.gdbServer = null;
                     this.doWaitMsg();
@@ -489,20 +508,20 @@ export class serverConnection {
 function main() {
     let server: serverConnection;
     const args = process.argv.slice(2);
+    const modes = Object.values(TerminalInputMode);
     const opts = new GetOpt([
         ['',    'port=ARG',     'tcpPort number with format "[host:]port'],
         ['',    'prompt=ARG',   'Optional prompt for terminal'],
         ['',    'noprompt',     'Do not display a prompt'],
         ['',    'clear',        'Clear screen/logfile on new connection'],
         ['',    'logfile=ARG',  'Log all IO to file'],
-        ['',    'encoding=ARG', `Encoding for input and output. One of ${encodings.join(", ")}. For binary, ${bencodings.join(", ")}`],
-        ['',    'raw',          'Input will not be buffered, raw mode'],
-        ['',    'rawecho',      'Input will not be buffered, raw mode. Will echo chars and carriage returns'],
+        ['',    'encoding=ARG', `Encoding for input and output. One of ${encodings.join(', ')}. For binary, ${bencodings.join(', ')}`],
+        ['',    'inputmode',    `Input mode one of ${modes.join(', ')}`],
         ['',    'binary',       'Convert output to binary data with. Encoding must be signed, unsigned'],
         ['',    'scale=ARG,',   'Multiply binary data with given scale (float)'],
-        ['h',   'help',         'display this help'],
         ['',    'useserver=ARG','Reserved: all other options ignored. Options passed on socket'],
-        ['',    'nonce=ARG',    'Reserved: a unique string id to indentify this instance']
+        ['',    'nonce=ARG',    'Reserved: a unique string id to indentify this instance'],
+        ['h',   'help',         'display this help']
     ]);
     
     opts.parse(process.argv.slice(2));
@@ -535,13 +554,12 @@ function main() {
         return;
     }
 
-    let inpMode: TerminalInputMode = TerminalInputMode.COOKED;
-    if (process.stdin.isTTY) {
-        if (opts.options.rawecho) {
-            inpMode = TerminalInputMode.RAWECHO;
-        } else if (opts.options.raw) {
-            inpMode = TerminalInputMode.RAW;
-        }
+    if (!opts.options.inputmode) {
+        opts.options.inputmode = TerminalInputMode.COOKED;
+    } else if (!(opts.options.inputmode in TerminalInputMode)) {
+        console.error(`invalid inputmode ${opts.options.inputmode}. Must be ${modes.join(', ')}`);
+        opts.showHelp();
+        return;
     }
 
     const options: IRTTTerminalOptions = {
@@ -550,13 +568,13 @@ function main() {
         noprompt  : !!opts.options.noprompt,
         clear     : !!opts.options.clear,
         logfile   : opts.options.logFile || '',
-        inputmode : inpMode,
+        inputmode : opts.options.inputmode,
         binary    : !!opts.options.binary,
-        scale     : opts.options.scale,
-        encoding  : opts.options.encoding,
+        scale     : opts.options.scale || 1,
+        encoding  : opts.options.encoding || (opts.options.binary ? 'unsigned' : 'utf8'),
         nonce     : 'cmd-line'
     };
-    const tcpCat = new TcpCatReadLine(options, false);
+    const tcpCat = new TcpConsole(options, false);
     tcpCat.start();
 }
 

@@ -871,6 +871,7 @@ export class GDBDebugSession extends DebugSession {
         const restartProcessing = async () => {
             this.disableSendStoppedEvents = false;
             const commands = [];
+            (this.args as any).pvtRestart = true;
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
             const restartCommands = this.args.overrideRestartCommands != null ?

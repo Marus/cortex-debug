@@ -1229,12 +1229,13 @@
                                                         },
                                                         "inputmode": {
                                                             "type": "string",
-                                                            "description": "Experimental: 'raw' and 'rawecho' sends chars as they are typed. 'rawecho' will echo chars and process RETURN keys. Even CTRL-C CTRL-D are passed on",
+                                                            "description": "Experimental: 'disabled' means no stdin. 'raw' and 'rawecho' sends chars as they are typed.\n'rawecho' will echo chars and process RETURN keys. Even CTRL-C CTRL-D are passed on",
                                                             "default": "cooked",
                                                             "enum": [
                                                                 "cooked",
                                                                 "raw",
-                                                                "rawecho"
+                                                                "rawecho",
+                                                                "disabled"
                                                             ]
                                                         }
                                                     },

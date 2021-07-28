@@ -29,9 +29,9 @@ export class RTTTerminalOptions implements IRTTTerminalOptions {
         public noprompt  = !!options.noprompt,
         public clear     = !!options.clear,
         public logfile   = options.logfile || '',
-        public inputmode = options.inputmode,
+        public inputmode = (options.inputmode === undefined) ? TerminalInputMode.COOKED : options.inputmode,
         public binary    = options.type === 'binary',
-        public scale     = options.scale || 1,
+        public scale     = (options.scale === undefined) ? 1 : options.scale,
         public encoding  = options.encoding || (options.type === 'binary' ? 'unsigned' : 'utf8'),
     ) {}
 }
