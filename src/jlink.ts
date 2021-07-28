@@ -14,8 +14,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     private ports: { [name: string]: number };
     private rttHelper: RTTServerHelper = new RTTServerHelper();
 
-    public rttLocalPortMap: { [channel: number]: string} = {};
-
     constructor() {
         super();
     }
@@ -93,8 +91,9 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 }
             }
             commands.push(`interpreter-exec console "monitor exec SetRTTAddr ${cfg.address}"`);
-            if (this.rttLocalPortMap[0] && (this.rttLocalPortMap[0] !== this.defaultRttPort.toString())) {
-                commands.push(`interpreter-exec console "monitor exec SetRTTTelnetPort ${this.rttHelper.rttLocalPortMap[0]}"`);
+            if (this.rttHelper.rttLocalPortMap[0] && (this.rttHelper.rttLocalPortMap[0] !== this.defaultRttPort.toString())) {
+                // This does not work as it needs to be done before the probe connects to device
+                // commands.push(`interpreter-exec console "monitor exec SetRTTTelnetPort ${this.rttHelper.rttLocalPortMap[0]}"`);
             }
             cfg.allowSharedTcp = false;     // Not sure if client port sharing is allowed
         }
@@ -157,6 +156,16 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             '-telnetport', consoleport.toString(),
             '-device', this.args.device
         ];
+
+        if (this.args.rttConfig.enabled) {
+            if (this.rttHelper.rttPortsPending > 0) {
+                // If we are getting here, we will need some serious re-factoring
+                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time.');
+            }
+            if (this.rttHelper.rttLocalPortMap[0] && (this.rttHelper.rttLocalPortMap[0] !== this.defaultRttPort.toString())) {
+                cmdargs.push('-rtttelnetport', this.rttHelper.rttLocalPortMap[0]);
+            }
+        }
 
         if (this.args.serialNumber) {
             cmdargs.push('-select', `usb=${this.args.serialNumber}`);
