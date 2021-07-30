@@ -48,7 +48,8 @@
 			"request": "launch",
 			"runtimeArgs": [ "--nolazy" ],
 			// Run something like 'nc -lk 2340' to test this module with a server going
-			"args": ["--port", "2340", "--prompt", "myRTT> ", "--logfile", "/tmp/tcpCat.txt"],
+			"args": ["--useserver", "2340", "--nonce", "yes"],
+			// "args": ["--port", "2340", "--prompt", "myRTT> ", "--logfile", "/tmp/tcpCat.txt"],
 			// "args": ["--port", "2340", "--prompt", "myRTT> ", "--logfile", "/tmp/tcpCat.txt", "--binary", "--scale=1.5"],
 			"program": "${workspaceRoot}/dist/tcp_cat.bundle.js",
 			"console": "integratedTerminal",

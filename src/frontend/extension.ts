@@ -19,7 +19,7 @@ import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
 import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
-import { RTTTerminal, TerminalServer } from './rtt_terminal';
+import { GDBServerConsole, RTTTerminal, TerminalServer } from './rtt_terminal';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -36,7 +36,8 @@ export class CortexDebugExtension {
     private rttSources: SocketRTTSource[] = [];
     private rttTerminals: RTTTerminal[] = [];
     private rttPortMap: { [channel: number]: string} = {};
-    private rttTermServer = new TerminalServer();
+    private rttTermServer: TerminalServer = null;
+    private gdbServerConsole : GDBServerConsole = null;
 
 
     private peripheralProvider: PeripheralTreeProvider;
@@ -117,6 +118,50 @@ export class CortexDebugExtension {
                 e.element.expanded = false;
             })
         );
+
+        this.startTerminalServers(context);
+    }
+
+    private startTerminalServers(context: vscode.ExtensionContext) {
+        if (!commandExistsSync('node')) {
+            vscode.window.showWarningMessage(
+                "Command 'node' not found in your PATH. Cortex-Debug needs 'NodeJS' to be installed for full functionality. " +
+                "RTT, bidirectional-semihosting and few other features will be missing.", 'Visit nodejs.org', 'Continue').then((yn) => {
+                    if (yn.startsWith('V')) {
+                        vscode.env.openExternal(vscode.Uri.parse('https://nodejs.org'));
+                    }
+            });
+            return;
+        }
+
+        // TODO: Remove all the debug info
+        const rptMsg = 'Please report this problem.'
+        this.rttTermServer = new TerminalServer();
+        this.rttTermServer.createServer().then(() => {
+            console.log('Termserver created');
+            this.gdbServerConsole = new GDBServerConsole(context, this.rttTermServer);
+            this.gdbServerConsole.startServer().then(() => {
+                console.log('GDB server console created');
+                if (!this.gdbServerConsole.createTerminal()) {
+                    console.log('GDB server terminal window created');
+                    this.gdbServerConsole.dispose();
+                    this.gdbServerConsole = null;
+                } else {
+                    console.log('GDB server terminal window created');
+                    return;         // All worked out
+                }
+            }).catch((e) => {
+                vscode.window.showWarningMessage(
+                    `Could not create gdb-server-console. Will use old style console. ${rptMsg} ${e}`);
+                this.gdbServerConsole = null;
+                this.rttTermServer = null;
+            });
+        }).catch((e) => {
+            vscode.window.showWarningMessage(
+                `Could not create server. RTT functionality will be disabled. ${rptMsg} ${e}`);
+            this.gdbServerConsole = null;
+            this.rttTermServer = null;
+        });
     }
 
     private getSVDFile(device: string): string {
@@ -426,11 +471,13 @@ export class CortexDebugExtension {
                 this.swoSource = null;
             }
 
-            this.rttSources.forEach((s) => s.dispose())
-            this.rttSources = [];
-            this.rttTerminals.forEach((t) => t.inUse = false);
-            this.rttPortMap = {};
-            this.rttTermServer.broadcastExit();
+            if (this.rttTermServer) {
+                this.rttSources.forEach((s) => s.dispose())
+                this.rttSources = [];
+                this.rttTerminals.forEach((t) => t.inUse = false);
+                this.rttPortMap = {};
+                this.rttTermServer.broadcastExit();
+            }
 
             this.clearAdapterOutputChannel = true;
         }
@@ -453,7 +500,11 @@ export class CortexDebugExtension {
                 this.receivedSWOConfigureEvent(e);
                 break;
             case 'rtt-configure':
-                this.receivedRTTConfigureEvent(e);
+                if (!this.rttTermServer) {
+                    vscode.window.showErrorMessage('RTT functionality disabled because program "node" not found');
+                } else {
+                    this.receivedRTTConfigureEvent(e);
+                }
                 break;
             case 'adapter-output':
                 this.receivedAdapterOutput(e);
@@ -566,21 +617,13 @@ export class CortexDebugExtension {
                 return;
             }
         }
-        if (!this.nodeExecExists) {
-            // try again. following may launch an external command to determine existence
-            this.nodeExecExists = commandExistsSync('node');
-        }
-        if (!this.nodeExecExists) {
-            vscode.window.showErrorMessage('RTT terminal needs "node" to be installed. Visit\nhttps://nodejs.org\nto doanload and install')
-        } else {
-            const newTerminal = new RTTTerminal(this.context, decoder, this.rttTermServer);
-            if (newTerminal.startTerminal()) {
-                this.rttTerminals.push(newTerminal);
-                if (vscode.debug.activeDebugConsole) {
-                    vscode.debug.activeDebugConsole.appendLine(
-                        `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
-                    )
-                }
+        const newTerminal = new RTTTerminal(this.context, decoder, this.rttTermServer);
+        if (newTerminal.startTerminal()) {
+            this.rttTerminals.push(newTerminal);
+            if (vscode.debug.activeDebugConsole) {
+                vscode.debug.activeDebugConsole.appendLine(
+                    `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+                )
             }
         }
     }
@@ -590,6 +633,8 @@ export class CortexDebugExtension {
     }
 
     private receivedAdapterOutput(e) {
+        let output = e.body.content;
+        if (!output.endsWith('\n')) { output += '\n'; }
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
             this.adapterOutputChannel.show();
@@ -598,8 +643,6 @@ export class CortexDebugExtension {
         }
         this.clearAdapterOutputChannel = false;
 
-        let output = e.body.content;
-        if (!output.endsWith('\n')) { output += '\n'; }
         this.adapterOutputChannel.append(output);
     }
 
@@ -615,7 +658,7 @@ export class CortexDebugExtension {
     }
 
     private initializeRTT(args) {
-        if (!this.rttSources.length) {
+        if (this.rttSources.length === 0) {
             vscode.window.showErrorMessage('Tried to initialize RTT Decoding without a RTT data source');
             return;            
         }

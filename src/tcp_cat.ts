@@ -1,7 +1,6 @@
 import { EventEmitter } from 'stream';
 import GetOpt = require('node-getopt');
 import readline = require('readline');
-// import * as ReadLine from 'readline';
 import * as net from 'net';
 import * as fs from 'fs';
 import { decoders as DECODER_MAP } from '../src/frontend/swo/decoders/utils';
@@ -156,7 +155,7 @@ export class TcpConsole extends EventEmitter {
         this.firstConnect = false;
     }
     
-    private clearAndPrompt() {
+    public clearAndPrompt() {
         if (this.options.clear) {
             process.stdout.write(this.CLEARBUFFER);
             if (this.rlIF) {
@@ -249,9 +248,10 @@ export class TcpConsole extends EventEmitter {
                 let start = 0;
                 for (let ix = 1; ix < buf.length; ix++ ) {
                     if (buf[ix-1] !== 0xff) { continue; }
-                    const chr = String.fromCharCode(buf[ix]);
-                    if (chr.match(/[0-9A-F]/)) {
-                        if (ix > 1) {
+                    const chr = buf[ix];
+                    if (((chr >= 48) && (chr <= 57)) || ((chr >= 65) && (chr <= 90))) {
+//                    if ((chr as String) && chr.match(/[0-9A-F]/)) {
+                        if (ix >= 1) {
                             this.writeData(buf.slice(start, ix-1));
                         }
                         this.writeData(`<switch to vTerm#${chr}>\n`);
@@ -298,10 +298,8 @@ export class TcpConsole extends EventEmitter {
         process.stdout.uncork();        
     }
 
-    //
     // writePrompt will delay the actual writing of the prompt in case new things
     // are being written. This is to avoid flashing due to rapid writes and erases
-    //
     protected promptTimer: ResettableTimeout = null;
     private writePrompt() {
         if (this.promptTimer === null) {
@@ -396,7 +394,7 @@ export class TcpConsole extends EventEmitter {
 export class serverConnection {
     protected tcpClient = new net.Socket();
     protected options: IRTTTerminalOptions = null;
-    protected gdbServer: TcpConsole = null;
+    protected tcpCatClient: TcpConsole = null;
     protected interval: NodeJS.Timeout = null;
     protected oldData: string = '';
 
@@ -408,13 +406,16 @@ export class serverConnection {
         this.tcpClient.on('close', () => {process.exit(0)});
         this.tcpClient.on('error', (e) => {
             // We should not get any errors at all
+            debugger;
             const code = (e as any).code;
             console.error(`Error code = ${code}`);
             reportCrash(e, true);
             process.exit(101);
         });
         this.tcpClient.connect(this.port, '127.0.0.1', () => {
+            debugger;
             process.stdout.write('Connected to VSCode.\n');
+            process.stdout.uncork();
             this.tcpClient.write(this.nonce + '\n');
             this.tcpClient.uncork();
         });
@@ -422,16 +423,20 @@ export class serverConnection {
     }
 
     protected doWaitMsg() {
+        debugger;
         process.stdout.write('Waiting for VSCode session options...');
+        process.stdout.uncork();
         const intervalMs = 10;
         let waitMs = 0;
         this.interval = setInterval(() => {
             // Do nothing for now
-            if (!this.gdbServer) {
+            if (!this.tcpCatClient) {
                 waitMs = waitMs + intervalMs;
                 if (waitMs > 1000) {
-                    // process.stdout.write('.');
-                    // process.stdout.uncork();
+                    if (false) {
+                        process.stdout.write('.');
+                        process.stdout.uncork();
+                    }
                     waitMs = 0;
                 }
             } else if (this.interval) {
@@ -441,15 +446,23 @@ export class serverConnection {
     }
 
     protected onDataCb(data: string | Buffer) {
+        try {
+            this._onDataCb(data.toString());
+        }
+        catch (e) {
+            console.error(data.toString());
+            reportCrash(e, true);
+        }
+    }
+    protected _onDataCb(str: string) {
         clearInterval(this.interval);
         this.interval = null;
 
-        let str = data.toString('utf8');
-        let options: any;
+        let obj: any;
         try {
             str = this.oldData + str;
             if (str.endsWith('\n')) {
-                options = JSON.parse(str);
+                obj = JSON.parse(str);
             } else {
                 this.oldData = str;
                 return;
@@ -461,30 +474,35 @@ export class serverConnection {
             return;
         }
 
-        if (options.nonce === 'broadcast') {
-            if (options.data === 'exit') {
+        if (obj.nonce === 'broadcast') {
+            if (obj.data === 'exit') {
                 this.closeClient();
             }
         } else {
             process.stdout.write(str);
             process.stdout.uncork();            
-            if (this.nonce === options.nonce) {
-                if (this.gdbServer) {
-                    if (this.gdbServer.connected) {
+            if (this.nonce === obj.nonce) {
+                if (obj.data === 'clear') {
+                    if (this.tcpCatClient) {
+                        this.tcpCatClient.clearAndPrompt();
+                    }
+                } else if (this.tcpCatClient) {
+                    if (this.tcpCatClient.connected) {
                         // We are not expecting a new message while the gdb server is already running.
                         const msg = `Invalid message ${str} while gdb connection is still active`;
                         reportCrash(new Error(msg), true);
                     } else {
                         this.closeClient();
                     }
+                } else {
+                    this.options = obj;
+                    this.tcpCatClient = new TcpConsole(this.options, true);
+                    this.tcpCatClient.on('close', () => {
+                        this.tcpCatClient = null;
+                        this.doWaitMsg();
+                    });
+                    this.tcpCatClient.start();
                 }
-                this.options = options;
-                this.gdbServer = new TcpConsole(this.options, true);
-                this.gdbServer.on('close', () => {
-                    this.gdbServer = null;
-                    this.doWaitMsg();
-                });
-                this.gdbServer.start();
             } else {
                 console.error(`Invalid message ${str} from VSCode. Nonce mismatch`);
             }
@@ -493,9 +511,9 @@ export class serverConnection {
 
     private closeClient() {
         try {
-            if (this.gdbServer) {
-                this.gdbServer.end();
-                this.gdbServer = null;
+            if (this.tcpCatClient) {
+                this.tcpCatClient.end();
+                this.tcpCatClient = null;
             }
         }
         catch (e) {
@@ -528,7 +546,7 @@ function main() {
 
     if (opts.options.useserver) {
         
-        if (!opts.options.nonce || (opts.options.nonce.length !== 32)) {
+        if (!opts.options.nonce/* || (opts.options.nonce.length !== 32)*/) {
             console.error(`Invalid nonce ${opts.options.nonce}`);
             process.exit(102);
         }
@@ -584,9 +602,9 @@ function reportCrash(e: any, hang: boolean = false) {
         console.error(e.stack);
     }
     if (hang) {
-        console.error('tcpCat crashed... Use Ctrl-C to exit');
+        console.error(`tcpCat crashed... Use Ctrl-C to exit ${e}`);
         setInterval(() => {
-            console.error('tcpCat crashed... Use Ctrl-C to exit');
+            console.error(`tcpCat crashed... Use Ctrl-C to exit ${e}`);
         }, 5000);
     }
 }
@@ -597,7 +615,19 @@ try {
     });
 
     console.log('RTT Console: ' + process.argv.slice(2).join(' '));
-    main();
+    const flag = false;
+    if (process.argv[2] === '??') {
+        process.argv = process.argv.splice(2, 1);
+        console.log('Waiting for debugger to attach...');
+        const int = setInterval(() => {
+             if (flag !== false) {
+                 clearInterval(int);
+                 main();
+            }
+        }, 1000);
+    } else {
+        main();
+    }
 }
 catch (e) {
     reportCrash(e, true);

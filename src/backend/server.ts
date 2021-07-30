@@ -1,11 +1,12 @@
 import * as ChildProcess from 'child_process';
 import * as os from 'os';
+import * as net from 'net';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
 import { TcpPortScanner } from '../tcpportscanner';
 
 export class GDBServer extends EventEmitter {
-    private process: any;
+    private process: ChildProcess.ChildProcess;
     private outBuffer: string = '';
     private errBuffer: string = '';
     private initResolve: (result: boolean) => void;
@@ -15,7 +16,7 @@ export class GDBServer extends EventEmitter {
 
     constructor(
         private cwd: string, private application: string, private args: string[],
-        private initMatch: RegExp, private port: number|undefined) {
+        private initMatch: RegExp, private port: number|undefined, private consolePort: number) {
         super();
     }
 
@@ -30,6 +31,7 @@ export class GDBServer extends EventEmitter {
                 this.process.stderr.on('data', this.onStderr.bind(this));
                 this.process.on('exit', this.onExit.bind(this));
                 this.process.on('error', this.onError.bind(this));
+                this.process.on('spawn', () => { this.connectToConsole(); })
 
                 if ((typeof this.port === 'number') && (this.port > 0)) {
                     // We monitor for port getting into Listening mode. This is a backup for initMatch
@@ -85,6 +87,9 @@ export class GDBServer extends EventEmitter {
 
     private onExit(code, signal) {
         this.emit('exit', code, signal);
+        if (this.consoleSocket) {
+            this.consoleSocket.destroy();
+        }
     }
 
     private onError(err) {
@@ -98,6 +103,7 @@ export class GDBServer extends EventEmitter {
     }
 
     private onStdout(data) {
+        this.sendToConsole(data);        // Send it without any processing or buffering
         if (typeof data === 'string') { this.outBuffer += data; }
         else { this.outBuffer += data.toString('utf8'); }
 
@@ -116,6 +122,7 @@ export class GDBServer extends EventEmitter {
     }
 
     private onStderr(data) {
+        this.sendToConsole(data);        // Send it without any processing or buffering
         if (typeof data === 'string') { this.errBuffer += data; }
         else { this.errBuffer += data.toString('utf8'); }
 
@@ -130,6 +137,36 @@ export class GDBServer extends EventEmitter {
         if (end !== -1) {
             this.emit('output', this.errBuffer.substring(0, end));
             this.errBuffer = this.errBuffer.substring(end + 1);
+        }
+    }
+
+    protected consoleSocket: net.Socket = null;
+    protected consoleReady: boolean = false;;
+    protected connectToConsole() {
+        this.consoleReady = false;
+        this.consoleSocket = new net.Socket();
+        this.consoleSocket.on  ('data', (data) => {
+            try {
+                this.process.stdin.write(data, 'utf8');
+            }
+            catch (e) {
+                console.error(`stdin write failed ${e}`);
+            }
+        });
+        this.consoleSocket.once('close', () => {
+            this.consoleReady = false;
+            this.consoleSocket = null;
+        });
+        this.consoleSocket.on  ('error', (e) => {
+        });
+        this.consoleSocket.connect(this.consolePort, '127.0.0.1', () => {
+            this.consoleReady = true;
+        });
+    }
+
+    private sendToConsole(data: string|Buffer) {
+        if (this.consoleReady && this.consolePort) {
+            this.consoleSocket.write(data);
         }
     }
 }

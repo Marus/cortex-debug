@@ -342,7 +342,16 @@ export class GDBDebugSession extends DebugSession {
             }
 
             const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
-            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort);
+            const consolePort = (this.args  as any).gdbServerConsolePort;
+            if (consolePort === undefined) {
+                this.sendErrorResponse(
+                    response,
+                    107,
+                    `GDB Server Console tcp port is undefined.`
+                );
+                return;
+            }
+            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort, consolePort);
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {

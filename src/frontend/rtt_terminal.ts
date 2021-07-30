@@ -36,6 +36,14 @@ export class RTTTerminalOptions implements IRTTTerminalOptions {
     ) {}
 }
 
+/**
+ * This class creates an instance of a terminal intended to display RTT/semihosting/SWO output
+ * but technically, it can be anything. It provides a limited set of options that hopefully
+ * will meet most needs
+ * 
+ * The goal here is to re-use the terminal as much as possible so the user would find it in
+ * a stable place and preferably in the place they docked it.
+ */
 export class RTTTerminal extends EventEmitter implements SWORTTSource   {
     protected termOptions: RTTTerminalOptions;
     protected nonce = getNonce();
@@ -65,6 +73,7 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         super();
         this.termOptions = new RTTTerminalOptions(options, this.nonce);
     }
+
     dispose() {
         // process.kill(this.rttTerminal.processId)
         if (this.rttTerminal) {
@@ -90,6 +99,8 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
             ]
         };
 
+        // Even in append mode, we start off with an empty file
+        // and the terminal appends (or truncates) with its own lifetime
         if (this.options.logfile) {
             try {
                 fs.writeFileSync(this.options.logfile, "");
@@ -100,13 +111,16 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         }
 
         try {
+            this.rttTermServer.once('register', (str) => {
+                if (str === this.nonce) {
+                    this.sendOptions(this.termOptions);
+                    this.connected = true;                }
+            });
             this._rttTerminal = vscode.window.createTerminal(args);
             setTimeout(() => {
                 this._rttTerminal.show();
             }, 100);
             this.rttTermServer.addClient(this.nonce);
-            this.sendOptions(this.termOptions);
-            this.connected = true;
             this.inUse = true;
             return true;
         }
@@ -159,38 +173,47 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
     }
 }
 
-export class TerminalServer {
+/**
+ * This class creates a server which communicates with all the registered channels
+ * and is able to send information to indivitual sockets. Each terminal identifies
+ * and authenticates itself with a nonce. This process knows nothing about the
+ * terminals themselves are what is going on within them
+ */
+export class TerminalServer extends EventEmitter {
     protected server: net.Server = null;
     protected port: number;
     protected socketByNonce: Map<string, net.Socket> = new Map();
     protected nonceBySocket: Map<net.Socket, string> = new Map();
-
-    public static TheServer;
+    protected noBroadExit: string[] = [];
 
     constructor() {
-        TerminalServer.TheServer = this;
-        this.createServer();
+        super();
     }
 
     public portNumber(): number { return this.port; }
     public isConnected(): boolean { return !!this.server; }
-    private createServer() {
-        getAnyFreePort(55000).then((x) => {
-            this.port = x;
-            const newServer = net.createServer(this.onNewClient.bind(this));
-            newServer.listen(this.port, '127.0.0.1', () => {
-                this.server = newServer;
+    public createServer(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            getAnyFreePort(55678).then((x) => {
+                this.port = x;
+                const newServer = net.createServer(this.onNewClient.bind(this));
+                newServer.listen(this.port, '127.0.0.1', () => {
+                    this.server = newServer;
+                    resolve();
+                });
+                newServer.on(('error'), (e) => {
+                    console.log(e);
+                });
+                newServer.on('close', () => { this.server = null; });
+            }).catch((e) => {
+                reject(e)
             });
-            newServer.on(('error'), (e) => {
-                console.log(e);
-            });
-            newServer.on('close', () => { this.server = null; });
-        }).catch((e) => {
         });
     }
 
     protected onNewClient(socket: net.Socket) {
-        console.log('New client connected');
+        this.emit('connect');
+        console.log('TerminalServer: New client connected');
         socket.setKeepAlive(true);
         socket.on('close', () => {
             console.log('client closed');
@@ -198,14 +221,18 @@ export class TerminalServer {
             if (nonce) {
                 this.nonceBySocket.delete(socket);
                 this.socketByNonce.delete(nonce);
+                this.noBroadExit = this.noBroadExit.filter((item) => item !== nonce);
             }
+            this.emit('disconnect');
         });
         socket.on('data', (data) => {
             const str = data.toString().trim();
             if (this.socketByNonce.has(str)) {
                 // Client is alive and responded with proper nonce
+                console.log(`client ${str} registered`);
                 this.socketByNonce.set(str, socket);
                 this.nonceBySocket.set(socket, str);
+                this.emit('register', str);
             } else {
                 console.error(`Unknown message '${str}' from client`);
             }
@@ -250,14 +277,17 @@ export class TerminalServer {
                         clearInterval(interval);
                         send();
                     }
-                }, 1);
+                }, 10);
             }
         });
     }
 
-    public addClient(nonce:string) {
+    public addClient(nonce:string, allowExitBroadcast: boolean = true) {
         console.log(`adding client ${nonce}`);
         this.socketByNonce.set(nonce, null);
+        if (!allowExitBroadcast) {
+            this.noBroadExit.push(nonce);
+        }
     }
 
     public broadcast(msg: string) {
@@ -267,11 +297,13 @@ export class TerminalServer {
         }
         msg = JSON.stringify(obj) + '\n';
         this.socketByNonce.forEach((socket,nonce,map) => {
-            try {
-                socket.write(msg);   
-                socket.uncork();   
-            }
-            catch (e) {
+            if (this.noBroadExit.findIndex((item) => item === nonce) < 0) {
+                try {
+                    socket.write(msg);   
+                    socket.uncork();   
+                }
+                catch (e) {
+                }
             }
         });
     }
@@ -281,13 +313,22 @@ export class TerminalServer {
     }
 }
 
-export class AdapterOutputTerminal {
-    protected server: net.Server = null;
-    protected client: net.Socket = null;
-    public terminal: vscode.Terminal;
-    public options: IRTTTerminalOptions;
-    public port: number;
-    constructor(public context: vscode.ExtensionContext) {
+export class GDBServerConsole {
+    protected toTerminalServer: net.Server = null;
+    protected toTerminal: net.Socket = null;
+    protected toTerminalPort: number = -1;
+
+    protected toBackendServer: net.Server = null;
+    protected toBackend: net.Socket = null;
+    protected toBackendPort: number = -1;    
+
+    public terminal: vscode.Terminal = null;
+    protected options: IRTTTerminalOptions;
+    protected name: string;
+    protected connected: boolean;
+    static BackendPort: number = -1;
+
+    constructor(public context: vscode.ExtensionContext, public termServer: TerminalServer) {
         this.options = {
             port      : '',
             prompt    : '',
@@ -298,76 +339,220 @@ export class AdapterOutputTerminal {
             binary    : false,
             scale     : 1.0,
             encoding  : 'utf8',
-            nonce     : 'console'
+            nonce     : getNonce()
         };
-        this.startServer();
     }
 
-    protected startServer() {
-        getAnyFreePort(54554).then((p) => {
-            this.port = p;
-            const newServer = net.createServer(this.onConnect.bind(this));
-            newServer.listen(this.port, '127.0.0.1', () => {
-                this.server = newServer;
+    public startServer(): Promise<[void, void]> {
+        return Promise.all<void, void>([
+            this.initToTerminalSocket(),
+            this.initToBackendSocket()
+        ]);
+    }
+
+    // Create a server that communicates between the terminal and this extension
+    // The gdb-server terminal connects to this server and gets does the IO with it
+    // It does not directly talk to the gdb-server. Any input entered into the terminal
+    // is sent to the gdb-server via the backend socket
+    protected initToTerminalSocket() : Promise<void> {
+        return new Promise((resolve, reject) => {
+            getAnyFreePort(55778).then((p) => {
+                this.toTerminalPort = p;
+                this.options.port = p.toString();
+                const newServer = net.createServer(this.onTerminalConnect.bind(this));
+                newServer.listen(this.toTerminalPort, '127.0.0.1', () => {
+                    this.toTerminalServer = newServer;
+                    resolve();
+                });
+                newServer.on(('error'), (e) => {
+                    console.error(e);
+                    reject(e);
+                });
+                newServer.on('close', () => {
+                    this.toTerminalServer = null;
+                });
             });
-            newServer.on(('error'), (e) => {
-                console.log(e);
-            });
-            newServer.on('close', () => {
-                this.server = null;
-                this.startServer();
+        });     
+    }
+
+    // Create a server that serves the GDBServer running in the adapter process
+    // Any data from the gdb-server is received here and sent to the terminal
+    // via the terminal socket
+    protected initToBackendSocket() : Promise<void> {
+        return new Promise((resolve, reject) => {
+            getAnyFreePort(55878).then((p) => {
+                this.toBackendPort = p;
+                GDBServerConsole.BackendPort = p;
+                const newServer = net.createServer(this.onBackendConnect.bind(this));
+                newServer.listen(this.toBackendPort, '127.0.0.1', () => {
+                    this.toBackendServer = newServer;
+                    resolve();
+                });
+                newServer.on(('error'), (e) => {
+                    console.error(e);
+                    reject(e);
+                });
+                newServer.on('close', () => {
+                    this.toBackendServer = null;
+                });
             });
         });
     }
 
     // The program running in the terinal is just connected
-    protected onConnect(socket: net.Socket) {
-        this.client = socket;
-        console.log('gdb-server console connected');
+    protected onTerminalConnect(socket: net.Socket) {
+        this.toTerminal = socket;
+        console.log('onTerminalConnect gdb-server console connected');
         socket.setKeepAlive(true);
         socket.once('close', () => {
-            console.log('gdb-server console closed');
-            this.client = null;
+            console.log('onTerminalConnect gdb-server console closed');
+            this.toTerminal = null;
+            vscode.window.showErrorMessage(
+                'Cortex-Debug GDB Server console terminal window quit unexpectedly. Please report this problem.\n' +
+                'Many things may not work. Do you want to try re-starting the terminal window', 'Yes', 'Np').then((str) => {
+                    if (str === 'Yes') {
+                        try { this.terminal.dispose(); } catch (e) {}
+                        this.terminal = null;
+                        this.createTerminal();
+                    }
+                })
         });
         socket.on('data', (data) => {
             // route this data to the gdb-server through the gdb-adapter. very long trip
-            this.sendToBackend(data)
+            this.sendToBackend(data);
         });
         socket.on('error', (e) => {
-            console.error(`gdb-server console client error ${e}`)
+            console.error(`onTerminalConnect: gdb-server console client error ${e}`)
+        });
+        socket.setKeepAlive(true);
+    }
+
+    // The gdb-server running in the backend
+    protected onBackendConnect(socket: net.Socket) {
+        this.toBackend = socket;
+        this.clearTerminal();
+        console.log('onBackendConnect: gdb-server program connected');
+        socket.setKeepAlive(true);
+        socket.on('close', () => {
+            console.log('onBackendConnect: gdb-server program closed');
+            this.sendToTerminal('GDB server exited. Waiting for next server start...')
+            this.toBackend = null;
+        });
+        socket.on('data', (data) => {
+            this.sendToTerminal(data);
+        });
+        socket.on('error', (e) => {
+            console.error(`onBackendConnect: gdb-server program client error ${e}`)
         });
         socket.setKeepAlive(true);
     }
 
     public sendToBackend(data: string | Buffer) {
-    }
-
-    public sendToTerminal(data: string) {
-        if (this.client) {
-            this.client.write(data, 'utf8');
+        if (this.toBackend) {
+            this.toBackend.write(data.toString());
+            this.toBackend.uncork();
         }
     }
 
-    protected startTerminal() {
+    //
+    // There are two sockets going on. It can happen that the socket to the gdb-server 
+    // starts streaming before the terminal is even ready. Just buffer it until we have
+    // the terminal is alice
+    //
+    private termBuffer = Buffer.alloc(0);
+    public sendToTerminal(data: string | Buffer) {
+        if (this.toTerminal) {
+            if (this.termBuffer.length > 0) {
+                this.toTerminal.write(this.termBuffer, 'utf8');
+                this.termBuffer = Buffer.alloc(0);
+            }
+            this.toTerminal.write(data, 'utf8');
+            this.toTerminal.uncork();
+        } else {
+            this.termBuffer = Buffer.concat([this.termBuffer, Buffer.from(data)]);
+        }
+    }
+
+    public clearTerminal() {
+        const obj = {
+            nonce: this.options.nonce,
+            data: 'clear'
+        }
+        const msg = JSON.stringify(obj) + '\n';
+        this.termServer.sendToClient(this.options.nonce, msg);
+    }
+
+    static createTermName(want: string, existing: string | null): string {
+        let ret = want;
+        let count = 1;
+        while (vscode.window.terminals.findIndex((t) => t.name === ret) >= 0) {
+            if (existing === ret) {
+                return existing;
+            }
+            ret = `${want}-${count}`;
+            count = count + 1;
+        }
+        return ret;
+    }
+
+    public dispose() {
+        if (this.terminal) {
+            this.terminal.dispose();
+        }
+        this.terminal = null;
+        this.connected = false;
+        if (this.toBackend) {
+            this.toBackend.destroy();
+            this.toBackend = null;
+        }
+        if (this.toTerminal) {
+            this.toTerminal.destroy();
+            this.toTerminal = null;
+        }
+    }
+
+    public createTerminal(): boolean {
+        if (this.terminal) {
+            return true;
+        }
         const script = path.join(this.context.extensionPath, 'dist', 'tcp_cat.bundle.js');
+        this.name = GDBServerConsole.createTermName('gdb-server', null);
+        const portStr = this.termServer.portNumber().toString();
         const args = {
-            name: 'gdb-server',
+            name: this.name,
             shellPath: 'node',
-            shellArgs: [script,
-                '--port',    this.port.toString(),
-                '--noprompt',
-                '--clear'
+            shellArgs: [//'inspect',
+                script,
+                "--useserver", portStr,
+                "--nonce",     this.options.nonce
             ]
         };
 
         try {
+            this.termServer.once('register', (str) => {
+                if (str === this.options.nonce) {
+                    this.connected = true;
+                    this.sendTerminalOptions(this.options);
+                }
+            });
+            this.termServer.addClient(this.options.nonce, false);
             this.terminal = vscode.window.createTerminal(args);
+            setTimeout(() => {
+                this.terminal.show();
+            }, 100);
+            return true;
         }
         catch (e) {
-            vscode.window.showErrorMessage(`Gdb server console start failed: ${e.toString()}`);
+            vscode.window.showErrorMessage(`Terminal start for gdb-server failed: ${e.toString()}`);
+            return false;
         }     
     }
 
-    public dispose() {
+    private sendTerminalOptions(options: RTTTerminalOptions): boolean {
+        const str = JSON.stringify(options) + '\n';
+        if (this.termServer.sendToClient(this.options.nonce, str)) {
+            return true;
+        }
+        return false;
     }
 }
