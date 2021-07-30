@@ -49,7 +49,6 @@ export class CortexDebugExtension {
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
-    private nodeExecExists = false;
 
     constructor(private context: vscode.ExtensionContext) {
         this.peripheralProvider = new PeripheralTreeProvider();
@@ -123,18 +122,26 @@ export class CortexDebugExtension {
     }
 
     private startTerminalServers(context: vscode.ExtensionContext) {
-        if (!commandExistsSync('node')) {
+        const momentoId = 'noNodeMessage';
+        const nodeExists =  commandExistsSync('node');
+        const flag = context.globalState.get<Boolean>(momentoId, false);
+        if (!flag && !nodeExists) {
             vscode.window.showWarningMessage(
                 "Command 'node' not found in your PATH. Cortex-Debug needs 'NodeJS' to be installed for full functionality. " +
-                "RTT, bidirectional-semihosting and few other features will be missing.", 'Visit nodejs.org', 'Continue').then((yn) => {
-                    if (yn.startsWith('V')) {
+                "RTT, bidirectional-semihosting and few other features will be missing.",
+                'Visit nodejs.org', "Don't ask again", 'Continue').then((ret) => {
+                    if (ret.startsWith('V')) {
                         vscode.env.openExternal(vscode.Uri.parse('https://nodejs.org'));
+                    } else if (ret.startsWith('D')){
+                        context.globalState.update(momentoId, true);
                     }
             });
-            return;
         }
 
-        // TODO: Remove all the debug info
+        if (!nodeExists) { return; }
+
+        // While we have to do all this work, we should not fail going through the whole init process
+        // TODO: Remove all the debug info. 
         const rptMsg = 'Please report this problem.'
         this.rttTermServer = new TerminalServer();
         this.rttTermServer.createServer().then(() => {
@@ -146,6 +153,7 @@ export class CortexDebugExtension {
                     console.log('GDB server terminal window created');
                     this.gdbServerConsole.dispose();
                     this.gdbServerConsole = null;
+                    this.rttTermServer = null;
                 } else {
                     console.log('GDB server terminal window created');
                     return;         // All worked out
