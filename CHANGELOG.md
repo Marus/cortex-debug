@@ -1,9 +1,13 @@
 ChangeLog
 
-# V0.3.14.pre2
+# V0.3.14.pre3
+
+Currently the new features involving Terminals require you to have installation of [NodeJS](https://nodejs.org). The extension will work but some of the new features will be disabled
+
 New Features:
-   * Support for RTT (SEGGER RealTimeTrace) with OpenOCD and JLink. See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
-     * JLink RTT has a limitation that it can ONLY work with one channel (channel 0). We are not sure why yet. There is another artifact with channel 0 where you may see output from a previous run at the very beginning.
+   * NodeJS required: Support for RTT (SEGGER RealTimeTrace) with OpenOCD and JLink. See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
+     * JLink RTT has a limitation that it can ONLY work with one channel (channel 0). There is another artifact with channel 0 where you may see output from a previous run at the very beginning.
+   * NodeJS required: There is now a new Terminal window for viewing the "Adapter Output". The old window is still available. This is the output of a gdb-server like JLink, OpenOCD, etc. If you are using semi-hosting, this terminal is bidirectional. You can enter input that is fed to your program.
    * `demangle` is on by default. You can turn it off in `launch.json`
    
 # V0.3.13

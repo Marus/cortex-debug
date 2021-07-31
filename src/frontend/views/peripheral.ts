@@ -37,17 +37,26 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
     
-    private loadSVD(SVDFile: string): Thenable<any> {
-        if (!path.isAbsolute(SVDFile)) {
-            const fullpath = path.normalize(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, SVDFile));
-            SVDFile = fullpath;
-        }
+    private loadSVD(SVDFile: string): Promise<any> {
+        return new Promise((resolve,reject) => {
+            if (!path.isAbsolute(SVDFile)) {
+                const fullpath = path.normalize(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, SVDFile));
+                SVDFile = fullpath;
+            }
 
-        this.svdFileName = SVDFile;
-        return SVDParser.parseSVD(SVDFile).then((peripherals) => {
-            this.peripherials = peripherals;
-            this.loaded = true;
-            return true;
+            this.svdFileName = SVDFile;
+            try {
+                return SVDParser.parseSVD(SVDFile).then((peripherals) => {
+                    this.peripherials = peripherals;
+                    this.loaded = true;
+                    resolve(true);
+                }).catch ((e) => {
+                    reject(e);
+                });
+            }
+            catch (e) {
+                reject(e);
+            }
         });
     }
 
@@ -77,7 +86,12 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             }
         }
         else if (!this.loaded) {
-            return [new MessageNode('Unable to load SVD File: ' + (this.svdFileName || 'Not specified'), null)];
+            if (!vscode.debug.activeDebugSession) {
+                return [new MessageNode('SVD: Debug session not active', null)];
+            } else if (!this.svdFileName) {
+                return [new MessageNode('SVD: No SVD file specified', null)];
+            }
+            return [new MessageNode(`Unable to load SVD file: ${this.svdFileName}`, null)];
         }
         else {
             return [];
