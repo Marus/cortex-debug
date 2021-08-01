@@ -10,14 +10,13 @@ import { SWORTTSource } from './sources/common';
 import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig,
     SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
     SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage,
-    GrapherProgramCounterMessage, 
-    getNonce} from './common';
+    GrapherProgramCounterMessage} from './common';
 import { SWORTTAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
 import { PacketType, Packet } from './common';
 import { parseUnsigned } from './decoders/utils';
 import { SymbolInformation } from '../../symbols';
-import { RTTCommonDecoderOpts } from '../../common';
+import { getNonce, RTTCommonDecoderOpts } from '../../common';
 import { SocketRTTSource, SocketSWOSource } from './sources/socket';
 
 const RingBuffer = require('ringbufferjs');
@@ -469,9 +468,6 @@ export class RTTCore extends SWORTTCoreBase {
         
         args.rttConfig.decoders.forEach((conf) => {
             switch (conf.type) {
-                case 'binary':
-                    this.processors.push(new SWOBinaryProcessor(conf as any as SWOBinaryDecoderConfig, 'RTT'));
-                    break;
                 case 'graph':
                     const processor = new SWORTTGraphProcessor(conf as any as SWOGraphDecoderConfig);
                     if (this.webview) { this.webview.registerProcessors(processor); }

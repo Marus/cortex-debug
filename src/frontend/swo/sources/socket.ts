@@ -1,7 +1,7 @@
 import { SWORTTSource } from './common';
 import { EventEmitter } from 'events';
 import * as net from 'net';
-import { parseHostPort } from '../common';
+import { parseHostPort } from '../../../common';
 
 export class SocketSWOSource extends EventEmitter implements SWORTTSource {
     private client: net.Socket = null;

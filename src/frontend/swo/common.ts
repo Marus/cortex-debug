@@ -121,25 +121,3 @@ export interface Packet {
     size: number;
     data: Buffer;
 }
-
-export function parseHostPort(hostPort: string) {
-    let port: number;
-    let host = '127.0.0.1';
-    const match = hostPort.match(/(.*)\:([0-9]+)/);
-    if (match) {
-        host = match[1] ? match[1] : host;
-        port = parseInt(match[2], 10);
-    } else {
-        port = parseInt(hostPort, 10);
-    }
-    return { port: port, host: host };
-}
-
-export function getNonce() {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
-}

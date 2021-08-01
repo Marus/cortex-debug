@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as net from 'net';
-import { getAnyFreePort, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
+import { getAnyFreePort, getNonce, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
 import { SWORTTSource } from './swo/sources/common';
 import EventEmitter = require('events');
-import { getNonce } from './swo/common';
 
 export interface IRTTTerminalOptions
 {

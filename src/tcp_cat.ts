@@ -4,8 +4,7 @@ import readline = require('readline');
 import * as net from 'net';
 import * as fs from 'fs';
 import { decoders as DECODER_MAP } from '../src/frontend/swo/decoders/utils';
-import { ResettableInterval, ResettableTimeout, TerminalInputMode } from './common';
-import { parseHostPort } from './frontend/swo/common';
+import { parseHostPort, ResettableInterval, ResettableTimeout, TerminalInputMode } from './common';
 import { IRTTTerminalOptions } from './frontend/rtt_terminal';
 
 const encodings: string[] = ["ascii", "utf8", "ucs2", "utf16le"];
