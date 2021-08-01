@@ -38,6 +38,8 @@ export class CortexDebugExtension {
     private rttPortMap: { [channel: number]: string} = {};
     private rttTermServer: TerminalServer = null;
     private gdbServerConsole : GDBServerConsole = null;
+    private finishedTerminalSetup = false;
+    private nodeExists = false;
 
 
     private peripheralProvider: PeripheralTreeProvider;
@@ -123,9 +125,9 @@ export class CortexDebugExtension {
 
     private startTerminalServers(context: vscode.ExtensionContext) {
         const momentoId = 'noNodeMessage';
-        const nodeExists =  commandExistsSync('node');
+        this.nodeExists =  commandExistsSync('node');
         const flag = context.globalState.get<Boolean>(momentoId, false);
-        if (!flag && !nodeExists) {
+        if (!flag && !this.nodeExists) {
             vscode.window.showWarningMessage(
                 "Command 'node' not found in your PATH. Cortex-Debug needs 'NodeJS' to be installed for full functionality. " +
                 "RTT, bidirectional-semihosting and few other features will be missing.",
@@ -138,37 +140,47 @@ export class CortexDebugExtension {
             });
         }
 
-        if (!nodeExists) { return; }
+        if (!this.nodeExists) {
+            this.finishedTerminalSetup = true;
+            return;
+        }
 
         // While we have to do all this work, we should not fail going through the whole init process
         // TODO: Remove all the debug info. 
-        const rptMsg = 'Please report this problem.'
-        this.rttTermServer = new TerminalServer();
-        this.rttTermServer.createServer().then(() => {
-            console.log('Termserver created');
-            this.gdbServerConsole = new GDBServerConsole(context, this.rttTermServer);
-            this.gdbServerConsole.startServer().then(() => {
-                console.log('GDB server console created');
-                if (!this.gdbServerConsole.createTerminal()) {
-                    console.log('GDB server terminal window created');
-                    this.gdbServerConsole.dispose();
-                    this.gdbServerConsole = null;
-                    this.rttTermServer = null;
-                } else {
-                    console.log('GDB server terminal window created');
-                    return;         // All worked out
-                }
-            }).catch((e) => {
-                vscode.window.showWarningMessage(
-                    `Could not create gdb-server-console. Will use old style console. ${rptMsg} ${e}`);
+        this.doTerminalSetup(context).then(() => {
+            // Everything went well
+        }).catch ((e) => {
+            if (this.gdbServerConsole) {
+                this.gdbServerConsole.dispose();
                 this.gdbServerConsole = null;
-                this.rttTermServer = null;
-            });
-        }).catch((e) => {
-            vscode.window.showWarningMessage(
-                `Could not create server. RTT functionality will be disabled. ${rptMsg} ${e}`);
-            this.gdbServerConsole = null;
+            }
             this.rttTermServer = null;
+            vscode.window.showErrorMessage(`Please report this problem. ${e.toString()}`);
+        }).finally (() => {
+            this.finishedTerminalSetup = true;
+        });
+    }
+
+    private doTerminalSetup(context: vscode.ExtensionContext): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            const rptMsg = 'Please report this problem.';
+            this.rttTermServer = new TerminalServer();
+            this.rttTermServer.createServer().then(() => {
+                console.log('Termserver created');
+                this.gdbServerConsole = new GDBServerConsole(context, this.rttTermServer);
+                this.gdbServerConsole.startServer().then(() => {
+                    console.log('GDB server console created');
+                    if (!this.gdbServerConsole.createTerminal()) {
+                        reject(new Error('GDB server terminal window created'));
+                    } else {
+                        resolve(); // All worked out
+                    }
+                }).catch((e) => {
+                    reject(new Error(`Could not create gdb-server-console. Will use old style console. ${rptMsg} ${e}`));
+                });
+            }).catch((e) => {
+                reject(new Error(`Could not create server. RTT functionality will be disabled. ${rptMsg} ${e}`));
+            });
         });
     }
 
