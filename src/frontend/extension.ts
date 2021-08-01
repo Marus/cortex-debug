@@ -559,7 +559,12 @@ export class CortexDebugExtension {
 
     private receivedSWOConfigureEvent(e) {
         if (e.body.type === 'socket') {
-            this.swoSource = new SocketSWOSource(e.body.port);
+            const src = new SocketSWOSource(e.body.port);
+            src.start().then(() => {
+                this.swoSource = src;
+            }).catch((e) => {
+                vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e}`);
+            });
             Reporting.sendEvent('SWO', 'Source', 'Socket');
         }
         else if (e.body.type === 'fifo') {
@@ -588,12 +593,18 @@ export class CortexDebugExtension {
             const decoder: RTTCommonDecoderOpts = e.body.decoder;
             if (!e.body.allowSharedTcp) {
                 const channels = decoder.ports ? decoder.ports : [decoder.port];
+                let dupFound = false;
                 for (const channel of channels) {
-                    if (this.rttPortMap[decoder.port]) {
-                        vscode.window.showErrorMessage(`Duplicate RTT channel ${decoder.port}. Ignoring decoder.`)
-                        return;
+                    if (this.rttPortMap[channel]) {
+                        if (!dupFound) {       // Already shown error msg?
+                            vscode.window.showErrorMessage(`Duplicate RTT channel ${channel}. Ignoring decoder.`);
+                        }
+                        dupFound = true;
                     }
                     this.rttPortMap[decoder.port] = decoder.tcpPort;
+                }
+                if (dupFound) {
+                    return;
                 }
             }
             if ((decoder.type === 'console') || (decoder.type === 'binary')) {
@@ -602,17 +613,26 @@ export class CortexDebugExtension {
             } else {
                 Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
                 if (!decoder.ports) {
-                    this.rttSources.push(new SocketRTTSource(decoder.tcpPort, decoder.port));
+                    this.createRTTSource(decoder.tcpPort, decoder.port);
                 } else {
                     for (var ix = 0; ix < decoder.ports.length; ix = ix + 1) {
                         // Hopefully ports and tcpPorts are a matched set
-                        this.rttSources.push(new SocketRTTSource(decoder.tcpPorts[ix], decoder.ports[ix]));
+                        this.createRTTSource(decoder.tcpPorts[ix], decoder.ports[ix]);
                     }
                 }
             }
         } else {
             console.error('receivedRTTConfigureEvent: unknown type: ' + e.body.type);
         }
+    }
+
+    private createRTTSource(tcpPort: string, channel: number) {
+        const src = new SocketRTTSource(tcpPort, channel);
+        src.start().then(() => {
+            this.rttSources.push(src);
+        }).catch((e) => {
+            vscode.window.showErrorMessage(`Could not open RTT:channel-${channel} TCP port ${tcpPort} ${e}`);
+        });
     }
 
     private cleanupRTTTerminals() {

@@ -146,7 +146,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const gdbport = this.ports['gdbPort'];
         const swoport = this.ports['swoPort'];
         const consoleport = this.ports['consolePort'];
-        const rttport = this.ports['rttPort'];
 
         let cmdargs = [
             '-singlerun', '-nogui',  // -strict -timeout 0 
@@ -162,9 +161,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 // If we are getting here, we will need some serious re-factoring
                 throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time.');
             }
-            if (this.rttHelper.rttLocalPortMap[0] && (this.rttHelper.rttLocalPortMap[0] !== this.defaultRttPort.toString())) {
-                cmdargs.push('-rtttelnetport', this.rttHelper.rttLocalPortMap[0]);
-            }
+            cmdargs.push('-rtttelnetport', this.rttHelper.rttLocalPortMap[0]);
         }
 
         if (this.args.serialNumber) {

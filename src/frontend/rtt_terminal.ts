@@ -110,16 +110,17 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
         }
 
         try {
-            this.rttTermServer.once('register', (str) => {
+            this.rttTermServer.addClient(this.nonce);
+            this.rttTermServer.on('register', (str) => {
                 if (str === this.nonce) {
                     this.sendOptions(this.termOptions);
-                    this.connected = true;                }
+                    this.connected = true;
+                }
             });
             this._rttTerminal = vscode.window.createTerminal(args);
             setTimeout(() => {
                 this._rttTerminal.show();
             }, 100);
-            this.rttTermServer.addClient(this.nonce);
             this.inUse = true;
             return true;
         }
@@ -183,7 +184,7 @@ export class TerminalServer extends EventEmitter {
     protected port: number;
     protected socketByNonce: Map<string, net.Socket> = new Map();
     protected nonceBySocket: Map<net.Socket, string> = new Map();
-    protected noBroadExit: string[] = [];
+    protected noBroadcastExit: string[] = [];
 
     constructor() {
         super();
@@ -220,7 +221,7 @@ export class TerminalServer extends EventEmitter {
             if (nonce) {
                 this.nonceBySocket.delete(socket);
                 this.socketByNonce.delete(nonce);
-                this.noBroadExit = this.noBroadExit.filter((item) => item !== nonce);
+                this.noBroadcastExit = this.noBroadcastExit.filter((item) => item !== nonce);
             }
             this.emit('disconnect');
         });
@@ -285,7 +286,7 @@ export class TerminalServer extends EventEmitter {
         console.log(`adding client ${nonce}`);
         this.socketByNonce.set(nonce, null);
         if (!allowExitBroadcast) {
-            this.noBroadExit.push(nonce);
+            this.noBroadcastExit.push(nonce);
         }
     }
 
@@ -296,7 +297,7 @@ export class TerminalServer extends EventEmitter {
         }
         msg = JSON.stringify(obj) + '\n';
         this.socketByNonce.forEach((socket,nonce,map) => {
-            if (this.noBroadExit.findIndex((item) => item === nonce) < 0) {
+            if (this.noBroadcastExit.findIndex((item) => item === nonce) < 0) {
                 try {
                     socket.write(msg);   
                     socket.uncork();   
@@ -528,13 +529,13 @@ export class GDBServerConsole {
         };
 
         try {
-            this.termServer.once('register', (str) => {
+            this.termServer.addClient(this.options.nonce, false);
+            this.termServer.on('register', (str) => {
                 if (str === this.options.nonce) {
                     this.connected = true;
                     this.sendTerminalOptions(this.options);
                 }
             });
-            this.termServer.addClient(this.options.nonce, false);
             this.terminal = vscode.window.createTerminal(args);
             setTimeout(() => {
                 this.terminal.show();

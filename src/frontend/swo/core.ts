@@ -448,6 +448,8 @@ class RTTDecoder extends EventEmitter {
             }
         }
     }
+
+    public dispose() {}
 }
 
 export class RTTCore extends SWORTTCoreBase {
