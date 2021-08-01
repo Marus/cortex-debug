@@ -446,29 +446,32 @@ export class serverConnection {
 
     protected onDataCb(data: string | Buffer) {
         try {
-            this._onDataCb(data.toString());
+            const str = this.oldData + data.toString();
+            const lines = str.split('\n');
+            const len = str.endsWith('\n') ? lines.length: lines.length - 1;
+            for (let ix = 0; ix < len; ix++ ) {
+                if (lines[ix].length > 0) {
+                    this._onDataCb(lines[ix] + '\n');
+                }
+            }
+            this.oldData = (len === lines.length) ? '' : lines[len];
         }
         catch (e) {
             console.error(data.toString());
             reportCrash(e, true);
         }
     }
+
     protected _onDataCb(str: string) {
         clearInterval(this.interval);
         this.interval = null;
 
         let obj: any;
         try {
-            str = this.oldData + str;
-            if (str.endsWith('\n')) {
-                obj = JSON.parse(str);
-            } else {
-                this.oldData = str;
-                return;
-            }
+            obj = JSON.parse(str);
         }
         catch (e) {
-            console.error(`invalide JSON '${str}` + e.toString());
+            console.error(`Invalid JSON '${str}'` + e.toString());
             reportCrash(e, false);
             return;
         }

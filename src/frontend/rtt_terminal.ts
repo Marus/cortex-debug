@@ -111,10 +111,12 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
 
         try {
             this.rttTermServer.addClient(this.nonce);
-            this.rttTermServer.on('register', (str) => {
+            this.rttTermServer.on(this.nonce, (str) => {
                 if (str === this.nonce) {
                     this.sendOptions(this.termOptions);
                     this.connected = true;
+                } else {
+                    console.error('RTTTerminal: Duplicate registration call');
                 }
             });
             this._rttTerminal = vscode.window.createTerminal(args);
@@ -178,6 +180,10 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
  * and is able to send information to indivitual sockets. Each terminal identifies
  * and authenticates itself with a nonce. This process knows nothing about the
  * terminals themselves are what is going on within them
+ * 
+ * On a terminal connect, the terminal is supposed to send back a nonce it was once given
+ * to make sure it is active. Since multiple terminals are started, we need to know which
+ * is which. Also, an event is emitted using the nonce are the event-id
  */
 export class TerminalServer extends EventEmitter {
     protected server: net.Server = null;
@@ -232,7 +238,7 @@ export class TerminalServer extends EventEmitter {
                 console.log(`client ${str} registered`);
                 this.socketByNonce.set(str, socket);
                 this.nonceBySocket.set(socket, str);
-                this.emit('register', str);
+                this.emit(str, str);
             } else {
                 console.error(`Unknown message '${str}' from client`);
             }
@@ -325,7 +331,7 @@ export class GDBServerConsole {
     public terminal: vscode.Terminal = null;
     protected options: IRTTTerminalOptions;
     protected name: string;
-    protected connected: boolean;
+    protected termConnected: boolean;
     static BackendPort: number = -1;
 
     constructor(public context: vscode.ExtensionContext, public termServer: TerminalServer) {
@@ -409,10 +415,12 @@ export class GDBServerConsole {
             this.toTerminal = null;
             vscode.window.showErrorMessage(
                 'Cortex-Debug GDB Server console terminal window quit unexpectedly. Please report this problem.\n' +
-                'Many things may not work. Do you want to try re-starting the terminal window', 'Yes', 'Np').then((str) => {
+                'Many things may not work. Do you want to try re-starting the terminal window', 'Yes', 'No').then((str) => {
                     if (str === 'Yes') {
                         try { this.terminal.dispose(); } catch (e) {}
                         this.terminal = null;
+                        this.termConnected = false;
+                        this.options.nonce = getNonce();        // Refresh the nonce
                         this.createTerminal();
                     }
                 })
@@ -500,7 +508,7 @@ export class GDBServerConsole {
             this.terminal.dispose();
         }
         this.terminal = null;
-        this.connected = false;
+        this.termConnected = false;
         if (this.toBackend) {
             this.toBackend.destroy();
             this.toBackend = null;
@@ -530,10 +538,12 @@ export class GDBServerConsole {
 
         try {
             this.termServer.addClient(this.options.nonce, false);
-            this.termServer.on('register', (str) => {
+            this.termServer.on(this.options.nonce, (str) => {
                 if (str === this.options.nonce) {
-                    this.connected = true;
+                    this.termConnected = true;
                     this.sendTerminalOptions(this.options);
+                } else {
+                    console.log('GDBServerConsole: Duplicate registration call');
                 }
             });
             this.terminal = vscode.window.createTerminal(args);
