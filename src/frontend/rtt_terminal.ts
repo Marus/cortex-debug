@@ -111,13 +111,9 @@ export class RTTTerminal extends EventEmitter implements SWORTTSource   {
 
         try {
             this.rttTermServer.addClient(this.nonce);
-            this.rttTermServer.on(this.nonce, (str) => {
-                if (str === this.nonce) {
-                    this.sendOptions(this.termOptions);
-                    this.connected = true;
-                } else {
-                    console.error('RTTTerminal: Duplicate registration call');
-                }
+            this.rttTermServer.once(this.nonce, (str) => {
+                this.connected = true;
+                this.sendOptions(this.termOptions);
             });
             this._rttTerminal = vscode.window.createTerminal(args);
             setTimeout(() => {
@@ -538,13 +534,9 @@ export class GDBServerConsole {
 
         try {
             this.termServer.addClient(this.options.nonce, false);
-            this.termServer.on(this.options.nonce, (str) => {
-                if (str === this.options.nonce) {
-                    this.termConnected = true;
-                    this.sendTerminalOptions(this.options);
-                } else {
-                    console.log('GDBServerConsole: Duplicate registration call');
-                }
+            this.termServer.once(this.options.nonce, (str) => {
+                this.termConnected = true;
+                this.sendTerminalOptions(this.options);
             });
             this.terminal = vscode.window.createTerminal(args);
             setTimeout(() => {
