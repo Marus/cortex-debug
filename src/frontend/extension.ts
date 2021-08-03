@@ -39,8 +39,6 @@ export class CortexDebugExtension {
     private rttPortMap: { [channel: number]: string} = {};
     private gdbServerConsole : GDBServerConsole = null;
     private finishedTerminalSetup = false;
-    private nodeExists = false;
-
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -123,52 +121,18 @@ export class CortexDebugExtension {
         this.startTerminalServers(context);
     }
 
-    private startTerminalServers(context: vscode.ExtensionContext) {
-        const momentoId = 'noNodeMessage';
-        this.nodeExists =  commandExistsSync('node');
-        const flag = context.globalState.get<Boolean>(momentoId, false);
-        if (!flag && !this.nodeExists) {
-            vscode.window.showWarningMessage(
-                "Command 'node' not found in your PATH. Cortex-Debug needs 'NodeJS' to be installed for full functionality. " +
-                "RTT, bidirectional-semihosting and few other features will be missing.",
-                'Visit nodejs.org', "Don't ask again", 'Continue').then((ret) => {
-                    if (ret.startsWith('V')) {
-                        vscode.env.openExternal(vscode.Uri.parse('https://nodejs.org'));
-                    } else if (ret.startsWith('D')){
-                        context.globalState.update(momentoId, true);
-                    }
-            });
-        }
-
-        if (!this.nodeExists) {
-            this.finishedTerminalSetup = true;
-            return;
-        }
-
-        // While we have to do all this work, we should not fail going through the whole init process
-        // TODO: Remove all the debug info. 
-        this.doTerminalSetup(context).then(() => {
-            // Everything went well
-        }).catch ((e) => {
-            if (this.gdbServerConsole) {
-                this.gdbServerConsole.dispose();
-                this.gdbServerConsole = null;
-            }
-            vscode.window.showErrorMessage(`Please report this problem. ${e.toString()}`);
-        }).finally (() => {
-            this.finishedTerminalSetup = true;
-        });
-    }
-
-    private doTerminalSetup(context: vscode.ExtensionContext): Promise<void> {
+    private startTerminalServers(context: vscode.ExtensionContext): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const rptMsg = 'Please report this problem.';
             this.gdbServerConsole = new GDBServerConsole(context);
             this.gdbServerConsole.startServer().then(() => {
                 console.log('GDB server console created');
+                this.finishedTerminalSetup = true;
                 resolve(); // All worked out
             }).catch((e) => {
-                reject(new Error(`Could not create gdb-server-console. Will use old style console. ${rptMsg} ${e}`));
+                this.gdbServerConsole.dispose();
+                this.gdbServerConsole = null;
+                vscode.window.showErrorMessage(`Could not create gdb-server-console. Will use old style console. Please report this problem. ${e.toString()}`);
             });
         });
     }
