@@ -68,7 +68,7 @@ export class TcpConsole extends EventEmitter {
     }
 
     private sendDataRaw(data: string | Buffer) {
-        if (this.connected && (this.options.inputmode !==TerminalInputMode.DISABLED)) {
+        if (this.connected && (this.options.inputmode !== TerminalInputMode.DISABLED)) {
             // On the send side, maybe it should ways be 'ascii' or 'utf8'
             this.tcpClient.write(data);
             this.logData(data);

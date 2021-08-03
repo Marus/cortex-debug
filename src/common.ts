@@ -85,7 +85,7 @@ export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     label: string;    // label for window
     prompt: string;   // Prompt to use
     noprompt: boolean;// disable prompt
-    clear: boolean;   // Clear screen buffer on connect
+    noclear: boolean; // do not vlear screen buffer on connect
     logfile: string;  // log IO to file
     inputmode: TerminalInputMode;
     // Binary only options

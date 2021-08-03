@@ -1197,8 +1197,8 @@
                                                             "type": "boolean",
                                                             "default": false
                                                         },
-                                                        "clear": {
-                                                            "description": "clear screen/logfile when another connection is made",
+                                                        "noclear": {
+                                                            "description": "append to screen/logfile when another connection is made",
                                                             "type": "boolean",
                                                             "default": false
                                                         },
@@ -1852,7 +1852,6 @@
         "debug": "^4.3.1",
         "hasbin": "^1.2.3",
         "nan": "^2.14.2",
-        "node-getopt": "^0.3.2",
         "prebuild-install": "^5.3.6",
         "promirepl": "^1.0.1",
         "ringbufferjs": "^1.1.0",

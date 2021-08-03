@@ -2,7 +2,6 @@
 {
 	"version": "0.1.0",
 	"configurations": [
-
 		{
 			"name": "Launch Extension",
 			"type": "extensionHost",
@@ -41,24 +40,6 @@
 				"${workspaceRoot}/out/test/**/*.js"
 			],
 			"preLaunchTask": "test-compile"
-		},
-		{
-			"name": "Debug tcpCat",
-			"type": "node",
-			"request": "launch",
-			"runtimeArgs": [ "--nolazy" ],
-			// Run something like 'nc -lk 2340' to test this module with a server going
-			"args": ["--useserver", "2340", "--nonce", "yes"],
-			// "args": ["--port", "2340", "--prompt", "myRTT> ", "--logfile", "/tmp/tcpCat.txt"],
-			// "args": ["--port", "2340", "--prompt", "myRTT> ", "--logfile", "/tmp/tcpCat.txt", "--binary", "--scale=1.5"],
-			"program": "${workspaceRoot}/dist/tcp_cat.bundle.js",
-			"console": "integratedTerminal",
-			"stopOnEntry": false,
-			"sourceMaps": true,
-			"outFiles": [
-				"${workspaceRoot}/dist/*.js"
-			],
-			"cwd": "${workspaceRoot}"
 		}
 	],
 	"compounds": [

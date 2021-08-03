@@ -99,37 +99,4 @@ const grapherConfig = {
   }
 };
 
-const tcpCatConfig = {
-  target: 'node',
-  entry: {
-    'tcp_cat': './src/tcp_cat.ts'
-  },
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: '[name].bundle.js',
-    devtoolModuleFilenameTemplate: '../[resource-path]'
-  },
-  devtool: 'source-map',
-  externals: {
-    vscode: 'vscode',
-    serialport: 'serialport'
-  },
-  resolve: {
-    extensions: ['.ts', '.js']
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
-  }
-};
-
-module.exports = [extensionConfig, adapterConfig, grapherConfig, tcpCatConfig];
+module.exports = [extensionConfig, adapterConfig, grapherConfig];
