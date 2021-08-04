@@ -15,6 +15,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
+        if (GDBServerConsole.BackendPort <= 0) {
+            vscode.window.showErrorMessage('GDB server console not yet ready. Please try again. Report this problem');
+            return undefined;            
+        }
+        config.gdbServerConsolePort = GDBServerConsole.BackendPort;
+        
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
             case 'darwin': Object.assign(config, config.osx); delete config.osx; break;
@@ -26,8 +32,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.debuggerArgs = config.debugger_args;
         }
         if (!config.debuggerArgs) { config.debuggerArgs = []; }
-
-        config.gdbServerConsolePort = GDBServerConsole.BackendPort;
         
         const type = config.servertype;
 

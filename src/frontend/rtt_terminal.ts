@@ -100,7 +100,7 @@ export class RTTTerminal {
                 if (ix >= 1) {
                     this.ptyTerm.write(buf.slice(start, ix-1));
                 }
-                this.ptyTerm.write(`\n<switch to vTerm#${String.fromCharCode(chr)}>\n`);
+                this.ptyTerm.write(`<switch to vTerm#${String.fromCharCode(chr)}>\n`);
                 buf = buf.slice(ix+1);
                 ix = 0;
                 start = 0;
@@ -128,7 +128,7 @@ export class RTTTerminal {
     }
 
     protected createPrompt(): string {
-        return this.options.noprompt ? '' : this.options.prompt || `RTT:${this.options.port} >`
+        return this.options.noprompt ? '' : this.options.prompt || `RTT:${this.options.port}> `
     }
 
     static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {

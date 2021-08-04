@@ -51,6 +51,7 @@ export class CortexDebugExtension {
     private functionSymbols: SymbolInformation[] = null;
 
     constructor(private context: vscode.ExtensionContext) {
+        this.startServerConsole(context);           // Make this the first thing we do so it is ready for the session
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
@@ -117,11 +118,9 @@ export class CortexDebugExtension {
                 e.element.expanded = false;
             })
         );
-
-        this.startTerminalServers(context);
     }
 
-    private startTerminalServers(context: vscode.ExtensionContext): Promise<void> {
+    private startServerConsole(context: vscode.ExtensionContext): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const rptMsg = 'Please report this problem.';
             this.gdbServerConsole = new GDBServerConsole(context);

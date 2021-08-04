@@ -4,6 +4,7 @@ import * as net from 'net';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
 import { TcpPortScanner } from '../tcpportscanner';
+import { throws } from 'assert';
 
 export class GDBServer extends EventEmitter {
     private process: ChildProcess.ChildProcess;
@@ -73,6 +74,7 @@ export class GDBServer extends EventEmitter {
                 }
             }
             else { // For servers like BMP that are always running directly on the probe
+                this.connectToConsole(); 
                 resolve(true);
             }
         });
@@ -87,9 +89,7 @@ export class GDBServer extends EventEmitter {
 
     private onExit(code, signal) {
         this.emit('exit', code, signal);
-        if (this.consoleSocket) {
-            this.consoleSocket.destroy();
-        }
+        this.disconnectConsole();
     }
 
     private onError(err) {
@@ -140,12 +140,15 @@ export class GDBServer extends EventEmitter {
         }
     }
 
+    // TODO: We should have init also wait for the connection to be established before
+    // resolving.
     protected consoleSocket: net.Socket = null;
-    protected consoleReady: boolean = false;;
     protected connectToConsole() {
-        this.consoleReady = false;
-        this.consoleSocket = new net.Socket();
-        this.consoleSocket.on  ('data', (data) => {
+        if ((this.consolePort || 0) <= 0) {
+            return;
+        }
+        const socket = new net.Socket();
+        socket.on  ('data', (data) => {
             try {
                 this.process.stdin.write(data, 'utf8');
             }
@@ -153,20 +156,36 @@ export class GDBServer extends EventEmitter {
                 console.error(`stdin write failed ${e}`);
             }
         });
-        this.consoleSocket.once('close', () => {
-            this.consoleReady = false;
+        socket.once('close', () => {
             this.consoleSocket = null;
         });
-        this.consoleSocket.on  ('error', (e) => {
+        socket.on  ('error', (e) => {
+            console.error(`unknown socket error ${e}`);
         });
-        this.consoleSocket.connect(this.consolePort, '127.0.0.1', () => {
-            this.consoleReady = true;
+
+        // It is possible that the server is not ready
+        socket.connect(this.consolePort, '127.0.0.1', () => {
+            this.consoleSocket = socket;
         });
     }
 
+    private conBuffer = '';
     private sendToConsole(data: string|Buffer) {
-        if (this.consoleReady && this.consolePort) {
+        if (this.consoleSocket) {
+            if (this.conBuffer) {
+                this.consoleSocket.write(this.conBuffer);
+                this.conBuffer = '';
+            }
             this.consoleSocket.write(data);
+        } else if ((this.consolePort || 0) > 0) {
+            this.conBuffer += data.toString();
+        }
+    }
+
+    private disconnectConsole() {
+        if (this.consoleSocket) {
+            this.consoleSocket.destroy();
+            this.consoleSocket = null;
         }
     }
 }

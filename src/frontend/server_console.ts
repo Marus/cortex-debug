@@ -15,21 +15,42 @@ export class GDBServerConsole {
     constructor(public context: vscode.ExtensionContext) {
         this.ptyOptions = {
             name      : 'gdb-server',
-            prompt    : '',
+            prompt    : '',             // Can't have a prompt since the gdb-server or semihosting may have one
             inputMode : TerminalInputMode.COOKED
         };
         this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null)
+        this.setupTerminal();
+    }
+
+    private setupTerminal() {
         this.ptyTerm = new MyPtyTerminal(this.ptyOptions);
-        this.ptyTerm.write('Waiting for gdb server to start...')
+        this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
+        this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
+        if (this.toBackend === null) {
+            this.ptyTerm.write('Waiting for gdb server to start...');
+            this.ptyTerm.pause();
+        } else {
+            this.ptyTerm.write('Resuming connection to gdb server...\n');
+            this.ptyTerm.resume();
+        }
+    }
+
+    private onTerminalClosed() {
+        vscode.window.showInformationMessage('gdb-server terminal closed unexpectedly. Trying to reopen it');
+        this.setupTerminal();
     }
 
     public startServer(): Promise<void> {
         return this.initToBackendSocket();
     }
 
-    // Create a server that serves the GDBServer running in the adapter process
-    // Any data from the gdb-server is received here and sent to the terminal
-    // via the terminal socket
+    public isServerAlive() {
+        return this.toBackendServer !== null;
+    }
+
+    // Create a server for the GDBServer running in the adapter process. Any data
+    // from the gdb-server (like OpenOCD) is sent here and sent to the terminal
+    // and any usr input in the terminal is sent back (like semi-hosting)
     protected initToBackendSocket() : Promise<void> {
         return new Promise((resolve, reject) => {
             getAnyFreePort(55878).then((p) => {
@@ -54,6 +75,7 @@ export class GDBServerConsole {
     // The gdb-server running in the backend
     protected onBackendConnect(socket: net.Socket) {
         this.toBackend = socket;
+        this.ptyTerm.resume();
         this.clearTerminal();
         console.log('onBackendConnect: gdb-server program connected');
         socket.setKeepAlive(true);
@@ -61,6 +83,7 @@ export class GDBServerConsole {
             console.log('onBackendConnect: gdb-server program closed');
             this.ptyTerm.write('GDB server exited. Waiting for next server to start...')
             this.toBackend = null;
+            this.ptyTerm.pause();
         });
         socket.on('data', (data) => {
             this.ptyTerm.write(data);
