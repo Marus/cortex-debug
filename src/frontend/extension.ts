@@ -544,8 +544,9 @@ export class CortexDebugExtension {
                             vscode.window.showErrorMessage(`Duplicate RTT channel ${channel}. Ignoring decoder.`);
                         }
                         dupFound = true;
+                    } else {
+                        this.rttPortMap[decoder.port] = decoder.tcpPort;
                     }
-                    this.rttPortMap[decoder.port] = decoder.tcpPort;
                 }
                 if (dupFound) {
                     return;

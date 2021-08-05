@@ -93,6 +93,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
             // Cleanup any port arrays that are partially filled. Very unlikely but check anyways
             for (const dec of cfg.decoders) {
+                dec.allowSharedTcp = false;     // OpenOCD does not 'yet' allow this. Let the front-end publish an error
                 if (dec.ports && dec,this.ports.length > 0) {
                     dec.tcpPorts = [];      // We create this array here to ensure we have a matched set
                     for (const p of dec.ports) {
@@ -111,7 +112,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 commands.push(`interpreter-exec console "monitor rtt server start ${tcpPort} ${channel}"`);
             }
 
-            cfg.allowSharedTcp = false;     // OpenOCD does not 'yet' allow this. Let the front-end publish an error
             // We are starting way too early before the FW has a chance to initialize itself
             // but there is no other handshake mechanism
             commands.push(`interpreter-exec console "monitor rtt start"`);
@@ -252,10 +252,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 }));
             }
         }
-
-        this.rttHelper.emitConfigures(this.args.rttConfig, this);
     }
 
     public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {}
+    public debuggerLaunchCompleted(): void {
+        this.rttHelper.emitConfigures(this.args.rttConfig, this);
+    }
 }

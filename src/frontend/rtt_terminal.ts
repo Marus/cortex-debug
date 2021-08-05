@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as net from 'net';
 import * as fs from 'fs';
 import { parseHostPort, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
-import { IPtyTerminalOptions, PtyTerminal } from './pty';
+import { IPtyTerminalOptions, PtyTerminal, RESET } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 
 export class RTTTerminal {
@@ -60,6 +60,7 @@ export class RTTTerminal {
             try { fs.closeSync(this.logFd); } catch { };
         }
         this.logFd = -1;
+        this.ptyTerm.write(RESET + `\nRTT connection on TCP port ${this.options.tcpPort} ended. Waiting for next connection...`);
     }
 
     private onData(data: Buffer) {
@@ -163,8 +164,8 @@ export class RTTTerminal {
     // since there no way to rename it. If successful, tt will reset the Terminal options and mark it as
     // used (inUse = true) as well
     public tryReuse(options: RTTConsoleDecoderOpts): boolean {
-        const newPtyOptions = this.createTermOptions(this.ptyOptions.name)
-        if (newPtyOptions.name === this.ptyOptions.name) {
+        const newTermName = RTTTerminal.createTermName(options, this.ptyOptions.name);
+        if (newTermName === this.ptyOptions.name) {
             this.inUse = true;
             if (!this.options.noclear || (this.options.type !== options.type)) {
                 this.ptyTerm.clearTerminalBuffer();
@@ -180,8 +181,8 @@ export class RTTTerminal {
                 }
             }
             this.options = options;
-            this.ptyOptions = newPtyOptions;
-            this.ptyTerm.resetOptions(newPtyOptions);
+            this.ptyOptions = this.createTermOptions(newTermName);;
+            this.ptyTerm.resetOptions(this.ptyOptions);
             this.startConnection();
             return true;
         }

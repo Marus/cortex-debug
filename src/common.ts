@@ -3,7 +3,6 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { EventEmitter } from 'events';
 import { TcpPortScanner } from './tcpportscanner';
 import { GDBServer } from './backend/server';
-import { time } from 'console';
 
 export enum NumberFormat {
     Auto = 0,
@@ -70,6 +69,7 @@ export enum TerminalInputMode {
     DISABLED = 'disabled'
 }
 export interface RTTCommonDecoderOpts {
+    allowSharedTcp: boolean;    // Can this server allow multiple TCP client connections to same channel?
     type: string;     // 'console', 'graph', ...
     tcpPort: string;  // [hostname:]port
     port: number;     // RTT Channel number
@@ -139,7 +139,6 @@ export interface RTTConfiguration {
     clearSearch: boolean;
     polling_interval: number;
     decoders: RTTCommonDecoderOpts[];
-    allowSharedTcp: boolean;
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {

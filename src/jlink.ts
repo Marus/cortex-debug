@@ -95,7 +95,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 // This does not work as it needs to be done before the probe connects to device
                 // commands.push(`interpreter-exec console "monitor exec SetRTTTelnetPort ${this.rttHelper.rttLocalPortMap[0]}"`);
             }
-            cfg.allowSharedTcp = false;     // Not sure if client port sharing is allowed
         }
         return commands;
     }    
@@ -205,9 +204,9 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 }));
             }
         }
-
-        this.rttHelper.emitConfigures(this.args.rttConfig, this);
     }
     public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {}
+    public debuggerLaunchCompleted(): void {
+        this.rttHelper.emitConfigures(this.args.rttConfig, this);
+    }
 }
