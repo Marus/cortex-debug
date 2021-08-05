@@ -3,6 +3,8 @@ import { SWORTTDecoder } from './common';
 import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
 import { Packet } from '../common';
+import { IMyPtyTerminalOptions, MyPtyTerminal } from '../../pty';
+import { TerminalInputMode } from '../../../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
     return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
@@ -14,15 +16,44 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     private port: number;
     private scale: number;
     private encoding: string;
+    private useTerminal = true;
+    private ptyTerm: MyPtyTerminal = null;
 
-    constructor(config: SWOBinaryDecoderConfig, prefix: string = 'SWO') {
+    constructor(config: SWOBinaryDecoderConfig) {
         this.port = config.port;
         this.scale = config.scale || 1;
         this.encoding = (config.encoding || 'unsigned').replace('.', '_');
+        this.useTerminal = 'useTerminal' in config ? (config as any).useTerminal : true;   // TODO: Remove
 
-        const source = (prefix !== 'SWO') ? 'channel' : 'port';
-        const chName = `${prefix}: ${config.label || ''} [${source}: ${this.port}, encoding: ${this.encoding}]`;
+        if (this.useTerminal) {
+            this.createVSCodeTerminal(config);
+        } else {
+            this.createVSCodeChannel(config);
+        }
+    }
+
+    private createVSCodeTerminal(config: SWOBinaryDecoderConfig) {
+        const options : IMyPtyTerminalOptions = {
+            name: this.createName(config),
+            prompt: '',
+            inputMode: TerminalInputMode.DISABLED
+        };
+        this.ptyTerm = MyPtyTerminal.findExisting(options.name);
+        if (this.ptyTerm) {
+            this.ptyTerm.clearTerminalBuffer();
+        } else {
+            this.ptyTerm = new MyPtyTerminal(options);
+            this.ptyTerm.terminal.show();
+        }
+    }
+
+    private createVSCodeChannel(config: SWOBinaryDecoderConfig) {
+        const chName = this.createName(config);
         this.output = vscode.window.createOutputChannel(chName);
+    }
+
+    private createName(config: SWOBinaryDecoderConfig) {
+        return `SWO:${config.label || ''}[port:${this.port}, enc:${this.encoding}]`;
     }
 
     public softwareEvent(packet: Packet) {
@@ -33,8 +64,13 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         const hexvalue = packet.data.toString('hex');
         const decodedValue = parseEncoded(packet.data, this.encoding);
         const scaledValue = decodedValue * this.scale;
-        
-        this.output.appendLine(`[${date.toISOString()}]   ${hexvalue} - ${decodedValue} - ${scaledValue}`);
+
+        const str = `[${date.toISOString()}]   ${hexvalue} - ${decodedValue} - ${scaledValue}`;
+        if (this.useTerminal) {
+            this.ptyTerm.write(str + '\n');
+        } else {
+            this.output.appendLine(str);
+        }
     }
 
     public hardwareEvent(event: Packet) {}
@@ -42,6 +78,8 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     public lostSynchronization() {}
 
     public dispose() {
-        this.output.dispose();
+        if (this.output) {
+            this.output.dispose();
+        }
     }
 }

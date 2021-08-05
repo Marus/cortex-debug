@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import { parseHostPort, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
 import { IMyPtyTerminalOptions, MyPtyTerminal } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
-import { prototype } from 'events';
 
 export class RTTTerminal {
     public connected = false;

@@ -63,6 +63,8 @@ export class MyPtyTerminal extends EventEmitter {
     private isPaused = false;
     protected promptTimer: ResettableTimeout = null;
 
+    static oldOnes: { [name: string]: MyPtyTerminal }  = {};
+
     readonly pty: vscode.Pseudoterminal = {
         onDidWrite: this.writeEmitter.event,
         // onDidOverrideDimensions?: vscode.Event<vscode.TerminalDimensions>;
@@ -87,18 +89,24 @@ export class MyPtyTerminal extends EventEmitter {
 
     constructor(protected options: IMyPtyTerminalOptions) {
         super();
-        this.resetOptions(options);
         this.terminal = vscode.window.createTerminal({
-            name: options.name,
+            name: this.options.name,
             pty: this.pty
         });
+        this.resetOptions(options);
+        MyPtyTerminal.oldOnes[this.options.name] = this;
         vscode.window.onDidCloseTerminal((t) => {
             if ((t === this.terminal) && !this.disposing) {
                 this.terminal = null;
                 this.emit('close');
                 super.removeAllListeners();
+                delete MyPtyTerminal.oldOnes[this.options.name];
             }
         });
+    }
+
+    static findExisting(name: string): MyPtyTerminal  {
+        return MyPtyTerminal.oldOnes[name];
     }
 
     // pause and resume are used when the terminal should appear to not take any input
@@ -355,11 +363,13 @@ export class MyPtyTerminal extends EventEmitter {
     public write(data: string | Buffer) {
         try {
             this.unPrompt();
-            let str = data.toString('utf8');
-            const endsWithNl = str.endsWith('\n');
-            str = str.replace(/[\r]?\n/g, '\r\n');
-            this.writeEmitter.fire(str);
-            if (str.endsWith('\n')) {
+            if (!(typeof data === 'string')) {
+                data = data.toString('utf8');
+            }
+            const endsWithNl = data.endsWith('\n');
+            data = data.replace(/[\r]?\n/g, '\r\n');
+            this.writeEmitter.fire(data);
+            if (data.endsWith('\n')) {
                 this.doPrompt();
             } else if (this.promptTimer) {
                 this.promptTimer.kill();
@@ -402,6 +412,7 @@ export class MyPtyTerminal extends EventEmitter {
             this.disposing = true;
             this.terminal.dispose();
             this.terminal = null;
+            delete MyPtyTerminal.oldOnes[this.options.name];
         }
         if (this.promptTimer) {
             this.promptTimer.kill();

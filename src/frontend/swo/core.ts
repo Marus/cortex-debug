@@ -296,7 +296,7 @@ export class SWOCore extends SWORTTCoreBase {
                     this.processors.push(new SWOConsoleProcessor(conf as SWOConsoleDecoderConfig));
                     break;
                 case 'binary':
-                    this.processors.push(new SWOBinaryProcessor(conf as SWOBinaryDecoderConfig, 'SWO'));
+                    this.processors.push(new SWOBinaryProcessor(conf as SWOBinaryDecoderConfig));
                     break;
                 case 'graph':
                     processor = new SWORTTGraphProcessor(conf as SWOGraphDecoderConfig);

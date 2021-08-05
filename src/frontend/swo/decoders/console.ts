@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 
 import { SWORTTDecoder } from './common';
-import { parseUnsigned } from './utils';
 import { SWOConsoleDecoderConfig } from '../common';
 import { Packet } from '../common';
+import { IMyPtyTerminalOptions, MyPtyTerminal } from '../../pty';
+import { TerminalInputMode } from '../../../common';
 
 export class SWOConsoleProcessor implements SWORTTDecoder {
     private positionCount: number;
@@ -14,14 +15,53 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     private port: number;
     private encoding: string;
     private showOutputTimer: any = null;
+    private useTerminal = true;
+    private ptyTerm: MyPtyTerminal = null;
     
     constructor(config: SWOConsoleDecoderConfig) {
         this.port = config.port;
         this.encoding = config.encoding || 'utf8';
-        this.output = vscode.window.createOutputChannel(`SWO: ${config.label || ''} [port: ${this.port}, type: console]`);
+        this.useTerminal = 'useTerminal' in config ? (config as any).useTerminal : true;   // TODO: Remove
+        if (this.useTerminal) {
+            this.createVSCodeTerminal(config);
+        } else {
+            this.createVSCodeChanne(config);
+        }
+    }
+
+    private createName(config: SWOConsoleDecoderConfig) {
+        // Try to keep it small while still having enough info
+        const basic = `SWO:${config.label || ''}[port:${this.port}`;
+
+        if (this.useTerminal) {
+            return basic + ']';
+        } else {
+            return basic + ', type: console]';
+        }
+    }
+
+    private createVSCodeTerminal(config: SWOConsoleDecoderConfig) {
+        const options : IMyPtyTerminalOptions = {
+            name: this.createName(config),
+            prompt: '',
+            inputMode: TerminalInputMode.DISABLED
+        };
+        this.ptyTerm = MyPtyTerminal.findExisting(options.name);
+        if (this.ptyTerm) {
+            this.ptyTerm.clearTerminalBuffer();
+        } else {
+            this.ptyTerm = new MyPtyTerminal(options);
+            if (config.showOnStartup) {
+                this.ptyTerm.terminal.show();
+            }
+        }
+    }
+
+    private createVSCodeChanne(config: SWOConsoleDecoderConfig) {
+        this.output = vscode.window.createOutputChannel(this.createName(config));
 
         // A work-around. A blank display will appear if the output is shown immediately 
-        if (config.showOnStartup) {       
+        if (config.showOnStartup) {
             this.showOutputTimer = setTimeout(() => {
                 this.output.show(true);
                 this.showOutputTimer = null;
@@ -33,6 +73,13 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         if (packet.port !== this.port) { return; }
 
         const letters = packet.data.toString(this.encoding);
+
+        if (this.useTerminal) {
+            // Not sure why writing to the channel has a 5 second timeout. Thinking it was a left
+            // over but it was done three years ago. Also, not sure attaching timestamps is worth it
+            this.ptyTerm.write(letters);
+            return;
+        }
 
         for (const letter of letters) {
             if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
@@ -71,6 +118,8 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     public lostSynchronization() {}
 
     public dispose() {
-        this.output.dispose();
+        if (this.output) {
+            this.output.dispose();
+        }
     }
 }

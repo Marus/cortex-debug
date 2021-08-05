@@ -450,7 +450,7 @@ export class CortexDebugExtension {
             this.clearAdapterOutputChannel = true;
         }
         catch (e) {
-            vscode.window.showInformationMessage('Debug session did not terminate cleanly ${e}. Please report this problem');
+            vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
         }
         
     }
