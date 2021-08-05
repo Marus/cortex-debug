@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { SWORTTDecoder } from './common';
 import { SWOConsoleDecoderConfig } from '../common';
 import { Packet } from '../common';
-import { IMyPtyTerminalOptions, MyPtyTerminal } from '../../pty';
+import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
 import { TerminalInputMode } from '../../../common';
 
 export class SWOConsoleProcessor implements SWORTTDecoder {
@@ -16,7 +16,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     private encoding: string;
     private showOutputTimer: any = null;
     private useTerminal = true;
-    private ptyTerm: MyPtyTerminal = null;
+    private ptyTerm: PtyTerminal = null;
     
     constructor(config: SWOConsoleDecoderConfig) {
         this.port = config.port;
@@ -41,16 +41,16 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     }
 
     private createVSCodeTerminal(config: SWOConsoleDecoderConfig) {
-        const options : IMyPtyTerminalOptions = {
+        const options : IPtyTerminalOptions = {
             name: this.createName(config),
             prompt: '',
             inputMode: TerminalInputMode.DISABLED
         };
-        this.ptyTerm = MyPtyTerminal.findExisting(options.name);
+        this.ptyTerm = PtyTerminal.findExisting(options.name);
         if (this.ptyTerm) {
             this.ptyTerm.clearTerminalBuffer();
         } else {
-            this.ptyTerm = new MyPtyTerminal(options);
+            this.ptyTerm = new PtyTerminal(options);
             if (config.showOnStartup) {
                 this.ptyTerm.terminal.show();
             }

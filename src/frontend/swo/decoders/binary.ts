@@ -3,7 +3,7 @@ import { SWORTTDecoder } from './common';
 import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
 import { Packet } from '../common';
-import { IMyPtyTerminalOptions, MyPtyTerminal } from '../../pty';
+import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
 import { TerminalInputMode } from '../../../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
@@ -17,7 +17,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     private scale: number;
     private encoding: string;
     private useTerminal = true;
-    private ptyTerm: MyPtyTerminal = null;
+    private ptyTerm: PtyTerminal = null;
 
     constructor(config: SWOBinaryDecoderConfig) {
         this.port = config.port;
@@ -33,16 +33,16 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     }
 
     private createVSCodeTerminal(config: SWOBinaryDecoderConfig) {
-        const options : IMyPtyTerminalOptions = {
+        const options : IPtyTerminalOptions = {
             name: this.createName(config),
             prompt: '',
             inputMode: TerminalInputMode.DISABLED
         };
-        this.ptyTerm = MyPtyTerminal.findExisting(options.name);
+        this.ptyTerm = PtyTerminal.findExisting(options.name);
         if (this.ptyTerm) {
             this.ptyTerm.clearTerminalBuffer();
         } else {
-            this.ptyTerm = new MyPtyTerminal(options);
+            this.ptyTerm = new PtyTerminal(options);
             this.ptyTerm.terminal.show();
         }
     }

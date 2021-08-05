@@ -2,14 +2,14 @@ import * as vscode from 'vscode';
 import * as net from 'net';
 import * as fs from 'fs';
 import { parseHostPort, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
-import { IMyPtyTerminalOptions, MyPtyTerminal } from './pty';
+import { IPtyTerminalOptions, PtyTerminal } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 
 export class RTTTerminal {
     public connected = false;
     protected socket: net.Socket = null;
-    protected ptyTerm: MyPtyTerminal;
-    protected ptyOptions: IMyPtyTerminalOptions;
+    protected ptyTerm: PtyTerminal;
+    protected ptyOptions: IPtyTerminalOptions;
     protected binaryFormatter: BinaryFormatter;
     public inUse = true;
     protected logFd: number;
@@ -110,8 +110,8 @@ export class RTTTerminal {
         }
     }
 
-    protected createTermOptions(existing: string | null): IMyPtyTerminalOptions {
-        const ret: IMyPtyTerminalOptions = {
+    protected createTermOptions(existing: string | null): IPtyTerminalOptions {
+        const ret: IPtyTerminalOptions = {
             name: RTTTerminal.createTermName(this.options, existing),
             prompt: this.createPrompt(),
             inputMode: this.options.inputmode || TerminalInputMode.COOKED
@@ -120,7 +120,7 @@ export class RTTTerminal {
     }
 
     protected createTerminal() {
-        this.ptyTerm = new MyPtyTerminal(this.createTermOptions(null));
+        this.ptyTerm = new PtyTerminal(this.createTermOptions(null));
         this.ptyTerm.on('data', this.sendData.bind(this));
         this.ptyTerm.on('close', this.terminalClosed.bind(this));
         this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
@@ -225,7 +225,7 @@ class BinaryFormatter {
     public readonly encodings: string[] = ['signed', 'unsigned', 'Q16.16', 'float'];
 
     constructor(
-        protected ptyTerm: MyPtyTerminal,
+        protected ptyTerm: PtyTerminal,
         protected encoding: string,
         protected scale: number) {
         this.reset();

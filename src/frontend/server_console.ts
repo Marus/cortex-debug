@@ -1,6 +1,6 @@
 import * as net from 'net';
 import * as vscode from 'vscode';
-import { IMyPtyTerminalOptions, MyPtyTerminal } from './pty';
+import { IPtyTerminalOptions, PtyTerminal } from './pty';
 import { getAnyFreePort, parseHostPort, TerminalInputMode } from '../common';
 
 export class GDBServerConsole {
@@ -8,8 +8,8 @@ export class GDBServerConsole {
     protected toBackend: net.Socket = null;
     protected toBackendPort: number = -1;    
 
-    public ptyTerm: MyPtyTerminal = null;
-    protected ptyOptions: IMyPtyTerminalOptions;
+    public ptyTerm: PtyTerminal = null;
+    protected ptyOptions: IPtyTerminalOptions;
     static BackendPort: number = -1;
 
     constructor(public context: vscode.ExtensionContext) {
@@ -23,7 +23,7 @@ export class GDBServerConsole {
     }
 
     private setupTerminal() {
-        this.ptyTerm = new MyPtyTerminal(this.ptyOptions);
+        this.ptyTerm = new PtyTerminal(this.ptyOptions);
         this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
         this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
         if (this.toBackend === null) {
