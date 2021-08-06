@@ -1,13 +1,15 @@
 ChangeLog
 
-# V0.3.14.pre3
+# V0.4.0.pre1
 
-Currently the new features involving Terminals require you to have installation of [NodeJS](https://nodejs.org). The extension will work but some of the new features will be disabled
+This will be a major release with a lot of changes and many new features. The `TERMINAL` area of VSCode is utilized a lot more heavily to enable bidirectional communication with the firmware. It is used for RTT, SWO and Semi-hosting.
 
 New Features:
-   * NodeJS required: Support for RTT (SEGGER RealTimeTrace) with OpenOCD and JLink. See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
+   * Support for RTT (SEGGER Real Time Trace) with OpenOCD and JLink. See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
      * JLink RTT has a limitation that it can ONLY work with one channel (channel 0). There is another artifact with channel 0 where you may see output from a previous run at the very beginning.
-   * NodeJS required: There is now a new Terminal window for viewing the "Adapter Output". The old window is still available. This is the output of a gdb-server like JLink, OpenOCD, etc. If you are using semi-hosting, this terminal is bidirectional. You can enter input that is fed to your program.
+   * SWO console and binary decoded text data now appears in a "TERMINAL" tab instead in the "OUTPUT" tab
+   * All gdb-server (OpenOCD, JLink, etc.) output is also in the "TERMINAL" tab. In there you can also interact with your semihosting
+   * Support in debugger for `Jump to Cursor`, thanks to [PR#417](https://github.com/Marus/cortex-debug/pull/417) 
    * `demangle` is on by default. You can turn it off in `launch.json`
    
 # V0.3.13
