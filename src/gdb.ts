@@ -170,6 +170,7 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
         response.body.supportsRestartRequest = true;
+        response.body.supportsGotoTargetsRequest = true;     
         this.sendResponse(response);
     }
 
@@ -2130,6 +2131,22 @@ export class GDBDebugSession extends DebugSession {
             });
         }
     }
+
+    protected gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): void {
+		this.miDebugger.goto(args.source.path, args.line).then(done => {
+			response.body = {
+				targets: [{
+					id: 1,
+					label: args.source.name,
+					column: args.column,
+					line : args.line
+				}]
+			};
+			this.sendResponse(response);
+		}, msg => {
+			this.sendErrorResponse(response, 16, `Could not jump to: ${msg}`);
+		});
+	}
 }
 
 function prettyStringArray(strings) {
