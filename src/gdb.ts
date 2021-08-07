@@ -6,8 +6,8 @@ import {
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
-import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName, RTTConfigureEvent } from './common';
+import { Breakpoint, Variable, VariableObject, MIError } from './backend/backend';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -618,7 +618,7 @@ export class GDBDebugSession extends DebugSession {
                 break;
             case 'write-memory':
                 if (this.stopped === false) { return ; }
-                this.writeMemoryRequest(response, args['address'], args['data']);
+                this.writeMemoryRequestCustom(response, args['address'], args['data']);
                 break;
             case 'read-registers':
                 if (this.stopped === false) { return ; }
@@ -775,7 +775,7 @@ export class GDBDebugSession extends DebugSession {
         });
     }
 
-    protected writeMemoryRequest(response: DebugProtocol.Response, startAddress: number, data: string) {
+    protected writeMemoryRequestCustom(response: DebugProtocol.Response, startAddress: number, data: string) {
         const address = hexFormat(startAddress, 8);
         this.miDebugger.sendCommand(`data-write-memory-bytes ${address} ${data}`).then((node) => {
             this.sendResponse(response);
