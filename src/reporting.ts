@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import { ConfigurationArguments } from './common';
 
 const ua = require('universal-analytics');
-const uuidv4 = require('uuid/v4');
+import { v4 as uuidv4 } from 'uuid';
 
 const extension = vscode.extensions.getExtension('marus25.cortex-debug');
 const extensionId = extension.id;

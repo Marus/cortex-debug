@@ -190,8 +190,8 @@ export class GDBDebugSession extends DebugSession {
             const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
             if (!rttSym) {
                 this.args.rttConfig.enabled = false;
-                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. " + 
-                    "Make sure you complile/link with debug ON or you can specify your own RTT address\n`);
+                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` + 
+                    `Make sure you complile/link with debug ON or you can specify your own RTT address\n`);
             } else {
                 const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
                 this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
@@ -1064,14 +1064,14 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
     }
 
-    protected stopEvent(info: MINode) {
+    protected stopEvent(info: MINode, reason:string = 'exception') {
         if (!this.started) { this.crashed = true; }
         if (!this.quit) {
             this.stopped = true;
-            this.stoppedReason = 'exception';
+            this.stoppedReason = reason;
             this.findPausedThread(info);
-            this.sendEvent(new StoppedEvent('exception', this.currentThreadId, true));
-            this.sendEvent(new CustomStoppedEvent('exception', this.currentThreadId));
+            this.sendEvent(new StoppedEvent(reason, this.currentThreadId, true));
+            this.sendEvent(new CustomStoppedEvent(reason, this.currentThreadId));
         }
     }
 
