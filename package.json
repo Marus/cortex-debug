@@ -1843,7 +1843,6 @@
         }
     },
     "dependencies": {
-        "ajv": "^6.12.6",
         "binary-parser": "^1.7.0",
         "bindings": "^1.5.0",
         "command-exists": "^1.2.9",
@@ -1853,7 +1852,6 @@
         "hasbin": "^1.2.3",
         "nan": "^2.14.2",
         "prebuild-install": "^5.3.6",
-        "promirepl": "^1.0.1",
         "ringbufferjs": "^1.1.0",
         "safe-buffer": "^5.2.1",
         "tcp-port-used": "^1.0.2",
