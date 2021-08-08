@@ -250,7 +250,6 @@ export interface GDBServerController extends EventEmitter {
 }
 
 export class RTTServerHelper {
-    public rttPreferredPorts:  { [channel: number]: string} = {};
     // Channel numbers previously used on the localhost
     public rttLocalPortMap: { [channel: number]: string} = {};
 
@@ -258,53 +257,45 @@ export class RTTServerHelper {
     // a multple clients connect to the same channel. Perhaps in the future
     // it wil
     public rttPortsPending: number = 0;
-    public allocateRTTPorts(cfg: RTTConfiguration) {
-        this.rttPortsPending = 0;
-        if (cfg && cfg.enabled) {
+    public allocateRTTPorts(cfg: RTTConfiguration, startPort:number = 60000) {
+        if (!cfg || !cfg.enabled || !cfg.decoders || cfg.decoders.length === 0) {
+            return;
+        }
+
+        // Remember that you can have duplicate decoder ports. ie, multiple decoders looking at the same port
+        // while mostly not allowed, it could be in the future. Handle it here but disallow on a case by case
+        // basis depending on the gdb-server type
+        let numPorts = 0;
+        for (const dec of cfg.decoders) {
+            numPorts += dec.ports ? dec.ports.length : 1;
+        }
+
+        this.rttPortsPending = numPorts;
+        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: numPorts, consecutive: false };
+        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {    
+            this.rttPortsPending = 0;    
             for (const dec of cfg.decoders) {
                 if (dec.ports && (dec.ports.length > 0)) {
                     this.rttPortsPending = this.rttPortsPending + dec.ports.length;
+                    dec.tcpPorts = [];
                     for (const p of dec.ports) {
-                        this.allocateOnePort(p).then((ret) => {
-                            this.rttPortsPending = this.rttPortsPending - 1;
-                        });
+                        let str = this.rttLocalPortMap[p];
+                        if (!str) {
+                            str = ports.shift().toString();
+                            this.rttLocalPortMap[p] = str;
+                        }
+                        dec.tcpPorts.push(str);
                     }
                 } else {
-                    this.rttPortsPending = this.rttPortsPending + 1;
-                    this.allocateOnePort(dec.port).then((ret) => {
-                        this.rttPortsPending = this.rttPortsPending - 1;
-                        dec.tcpPort = ret;
-                    });
+                    let str = this.rttLocalPortMap[dec.port];
+                    if (!str) {
+                        str = ports.shift().toString(); 
+                        this.rttLocalPortMap[dec.port] = str;
+                    }
+                    dec.tcpPort = str;
                 }
             }
-        }
-    }
-
-    public allocateOnePort(channel: number): Promise<string> {
-        return new Promise((resolve) => {
-            if (this.rttLocalPortMap[channel]) {
-                resolve(this.rttLocalPortMap[channel]);
-            } else {
-                const preferred = this.rttPreferredPorts[channel] ? parseInt(this.rttPreferredPorts[channel]) : -1;
-                getAnyFreePort(preferred).then((num) => {
-                    let ret = this.rttLocalPortMap[channel];
-                    if (!ret) {     // If we already had a port assigned to this channel, must reuse it
-                        ret = num.toString();
-                        this.rttLocalPortMap[channel] = ret;
-                    }
-                    resolve(ret);
-                }).catch(() => {
-                    console.error(`Could not get free tcp port for RTT channel ${channel}`);
-                    resolve('');
-                });
-            }
         });
-    }
-
-    public setPreferredPorts(map: { [channel: number]: string} ) {
-        if (map) {
-            this.rttPreferredPorts = map;
-        }
     }
 
     public emitConfigures(cfg: RTTConfiguration, obj: EventEmitter) {

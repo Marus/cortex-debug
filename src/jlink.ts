@@ -28,8 +28,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
         // JLink only support one TCP port and that too for channel 0 only. The config provider
         // makes sure that the rttConfig conforms.
-        this.rttHelper.setPreferredPorts({0: this.defaultRttPort.toString()})
-        this.rttHelper.allocateRTTPorts(args.rttConfig);
+        this.rttHelper.allocateRTTPorts(args.rttConfig, this.defaultRttPort);
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -147,7 +146,8 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const consoleport = this.ports['consolePort'];
 
         let cmdargs = [
-            '-singlerun', '-nogui',  // -strict -timeout 0 
+            '-singlerun',   // -strict -timeout 0 
+            // '-nogui',    // removed at users request 
             '-if', this.args.interface,
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),

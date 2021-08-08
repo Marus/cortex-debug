@@ -426,9 +426,9 @@ export class GDBDebugSession extends DebugSession {
                 }
                 catch (err) {
                     const msg = err.toString() + '\n' + err.stack.toString();
-                    this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `ailed to generate gdb init commands: ${msg}`));
-                    this.sendErrorResponse(response, 104, `Failed to generate gdb init commands: ${msg}`);
-                    throw err;
+                    this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `Failed to generate gdb commands: ${msg}`));
+                    this.sendErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
+                    return;
                 }
                 
                 this.serverController.debuggerLaunchStarted();

@@ -1,8 +1,7 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
 import {
     GDBServerController, ConfigurationArguments, SWOConfigureEvent,
-    RTTConfigureEvent, calculatePortMask, createPortName, 
-    getAnyFreePort, RTTConfiguration, RTTCommonDecoderOpts, RTTServerHelper
+    calculatePortMask, createPortName, RTTServerHelper
 } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';

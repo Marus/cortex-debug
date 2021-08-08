@@ -38,10 +38,20 @@ export class RTTTerminal {
             this.socket.on  ('data', (data) => { this.onData(data); });
             this.socket.once('close', () => { this.onClose(); });
             this.socket.once('error', (e) => {
-                this.ptyTerm.write(e.toString() + '\n');
-                this.connected = false;
-                this.socket = null;
-                reject(e);
+                const code: string = (e as any).code;
+                if ((code === 'ECONNRESET') && this.connected) {
+                    // Server closed the connection. We are done with this session
+                    this.connected = false;
+                    this.socket = null;                    
+                } else if (code === 'ECONNREFUSED') {
+                    // We expect 'ECONNREFUSED' if the server has not yet started.
+                    this.ptyTerm.write(`Error: Failed to connect to port ${this.options.tcpPort} ${e}\nPlease report this problem.`);
+                    this.connected = false;
+                    this.socket = null;
+                    reject(e);
+                } else {
+                    this.ptyTerm.write(`Error: Ignored unknown error on port ${this.options.tcpPort} ${e}\nPlease report this problem.`);
+                }
             });
             const hostPort = parseHostPort(this.options.tcpPort);
             this.socket.connect(hostPort.port, hostPort.host, () => {

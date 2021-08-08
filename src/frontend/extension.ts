@@ -405,6 +405,13 @@ export class CortexDebugExtension {
 
         this.functionSymbols = null;
 
+        // We initialize this here because all the terminals needed for RTT
+        // should have been done already. Also, if the user terminates and starts
+        // the session super fast, we may still be working on the last terminate.
+        // I don't know how that is possible but it is happening.
+        this.rttPortMap = {};
+        this.cleanupRTTTerminals();
+
         session.customRequest('get-arguments').then((args) => {
             let svdfile = args.svdFile;
             if (!svdfile) {
@@ -418,7 +425,6 @@ export class CortexDebugExtension {
 
             if (this.swoSource) { this.initializeSWO(args); }
             if (this.rttSources.length > 0) { this.initializeRTT(args); }
-            this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments
         });
