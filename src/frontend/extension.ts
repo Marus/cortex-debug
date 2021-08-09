@@ -34,9 +34,8 @@ export class CortexDebugExtension {
     private swo: SWOCore = null;
     private rtt: RTTCore = null;
     private swoSource: SWORTTSource = null;
-    private rttSources: SocketRTTSource[] = [];
     private rttTerminals: RTTTerminal[] = [];
-    private rttPortMap: { [channel: number]: string} = {};
+    private rttPortMap: { [channel: number]: SocketRTTSource} = {};
     private gdbServerConsole : GDBServerConsole = null;
     private finishedTerminalSetup = false;
 
@@ -405,13 +404,6 @@ export class CortexDebugExtension {
 
         this.functionSymbols = null;
 
-        // We initialize this here because all the terminals needed for RTT
-        // should have been done already. Also, if the user terminates and starts
-        // the session super fast, we may still be working on the last terminate.
-        // I don't know how that is possible but it is happening.
-        this.rttPortMap = {};
-        this.cleanupRTTTerminals();
-
         session.customRequest('get-arguments').then((args) => {
             let svdfile = args.svdFile;
             if (!svdfile) {
@@ -419,12 +411,13 @@ export class CortexDebugExtension {
             }
 
             Reporting.beginSession(args as ConfigurationArguments);
-            
-            this.registerProvider.debugSessionStarted();
-            this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
 
             if (this.swoSource) { this.initializeSWO(args); }
-            if (this.rttSources.length > 0) { this.initializeRTT(args); }
+            if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }  
+
+            this.registerProvider.debugSessionStarted();
+            this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
+            this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments
         });
@@ -441,16 +434,21 @@ export class CortexDebugExtension {
             if (this.swo) {
                 this.swo.debugSessionTerminated();
             }
-            if (this.rtt) {
-                this.rtt.debugSessionTerminated();
-            }
             if (this.swoSource) {
                 this.swoSource.dispose();
                 this.swoSource = null;
             }
-
-            this.rttSources.forEach((s) => s.dispose())
-            this.rttSources = [];
+            if (this.rtt) {
+                this.rtt.debugSessionTerminated();
+            }
+            for (const term of this.rttTerminals) {
+                // All though they mark themselves as unused when socket closes, that won't happen
+                // if a connection never happened.
+                term.inUse = false;
+            }
+            for (const ch in this.rttPortMap) {
+                this.rttPortMap[ch].dispose();
+            }
             this.rttPortMap = {};
 
             this.clearAdapterOutputChannel = true;
@@ -541,23 +539,6 @@ export class CortexDebugExtension {
     private receivedRTTConfigureEvent(e: any) {
         if (e.body.type === 'socket') {
             const decoder: RTTCommonDecoderOpts = e.body.decoder;
-            if (!e.body.allowSharedTcp) {
-                const channels = decoder.ports ? decoder.ports : [decoder.port];
-                let dupFound = false;
-                for (const channel of channels) {
-                    if (this.rttPortMap[channel]) {
-                        if (!dupFound) {       // Already shown error msg?
-                            vscode.window.showErrorMessage(`Duplicate RTT channel ${channel}. Ignoring decoder.`);
-                        }
-                        dupFound = true;
-                    } else {
-                        this.rttPortMap[decoder.port] = decoder.tcpPort;
-                    }
-                }
-                if (dupFound) {
-                    return;
-                }
-            }
             if ((decoder.type === 'console') || (decoder.type === 'binary')) {
                 Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
                 this.rttCreateTerninal(decoder as RTTConsoleDecoderOpts);
@@ -577,13 +558,20 @@ export class CortexDebugExtension {
         }
     }
 
-    private createRTTSource(tcpPort: string, channel: number) {
-        const src = new SocketRTTSource(tcpPort, channel);
-        src.start().then(() => {
-            this.rttSources.push(src);
-        }).catch((e) => {
-            vscode.window.showErrorMessage(`Could not open RTT:channel-${channel} TCP port ${tcpPort} ${e}`);
-        });
+    // The retured value is a connection source. It may still be in disconnected
+    // state.
+    private createRTTSource(tcpPort: string, channel: number): SocketRTTSource {
+        let src = this.rttPortMap[channel];
+        if (!src) {
+            src = new SocketRTTSource(tcpPort, channel);
+            this.rttPortMap[channel] = src;     // Yes, we put this in the list even if start() can fail
+            src.start().then(() => {
+                // Nothing to do
+            }).catch ((e) => {
+                vscode.window.showErrorMessage(`Could not open to RTT channel ${channel}, TCP Port ${tcpPort}. ${e}`);
+            });
+        }
+        return src;
     }
 
     private cleanupRTTTerminals() {
@@ -597,25 +585,24 @@ export class CortexDebugExtension {
     }
 
     private async rttCreateTerninal(decoder: RTTConsoleDecoderOpts) {
+        const src = this.createRTTSource(decoder.tcpPort, decoder.port);
         for (const terminal of this.rttTerminals) {
-            const success = await terminal.tryReuse(decoder);
+            const success = !terminal.inUse && terminal.tryReuse(decoder, src);
             if (success) {
                 if (vscode.debug.activeDebugConsole) {
                     vscode.debug.activeDebugConsole.appendLine(
                         `Reusing RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
-                    )
+                    );
                 }
                 return;
             }
         }
-        const newTerminal = new RTTTerminal(this.context, decoder);
-        if (newTerminal.startConnection()) {
-            this.rttTerminals.push(newTerminal);
-            if (vscode.debug.activeDebugConsole) {
-                vscode.debug.activeDebugConsole.appendLine(
-                    `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
-                )
-            }
+        const newTerminal = new RTTTerminal(this.context, decoder, src);
+        this.rttTerminals.push(newTerminal);
+        if (vscode.debug.activeDebugConsole) {
+            vscode.debug.activeDebugConsole.appendLine(
+                `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+            );
         }
     }
 
@@ -628,6 +615,8 @@ export class CortexDebugExtension {
         if (!output.endsWith('\n')) { output += '\n'; }
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+            this.adapterOutputChannel.appendLine("DEPRECATED: Please check the 'TERMINALS' tab for 'gdb-server' output." +
+                "This window will not appear in future releases");
             this.adapterOutputChannel.show();
         } else if (this.clearAdapterOutputChannel) {
             this.adapterOutputChannel.clear();
@@ -649,12 +638,8 @@ export class CortexDebugExtension {
     }
 
     private initializeRTT(args) {
-        if (this.rttSources.length === 0) {
-            vscode.window.showErrorMessage('Tried to initialize RTT Decoding without a RTT data source');
-            return;            
-        }
         if (!this.rtt) {
-            this.rtt = new RTTCore(this.rttSources, args, this.context.extensionPath);
+            this.rtt = new RTTCore(this.rttPortMap, args, this.context.extensionPath);
         }
     }
 }

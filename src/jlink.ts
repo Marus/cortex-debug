@@ -90,10 +90,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 }
             }
             commands.push(`interpreter-exec console "monitor exec SetRTTAddr ${cfg.address}"`);
-            if (this.rttHelper.rttLocalPortMap[0] && (this.rttHelper.rttLocalPortMap[0] !== this.defaultRttPort.toString())) {
-                // This does not work as it needs to be done before the probe connects to device
-                // commands.push(`interpreter-exec console "monitor exec SetRTTTelnetPort ${this.rttHelper.rttLocalPortMap[0]}"`);
-            }
         }
         return commands;
     }    

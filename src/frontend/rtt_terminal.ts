@@ -4,13 +4,14 @@ import * as fs from 'fs';
 import { parseHostPort, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
 import { IPtyTerminalOptions, PtyTerminal, RESET } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
+import { SocketRTTSource } from './swo/sources/socket';
+import { scrypt } from 'crypto';
 
 export class RTTTerminal {
-    public connected = false;
-    protected socket: net.Socket = null;
     protected ptyTerm: PtyTerminal;
     protected ptyOptions: IPtyTerminalOptions;
     protected binaryFormatter: BinaryFormatter;
+    private source: SocketRTTSource;
     public inUse = true;
     protected logFd: number;
     public get terminal(): vscode.Terminal {
@@ -19,51 +20,47 @@ export class RTTTerminal {
 
     constructor(
         protected context: vscode.ExtensionContext,
-        public options: RTTConsoleDecoderOpts) {
+        public options: RTTConsoleDecoderOpts,
+        src: SocketRTTSource) {
         this.ptyOptions = this.createTermOptions(null);
         this.createTerminal();
         this.openLogFile();
+        this.connectToSource(src);
         setTimeout(() => this.terminal.show(), 100);
     }
 
-    public startConnection(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (this.connected) {
-                resolve();
-                return;
+    private connectToSource(src: SocketRTTSource) {
+        src.once('disconnected', () => { this.onClose(); });
+        src.on('error', (e) => {
+            const code: string = (e as any).code;
+            if (code === 'ECONNRESET') {
+                // Server closed the connection. We are done with this session
+                this.source = null;                    
+            } else if (code === 'ECONNREFUSED') {
+                // We expect 'ECONNREFUSED' if the server has not yet started.
+                this.ptyTerm.write(`${e.message}\nPlease report this problem.`);
+                this.source = null;
+            } else {
+                this.ptyTerm.write(`${e.message}\nPlease report this problem.`);
             }
-
-            this.connected = false;
-            this.socket = new net.Socket();
-            this.socket.on  ('data', (data) => { this.onData(data); });
-            this.socket.once('close', () => { this.onClose(); });
-            this.socket.once('error', (e) => {
-                const code: string = (e as any).code;
-                if ((code === 'ECONNRESET') && this.connected) {
-                    // Server closed the connection. We are done with this session
-                    this.connected = false;
-                    this.socket = null;                    
-                } else if (code === 'ECONNREFUSED') {
-                    // We expect 'ECONNREFUSED' if the server has not yet started.
-                    this.ptyTerm.write(`Error: Failed to connect to port ${this.options.tcpPort} ${e}\nPlease report this problem.`);
-                    this.connected = false;
-                    this.socket = null;
-                    reject(e);
-                } else {
-                    this.ptyTerm.write(`Error: Ignored unknown error on port ${this.options.tcpPort} ${e}\nPlease report this problem.`);
-                }
-            });
-            const hostPort = parseHostPort(this.options.tcpPort);
-            this.socket.connect(hostPort.port, hostPort.host, () => {
-                this.connected = true;
-                resolve();
-            });
         });
+        src.on('data', (data) => { this.onData(data); });
+
+        if (src.connError) {
+            this.source = src;
+            this.ptyTerm.write(`${src.connError.message}\nPlease report this problem.`);
+        } else if (src.connected) {
+            this.source = src;
+        }
+        else {
+            src.once('connected', () => {
+                this.source = src;
+            });
+        }
     }
 
     private onClose() {
-        this.connected = false;
-        this.socket = null;
+        this.source = null;
         this.inUse = false;
         this.binaryFormatter.reset();
         if (!this.options.noclear && (this.logFd >= 0)) {
@@ -142,7 +139,7 @@ export class RTTTerminal {
     }
 
     static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {
-        const orig = options.label || `RTT Ch:${options.port}`;
+        const orig = options.label || `RTT Ch:${options.port} ${options.type}`;
         let ret = orig;
         let count = 1;
         while (vscode.window.terminals.findIndex((t) => t.name === ret) >= 0) {
@@ -160,9 +157,9 @@ export class RTTTerminal {
     }
 
     public sendData(str: string) {
-        if (this.connected) {
+        if (this.source) {
             try {
-                this.socket.write(str);
+                this.source.write(str);
             }
             catch (e) {
                 console.error(`RTTTerminal:sendData failed ${e}`);
@@ -173,7 +170,7 @@ export class RTTTerminal {
     // If all goes well, this will reset the terminal options. Label for the VSCode terminal has to match
     // since there no way to rename it. If successful, tt will reset the Terminal options and mark it as
     // used (inUse = true) as well
-    public tryReuse(options: RTTConsoleDecoderOpts): boolean {
+    public tryReuse(options: RTTConsoleDecoderOpts, src: SocketRTTSource): boolean {
         const newTermName = RTTTerminal.createTermName(options, this.ptyOptions.name);
         if (newTermName === this.ptyOptions.name) {
             this.inUse = true;
@@ -193,22 +190,13 @@ export class RTTTerminal {
             this.options = options;
             this.ptyOptions = this.createTermOptions(newTermName);;
             this.ptyTerm.resetOptions(this.ptyOptions);
-            this.startConnection();
+            this.connectToSource(src);
             return true;
         }
         return false;
     }
 
     dispose() {
-        if (this.socket) {
-            try {
-                this.socket.destroy();
-            }
-            finally {
-                this.socket = null;
-                this.connected = false;
-            }
-        }
         this.ptyTerm.dispose();
         if (this.logFd >= 0) {
             try { fs.closeSync(this.logFd); } catch {};

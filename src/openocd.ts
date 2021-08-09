@@ -87,25 +87,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             if (cfg.polling_interval > 0) {
                 commands.push(`interpreter-exec console "monitor rtt polling_interval ${cfg.polling_interval}"`);
             }
-            // It is perfectly acceptable to have no decoders but just have the RTT enabled
-            // Users can use SEGGER's utilities and start their own servers for RTT operations
 
-            // Cleanup any port arrays that are partially filled. Very unlikely but check anyways
-            for (const dec of cfg.decoders) {
-                dec.allowSharedTcp = false;     // OpenOCD does not 'yet' allow this. Let the front-end publish an error
-                if (dec.ports && dec,this.ports.length > 0) {
-                    dec.tcpPorts = [];      // We create this array here to ensure we have a matched set
-                    for (const p of dec.ports) {
-                        const tcpPort = this.rttHelper.rttLocalPortMap[p];
-                        if (!tcpPort) {
-                            throw new Error('All TCP ports for Advanced RTT decoder could not be allocated');
-                        }
-                        dec.tcpPorts.push(tcpPort);
-                    }
-                } else if (!dec.tcpPort) {
-                    throw new Error('TCP port for RTT decoder could not be allocated')
-                }
-            }
             for (const channel in this.rttHelper.rttLocalPortMap) {
                 const tcpPort = this.rttHelper.rttLocalPortMap[channel];
                 commands.push(`interpreter-exec console "monitor rtt server start ${tcpPort} ${channel}"`);

@@ -197,7 +197,8 @@ class SWOWebview {
             localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'dist'))]
         };
 
-        this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', `SWO Graphs [${time}]`, showOptions, viewOptions);
+        const title = `SWO/RTT Graphs [${time}]`;
+        this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', title, showOptions, viewOptions);
         this.viewPanel.webview.onDidReceiveMessage((msg) => { this.onMessage(msg); });
         this.viewPanel.webview.html = this.getHTML();
     }
@@ -456,27 +457,26 @@ export class RTTCore extends SWORTTCoreBase {
     private processors: SWORTTDecoder[] = [];
     protected decoders: RTTDecoder[] = [];
 
-    constructor(private sources: SocketRTTSource[], args: ConfigurationArguments, extensionPath: string) {
+    constructor(private sources: {[channel: number]: SocketRTTSource}, args: ConfigurationArguments, extensionPath: string) {
         super();
 
         if (args.graphConfig.length >= 1) {
             this.webview = new SWOWebview(extensionPath, args.graphConfig);
         }
-        for (const src of sources) {
-            const dec = new RTTDecoder(src, src.channel, 4);
-            dec.on('software-event', this.onPacket.bind(this));
-            this.decoders.push(dec);
-        }
-        
+
         args.rttConfig.decoders.forEach((conf) => {
             switch (conf.type) {
                 case 'graph':
+                    this.addRTTDecoder(this.sources[conf.port]);                    
                     const processor = new SWORTTGraphProcessor(conf as any as SWOGraphDecoderConfig);
                     if (this.webview) { this.webview.registerProcessors(processor); }
                     this.processors.push(processor);
                     break;
                 case 'advanced':
                     try {
+                        for (const p of conf.ports) {
+                            this.addRTTDecoder(this.sources[p]);                    
+                        }
                         const processor = new SWORTTAdvancedProcessor(conf as any as SWOAdvancedDecoderConfig);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
@@ -489,6 +489,17 @@ export class RTTCore extends SWORTTCoreBase {
                     break;
             }
         });
+    }
+
+    private addRTTDecoder(src: SocketRTTSource) {
+        if (src) {
+            const dec = new RTTDecoder(src, src.channel, 4);
+            dec.on('software-event', this.onPacket.bind(this));
+            this.decoders.push(dec);
+        }
+        else {
+            console.error('Null source?');
+        }
     }
 
     private onPacket(packet: Packet) {

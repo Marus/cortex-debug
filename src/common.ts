@@ -69,7 +69,6 @@ export enum TerminalInputMode {
     DISABLED = 'disabled'
 }
 export interface RTTCommonDecoderOpts {
-    allowSharedTcp: boolean;    // Can this server allow multiple TCP client connections to same channel?
     type: string;     // 'console', 'graph', ...
     tcpPort: string;  // [hostname:]port
     port: number;     // RTT Channel number
@@ -251,7 +250,7 @@ export interface GDBServerController extends EventEmitter {
 
 export class RTTServerHelper {
     // Channel numbers previously used on the localhost
-    public rttLocalPortMap: { [channel: number]: string} = {};
+    public rttLocalPortMap: {[channel: number]: string} = {};
 
     // For openocd, you cannot have have duplicate ports and neither can
     // a multple clients connect to the same channel. Perhaps in the future
@@ -265,13 +264,21 @@ export class RTTServerHelper {
         // Remember that you can have duplicate decoder ports. ie, multiple decoders looking at the same port
         // while mostly not allowed, it could be in the future. Handle it here but disallow on a case by case
         // basis depending on the gdb-server type
-        let numPorts = 0;
+        const dummy = '??';
         for (const dec of cfg.decoders) {
-            numPorts += dec.ports ? dec.ports.length : 1;
+            if (dec.ports && (dec.ports.length > 0)) {
+                this.rttPortsPending = this.rttPortsPending + dec.ports.length;
+                dec.tcpPorts = [];
+                for (const p of dec.ports) {
+                    this.rttLocalPortMap[p] = dummy;
+                }
+            } else {
+                this.rttLocalPortMap[dec.port] = dummy;
+            }
         }
 
-        this.rttPortsPending = numPorts;
-        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: numPorts, consecutive: false };
+        this.rttPortsPending = Object.keys(this.rttLocalPortMap).length;
+        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: this.rttPortsPending, consecutive: false };
         TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {    
             this.rttPortsPending = 0;    
             for (const dec of cfg.decoders) {
@@ -280,7 +287,7 @@ export class RTTServerHelper {
                     dec.tcpPorts = [];
                     for (const p of dec.ports) {
                         let str = this.rttLocalPortMap[p];
-                        if (!str) {
+                        if (str === dummy) {
                             str = ports.shift().toString();
                             this.rttLocalPortMap[p] = str;
                         }
@@ -288,7 +295,7 @@ export class RTTServerHelper {
                     }
                 } else {
                     let str = this.rttLocalPortMap[dec.port];
-                    if (!str) {
+                    if (str === dummy) {
                         str = ports.shift().toString(); 
                         this.rttLocalPortMap[dec.port] = str;
                     }
