@@ -1,12 +1,15 @@
 import * as net from 'net';
 import * as vscode from 'vscode';
-import { IPtyTerminalOptions, PtyTerminal } from './pty';
+import * as fs from 'fs';
+import * as os from 'os';
+import { BR_MAGENTA_FG, IPtyTerminalOptions, PtyTerminal, RESET } from './pty';
 import { getAnyFreePort, parseHostPort, TerminalInputMode } from '../common';
 
 export class GDBServerConsole {
     protected toBackendServer: net.Server = null;
     protected toBackend: net.Socket = null;
-    protected toBackendPort: number = -1;    
+    protected toBackendPort: number = -1;
+    protected logFd = -1;
 
     public ptyTerm: PtyTerminal = null;
     protected ptyOptions: IPtyTerminalOptions;
@@ -20,6 +23,12 @@ export class GDBServerConsole {
         };
         this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null)
         this.setupTerminal();
+        try {
+            const tmpdir = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
+            const fname = `${tmpdir}/gdb-server-console-${process.pid}`;
+            this.logFd = fs.openSync(fname, 'w');
+        }
+        catch {}
     }
 
     private setupTerminal() {
@@ -27,10 +36,10 @@ export class GDBServerConsole {
         this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
         this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
         if (this.toBackend === null) {
-            this.ptyTerm.write('Waiting for gdb server to start...');
+            this.magentaWrite('Waiting for gdb server to start...');
             this.ptyTerm.pause();
         } else {
-            this.ptyTerm.write('Resuming connection to gdb server...\n');
+            this.magentaWrite('Resuming connection to gdb server...\n');
             this.ptyTerm.resume();
         }
     }
@@ -40,25 +49,35 @@ export class GDBServerConsole {
         this.setupTerminal();
     }
 
-    public startServer(): Promise<void> {
-        return this.initToBackendSocket();
-    }
-
     public isServerAlive() {
         return this.toBackendServer !== null;
+    }
+
+    protected debugMsg(msg: string) {
+        if (true) {
+            try {
+                msg = 'SERVER CONSOLE DEBUG: ' + msg;
+                console.log(msg)
+                if (this.ptyTerm) {
+                    msg += msg.endsWith('\n') ? '' : '\n';
+                    this.magentaWrite(msg);
+                }
+            }
+            finally {}
+        }
     }
 
     // Create a server for the GDBServer running in the adapter process. Any data
     // from the gdb-server (like OpenOCD) is sent here and sent to the terminal
     // and any usr input in the terminal is sent back (like semi-hosting)
-    protected initToBackendSocket() : Promise<void> {
+    public startServer() : Promise<void> {
         return new Promise((resolve, reject) => {
             getAnyFreePort(55878).then((p) => {
                 this.toBackendPort = p;
-                GDBServerConsole.BackendPort = p;
                 const newServer = net.createServer(this.onBackendConnect.bind(this));
                 newServer.listen(this.toBackendPort, '127.0.0.1', () => {
                     this.toBackendServer = newServer;
+                    GDBServerConsole.BackendPort = this.toBackendPort;
                     resolve();
                 });
                 newServer.on(('error'), (e) => {
@@ -72,24 +91,43 @@ export class GDBServerConsole {
         });
     }
 
+    protected magentaWrite(msg: string) {
+        if (this.ptyTerm) {
+            this.ptyTerm.write(BR_MAGENTA_FG + msg + RESET);
+        }
+    }
+
     // The gdb-server running in the backend
     protected onBackendConnect(socket: net.Socket) {
         this.toBackend = socket;
         this.ptyTerm.resume();
         this.clearTerminal();
-        console.log('onBackendConnect: gdb-server program connected');
+        this.debugMsg('onBackendConnect: gdb-server program connected');
         socket.setKeepAlive(true);
         socket.on('close', () => {
-            console.log('onBackendConnect: gdb-server program closed');
-            this.ptyTerm.write('GDB server exited. Waiting for next server to start...')
+            this.debugMsg('onBackendConnect: gdb-server program closed');
+            this.magentaWrite('GDB server exited. Waiting for next server to start...');
             this.toBackend = null;
             this.ptyTerm.pause();
         });
         socket.on('data', (data) => {
             this.ptyTerm.write(data);
+            try {
+                if (this.logFd >= 0) {
+                    if (!this.ptyTerm.isReady) {
+                        // Maybe we should do our own buffering rather than the pty doing it. This can
+                        // help if the user kills the terminal. But we would have lost previous data anyways
+                        fs.writeFileSync(this.logFd, '******* Terminal not yet ready, buffering ******');
+                    }
+                    fs.writeFileSync(this.logFd, data.toString());
+                }
+            }
+            catch (_e) {
+                this.logFd = -1;
+            }
         });
         socket.on('error', (e) => {
-            this.ptyTerm.write(`GDBServerConsole: onBackendConnect: gdb-server program client error ${e}`)
+            this.debugMsg(`GDBServerConsole: onBackendConnect: gdb-server program client error ${e}`);
         });
     }
 

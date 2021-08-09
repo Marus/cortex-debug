@@ -4,12 +4,12 @@ import * as net from 'net';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
 import { TcpPortScanner } from '../tcpportscanner';
-import { throws } from 'assert';
 
 export class GDBServer extends EventEmitter {
     private process: ChildProcess.ChildProcess;
     private outBuffer: string = '';
     private errBuffer: string = '';
+    protected consoleSocket: net.Socket = null;
     private initResolve: (result: boolean) => void;
     private initReject: (error: any) => void;
     public static readonly SERVER_TIMEOUT = 10000;
@@ -26,52 +26,52 @@ export class GDBServer extends EventEmitter {
             if (this.application !== null) {
                 this.initResolve = resolve;
                 this.initReject = reject;
+                this.connectToConsole().then(() => {
+                    this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd });
+                    this.process.stdout.on('data', this.onStdout.bind(this));
+                    this.process.stderr.on('data', this.onStderr.bind(this));
+                    this.process.on('exit', this.onExit.bind(this));
+                    this.process.on('error', this.onError.bind(this));
+                        
+                    if ((typeof this.port === 'number') && (this.port > 0)) {
+                        // We monitor for port getting into Listening mode. This is a backup for initMatch
+                        // TcpPortScanner.waitForPortOpenOSUtil(this.port, 250, GDBServer.SERVER_TIMEOUT - 1000, true, false)
+                        TcpPortScanner.waitForPortOpen(this.port, GDBServer.LOCALHOST, true, 50, GDBServer.SERVER_TIMEOUT - 1000)
+                        .then(() => {
+                            if (this.initResolve) {
+                                this.initResolve(true);
+                                this.initReject = null;
+                                this.initResolve = null;
+                            }
+                        }).catch((e) => {
+                            // We could reject here if it is truly a timeout and not something else, caller already has a timeout
+                            // ALso, waitForPortOpenOSUtil is not bullet proof if it fails, we don't know why because of differences
+                            // in OSes, upgrades, etc. But, when it works, we know for sure it worked.
+                        });
+                    }
 
-                this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd });
-                this.process.stdout.on('data', this.onStdout.bind(this));
-                this.process.stderr.on('data', this.onStderr.bind(this));
-                this.process.on('exit', this.onExit.bind(this));
-                this.process.on('error', this.onError.bind(this));
-                this.process.on('spawn', () => { this.connectToConsole(); })
-
-                if ((typeof this.port === 'number') && (this.port > 0)) {
-                    // We monitor for port getting into Listening mode. This is a backup for initMatch
-                    // TcpPortScanner.waitForPortOpenOSUtil(this.port, 250, GDBServer.SERVER_TIMEOUT - 1000, true, false)
-                    TcpPortScanner.waitForPortOpen(this.port, GDBServer.LOCALHOST, true, 50, GDBServer.SERVER_TIMEOUT - 1000)
-                    .then(() => {
-                        if (this.initResolve) {
-                            this.initResolve(true);
-                            this.initReject = null;
-                            this.initResolve = null;
-                        }
-                    }).catch((e) => {
-                        // We could reject here if it is truly a timeout and not something else, caller already has a timeout
-                        // ALso, waitForPortOpenOSUtil is not bullet proof if it fails, we don't know why because of differences
-                        // in OSes, upgrades, etc. But, when it works, we know for sure it worked.
-                    });
-                }
-
-                if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
-                    // For some reason we are not able to capture the st-util output on Windows
-                    // For now assume that it will launch properly within 1/2 second and resolve the init
-                    setTimeout(() => {
-                        if (this.initResolve) {
-                            this.initResolve(true);
-                            this.initReject = null;
-                            this.initResolve = null;
-                        }
-                    }, 500);
-                }
-                if (this.initMatch == null) {
-                    // If there is no init match string (e.g. QEMU) assume launch in 1/2 second and resolve
-                    setTimeout(() => {
-                        if (this.initResolve) {
-                            this.initResolve(true);
-                            this.initReject = null;
-                            this.initResolve = null;
-                        }
-                    }, 1000);
-                }
+                    if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
+                        // For some reason we are not able to capture the st-util output on Windows
+                        // For now assume that it will launch properly within 1/2 second and resolve the init
+                        setTimeout(() => {
+                            if (this.initResolve) {
+                                this.initResolve(true);
+                                this.initReject = null;
+                                this.initResolve = null;
+                            }
+                        }, 500);
+                    }
+                    if (this.initMatch == null) {
+                        // If there is no init match string (e.g. QEMU) assume launch in 1/2 second and resolve
+                        setTimeout(() => {
+                            if (this.initResolve) {
+                                this.initResolve(true);
+                                this.initReject = null;
+                                this.initResolve = null;
+                            }
+                        }, 1000);
+                    }
+                });
             }
             else { // For servers like BMP that are always running directly on the probe
                 this.connectToConsole(); 
@@ -140,45 +140,40 @@ export class GDBServer extends EventEmitter {
         }
     }
 
-    // TODO: We should have init also wait for the connection to be established before
-    // resolving.
-    protected consoleSocket: net.Socket = null;
-    protected connectToConsole() {
-        if ((this.consolePort || 0) <= 0) {
-            return;
-        }
-        const socket = new net.Socket();
-        socket.on  ('data', (data) => {
-            try {
-                this.process.stdin.write(data, 'utf8');
-            }
-            catch (e) {
-                console.error(`stdin write failed ${e}`);
-            }
-        });
-        socket.once('close', () => {
-            this.consoleSocket = null;
-        });
-        socket.on  ('error', (e) => {
-            console.error(`unknown socket error ${e}`);
-        });
+    protected connectToConsole(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            const socket = new net.Socket();
+            socket.on  ('data', (data) => {
+                try {
+                    this.process.stdin.write(data, 'utf8');
+                }
+                catch (e) {
+                    console.error(`stdin write failed ${e}`);
+                }
+            });
+            socket.once('close', () => {
+                this.consoleSocket = null;
+            });
+            socket.on  ('error', (e) => {
+                const msg = `Error: unexpected socket error ${e}. Please report this problem`;
+                this.emit('output', msg + '\n');
+                console.error(msg);
+                resolve();
+            });
 
-        // It is possible that the server is not ready
-        socket.connect(this.consolePort, '127.0.0.1', () => {
-            this.consoleSocket = socket;
+            // It is possible that the server is not ready
+            socket.connect(this.consolePort, '127.0.0.1', () => {
+                this.consoleSocket = socket;
+                resolve();
+            });
         });
     }
 
-    private conBuffer = '';
     private sendToConsole(data: string|Buffer) {
         if (this.consoleSocket) {
-            if (this.conBuffer) {
-                this.consoleSocket.write(this.conBuffer);
-                this.conBuffer = '';
-            }
             this.consoleSocket.write(data);
-        } else if ((this.consolePort || 0) > 0) {
-            this.conBuffer += data.toString();
+        } else {
+            console.error('sendToConsole: console not open. How did this happen?')
         }
     }
 

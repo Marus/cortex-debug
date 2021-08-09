@@ -615,8 +615,8 @@ export class CortexDebugExtension {
         if (!output.endsWith('\n')) { output += '\n'; }
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
-            this.adapterOutputChannel.appendLine("DEPRECATED: Please check the 'TERMINALS' tab for 'gdb-server' output." +
-                "This window will not appear in future releases");
+            this.adapterOutputChannel.appendLine("DEPRECATED: Please check the 'TERMINALS' tab for 'gdb-server' output. " +
+                "This 'Adapter Output' will not appear in future releases");
             this.adapterOutputChannel.show();
         } else if (this.clearAdapterOutputChannel) {
             this.adapterOutputChannel.clear();

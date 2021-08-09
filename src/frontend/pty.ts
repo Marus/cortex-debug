@@ -9,12 +9,11 @@ export interface IPtyTerminalOptions {
     inputMode: TerminalInputMode
 }
 
-
 export const ESC            = '\x1b';         // ASCII escape character
 export const CSI            = ESC + '[';      // control sequence introducer
 export const BOLD           = CSI + '1m';
 export const RESET          = CSI + '0m';
-export const BR_MAGENTA_FG  = CSI + '95m';
+export const BR_MAGENTA_FG  = CSI + '95m';    // Bright magenta foreground
 
 const KEYS = {
     enter       : '\r',
@@ -63,6 +62,8 @@ export class PtyTerminal extends EventEmitter {
     private disposing = false;
     private isPaused = false;
     protected promptTimer: ResettableTimeout = null;
+    public isReady = false;
+    protected pendingWrites: any[] = [];
 
     static oldOnes: { [name: string]: PtyTerminal }  = {};
 
@@ -70,13 +71,10 @@ export class PtyTerminal extends EventEmitter {
         onDidWrite: this.writeEmitter.event,
         // onDidOverrideDimensions?: vscode.Event<vscode.TerminalDimensions>;
         // onDidClose?: vscode.Event<number | void>;
-        open: () => this.doPrompt(),
-        close: () => {},
+        open: () => { this.onOpen(); },
+        close: () => { this.onClose(); },
         /*
         open(initialDimensions: vscode.TerminalDimensions): void {
-            throw new Error('Method not implemented.');
-        }
-        close(): void {
             throw new Error('Method not implemented.');
         }
         */
@@ -98,12 +96,29 @@ export class PtyTerminal extends EventEmitter {
         PtyTerminal.oldOnes[this.options.name] = this;
         vscode.window.onDidCloseTerminal((t) => {
             if ((t === this.terminal) && !this.disposing) {
-                this.terminal = null;
-                this.emit('close');
-                super.removeAllListeners();
-                delete PtyTerminal.oldOnes[this.options.name];
+                this.onClose();
             }
         });
+    }
+
+    private onOpen() {
+        this.isReady = true;
+        if (this.pendingWrites.length) {
+            for (const data of this.pendingWrites) {
+                this.write(data);
+            }
+            this.pendingWrites = [];
+        } else {
+            this.doPrompt();
+        }
+    }
+
+    private onClose() {
+        this.emit('close');
+        super.removeAllListeners();
+        delete PtyTerminal.oldOnes[this.options.name];
+        this.isReady = false;
+        this.terminal = null;
     }
 
     static findExisting(name: string): PtyTerminal  {
@@ -362,6 +377,10 @@ export class PtyTerminal extends EventEmitter {
     }
 
     public write(data: string | Buffer) {
+        if (!this.isReady) {
+            this.pendingWrites.push(data);
+            return;
+        }
         try {
             this.unPrompt();
             if ((typeof data !== 'string') && !(data instanceof String)) {

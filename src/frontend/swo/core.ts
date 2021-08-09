@@ -230,10 +230,8 @@ class SWOWebview {
     }
 
     private onMessage(message: GrapherMessage) {
-        console.log('Received message: ', message);
         if (message.type === 'init') {
             const message = { type: 'configure', graphs: this.graphs, status: this.currentStatus };
-            console.log('Configure Message: ', message);
             this.viewPanel.webview.postMessage(message);
         }
     }
