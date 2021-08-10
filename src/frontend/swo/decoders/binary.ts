@@ -80,6 +80,11 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     public dispose() {
         if (this.output) {
             this.output.dispose();
+            this.output = null;
+        }
+        if (this.ptyTerm) {
+            this.ptyTerm.dispose();
+            this.ptyTerm = null;
         }
     }
 }

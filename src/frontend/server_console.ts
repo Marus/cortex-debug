@@ -2,8 +2,8 @@ import * as net from 'net';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
-import { BR_MAGENTA_FG, IPtyTerminalOptions, PtyTerminal, RESET } from './pty';
-import { getAnyFreePort, parseHostPort, TerminalInputMode } from '../common';
+import {IPtyTerminalOptions, magentaWrite, PtyTerminal } from './pty';
+import { getAnyFreePort, TerminalInputMode } from '../common';
 
 export class GDBServerConsole {
     protected toBackendServer: net.Server = null;
@@ -36,10 +36,10 @@ export class GDBServerConsole {
         this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
         this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
         if (this.toBackend === null) {
-            this.magentaWrite('Waiting for gdb server to start...');
+            magentaWrite('Waiting for gdb server to start...', this.ptyTerm);
             this.ptyTerm.pause();
         } else {
-            this.magentaWrite('Resuming connection to gdb server...\n');
+            magentaWrite('Resuming connection to gdb server...\n', this.ptyTerm);
             this.ptyTerm.resume();
         }
     }
@@ -60,7 +60,7 @@ export class GDBServerConsole {
                 console.log(msg)
                 if (this.ptyTerm) {
                     msg += msg.endsWith('\n') ? '' : '\n';
-                    this.magentaWrite(msg);
+                    magentaWrite(msg, this.ptyTerm);
                 }
             }
             finally {}
@@ -91,12 +91,6 @@ export class GDBServerConsole {
         });
     }
 
-    protected magentaWrite(msg: string) {
-        if (this.ptyTerm) {
-            this.ptyTerm.write(BR_MAGENTA_FG + msg + RESET);
-        }
-    }
-
     // The gdb-server running in the backend
     protected onBackendConnect(socket: net.Socket) {
         this.toBackend = socket;
@@ -106,7 +100,7 @@ export class GDBServerConsole {
         socket.setKeepAlive(true);
         socket.on('close', () => {
             this.debugMsg('onBackendConnect: gdb-server program closed');
-            this.magentaWrite('GDB server exited. Waiting for next server to start...');
+            magentaWrite('GDB server exited. Waiting for next server to start...', this.ptyTerm);
             this.toBackend = null;
             this.ptyTerm.pause();
         });

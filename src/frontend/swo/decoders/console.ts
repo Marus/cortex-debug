@@ -34,7 +34,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         const basic = `SWO:${config.label || ''}[port:${this.port}`;
 
         if (this.useTerminal) {
-            return basic + ']';
+            return basic + '] console';
         } else {
             return basic + ', type: console]';
         }
@@ -75,8 +75,6 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         const letters = packet.data.toString(this.encoding);
 
         if (this.useTerminal) {
-            // Not sure why writing to the channel has a 5 second timeout. Thinking it was a left
-            // over but it was done three years ago. Also, not sure attaching timestamps is worth it
             this.ptyTerm.write(letters);
             return;
         }
@@ -120,6 +118,11 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     public dispose() {
         if (this.output) {
             this.output.dispose();
+            this.output = null;
+        }
+        if (this.ptyTerm) {
+            this.ptyTerm.dispose();
+            this.ptyTerm = null;
         }
     }
 }

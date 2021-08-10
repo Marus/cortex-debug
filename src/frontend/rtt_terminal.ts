@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
-import * as net from 'net';
 import * as fs from 'fs';
-import { parseHostPort, RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
-import { IPtyTerminalOptions, PtyTerminal, RESET } from './pty';
+import { RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
+import { IPtyTerminalOptions, magentaWrite, PtyTerminal, RESET } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 import { SocketRTTSource } from './swo/sources/socket';
-import { scrypt } from 'crypto';
 
 export class RTTTerminal {
     protected ptyTerm: PtyTerminal;
@@ -24,8 +22,9 @@ export class RTTTerminal {
         src: SocketRTTSource) {
         this.ptyOptions = this.createTermOptions(null);
         this.createTerminal();
-        this.openLogFile();
+        this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
         this.connectToSource(src);
+        this.openLogFile();
         setTimeout(() => this.terminal.show(), 100);
     }
 
@@ -38,17 +37,17 @@ export class RTTTerminal {
                 this.source = null;                    
             } else if (code === 'ECONNREFUSED') {
                 // We expect 'ECONNREFUSED' if the server has not yet started.
-                this.ptyTerm.write(`${e.message}\nPlease report this problem.`);
+                magentaWrite(`${e.message}\nPlease report this problem.`, this.ptyTerm);
                 this.source = null;
             } else {
-                this.ptyTerm.write(`${e.message}\nPlease report this problem.`);
+                magentaWrite(`${e.message}\nPlease report this problem.`, this.ptyTerm);
             }
         });
         src.on('data', (data) => { this.onData(data); });
 
         if (src.connError) {
             this.source = src;
-            this.ptyTerm.write(`${src.connError.message}\nPlease report this problem.`);
+            magentaWrite(`${src.connError.message}\nPlease report this problem.`, this.ptyTerm);
         } else if (src.connected) {
             this.source = src;
         }
@@ -62,12 +61,12 @@ export class RTTTerminal {
     private onClose() {
         this.source = null;
         this.inUse = false;
-        this.binaryFormatter.reset();
         if (!this.options.noclear && (this.logFd >= 0)) {
             try { fs.closeSync(this.logFd); } catch { };
         }
         this.logFd = -1;
-        this.ptyTerm.write(RESET + `\nRTT connection on TCP port ${this.options.tcpPort} ended. Waiting for next connection...`);
+        this.ptyTerm.write(RESET + '\n');
+        magentaWrite(`RTT connection on TCP port ${this.options.tcpPort} ended. Waiting for next connection...`, this.ptyTerm);
     }
 
     private onData(data: Buffer) {
@@ -82,7 +81,7 @@ export class RTTTerminal {
             }
         }
         catch (e) {
-            this.ptyTerm.write(`Error writing data: ${e}\n`);
+            magentaWrite(`Error writing data: ${e}\n`, this.ptyTerm);
         }
     }
 
@@ -93,7 +92,9 @@ export class RTTTerminal {
                 this.logFd = fs.openSync(this.options.logfile, 'w');
             }
             catch (e) {
-                console.error(`Could not open file ${this.options.logfile} for writing. ${e.toString()}`);
+                const msg = `Could not open file ${this.options.logfile} for writing. ${e.toString()}`;
+                console.error(msg);
+                magentaWrite(msg, this.ptyTerm)
             }
         }
     }
@@ -131,7 +132,6 @@ export class RTTTerminal {
         this.ptyTerm = new PtyTerminal(this.createTermOptions(null));
         this.ptyTerm.on('data', this.sendData.bind(this));
         this.ptyTerm.on('close', this.terminalClosed.bind(this));
-        this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
     }
 
     protected createPrompt(): string {
@@ -139,7 +139,8 @@ export class RTTTerminal {
     }
 
     static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {
-        const orig = options.label || `RTT Ch:${options.port} ${options.type}`;
+        const suffix = options.type === 'binary' ? `enc:${getEncoding(options.encoding)}` : options.type;
+        const orig = options.label || `RTT Ch:${options.port} ${suffix}`;
         let ret = orig;
         let count = 1;
         while (vscode.window.terminals.findIndex((t) => t.name === ret) >= 0) {
@@ -184,12 +185,13 @@ export class RTTTerminal {
                     this.openLogFile();
                 }
                 catch (e) {
-                    this.ptyTerm.write(`Error: closing fille ${e}\n`);
+                    magentaWrite(`Error: closing fille ${e}\n`, this.ptyTerm);
                 }
             }
             this.options = options;
-            this.ptyOptions = this.createTermOptions(newTermName);;
+            this.ptyOptions = this.createTermOptions(newTermName);
             this.ptyTerm.resetOptions(this.ptyOptions);
+            this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
             this.connectToSource(src);
             return true;
         }
@@ -217,25 +219,26 @@ function padLeft(str: string, len: number, chr = ' '): string {
     return str;
 }
 
+function getEncoding(enc: string): string {
+    const encodings: string[] = ['signed', 'unsigned', 'Q16.16', 'float'];
+    if (!enc || this.encodings.indexOf(enc) < 0) {
+        enc = 'unsigned';
+    }
+    return enc;
+}
+
 class BinaryFormatter {
     private readonly bytesNeeded = 4;
     private buffer = Buffer.alloc(4);
     private bytesRead = 0;
-    public readonly encodings: string[] = ['signed', 'unsigned', 'Q16.16', 'float'];
 
     constructor(
         protected ptyTerm: PtyTerminal,
         protected encoding: string,
         protected scale: number) {
-        this.reset();
-        if (this.encodings.indexOf(encoding) < 0) {
-            this.encoding = 'unsigned';
-        }
-        this.scale = scale || 1;
-    }
-
-    public reset() {
         this.bytesRead = 0;
+        this.encoding = getEncoding(encoding);
+        this.scale = scale || 1;
     }
 
     public writeBinary(input: string | Buffer) {

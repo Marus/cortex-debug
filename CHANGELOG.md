@@ -1,16 +1,21 @@
 ChangeLog
 
-# V0.4.0.pre1
+# V0.4.0.pre2
 
 This will be a major release with a lot of changes and many new features. The `TERMINAL` area of VSCode is utilized a lot more heavily to enable bidirectional communication with the firmware. It is used for RTT, SWO and Semi-hosting.
 
 New Features:
    * Support for RTT (SEGGER Real Time Trace) with OpenOCD and JLink. See [Issue#456](https://github.com/Marus/cortex-debug/issues/456) for more info
-     * JLink RTT has a limitation that it can ONLY work with one channel (channel 0). There is another artifact with channel 0 where you may see output from a previous run at the very beginning.
+     * You can plot RTT data just like you could with SWO. The setup in launch.json is identical. [See this comment](https://github.com/Marus/cortex-debug/issues/456#issuecomment-896021784)
+     * **Channel sharing:** You can use the same RTT channels in multiple ways. Corte-Debug reads the channel data from OpenOCD/JLink once and distributes to all subscribers (terminals & graphs). For instance, you can plot a channel and also look at its binary data in a terminal. Just use two decoders with the same channel (actually called port) number.
+     * JLink RTT has a limitation that it can ONLY work with one channel (channel 0). There is another artifact with RTT channels where you may see output from a previous run at the very beginning.
+     * The default polling interval in OpenOCD is 100 ms. If you are outputting more frequently, try lowering the interval in `launch.json`. 10ms seems more acceptable as a tradeoff between creating bus traffic and not losing/blocking data. If nothing changes, then OpenOCD does do much even if the interval is small.
    * SWO console and binary decoded text data now appears in a "TERMINAL" tab instead in the "OUTPUT" tab
    * All gdb-server (OpenOCD, JLink, etc.) output is also in the "TERMINAL" tab. In there you can also interact with your semihosting
    * Support in debugger for `Jump to Cursor`, thanks to [PR#417](https://github.com/Marus/cortex-debug/pull/417) 
    * `demangle` is on by default. You can turn it off in `launch.json`
+   * A change in this pre-release, you will see some debug information in the gdb-server console. You will also see messages output by the extension that are not part of the actual output in bright magenta. This will happen in all terminals (RTT, SWO and console)
+   * WARNING: The `Adapter Output` window in the `OUTPUT` tab will go away. Replaced by the 'gdb-server' in the `TERMINAL` tab.
    
 # V0.3.13
 
