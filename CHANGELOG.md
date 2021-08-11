@@ -32,7 +32,8 @@ New Features:
    * Support in debugger for `Jump to Cursor`, thanks to [PR#417](https://github.com/Marus/cortex-debug/pull/417) 
    * A change in this pre-release, you will see some debug information in the gdb-server console. You will also see messages output by the extension that are not part of the actual output in bright magenta. This will happen in all terminals (RTT, SWO and console)
    * WARNING: The `Adapter Output` window in the `OUTPUT` tab will go away. Replaced by the 'gdb-server' in the `TERMINAL` tab menntioned above.
-   
+
+A big thanks to Henrik Maier @hwmaier for helping me with the RTT feedback. Without that, it would have taken a lot longer and perhaps not as nice.
 # V0.3.13
 
 New Features:
