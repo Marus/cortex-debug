@@ -23,6 +23,9 @@ export class GDBServerConsole {
         };
         this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null)
         this.setupTerminal();
+        setTimeout(() => {
+            this.ptyTerm.terminal.show();
+        }, 10);
         try {
             const tmpdir = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
             const fname = `${tmpdir}/gdb-server-console-${process.pid}`;
