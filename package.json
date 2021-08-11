@@ -516,6 +516,212 @@
                                 "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
                             },
+                            "rttConfig": {
+                                "type": "object",
+                                "description": "SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future",
+                                "default": {
+                                    "enabled": true,
+                                    "address": "auto",
+                                    "decoders": [
+                                        {
+                                            "label": "",
+                                            "port": 0,
+                                            "type": "console"
+                                        }
+                                    ]
+                                },
+                                "properties": {
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "description": "Enable/Disable RTT",
+                                        "default": false
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "description": "Address to start searching for the RTT control block. Use \"auto\" for Cortex-Debug to use the address from elf file",
+                                        "default": "auto"
+                                    },
+                                    "searchSize": {
+                                        "type": "number",
+                                        "description": "Number of bytes to search for the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation",
+                                        "multipleOf": 1,
+                                        "minimum": 16,
+                                        "default": 16
+                                    },
+                                    "searchId": {
+                                        "type": "string",
+                                        "description": "A string to search for to find the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation",
+                                        "default": "SEGGER RTT"
+                                    },
+                                    "polling_interval": {
+                                        "type": "number",
+                                        "description": "number of milliseconds (> 0) to wait for check for data on out channels",
+                                        "default": 0,
+                                        "minimum": 1
+                                    },
+                                    "decoders": {
+                                        "description": "SWO Decoder Configuration",
+                                        "items": {
+                                            "anyOf": [
+                                                {
+                                                    "properties": {
+                                                        "label": {
+                                                            "description": "A label for RTT Console",
+                                                            "type": "string"
+                                                        },
+                                                        "port": {
+                                                            "description": "RTT Channel Number (0 to 15)",
+                                                            "default": 0,
+                                                            "maximum": 15,
+                                                            "minimum": 0,
+                                                            "multipleOf": 1,
+                                                            "type": "number"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "console",
+                                                                "binary"
+                                                            ],
+                                                            "default": "console",
+                                                            "description": "'console' with text input/output, 'binary' is for converting byte stream to other data types",
+                                                            "type": "string"
+                                                        },
+                                                        "prompt": {
+                                                            "description": "Prompt to use for RTT Console",
+                                                            "type": "string",
+                                                            "default": ""
+                                                        },
+                                                        "noprompt": {
+                                                            "description": "Don't use a prompt for RTT Console",
+                                                            "type": "boolean",
+                                                            "default": false
+                                                        },
+                                                        "noclear": {
+                                                            "description": "append to screen/logfile when another connection is made",
+                                                            "type": "boolean",
+                                                            "default": false
+                                                        },
+                                                        "logfile": {
+                                                            "description": "log all raw data (input and output) to specified file",
+                                                            "type": "string",
+                                                            "default": ""
+                                                        },
+                                                        "encoding": {
+                                                            "type": "string",
+                                                            "description": "ascii, utf8, ucs2, utf16le are for 'console', rest are for 'binary' type data",
+                                                            "default": "",
+                                                            "enum": [
+                                                                "ascii",
+                                                                "utf8",
+                                                                "ucs2",
+                                                                "utf16le",
+                                                                "unsigned",
+                                                                "signed",
+                                                                "Q16.16",
+                                                                "float"
+                                                            ]
+                                                        },
+                                                        "scale": {
+                                                            "default": 1,
+                                                            "description": "Binary only: This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "type": "number"
+                                                        },
+                                                        "inputmode": {
+                                                            "type": "string",
+                                                            "description": "Experimental: 'disabled' means no stdin. 'raw' and 'rawecho' sends chars as they are typed.\n'rawecho' will echo chars and process RETURN keys. Even CTRL-C CTRL-D are passed on",
+                                                            "default": "cooked",
+                                                            "enum": [
+                                                                "cooked",
+                                                                "raw",
+                                                                "rawecho",
+                                                                "disabled"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "port"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "properties": {
+                                                        "encoding": {
+                                                            "default": "unsigned",
+                                                            "description": "This property is only used for binary and graph output formats.",
+                                                            "enum": [
+                                                                "unsigned",
+                                                                "signed",
+                                                                "Q16.16",
+                                                                "float"
+                                                            ],
+                                                            "type": "string"
+                                                        },
+                                                        "graphId": {
+                                                            "description": "The identifier to use for this data in graph configurations.",
+                                                            "type": "string"
+                                                        },
+                                                        "port": {
+                                                            "description": "RTT Channel Number",
+                                                            "maximum": 15,
+                                                            "minimum": 0,
+                                                            "type": "number"
+                                                        },
+                                                        "scale": {
+                                                            "default": 1,
+                                                            "description": "This setting will scale the raw value from the ITM port by the specified value. Can be used, for example, to scale a raw n-bit ADC reading to a voltage value. (e.g to scale a 12-bit ADC reading to a 3.3v scale you would need a scale value of 3.3/4096 = 0.0008056640625",
+                                                            "type": "number"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "graph"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "port",
+                                                        "graphId"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "properties": {
+                                                        "config": {
+                                                            "additionalProperties": true,
+                                                            "type": "object"
+                                                        },
+                                                        "decoder": {
+                                                            "description": "Path to a javascript module to implement the decoding functionality.",
+                                                            "type": "string"
+                                                        },
+                                                        "ports": {
+                                                            "description": "RTT Channel Numbers",
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "number",
+                                                                "maximum": 15,
+                                                                "minimum": 0
+                                                            }
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "advanced"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "ports",
+                                                        "decoder"
+                                                    ],
+                                                    "type": "object"
+                                                }
+                                            ]
+                                        },
+                                        "type": "array"
+                                    }
+                                }
+                            },
                             "swoConfig": {
                                 "properties": {
                                     "cpuFrequency": {
@@ -1174,8 +1380,10 @@
                                                         },
                                                         "port": {
                                                             "description": "RTT Channel Number (0 to 15)",
+                                                            "default": 0,
                                                             "maximum": 15,
                                                             "minimum": 0,
+                                                            "multipleOf": 1,
                                                             "type": "number"
                                                         },
                                                         "type": {
