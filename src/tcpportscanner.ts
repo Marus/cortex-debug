@@ -1,6 +1,5 @@
 // Author to Blame: haneefdm on github
 
-import * as tcpPortUsed from 'tcp-port-used';
 import os = require('os');
 import net = require('net');
 import child_process = require('child_process');
@@ -10,9 +9,9 @@ export class TcpPortScanner {
     //
     // Strategies: There are two ways we can check/look for open ports or get status
     //
-    // 1. Client: Try to see if we can connect to that port. This is the preferred method
-    //    because you can probe for remote hosts as well but on Windows each probe on an free
-    //    port takes 1 second even on localhost
+    // 1. Client: Try to see if we can connect to that port. While this may be preferrable
+    //    it is dangerous as we would be making connections to unknown servers that may be
+    //    expecting a particular type of client.
     //
     // 2. Server: See if we can create a server on that port. It is super fast on all platforms,
     //    but, we can only do this on a localhost. We use this method is we can quickly determine
@@ -76,33 +75,28 @@ export class TcpPortScanner {
      * @param host host ip address to use.
      */
     public static isPortInUseEx(port: number, host: string): Promise<boolean> {
-        if (TcpPortScanner.shouldUseServerMethod(host)) {
-            const tries = TcpPortScanner.getLocalHostAliases();
-            let ix = 0;
-            // We don't use Promise.all method because we are trying to create a bunch of
-            // servers on the same machine/port, they could interfere with each other if you
-            // do it asynchronously/parallel.
-            // There is also a slight benefit that we can bail early if a port is in use
-            return new Promise((resolve, reject) => {
-                function next(port: number, host: string) {
-                    TcpPortScanner.isPortInUse(port, host).then((inUse) => {
-                        if (inUse) {
-                            resolve(inUse);
-                        } else if (++ix === tries.length) {
-                            resolve(false);
-                        } else {
-                            next(port, tries[ix]);
-                        }
-                    }).catch((err) => {
-                        reject(err);
-                    });
-                }
-                next(port, tries[ix]);
-            });
-        } else {
-            // This function is too slow on windows when checking on an open port.
-            return tcpPortUsed.check(port, host);
-        }
+        const tries = TcpPortScanner.getLocalHostAliases();
+        let ix = 0;
+        // We don't use Promise.all method because we are trying to create a bunch of
+        // servers on the same machine/port, they could interfere with each other if you
+        // do it asynchronously/parallel.
+        // There is also a slight benefit that we can bail early if a port is in use
+        return new Promise((resolve, reject) => {
+            function next(port: number, host: string) {
+                TcpPortScanner.isPortInUse(port, host).then((inUse) => {
+                    if (inUse) {
+                        resolve(inUse);
+                    } else if (++ix === tries.length) {
+                        resolve(false);
+                    } else {
+                        next(port, tries[ix]);
+                    }
+                }).catch((err) => {
+                    reject(err);
+                });
+            }
+            next(port, tries[ix]);
+        });
     }
 
     /**
@@ -130,7 +124,6 @@ export class TcpPortScanner {
         let freePorts = [];
         const busyPorts = [];           // Mostly for debug
         const needed = retrieve;
-        const functor = TcpPortScanner.shouldUseServerMethod(host) ? TcpPortScanner.isPortInUseEx : tcpPortUsed.tcpPortUsed;
         return new Promise((resolve, reject) => {
             if (needed <= 0) {
                 resolve(freePorts);
@@ -138,7 +131,7 @@ export class TcpPortScanner {
             }
             function next(port: number, host: string) {
                 const startTine = process.hrtime();
-                functor(port, host).then((inUse) => {
+                TcpPortScanner.isPortInUseEx(port, host).then((inUse) => {
                     const endTime = process.hrtime(startTine);
                     if (inUse) {
                         busyPorts.push(port);
@@ -194,13 +187,12 @@ export class TcpPortScanner {
         if (needed <= 0) {
             return new Promise((resolve) => { resolve(freePorts); });
         }
-        const functor = TcpPortScanner.shouldUseServerMethod(host) ? TcpPortScanner.isPortInUseEx : tcpPortUsed.tcpPortUsed;
         for (let port = min; port <= max; port++) {
             if (needed <= 0) {
                 return;
             }
             const startTime = process.hrtime();
-            await functor(port, host)
+            await TcpPortScanner.isPortInUseEx(port, host)
                 .then((inUse) => {
                     const endTime = process.hrtime(startTime);
                     if (inUse) {
@@ -390,12 +382,8 @@ export class TcpPortScanner {
         port, host = TcpPortScanner.DefaultHost, inUse = true,
         checkLocalHostAliaes = true, retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
         retryTimeMs = Math.max(retryTimeMs, 1);
-        if (!TcpPortScanner.shouldUseServerMethod(host)) {
-            return tcpPortUsed.waitForStatus(port, host, inUse, retryTimeMs, timeOutMs);
-        } else {
-            const opts = new PortStatusArgs(inUse, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
-            return TcpPortScanner.waitForPortStatusEx(opts);
-        }
+        const opts = new PortStatusArgs(inUse, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
+        return TcpPortScanner.waitForPortStatusEx(opts);
     }
 
     /**
@@ -409,12 +397,8 @@ export class TcpPortScanner {
         port, host = TcpPortScanner.DefaultHost, checkLocalHostAliaes = true,
         retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
         retryTimeMs = Math.max(retryTimeMs, 1);
-        if (!TcpPortScanner.shouldUseServerMethod(host)) {
-            return tcpPortUsed.waitUntilUsedOnHost(port, host, retryTimeMs, timeOutMs);
-        } else {
-            const opts = new PortStatusArgs(true, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
-            return TcpPortScanner.waitForPortStatusEx(opts);
-        }
+        const opts = new PortStatusArgs(true, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
+        return TcpPortScanner.waitForPortStatusEx(opts);
     }
 
     /**
@@ -428,12 +412,8 @@ export class TcpPortScanner {
         port, host = TcpPortScanner.DefaultHost, checkLocalHostAliaes = true,
         retryTimeMs = 100, timeOutMs = 5000): Promise<void> {
         retryTimeMs = Math.max(retryTimeMs, 1);
-        if (!TcpPortScanner.shouldUseServerMethod(host)) {
-            return tcpPortUsed.waitUntilFreeOnHost(port, host, retryTimeMs, timeOutMs);
-        } else {
-            const opts = new PortStatusArgs(false, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
-            return TcpPortScanner.waitForPortStatusEx(opts);
-        }
+        const opts = new PortStatusArgs(false, port, host, checkLocalHostAliaes, retryTimeMs, timeOutMs);
+        return TcpPortScanner.waitForPortStatusEx(opts);
     }
 
     // we cache only ipv4 address and the default ipv6 address for the localhost. All ipv6 aliases

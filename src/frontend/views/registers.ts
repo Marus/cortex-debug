@@ -1,11 +1,13 @@
 import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, debug, workspace, ProviderResult} from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 
 import { NodeSetting } from '../../common';
 import { RegisterNode, RegisterValue } from './nodes/registernode';
 import { MessageNode } from './nodes/messagenode';
 import { BaseNode } from './nodes/basenode';
+import { getVSCodeDownloadUrl } from 'vscode-test/out/util';
 
 export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     // tslint:disable-next-line:variable-name
@@ -121,7 +123,12 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
             state.push(...r._saveState());
         });
 
-        fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+        try {
+            fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+        }
+        catch (e) {
+            vscode.window.showWarningMessage(`Unable to save register preferences ${e}`);
+        }
     }
 
     public debugSessionTerminated() {

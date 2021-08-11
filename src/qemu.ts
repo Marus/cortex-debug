@@ -62,7 +62,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
         return commands;
     }
 
-    public swoCommands(): string[] {
+    public swoAndRTTCommands(): string[] {
         return [];
     }
 

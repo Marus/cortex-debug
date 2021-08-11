@@ -6,7 +6,7 @@ import {
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
-import { Breakpoint, IBackend, Variable, VariableObject, MIError } from './backend/backend';
+import { Breakpoint, Variable, VariableObject, MIError } from './backend/backend';
 import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -170,6 +170,7 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
         response.body.supportsRestartRequest = true;
+        response.body.supportsGotoTargetsRequest = true;     
         this.sendResponse(response);
     }
 
@@ -183,6 +184,23 @@ export class GDBDebugSession extends DebugSession {
         }
         this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
         this.symbolTable.loadSymbols();
+
+        if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
+            const symName = '_SEGGER_RTT';
+            const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
+            if (!rttSym) {
+                this.args.rttConfig.enabled = false;
+                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` + 
+                    `Make sure you complile/link with debug ON or you can specify your own RTT address\n`);
+            } else {
+                const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
+                this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
+                this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
+                this.args.rttConfig.searchId = searchStr;
+                this.args.rttConfig.clearSearch = true;
+            }
+        }
+
         // this.symbolTable.printToFile(args.executable + '.cd-dump');
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Finished reading symbols\n');
@@ -228,6 +246,15 @@ export class GDBDebugSession extends DebugSession {
 
         if (args.swoConfig && args.swoConfig.decoders) {
             args.swoConfig.decoders = args.swoConfig.decoders.map((dec) => {
+                if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
+                    dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
+                }
+                return dec;
+            });
+        }
+
+        if (args.rttConfig && args.rttConfig.decoders) {
+            args.rttConfig.decoders = args.rttConfig.decoders.map((dec: any) => {
                 if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
                     dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
                 }
@@ -316,7 +343,16 @@ export class GDBDebugSession extends DebugSession {
             }
 
             const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
-            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort);
+            const consolePort = (this.args  as any).gdbServerConsolePort;
+            if (consolePort === undefined) {
+                this.sendErrorResponse(
+                    response,
+                    107,
+                    `GDB Server Console tcp port is undefined.`
+                );
+                return;
+            }
+            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort, consolePort);
             this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {
@@ -367,23 +403,32 @@ export class GDBDebugSession extends DebugSession {
                     commands.push('interpreter-exec console "set print demangle on"');
                     commands.push('interpreter-exec console "set print asm-demangle on"');
                 }
-                commands.push(...this.serverController.initCommands());
-                
-                if (attach) {
-                    commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
-                    const attachCommands = this.args.overrideAttachCommands != null ?
-                        this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
-                    commands.push(...attachCommands);
-                    commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.swoCommands());
+
+                try {
+                    commands.push(...this.serverController.initCommands());
+                    
+                    if (attach) {
+                        commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
+                        const attachCommands = this.args.overrideAttachCommands != null ?
+                            this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
+                        commands.push(...attachCommands);
+                        commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
+                        commands.push(...this.serverController.swoAndRTTCommands());
+                    }
+                    else {
+                        commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
+                        const launchCommands = this.args.overrideLaunchCommands != null ?
+                            this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
+                        commands.push(...launchCommands);
+                        commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
+                        commands.push(...this.serverController.swoAndRTTCommands());
+                    }
                 }
-                else {
-                    commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
-                    const launchCommands = this.args.overrideLaunchCommands != null ?
-                        this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
-                    commands.push(...launchCommands);
-                    commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
-                    commands.push(...this.serverController.swoCommands());
+                catch (err) {
+                    const msg = err.toString() + '\n' + err.stack.toString();
+                    this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `Failed to generate gdb commands: ${msg}`));
+                    this.sendErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
+                    return;
                 }
                 
                 this.serverController.debuggerLaunchStarted();
@@ -403,6 +448,7 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
+
                     this.sendResponse(response);
 
                     const launchComplete = () => {
@@ -572,7 +618,7 @@ export class GDBDebugSession extends DebugSession {
                 break;
             case 'write-memory':
                 if (this.stopped === false) { return ; }
-                this.writeMemoryRequest(response, args['address'], args['data']);
+                this.writeMemoryRequestCustom(response, args['address'], args['data']);
                 break;
             case 'read-registers':
                 if (this.stopped === false) { return ; }
@@ -729,7 +775,7 @@ export class GDBDebugSession extends DebugSession {
         });
     }
 
-    protected writeMemoryRequest(response: DebugProtocol.Response, startAddress: number, data: string) {
+    protected writeMemoryRequestCustom(response: DebugProtocol.Response, startAddress: number, data: string) {
         const address = hexFormat(startAddress, 8);
         this.miDebugger.sendCommand(`data-write-memory-bytes ${address} ${data}`).then((node) => {
             this.sendResponse(response);
@@ -835,13 +881,14 @@ export class GDBDebugSession extends DebugSession {
         const restartProcessing = async () => {
             this.disableSendStoppedEvents = false;
             const commands = [];
+            (this.args as any).pvtRestart = true;
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
             const restartCommands = this.args.overrideRestartCommands != null ?
                 this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
             commands.push(...restartCommands);
             commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
-            commands.push(...this.serverController.swoCommands());
+            commands.push(...this.serverController.swoAndRTTCommands());
 
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);
@@ -1017,14 +1064,14 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
     }
 
-    protected stopEvent(info: MINode) {
+    protected stopEvent(info: MINode, reason:string = 'exception') {
         if (!this.started) { this.crashed = true; }
         if (!this.quit) {
             this.stopped = true;
-            this.stoppedReason = 'exception';
+            this.stoppedReason = reason;
             this.findPausedThread(info);
-            this.sendEvent(new StoppedEvent('exception', this.currentThreadId, true));
-            this.sendEvent(new CustomStoppedEvent('exception', this.currentThreadId));
+            this.sendEvent(new StoppedEvent(reason, this.currentThreadId, true));
+            this.sendEvent(new CustomStoppedEvent(reason, this.currentThreadId));
         }
     }
 
@@ -2084,6 +2131,22 @@ export class GDBDebugSession extends DebugSession {
             });
         }
     }
+
+    protected gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): void {
+		this.miDebugger.goto(args.source.path, args.line).then(done => {
+			response.body = {
+				targets: [{
+					id: 1,
+					label: args.source.name,
+					column: args.column,
+					line : args.line
+				}]
+			};
+			this.sendResponse(response);
+		}, msg => {
+			this.sendErrorResponse(response, 16, `Could not jump to: ${msg}`);
+		});
+	}
 }
 
 function prettyStringArray(strings) {

@@ -98,4 +98,5 @@ const grapherConfig = {
     ]
   }
 };
+
 module.exports = [extensionConfig, adapterConfig, grapherConfig];

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SWODecoder } from './common';
+import { SWORTTDecoder } from './common';
 import { SWOAdvancedDecoderConfig, AdvancedDecoder, GrapherDataMessage } from '../common';
 import { EventEmitter } from 'events';
 import { Packet } from '../common';
@@ -8,7 +8,7 @@ declare function __webpack_require__();
 declare const __non_webpack_require__: NodeRequire;
 const dynamicRequire = typeof __webpack_require__ === 'function' ? __non_webpack_require__ : require;
 
-export class SWOAdvancedProcessor extends EventEmitter implements SWODecoder {
+export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecoder {
     private output: vscode.OutputChannel;
     public readonly format: string = 'advanced';
     private ports: number[];

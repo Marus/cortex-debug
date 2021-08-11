@@ -1,4 +1,38 @@
 ChangeLog
+
+# V0.4.0
+
+This is a major release with a lot of changes and many new features. The `TERMINAL` area of VSCode is utilized a lot to enable bidirectional communication with the firmware. It is used for RTT, SWO and Semi-hosting.
+
+New Features:
+   * Support for RTT (SEGGER Real Time Trace) with OpenOCD and JLink. This RTT host side implementation has the following features. See https://github.com/Marus/cortex-debug/wiki/SEGGER-RTT-support for more details
+       * If you are used to RTT tools from SEGGER, this implementation adds many features, especially if OpenOCD is your gdb-server
+       * Setup of RTT is automatic by default. For this to work, your executable needs to have symbols so we can locate the address of the global variable `_SEGGER_RTT`
+       * The start of the RTT control block contains a string that OpenOCD/JLinkGDBServer look for. If the address auto-detected, we clear out the string. This will help with cases where you might have stale information from a previous run.
+       * For OpenOCD, you can customize the `polling_interval`, and the search string. The default `polling_interval` is 100ms as of today. 10ms seems more acceptable as a tradeoff between creating bus traffic and not losing/blocking data. If nothing changes in the MCU, then OpenOCD does not do much even if the interval is small.
+       * It is perfectly fine to have Cortex-Debug enable RTT but not use any display features. This way you can use external tools (like JLink tools or custom ones)
+       * You can plot RTT data just like you could with SWO. The setup in launch.json is identical. [See this comment](https://github.com/Marus/cortex-debug/issues/456#issuecomment-896021784).
+       * **Channel sharing:** You can use the same RTT channels in multiple ways. Corte-Debug reads the channel data from OpenOCD/JLink once and distributes to all subscribers (terminals & graphs & logfiles). For instance, you can plot a channel and also look at its binary data in a terminal. Just use two decoders with the same channel (actually called port) number.
+       * Note: JLink RTT has a limitation that it can ONLY work with one channel (channel 0). There is another artifact with RTT channels where you may see output from a previous run at the very beginning.
+       * Note: This implementation does not support Virtual Terminals that you see in the JLink RTTViewer. All output goes to the same terminal.
+   * SWO console and binary decoded text data now appears in a "TERMINAL" tab instead in the "OUTPUT" tab
+   * All gdb-server (OpenOCD, JLink, etc.) output is also in the "TERMINAL" tab. In there you can also interact with your semihosting
+   * The terminals for all the features above have the following (optinal) features
+     * RTT and gdb-server terminals allow user input. Used to communicate with your FW
+     * Set the prompt to be used (including no prompt)
+     * Set label used for the terminal. This label is used to the far right where you can switch between termainals
+     * In VSCode yuo can now drag a terminal window to the editor area or to on of the panels on the left
+     * Your FW can emit ANSI escape sequences to set colors, font attributes, etc.
+     * The terminal supports various `inputmode`s. The terminology was borrowed from age old Unix `stty`
+       * `cooked` - Default: Line mode. This is the normal mode. Bash style line editing is supported. In this mode, the FW will not see your input until you press Enter/Return key.
+       * `raw` - Zero input processing is done. Keys are sent to the FW as you type. The FW has to do any input processing it wishes to do. Not even backspace will work
+       * `rawecho` - Minimal processing is done. The terminal will echo characters you type and as such handle the Enter/Return keys as well. However, input is still sent to the FW as you type with zero processing
+       * `disabled` - No user input is allowed. This is useful when the FW is not expecting any input and for unidirectional Terminals.
+   * `demangle` is on by default. You can turn it off in `launch.json`
+   * Support in debugger for `Jump to Cursor`, thanks to [PR#417](https://github.com/Marus/cortex-debug/pull/417) 
+   * A change in this pre-release, you will see some debug information in the gdb-server console. You will also see messages output by the extension that are not part of the actual output in bright magenta. This will happen in all terminals (RTT, SWO and console)
+   * WARNING: The `Adapter Output` window in the `OUTPUT` tab will go away. Replaced by the 'gdb-server' in the `TERMINAL` tab menntioned above.
+   
 # V0.3.13
 
 New Features:

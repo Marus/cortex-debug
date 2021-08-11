@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
+import { GDBServerConsole } from './server_console';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'nuttx', 'auto'];
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS', 'Zephyr'];
@@ -14,6 +15,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
+        if (GDBServerConsole.BackendPort <= 0) {
+            vscode.window.showErrorMessage('GDB server console not yet ready. Please try again. Report this problem');
+            return undefined;            
+        }
+        config.gdbServerConsolePort = GDBServerConsole.BackendPort;
+        
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
             case 'darwin': Object.assign(config, config.osx); delete config.osx; break;
@@ -29,6 +36,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         const type = config.servertype;
 
         let validationResponse: string = null;
+
+        if (config.demangle === undefined) {
+            config.demangle = true;
+        }
 
         if (!config.swoConfig) {
             config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: 'probe' };
@@ -52,6 +63,13 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 }
             });
         }
+        if (!config.rttConfig) {
+            config.rttConfig = { enabled: false, decoders: [] };
+        }
+        else if (!config.rttConfig.decoders) {
+            config.rttConfig.decoders = [];
+        }
+
         if (!config.graphConfig) { config.graphConfig = []; }
         if (!config.preLaunchCommands) { config.preLaunchCommands = []; }
         if (!config.postLaunchCommands) { config.postLaunchCommands = []; }
@@ -180,6 +198,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.interface === 'jtag' && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             return 'SWO Decoding cannot be performed through the J-Link Probe in JTAG mode.';
+        }
+
+        if (config.rttConfig && config.rttConfig.enabled && config.rttConfig.decoders && (config.rttConfig.decoders.length !== 0)) {
+            if ((config.rttConfig.decoders.length > 1) || (config.rttConfig.decoders[0].port !== 0)) {
+                return 'Currently, JLink RTT can have a maximum of one decoder and it has to be port/channel 0';
+            }
         }
 
         return null;

@@ -4,16 +4,20 @@ import * as fs from 'fs';
 
 import { SWOConsoleProcessor } from './decoders/console';
 import { SWOBinaryProcessor } from './decoders/binary';
-import { SWOGraphProcessor } from './decoders/graph';
-import { SWODecoder } from './decoders/common';
-import { SWOSource } from './sources/common';
-import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig, SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig, SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './common';
-import { SWOAdvancedProcessor } from './decoders/advanced';
+import { SWORTTGraphProcessor } from './decoders/graph';
+import { SWORTTDecoder } from './decoders/common';
+import { SWORTTSource } from './sources/common';
+import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig,
+    SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
+    SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage,
+    GrapherProgramCounterMessage} from './common';
+import { SWORTTAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
 import { PacketType, Packet } from './common';
 import { parseUnsigned } from './decoders/utils';
 import { SymbolInformation } from '../../symbols';
-import { fstat } from 'fs';
+import { getNonce, RTTCommonDecoderOpts } from '../../common';
+import { SocketRTTSource, SocketSWOSource } from './sources/socket';
 
 const RingBuffer = require('ringbufferjs');
 
@@ -168,6 +172,10 @@ interface ConfigurationArguments {
         enabled: boolean,
         decoders: SWODecoderConfig[]
     };
+    rttConfig: {
+        enabled: boolean,
+        decoders: RTTCommonDecoderOpts[]
+    }
     graphConfig: GraphConfiguration[];
 }
 
@@ -189,14 +197,15 @@ class SWOWebview {
             localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'dist'))]
         };
 
-        this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', `SWO Graphs [${time}]`, showOptions, viewOptions);
+        const title = `SWO/RTT Graphs [${time}]`;
+        this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', title, showOptions, viewOptions);
         this.viewPanel.webview.onDidReceiveMessage((msg) => { this.onMessage(msg); });
         this.viewPanel.webview.html = this.getHTML();
     }
 
     private getHTML() {
         const scriptUri = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js')).with({ scheme: 'vscode-resource' });
-        const nonce = this.getNonce();
+        const nonce = getNonce();
 
         let html = fs.readFileSync(path.join(this.extensionPath, 'resources', 'grapher.html'), { encoding: 'utf8', flag: 'r' });
         html = html.replace(/\$\{nonce\}/g, nonce).replace(/\$\{scriptUri\}/g, scriptUri.toString());
@@ -204,17 +213,8 @@ class SWOWebview {
         return html;
     }
 
-    private getNonce() {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
-    }
-
-    private processors: Array<SWOGraphProcessor | SWOAdvancedProcessor> = [];
-    public registerProcessors(processor: SWOGraphProcessor | SWOAdvancedProcessor): void {
+    private processors: Array<SWORTTGraphProcessor | SWORTTAdvancedProcessor> = [];
+    public registerProcessors(processor: SWORTTGraphProcessor | SWORTTAdvancedProcessor): void {
         processor.on('message', this.sendMessage.bind(this));
         this.processors.push(processor);
     }
@@ -230,24 +230,47 @@ class SWOWebview {
     }
 
     private onMessage(message: GrapherMessage) {
-        console.log('Received message: ', message);
         if (message.type === 'init') {
             const message = { type: 'configure', graphs: this.graphs, status: this.currentStatus };
-            console.log('Configure Message: ', message);
             this.viewPanel.webview.postMessage(message);
         }
     }
 }
 
-export class SWOCore {
-    private processors: SWODecoder[] = [];
+export class SWORTTCoreBase {
+    protected webview: SWOWebview = null;
+
+    public debugSessionTerminated() {
+        if (this.webview) {
+            const message: GrapherStatusMessage = { type: 'status', status: 'terminated' };
+            this.webview.sendMessage(message);
+        }
+    }
+
+    public debugStopped() {
+        if (this.webview) {
+            const message: GrapherStatusMessage = { type: 'status', status: 'stopped' };
+            this.webview.sendMessage(message);
+        }
+    }
+
+    public debugContinued() {
+        if (this.webview) {
+            const message: GrapherStatusMessage = { type: 'status', status: 'continued' };
+            this.webview.sendMessage(message);
+        }
+    }
+    
+}
+
+export class SWOCore extends SWORTTCoreBase {
+    private processors: SWORTTDecoder[] = [];
     private connected: boolean = false;
     private itmDecoder: ITMDecoder;
     private functionSymbols: SymbolInformation[];
 
-    private webview: SWOWebview;
-
-    constructor(private source: SWOSource, args: ConfigurationArguments, extensionPath: string) {
+    constructor(private source: SWORTTSource, args: ConfigurationArguments, extensionPath: string) {
+        super();
         this.itmDecoder = new ITMDecoder();
         vscode.debug.activeDebugSession.customRequest('load-function-symbols').then((result) => {
             this.functionSymbols = result.functionSymbols;
@@ -275,13 +298,13 @@ export class SWOCore {
                     this.processors.push(new SWOBinaryProcessor(conf as SWOBinaryDecoderConfig));
                     break;
                 case 'graph':
-                    processor = new SWOGraphProcessor(conf as SWOGraphDecoderConfig);
+                    processor = new SWORTTGraphProcessor(conf as SWOGraphDecoderConfig);
                     if (this.webview) { this.webview.registerProcessors(processor); }
                     this.processors.push(processor);
                     break;
                 case 'advanced':
                     try {
-                        processor = new SWOAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
+                        processor = new SWORTTAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
                         break;
@@ -371,27 +394,6 @@ export class SWOCore {
         return mask;
     }
 
-    public debugSessionTerminated() {
-        if (this.webview) {
-            const message: GrapherStatusMessage = { type: 'status', status: 'terminated' };
-            this.webview.sendMessage(message);
-        }
-    }
-
-    public debugStopped() {
-        if (this.webview) {
-            const message: GrapherStatusMessage = { type: 'status', status: 'stopped' };
-            this.webview.sendMessage(message);
-        }
-    }
-
-    public debugContinued() {
-        if (this.webview) {
-            const message: GrapherStatusMessage = { type: 'status', status: 'continued' };
-            this.webview.sendMessage(message);
-        }
-    }
-    
     public dispose() {
         this.processors.forEach((p) => p.dispose());
         this.processors = null;
@@ -406,5 +408,109 @@ export class SWOCore {
         if (!matches || matches.length === 0) { return undefined; }
 
         return matches[0];
+    }
+}
+
+class RTTDecoder extends EventEmitter {
+    public readonly buffer: Buffer;
+    public connected = false;
+    private bytesRead: number = 0;
+
+    constructor (
+        public readonly source: SocketSWOSource,
+        public readonly port: number,       // Thisis the rtt channel
+        public readonly bytesNeeded: number) {
+        super();
+        this.buffer = Buffer.alloc(bytesNeeded);
+
+        if (this.source.connected) { this.connected = true; }
+        else { this.source.on('connected', () => { this.connected = true; }); }
+
+        this.source.on('data', this.onData.bind(this));
+        this.source.on('disconnected', () => { this.connected = false; });
+    }
+
+    public onData(input: string | Buffer) {
+        let data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ; 
+        for (let ix = 0; ix < data.length; ix = ix + 1) {
+            this.buffer[this.bytesRead] = data[ix];
+            this.bytesRead = this.bytesRead + 1;
+            if (this.bytesRead === this.bytesNeeded) {
+                const packet = {
+                    type: PacketType.SOFTWARE,
+                    port: this.port,
+                    size: this.bytesRead,
+                    data: Buffer.from(this.buffer)                
+                };
+                this.emit('software-event', packet);
+                this.bytesRead = 0;
+            }
+        }
+    }
+
+    public dispose() {}
+}
+
+export class RTTCore extends SWORTTCoreBase {
+    private processors: SWORTTDecoder[] = [];
+    protected decoders: RTTDecoder[] = [];
+
+    constructor(private sources: {[channel: number]: SocketRTTSource}, args: ConfigurationArguments, extensionPath: string) {
+        super();
+
+        if (args.graphConfig.length >= 1) {
+            this.webview = new SWOWebview(extensionPath, args.graphConfig);
+        }
+
+        args.rttConfig.decoders.forEach((conf) => {
+            switch (conf.type) {
+                case 'graph':
+                    this.addRTTDecoder(this.sources[conf.port]);                    
+                    const processor = new SWORTTGraphProcessor(conf as any as SWOGraphDecoderConfig);
+                    if (this.webview) { this.webview.registerProcessors(processor); }
+                    this.processors.push(processor);
+                    break;
+                case 'advanced':
+                    try {
+                        for (const p of conf.ports) {
+                            this.addRTTDecoder(this.sources[p]);                    
+                        }
+                        const processor = new SWORTTAdvancedProcessor(conf as any as SWOAdvancedDecoderConfig);
+                        if (this.webview) { this.webview.registerProcessors(processor); }
+                        this.processors.push(processor);
+                        break;
+                    }
+                    catch (e) {
+                        vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
+                    }
+                default:
+                    break;
+            }
+        });
+    }
+
+    private addRTTDecoder(src: SocketRTTSource) {
+        if (src) {
+            const dec = new RTTDecoder(src, src.channel, 4);
+            dec.on('software-event', this.onPacket.bind(this));
+            this.decoders.push(dec);
+        }
+        else {
+            console.error('Null source?');
+        }
+    }
+
+    private onPacket(packet: Packet) {
+        for (const p of this.processors) {
+            p.softwareEvent(packet);
+        }
+    }
+
+    public dispose() {
+        this.processors.forEach((p) => p.dispose());
+        this.processors = null;
+        if (this.webview) {
+            this.webview.clearProcessors();
+        }
     }
 }

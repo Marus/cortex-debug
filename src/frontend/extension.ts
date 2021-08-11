@@ -6,21 +6,23 @@ import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
-import { SWOCore } from './swo/core';
-import { SWOSource } from './swo/sources/common';
-import { NumberFormat, ConfigurationArguments } from '../common';
+import { RTTCore, SWOCore } from './swo/core';
+import { SWORTTSource } from './swo/sources/common';
+import { NumberFormat, ConfigurationArguments, RTTCommonDecoderOpts, RTTConsoleDecoderOpts } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import { CortexDebugConfigurationProvider } from './configprovider';
-import { SocketSWOSource } from './swo/sources/socket';
+import { SocketRTTSource, SocketSWOSource } from './swo/sources/socket';
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
 import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
-import { Cluster } from 'cluster';
+import { RTTTerminal } from './rtt_terminal';
+import { GDBServerConsole } from './server_console';
 
+const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
     expression: RegExp;
     path: string;
@@ -30,7 +32,12 @@ export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private clearAdapterOutputChannel = false;
     private swo: SWOCore = null;
-    private swosource: SWOSource = null;
+    private rtt: RTTCore = null;
+    private swoSource: SWORTTSource = null;
+    private rttTerminals: RTTTerminal[] = [];
+    private rttPortMap: { [channel: number]: SocketRTTSource} = {};
+    private gdbServerConsole : GDBServerConsole = null;
+    private finishedTerminalSetup = false;
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -43,6 +50,7 @@ export class CortexDebugExtension {
     private functionSymbols: SymbolInformation[] = null;
 
     constructor(private context: vscode.ExtensionContext) {
+        this.startServerConsole(context);           // Make this the first thing we do so it is ready for the session
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
@@ -85,6 +93,7 @@ export class CortexDebugExtension {
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)),
+            vscode.window.onDidCloseTerminal(this.terminalClosed.bind(this)),
             vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
                 if (e && e.textEditor.document.fileName.endsWith('.cdmem')) { this.memoryProvider.handleSelection(e); }
             }),
@@ -110,6 +119,22 @@ export class CortexDebugExtension {
         );
     }
 
+    private startServerConsole(context: vscode.ExtensionContext): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            const rptMsg = 'Please report this problem.';
+            this.gdbServerConsole = new GDBServerConsole(context);
+            this.gdbServerConsole.startServer().then(() => {
+                console.log('GDB server console created');
+                this.finishedTerminalSetup = true;
+                resolve(); // All worked out
+            }).catch((e) => {
+                this.gdbServerConsole.dispose();
+                this.gdbServerConsole = null;
+                vscode.window.showErrorMessage(`Could not create gdb-server-console. Will use old style console. Please report this problem. ${e.toString()}`);
+            });
+        });
+    }
+    
     private getSVDFile(device: string): string {
         const entry = this.SVDDirectory.find((de) => de.expression.test(device));
         return entry ? entry.path : null;
@@ -372,6 +397,10 @@ export class CortexDebugExtension {
             this.swo.dispose();
             this.swo = null;
         }
+        if (this.rtt) {
+            this.rtt.dispose();
+            this.rtt = null;
+        }
 
         this.functionSymbols = null;
 
@@ -382,11 +411,13 @@ export class CortexDebugExtension {
             }
 
             Reporting.beginSession(args as ConfigurationArguments);
-            
+
+            if (this.swoSource) { this.initializeSWO(args); }
+            if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }  
+
             this.registerProvider.debugSessionStarted();
             this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
-
-            if (this.swosource) { this.initializeSWO(args); }
+            this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments
         });
@@ -395,18 +426,37 @@ export class CortexDebugExtension {
     private debugSessionTerminated(session: vscode.DebugSession) {
         if (session.type !== 'cortex-debug') { return; }
 
-        Reporting.endSession();
+        try {
+            Reporting.endSession();
 
-        this.registerProvider.debugSessionTerminated();
-        this.peripheralProvider.debugSessionTerminated();
-        if (this.swo) {
-            this.swo.debugSessionTerminated();
+            this.registerProvider.debugSessionTerminated();
+            this.peripheralProvider.debugSessionTerminated();
+            if (this.swo) {
+                this.swo.debugSessionTerminated();
+            }
+            if (this.swoSource) {
+                this.swoSource.dispose();
+                this.swoSource = null;
+            }
+            if (this.rtt) {
+                this.rtt.debugSessionTerminated();
+            }
+            for (const term of this.rttTerminals) {
+                // All though they mark themselves as unused when socket closes, that won't happen
+                // if a connection never happened.
+                term.inUse = false;
+            }
+            for (const ch in this.rttPortMap) {
+                this.rttPortMap[ch].dispose();
+            }
+            this.rttPortMap = {};
+
+            this.clearAdapterOutputChannel = true;
         }
-        if (this.swosource) {
-            this.swosource.dispose();
-            this.swosource = null;
+        catch (e) {
+            vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
         }
-        this.clearAdapterOutputChannel = true;
+        
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
@@ -420,6 +470,9 @@ export class CortexDebugExtension {
                 break;
             case 'swo-configure':
                 this.receivedSWOConfigureEvent(e);
+                break;
+            case 'rtt-configure':
+                this.receivedRTTConfigureEvent(e);
                 break;
             case 'adapter-output':
                 this.receivedAdapterOutput(e);
@@ -438,12 +491,14 @@ export class CortexDebugExtension {
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
+        if (this.rtt) { this.rtt.debugStopped(); }
     }
 
     private receivedContinuedEvent(e) {
         this.peripheralProvider.debugContinued();
         this.registerProvider.debugContinued();
         if (this.swo) { this.swo.debugContinued(); }
+        if (this.rtt) { this.rtt.debugContinued(); }
     }
 
     private receivedEvent(e) {
@@ -452,22 +507,28 @@ export class CortexDebugExtension {
 
     private receivedSWOConfigureEvent(e) {
         if (e.body.type === 'socket') {
-            this.swosource = new SocketSWOSource(e.body.port);
+            const src = new SocketSWOSource(e.body.port);
+            src.start().then(() => {
+                this.swoSource = src;
+            }).catch((e) => {
+                vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e}`);
+            });
             Reporting.sendEvent('SWO', 'Source', 'Socket');
         }
         else if (e.body.type === 'fifo') {
-            this.swosource = new FifoSWOSource(e.body.path);
+            this.swoSource = new FifoSWOSource(e.body.path);
             Reporting.sendEvent('SWO', 'Source', 'FIFO');
         }
         else if (e.body.type === 'file') {
-            this.swosource = new FileSWOSource(e.body.path);
+            this.swoSource = new FileSWOSource(e.body.path);
             Reporting.sendEvent('SWO', 'Source', 'File');
         }
         else if (e.body.type === 'serial') {
-            this.swosource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
+            this.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
             Reporting.sendEvent('SWO', 'Source', 'Serial');
         }
 
+        // I don't think the following is needed as we already initialize SWO when the session finally starts
         if (vscode.debug.activeDebugSession) {
             vscode.debug.activeDebugSession.customRequest('get-arguments').then((args) => {
                 this.initializeSWO(args);
@@ -475,27 +536,111 @@ export class CortexDebugExtension {
         }
     }
 
+    private receivedRTTConfigureEvent(e: any) {
+        if (e.body.type === 'socket') {
+            const decoder: RTTCommonDecoderOpts = e.body.decoder;
+            if ((decoder.type === 'console') || (decoder.type === 'binary')) {
+                Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
+                this.rttCreateTerninal(decoder as RTTConsoleDecoderOpts);
+            } else {
+                Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
+                if (!decoder.ports) {
+                    this.createRTTSource(decoder.tcpPort, decoder.port);
+                } else {
+                    for (var ix = 0; ix < decoder.ports.length; ix = ix + 1) {
+                        // Hopefully ports and tcpPorts are a matched set
+                        this.createRTTSource(decoder.tcpPorts[ix], decoder.ports[ix]);
+                    }
+                }
+            }
+        } else {
+            console.error('receivedRTTConfigureEvent: unknown type: ' + e.body.type);
+        }
+    }
+
+    // The retured value is a connection source. It may still be in disconnected
+    // state.
+    private createRTTSource(tcpPort: string, channel: number): SocketRTTSource {
+        let src = this.rttPortMap[channel];
+        if (!src) {
+            src = new SocketRTTSource(tcpPort, channel);
+            this.rttPortMap[channel] = src;     // Yes, we put this in the list even if start() can fail
+            src.start().then(() => {
+                // Nothing to do
+            }).catch ((e) => {
+                vscode.window.showErrorMessage(`Could not open to RTT channel ${channel}, TCP Port ${tcpPort}. ${e}`);
+            });
+        }
+        return src;
+    }
+
+    private cleanupRTTTerminals() {
+        this.rttTerminals = this.rttTerminals.filter((t) => {
+            if (!t.inUse) {
+                t.dispose();
+                return false;
+            }
+            return true;
+        });
+    }
+
+    private async rttCreateTerninal(decoder: RTTConsoleDecoderOpts) {
+        const src = this.createRTTSource(decoder.tcpPort, decoder.port);
+        for (const terminal of this.rttTerminals) {
+            const success = !terminal.inUse && terminal.tryReuse(decoder, src);
+            if (success) {
+                if (vscode.debug.activeDebugConsole) {
+                    vscode.debug.activeDebugConsole.appendLine(
+                        `Reusing RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+                    );
+                }
+                return;
+            }
+        }
+        const newTerminal = new RTTTerminal(this.context, decoder, src);
+        this.rttTerminals.push(newTerminal);
+        if (vscode.debug.activeDebugConsole) {
+            vscode.debug.activeDebugConsole.appendLine(
+                `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+            );
+        }
+    }
+
+    private terminalClosed(terminal: vscode.Terminal) {
+        this.rttTerminals = this.rttTerminals.filter((t) => t.terminal !== terminal);
+    }
+
     private receivedAdapterOutput(e) {
+        let output = e.body.content;
+        if (!output.endsWith('\n')) { output += '\n'; }
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
+            this.adapterOutputChannel.appendLine("DEPRECATED: Please check the 'TERMINALS' tab for 'gdb-server' output. " +
+                "This 'Adapter Output' will not appear in future releases");
             this.adapterOutputChannel.show();
         } else if (this.clearAdapterOutputChannel) {
             this.adapterOutputChannel.clear();
         }
         this.clearAdapterOutputChannel = false;
 
-        let output = e.body.content;
-        if (!output.endsWith('\n')) { output += '\n'; }
         this.adapterOutputChannel.append(output);
     }
 
     private initializeSWO(args) {
-        if (!this.swosource) {
+        if (!this.swoSource) {
             vscode.window.showErrorMessage('Tried to initialize SWO Decoding without a SWO data source');
             return;
         }
 
-        this.swo = new SWOCore(this.swosource, args, this.context.extensionPath);
+        if (!this.swo) {
+            this.swo = new SWOCore(this.swoSource, args, this.context.extensionPath);
+        }
+    }
+
+    private initializeRTT(args) {
+        if (!this.rtt) {
+            this.rtt = new RTTCore(this.rttPortMap, args, this.context.extensionPath);
+        }
     }
 }
 

@@ -36,6 +36,7 @@ export class MI2 extends EventEmitter implements IBackend {
     protected errbuf: string;
     protected process: ChildProcess.ChildProcess;
     protected stream;
+    protected firstStop: boolean = true;
     
     constructor(public application: string, public args: string[]) {
         super();
@@ -46,7 +47,7 @@ export class MI2 extends EventEmitter implements IBackend {
             executable = nativePath.join(cwd, executable);
         }
             
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             const args = [...this.args, executable];
             this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
             this.process.stdout.on('data', this.stdout.bind(this));
@@ -156,7 +157,7 @@ export class MI2 extends EventEmitter implements IBackend {
                                     this.emit('running', parsed);
                                 }
                                 else if (record.asyncClass === 'stopped') {
-                                    const reason = parsed.record('reason');
+                                    let reason = parsed.record('reason');
                                     if (trace) {
                                         this.log('stderr', 'stop: ' + reason);
                                     }
@@ -180,9 +181,16 @@ export class MI2 extends EventEmitter implements IBackend {
                                         this.emit('exited-normally', parsed);
                                     }
                                     else {
-                                        this.log('console', 'Not implemented stop reason (assuming exception): ' + reason);
-                                        this.emit('stopped', parsed);
+                                        let msg = 'Not implemented stop reason (assuming exception): ';
+                                        if ((reason === undefined) && this.firstStop) {
+                                            this.log('console', 'Program stopped, probably due to a reset and/or halt issued by debugger');
+                                            this.emit('stopped', parsed, 'entry');
+                                        } else {
+                                            this.log('console', 'Not implemented stop reason (assuming exception): ' + reason || 'Unknown reason');
+                                            this.emit('stopped', parsed);
+                                        }
                                     }
+                                    this.firstStop = false;
                                     this.emit('generic-stopped', parsed);
                                 }
                                 else {
@@ -313,6 +321,20 @@ export class MI2 extends EventEmitter implements IBackend {
             }, reject);
         });
     }
+
+    public goto(filename: string, line: number): Thenable<boolean> {
+		if (trace) {
+			this.log('stderr', 'goto');
+        }
+		return new Promise((resolve, reject) => {
+			const target: string = '"' + (filename ? escape(filename) + ":" : "") + line.toString() + '"';
+			this.sendCommand("break-insert -t " + target).then(() => {
+				this.sendCommand("exec-jump " + target).then((info) => {
+					resolve(info.resultRecords.resultClass === 'running');
+				}, reject);
+			}, reject);
+		});
+	}
 
     public restart(commands: string[]): Thenable<boolean> {
         if (trace) {

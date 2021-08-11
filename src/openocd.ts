@@ -1,16 +1,19 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName } from './common';
+import {
+    GDBServerController, ConfigurationArguments, SWOConfigureEvent,
+    calculatePortMask, createPortName, RTTServerHelper
+} from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
-
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
-    public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort' /*, 'rttPort' */];
+    public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort'];
     public name = 'OpenOCD';
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
+    private rttHelper: RTTServerHelper = new RTTServerHelper();
 
     constructor() {
         super();
@@ -22,6 +25,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
+
+        // We get/reserve the ports here because it is an async. operation and it wll be done
+        // way before a server has even started. Hopefully
+        this.rttHelper.allocateRTTPorts(args.rttConfig);
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -61,13 +68,45 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public swoCommands(): string[] {
+    public rttCommands(): string[] {
+        const commands = [];
+        if (this.args.rttConfig.enabled && !(this.args as any).pvtRestart) {
+            const cfg = this.args.rttConfig;
+            if (this.rttHelper.rttPortsPending > 0) {
+                // If we are getting here, we will need some serious re-factoring
+                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
+            }
+            if ((this.args.request === 'launch') && cfg.clearSearch) {
+                // The RTT control block may contain a valid search string from a previous run
+                // and RTT ends up outputting garbage. Or, the server could read garbage and
+                // misconfigure itself. Following will clear the RTT header which
+                // will cause the server to wait for the server to actually be initialized
+                commands.push(`interpreter-exec console "monitor mwb ${cfg.address} 0 ${cfg.searchId.length}"`);
+            }
+            commands.push(`interpreter-exec console "monitor rtt setup ${cfg.address} ${cfg.searchSize} {${cfg.searchId}}"`);
+            if (cfg.polling_interval > 0) {
+                commands.push(`interpreter-exec console "monitor rtt polling_interval ${cfg.polling_interval}"`);
+            }
+
+            for (const channel in this.rttHelper.rttLocalPortMap) {
+                const tcpPort = this.rttHelper.rttLocalPortMap[channel];
+                commands.push(`interpreter-exec console "monitor rtt server start ${tcpPort} ${channel}"`);
+            }
+
+            // We are starting way too early before the FW has a chance to initialize itself
+            // but there is no other handshake mechanism
+            commands.push(`interpreter-exec console "monitor rtt start"`);
+        }
+        return commands;
+    }
+
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-        return commands;
+        return commands.concat(this.rttCommands());
     }
 
     private SWOConfigurationCommands(): string[] {
@@ -197,5 +236,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {}
+    public debuggerLaunchCompleted(): void {
+        this.rttHelper.emitConfigures(this.args.rttConfig, this);
+    }
 }
