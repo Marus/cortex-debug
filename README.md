@@ -53,6 +53,26 @@ Requirements:
 
 See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help from the community
 
+## How to Build from sources
+* `git clone https://github.com/Marus/cortex-debug.git`
+* `cd cortex-debug`
+* Optionally switch to a branch: `git checkout <existing-branch-name>`
+* `npm install`
+* Optional `npm run compie`
+* Open VSCode in this folder and run the task `npm watch`. This will compile the code and watch for any changes and auto compile. The first time, it may take a minute or so for it to watch the entire folder. You can see the output of `npm watch` in the Terminal tab.
+
+## How to debug
+The extension is split into two main parts.
+1) The front-end which is what you interact with mostly
+2) The backend called `debug adapter` which interfaces between `gdb`, `vscode/front-end`, and the `gdb-server`. We just start the server and from then on the debug adapter only interacts with `gdb`. All requests go to `gdb` and the results are read back from `gdb` using `gdb`'s MI (machine interface)
+
+If you want to debug both parts, in `launch.json` use the `Extension + Debug Server` configuration. It will launch a new window -- the `debuggee`. In the `debuggee` VSCode window, load a FW folder/workspace (VSCode remembers the last one) and add the following to `debuggee`'s `launch.json`.
+```
+            "debugServer": 4711
+```
+Now, launch a debug session and you wil be able to use the primary VSCode window to observe the Cortex-Debug extension
+
+
 ## Acknowledgments
 
 Parts of this extension are based upon Jan Jurzitza's (WebFreak) code-debug extension (https://github.com/WebFreak001/code-debug). His project provided an excellent base for GDB MI parsing and interaction.
