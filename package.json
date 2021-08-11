@@ -559,6 +559,11 @@
                                         "default": 0,
                                         "minimum": 1
                                     },
+                                    "clearSearch": {
+                                        "type": "boolean",
+                                        "description": "When true, clears the search-string. Only applicable when address is \"auto\"",
+                                        "default": true
+                                    },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",
                                         "items": {
@@ -1367,6 +1372,11 @@
                                         "description": "number of milliseconds (> 0) to wait for check for data on out channels",
                                         "default": 0,
                                         "minimum": 1
+                                    },
+                                    "clearSearch": {
+                                        "type": "boolean",
+                                        "description": "When true, clears the search-string. Only applicable when address is \"auto\"",
+                                        "default": true
                                     },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",
