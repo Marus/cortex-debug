@@ -1,5 +1,7 @@
 ChangeLog
 
+# V0.4.1
+Minor bug fix. The `launch.json` option `clearSearch` was not working for `rttConfig`. Only affected OpenOCD users.
 # V0.4.0
 
 This is a major release with a lot of changes and many new features. The `TERMINAL` area of VSCode is utilized a lot to enable bidirectional communication with the firmware. It is used for RTT, SWO and Semi-hosting.

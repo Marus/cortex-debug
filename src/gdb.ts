@@ -197,7 +197,7 @@ export class GDBDebugSession extends DebugSession {
                 this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
                 this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
                 this.args.rttConfig.searchId = searchStr;
-                this.args.rttConfig.clearSearch = true;
+                this.args.rttConfig.clearSearch = (this.args.rttConfig.clearSearch === undefined) ? true : this.args.rttConfig.clearSearch;
             }
         }
 

@@ -1,5 +1,5 @@
 {
-    "version": "0.3.13",
+    "version": "0.4.1",
     "activationEvents": [
         "onDebugResolve:cortex-debug"
     ],
@@ -2119,6 +2119,5 @@
         "watch": "webpack --mode development --watch",
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
-    },
-    "version": "0.4.0"
+    }
 }
