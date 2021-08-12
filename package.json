@@ -1,5 +1,5 @@
 {
-    "version": "0.4.1",
+    "version": "0.4.2-pre1",
     "activationEvents": [
         "onDebugResolve:cortex-debug"
     ],
@@ -614,17 +614,24 @@
                                                         },
                                                         "encoding": {
                                                             "type": "string",
-                                                            "description": "ascii, utf8, ucs2, utf16le are for 'console', rest are for 'binary' type data",
-                                                            "default": "",
+                                                            "description": "How binary data bytes are converted into a number. All little-endian",
+                                                            "default": "unsigned",
                                                             "enum": [
-                                                                "ascii",
-                                                                "utf8",
-                                                                "ucs2",
-                                                                "utf16le",
                                                                 "unsigned",
                                                                 "signed",
                                                                 "Q16.16",
                                                                 "float"
+                                                            ]
+                                                        },
+                                                        "iencoding": {
+                                                            "type": "string",
+                                                            "description": "How keyoard input is encoded. Cooked mode only",
+                                                            "default": "utf8",
+                                                            "enum": [
+                                                                "ascii",
+                                                                "utf8",
+                                                                "ucs2",
+                                                                "utf16le"
                                                             ]
                                                         },
                                                         "scale": {
@@ -1428,17 +1435,24 @@
                                                         },
                                                         "encoding": {
                                                             "type": "string",
-                                                            "description": "ascii, utf8, ucs2, utf16le are for 'console', rest are for 'binary' type data",
-                                                            "default": "",
+                                                            "description": "How binary data bytes are converted into a number. All little-endian",
+                                                            "default": "unsigned",
                                                             "enum": [
-                                                                "ascii",
-                                                                "utf8",
-                                                                "ucs2",
-                                                                "utf16le",
                                                                 "unsigned",
                                                                 "signed",
                                                                 "Q16.16",
                                                                 "float"
+                                                            ]
+                                                        },
+                                                        "iencoding": {
+                                                            "type": "string",
+                                                            "description": "How keyoard input is encoded Cooked mode only",
+                                                            "default": "utf8",
+                                                            "enum": [
+                                                                "ascii",
+                                                                "utf8",
+                                                                "ucs2",
+                                                                "utf16le"
                                                             ]
                                                         },
                                                         "scale": {

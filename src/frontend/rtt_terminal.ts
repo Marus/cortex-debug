@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { RTTConsoleDecoderOpts, TerminalInputMode } from '../common';
+import { RTTConsoleDecoderOpts, TerminalInputMode, TextEncoding, BinaryEncoding } from '../common';
 import { IPtyTerminalOptions, magentaWrite, PtyTerminal, RESET } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 import { SocketRTTSource } from './swo/sources/socket';
@@ -22,6 +22,7 @@ export class RTTTerminal {
         src: SocketRTTSource) {
         this.ptyOptions = this.createTermOptions(null);
         this.createTerminal();
+        this.sanitizeEncodings(this.options);
         this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
         this.connectToSource(src);
         this.openLogFile();
@@ -139,7 +140,7 @@ export class RTTTerminal {
     }
 
     static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {
-        const suffix = options.type === 'binary' ? `enc:${getEncoding(options.encoding)}` : options.type;
+        const suffix = options.type === 'binary' ? `enc:${getBinaryEncoding(options.encoding)}` : options.type;
         const orig = options.label || `RTT Ch:${options.port} ${suffix}`;
         let ret = orig;
         let count = 1;
@@ -157,9 +158,13 @@ export class RTTTerminal {
         this.dispose();
     }
 
-    public sendData(str: string) {
+    public sendData(str: string | Buffer) {
         if (this.source) {
             try {
+                if (((typeof str === 'string') || (str instanceof String)) &&
+                    (this.options.inputmode === TerminalInputMode.COOKED)) {
+                    str = Buffer.from(str as string, this.options.iencoding);
+                }
                 this.source.write(str);
             }
             catch (e) {
@@ -168,10 +173,16 @@ export class RTTTerminal {
         }
     }
 
+    private sanitizeEncodings(obj: RTTConsoleDecoderOpts) {
+        obj.encoding = getBinaryEncoding(obj.encoding);
+        obj.iencoding = getTextEncoding(obj.iencoding);
+    }
+
     // If all goes well, this will reset the terminal options. Label for the VSCode terminal has to match
     // since there no way to rename it. If successful, tt will reset the Terminal options and mark it as
     // used (inUse = true) as well
     public tryReuse(options: RTTConsoleDecoderOpts, src: SocketRTTSource): boolean {
+        this.sanitizeEncodings(this.options);
         const newTermName = RTTTerminal.createTermName(options, this.ptyOptions.name);
         if (newTermName === this.ptyOptions.name) {
             this.inUse = true;
@@ -219,14 +230,21 @@ function padLeft(str: string, len: number, chr = ' '): string {
     return str;
 }
 
-function getEncoding(enc: string): string {
-    const encodings: string[] = ['signed', 'unsigned', 'Q16.16', 'float'];
-    if (!enc || this.encodings.indexOf(enc) < 0) {
-        enc = 'unsigned';
+function getBinaryEncoding(enc: string): BinaryEncoding {
+    enc =  enc ? enc.toLowerCase() : '';
+    if (!(enc in  BinaryEncoding)) {
+        enc = BinaryEncoding.UNSIGNED;
     }
-    return enc;
+    return enc as BinaryEncoding;
 }
 
+function getTextEncoding(enc: string): TextEncoding {
+    enc =  enc ? enc.toLowerCase() : '';
+    if (!(enc in TextEncoding)) {
+        return TextEncoding.UTF8;
+    }
+    return enc as TextEncoding;
+}
 class BinaryFormatter {
     private readonly bytesNeeded = 4;
     private buffer = Buffer.alloc(4);
@@ -237,7 +255,7 @@ class BinaryFormatter {
         protected encoding: string,
         protected scale: number) {
         this.bytesRead = 0;
-        this.encoding = getEncoding(encoding);
+        this.encoding = getBinaryEncoding(encoding);
         this.scale = scale || 1;
     }
 
@@ -253,7 +271,7 @@ class BinaryFormatter {
                     if (byte <= 32 || (byte >= 127 && byte <= 159)) {
                         chars += '.';
                     } else {
-                        chars	+= String.fromCharCode(byte);
+                        chars += String.fromCharCode(byte);
                     }                    
                 }
                 const blah = this.buffer.toString();

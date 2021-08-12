@@ -78,17 +78,30 @@ export interface RTTCommonDecoderOpts {
     ports: number[];
 }
 
+export enum TextEncoding {
+    UTF8 = 'utf8',
+    UTF16LE = 'utf16le',
+    ASCII = 'ascii',
+    UCS2 = 'ucs2'
+}
+export enum BinaryEncoding {
+    UNSIGNED = 'unsigned',
+    SIGNED = 'signed',
+    Q1616 = 'Q16.16',
+    FLOAT = 'float',
+}
 export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     // Console  options
-    encoding: string; // 'utf8', 'ascii', etc.
     label: string;    // label for window
     prompt: string;   // Prompt to use
     noprompt: boolean;// disable prompt
     noclear: boolean; // do not vlear screen buffer on connect
     logfile: string;  // log IO to file
     inputmode: TerminalInputMode;
+    iencoding: TextEncoding;       // Encoding used for input
     // Binary only options
     scale: number;
+    encoding: BinaryEncoding;
 }
 
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
