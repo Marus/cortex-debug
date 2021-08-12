@@ -4,9 +4,9 @@
 
 Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
-* Support J-Link, OpenOCD GDB Server
+* Support J-Link, OpenOCD GDB Server, pyOCD
 * Initial support for STMicroelectronic's ST-LINK GDB server (no SWO support yet)
-* Partial support for PyOCD and textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
+* Partial support textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
 * Initial support for the Black Magic Probe (This has not been as heavily tested; SWO can only be captured via a serial port)
 * Cortex Core Register Viewer
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
@@ -18,6 +18,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Support for Custom ITM Data Decoders:
     * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system.
 * Live graphing of decoded ITM data.
+* Support for SEGGER Real Time Trace (RTT) using OpenOCD and JLink gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT.
 * Raw Memory Viewer ("Cortex-Debug: View Memory" command)
 * Ability to view and step through the disassembled binary. There are three ways that disassembled code will be shown:
     * Disassembly code will automatically be shown if it cannot locate the corresponding source code.
@@ -25,7 +26,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * You can set the debugger to always show show disassembly ("Cortex-Debug: Set Force Disassembly" command)
 * Globals and Static scopes in the variables view
 * Initial support for Rust code (most functionality is working; disassembly views and variables view may still have issues)
-* RTOS Support (J-Link and OpenOCD - RTOS supported depends on GDB server support)
+* RTOS Support (J-Link, OpenOCD, pyOCD) - RTOS supported depends on GDB server support)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 
 
@@ -33,7 +34,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
 * Additional Graphing Options
 * Enhanced SVD Auto-selection
-* Semihosting Support
+* Semihosting Support (this should be working now)
 
 ## Installation
 
