@@ -17,7 +17,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
         if (GDBServerConsole.BackendPort <= 0) {
             vscode.window.showErrorMessage('GDB server console not yet ready. Please try again. Report this problem');
-            return undefined;            
+            return undefined;
         }
         config.gdbServerConsolePort = GDBServerConsole.BackendPort;
         
@@ -343,7 +343,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             else if (config.swoConfig.source !== 'socket' && !config.swoConfig.swoPath) {
                 vscode.window.showWarningMessage(`SWO source type "${config.swoConfig.source}" requires a "swoPath". Disabling SWO support.`);
                 config.swoConfig = { enabled: false };
-                config.graphConfig = [];                
+                config.graphConfig = [];
             }
         }
 
