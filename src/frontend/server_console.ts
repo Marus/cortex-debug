@@ -13,7 +13,7 @@ export class GDBServerConsole {
 
     public ptyTerm: PtyTerminal = null;
     protected ptyOptions: IPtyTerminalOptions;
-    static BackendPort: number = -1;
+    public static BackendPort: number = -1;
 
     constructor(public context: vscode.ExtensionContext) {
         this.ptyOptions = {
@@ -21,7 +21,7 @@ export class GDBServerConsole {
             prompt    : '',             // Can't have a prompt since the gdb-server or semihosting may have one
             inputMode : TerminalInputMode.COOKED
         };
-        this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null)
+        this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null);
         this.setupTerminal();
         setTimeout(() => {
             this.ptyTerm.terminal.show();
@@ -60,7 +60,7 @@ export class GDBServerConsole {
         if (true) {
             try {
                 msg = 'SERVER CONSOLE DEBUG: ' + msg;
-                console.log(msg)
+                console.log(msg);
                 if (this.ptyTerm) {
                     msg += msg.endsWith('\n') ? '' : '\n';
                     magentaWrite(msg, this.ptyTerm);
@@ -73,7 +73,7 @@ export class GDBServerConsole {
     // Create a server for the GDBServer running in the adapter process. Any data
     // from the gdb-server (like OpenOCD) is sent here and sent to the terminal
     // and any usr input in the terminal is sent back (like semi-hosting)
-    public startServer() : Promise<void> {
+    public startServer(): Promise<void> {
         return new Promise((resolve, reject) => {
             getAnyFreePort(55878).then((p) => {
                 this.toBackendPort = p;
@@ -119,7 +119,7 @@ export class GDBServerConsole {
                     fs.writeFileSync(this.logFd, data.toString());
                 }
             }
-            catch (_e) {
+            catch (e) {
                 this.logFd = -1;
             }
         });
@@ -139,7 +139,7 @@ export class GDBServerConsole {
         this.ptyTerm.clearTerminalBuffer();
     }
 
-    static createTermName(want: string, existing: string | null): string {
+    private static createTermName(want: string, existing: string | null): string {
         let ret = want;
         let count = 1;
         while (vscode.window.terminals.findIndex((t) => t.name === ret) >= 0) {

@@ -170,7 +170,7 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
         response.body.supportsRestartRequest = true;
-        response.body.supportsGotoTargetsRequest = true;     
+        response.body.supportsGotoTargetsRequest = true;
         this.sendResponse(response);
     }
 
@@ -190,8 +190,8 @@ export class GDBDebugSession extends DebugSession {
             const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
             if (!rttSym) {
                 this.args.rttConfig.enabled = false;
-                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` + 
-                    `Make sure you complile/link with debug ON or you can specify your own RTT address\n`);
+                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
+                    'Make sure you complile/link with debug ON or you can specify your own RTT address\n');
             } else {
                 const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
                 this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
@@ -348,7 +348,7 @@ export class GDBDebugSession extends DebugSession {
                 this.sendErrorResponse(
                     response,
                     107,
-                    `GDB Server Console tcp port is undefined.`
+                    'GDB Server Console tcp port is undefined.'
                 );
                 return;
             }
@@ -1064,7 +1064,7 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
     }
 
-    protected stopEvent(info: MINode, reason:string = 'exception') {
+    protected stopEvent(info: MINode, reason: string = 'exception') {
         if (!this.started) { this.crashed = true; }
         if (!this.quit) {
             this.stopped = true;
@@ -2133,20 +2133,20 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): void {
-		this.miDebugger.goto(args.source.path, args.line).then(done => {
-			response.body = {
-				targets: [{
-					id: 1,
-					label: args.source.name,
-					column: args.column,
-					line : args.line
-				}]
-			};
-			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 16, `Could not jump to: ${msg}`);
-		});
-	}
+        this.miDebugger.goto(args.source.path, args.line).then((done) => {
+            response.body = {
+                targets: [{
+                    id: 1,
+                    label: args.source.name,
+                    column: args.column,
+                    line: args.line
+                }]
+            };
+            this.sendResponse(response);
+        }, (msg) => {
+            this.sendErrorResponse(response, 16, `Could not jump to: ${msg}`);
+        });
+    }
 }
 
 function prettyStringArray(strings) {

@@ -36,7 +36,7 @@ export class CortexDebugExtension {
     private swoSource: SWORTTSource = null;
     private rttTerminals: RTTTerminal[] = [];
     private rttPortMap: { [channel: number]: SocketRTTSource} = {};
-    private gdbServerConsole : GDBServerConsole = null;
+    private gdbServerConsole: GDBServerConsole = null;
     private finishedTerminalSetup = false;
 
     private peripheralProvider: PeripheralTreeProvider;
@@ -359,8 +359,9 @@ export class CortexDebugExtension {
             { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
             { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
         ]);
-        if (result === undefined)
+        if (result === undefined) {
             return;
+        }
 
         node.format = result.value;
         this.peripheralProvider.refresh();
@@ -413,7 +414,7 @@ export class CortexDebugExtension {
             Reporting.beginSession(args as ConfigurationArguments);
 
             if (this.swoSource) { this.initializeSWO(args); }
-            if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }  
+            if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
 
             this.registerProvider.debugSessionStarted();
             this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
@@ -446,6 +447,7 @@ export class CortexDebugExtension {
                 // if a connection never happened.
                 term.inUse = false;
             }
+            // tslint:disable-next-line: forin
             for (const ch in this.rttPortMap) {
                 this.rttPortMap[ch].dispose();
             }
@@ -547,7 +549,7 @@ export class CortexDebugExtension {
                 if (!decoder.ports) {
                     this.createRTTSource(decoder.tcpPort, decoder.port);
                 } else {
-                    for (var ix = 0; ix < decoder.ports.length; ix = ix + 1) {
+                    for (let ix = 0; ix < decoder.ports.length; ix = ix + 1) {
                         // Hopefully ports and tcpPorts are a matched set
                         this.createRTTSource(decoder.tcpPorts[ix], decoder.ports[ix]);
                     }
@@ -615,8 +617,8 @@ export class CortexDebugExtension {
         if (!output.endsWith('\n')) { output += '\n'; }
         if (!this.adapterOutputChannel) {
             this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
-            this.adapterOutputChannel.appendLine("DEPRECATED: Please check the 'TERMINALS' tab for 'gdb-server' output. " +
-                "This 'Adapter Output' will not appear in future releases");
+            this.adapterOutputChannel.appendLine('DEPRECATED: Please check the \'TERMINALS\' tab for \'gdb-server\' output. ' +
+                'This \'Adapter Output\' will not appear in future releases');
             this.adapterOutputChannel.show();
         } else if (this.clearAdapterOutputChannel) {
             this.adapterOutputChannel.clear();

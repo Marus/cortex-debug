@@ -34,7 +34,7 @@ export class RTTTerminal {
             const code: string = (e as any).code;
             if (code === 'ECONNRESET') {
                 // Server closed the connection. We are done with this session
-                this.source = null;                    
+                this.source = null;
             } else if (code === 'ECONNREFUSED') {
                 // We expect 'ECONNREFUSED' if the server has not yet started.
                 magentaWrite(`${e.message}\nPlease report this problem.`, this.ptyTerm);
@@ -62,7 +62,7 @@ export class RTTTerminal {
         this.source = null;
         this.inUse = false;
         if (!this.options.noclear && (this.logFd >= 0)) {
-            try { fs.closeSync(this.logFd); } catch { };
+            try { fs.closeSync(this.logFd); } catch { }
         }
         this.logFd = -1;
         this.ptyTerm.write(RESET + '\n');
@@ -94,7 +94,7 @@ export class RTTTerminal {
             catch (e) {
                 const msg = `Could not open file ${this.options.logfile} for writing. ${e.toString()}`;
                 console.error(msg);
-                magentaWrite(msg, this.ptyTerm)
+                magentaWrite(msg, this.ptyTerm);
             }
         }
     }
@@ -102,14 +102,14 @@ export class RTTTerminal {
     private writeNonBinary(buf: Buffer) {
         let start = 0;
         for (let ix = 1; ix < buf.length; ix++ ) {
-            if (buf[ix-1] !== 0xff) { continue; }
+            if (buf[ix - 1] !== 0xff) { continue; }
             const chr = buf[ix];
             if (((chr >= 48) && (chr <= 57)) || ((chr >= 65) && (chr <= 90))) {
                 if (ix >= 1) {
-                    this.ptyTerm.write(buf.slice(start, ix-1));
+                    this.ptyTerm.write(buf.slice(start, ix - 1));
                 }
                 this.ptyTerm.write(`<switch to vTerm#${String.fromCharCode(chr)}>\n`);
-                buf = buf.slice(ix+1);
+                buf = buf.slice(ix + 1);
                 ix = 0;
                 start = 0;
             }
@@ -124,7 +124,7 @@ export class RTTTerminal {
             name: RTTTerminal.createTermName(this.options, existing),
             prompt: this.createPrompt(),
             inputMode: this.options.inputmode || TerminalInputMode.COOKED
-        }
+        };
         return ret;
     }
 
@@ -135,10 +135,10 @@ export class RTTTerminal {
     }
 
     protected createPrompt(): string {
-        return this.options.noprompt ? '' : this.options.prompt || `RTT:${this.options.port}> `
+        return this.options.noprompt ? '' : this.options.prompt || `RTT:${this.options.port}> `;
     }
 
-    static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {
+    protected static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {
         const suffix = options.type === 'binary' ? `enc:${getBinaryEncoding(options.encoding)}` : options.type;
         const orig = options.label || `RTT Ch:${options.port} ${suffix}`;
         let ret = orig;
@@ -208,10 +208,10 @@ export class RTTTerminal {
         return false;
     }
 
-    dispose() {
+    public dispose() {
         this.ptyTerm.dispose();
         if (this.logFd >= 0) {
-            try { fs.closeSync(this.logFd); } catch {};
+            try { fs.closeSync(this.logFd); } catch {}
             this.logFd = -1;
         }
     }
@@ -259,10 +259,10 @@ class BinaryFormatter {
     }
 
     public writeBinary(input: string | Buffer) {
-        let data: Buffer = Buffer.from(input);
+        const data: Buffer = Buffer.from(input);
         const date = new Date();
-        for (let ix = 0; ix < data.length; ix = ix + 1) {
-            this.buffer[this.bytesRead] = data[ix];
+        for (const chr of data) {
+            this.buffer[this.bytesRead] = chr;
             this.bytesRead = this.bytesRead + 1;
             if (this.bytesRead === this.bytesNeeded) {
                 let chars = '';
@@ -271,7 +271,7 @@ class BinaryFormatter {
                         chars += '.';
                     } else {
                         chars += String.fromCharCode(byte);
-                    }                    
+                    }
                 }
                 const blah = this.buffer.toString();
                 const hexvalue = padLeft(this.buffer.toString('hex'), 8, '0');
