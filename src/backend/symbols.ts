@@ -148,7 +148,7 @@ export class SymbolTable {
 
     private sortGlobalVars() {
         // We only sort globalVars. Want to preserve statics original order though.
-        this.globalVars.sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+        this.globalVars.sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
 
         // double underscore variables are less interesting. Push it down to the bottom
         const doubleUScores: SymbolInformation[] = [];
@@ -426,7 +426,7 @@ export class SymbolTable {
         }
 
         return null;
-    }    
+    }
 
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }

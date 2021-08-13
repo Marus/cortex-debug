@@ -130,7 +130,7 @@ export class PtyTerminal extends EventEmitter {
         this.terminal = null;
     }
 
-    private static findExisting(name: string): PtyTerminal  {
+    public static findExisting(name: string): PtyTerminal  {
         return PtyTerminal.oldOnes[name];
     }
 
