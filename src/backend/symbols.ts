@@ -137,13 +137,29 @@ export class SymbolTable {
                 this.allSymbols.push(sym);
             }
             this.categorizeSymbols();
-            // We only sort globalVars. Want to preserve statics original order though.
-            this.globalVars.sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+            this.sortGlobalVars();
+
             if (!restored) {
                 this.serializeFileMaps(this.executable);
             }
         }
         catch (e) { }
+    }
+
+    private sortGlobalVars() {
+        // We only sort globalVars. Want to preserve statics original order though.
+        this.globalVars.sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+
+        // double underscore variables are less interesting. Push it down to the bottom
+        const doubleUScores: SymbolInformation[] = [];
+        while (this.globalVars.length > 0) {
+            if (this.globalVars[0].name.startsWith('__')) {
+                doubleUScores.push(this.globalVars.shift());
+            } else {
+                break;
+            }
+        }
+        this.globalVars = this.globalVars.concat(doubleUScores);
     }
 
     private categorizeSymbols() {
