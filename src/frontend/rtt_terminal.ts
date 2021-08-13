@@ -26,7 +26,6 @@ export class RTTTerminal {
         this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
         this.connectToSource(src);
         this.openLogFile();
-        setTimeout(() => this.terminal.show(), 100);
     }
 
     private connectToSource(src: SocketRTTSource) {
