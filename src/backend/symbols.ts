@@ -84,7 +84,7 @@ export class SymbolTable {
             const restored = this.deSerializeFileMaps(this.executable);
             const options = ['--syms'];
             if (!restored) {
-                options.push('-Wi');    // WARING! Creates super large output
+                options.push('-Wi');    // WARNING! Creates super large output
             }
             if (this.demangle) {
                 options.push('-C');
@@ -137,6 +137,8 @@ export class SymbolTable {
                 this.allSymbols.push(sym);
             }
             this.categorizeSymbols();
+            // We only sort globalVars. Want to preserve statics original order though.
+            this.globalVars.sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
             if (!restored) {
                 this.serializeFileMaps(this.executable);
             }

@@ -1,6 +1,13 @@
 ChangeLog
+# V0.4.2
+
+* Terminal input:
+  * Support for `Paste` in RTT in RTT terminals (See Issue #463)
+  * Input entered into RTT Terminals can now have thier encoding be use using the `iencoding` option for the `console` and `binary` encoders
+* Global variables are now sorted in the Variables Windows
 
 # V0.4.1
+
 Minor bug fix. The `launch.json` option `clearSearch` was not working for `rttConfig`. Only affected OpenOCD users.
 # V0.4.0
 
