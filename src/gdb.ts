@@ -628,7 +628,7 @@ export class GDBDebugSession extends DebugSession {
             case 'set-var-format':
                 // if (this.stopped === false) { return ; }
                 this.args.variableUseNaturalFormat = (args && args.hex) ? false : true;
-                this.setGdbOutputRadix(true);
+                this.setGdbOutputRadix();
                 break;
             case 'read-registers':
                 if (this.stopped === false) { return ; }
@@ -661,7 +661,7 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    protected setGdbOutputRadix(forceUpdate = false) {
+    protected setGdbOutputRadix() {
         for (const cmd of this.formatRadixGdbCommand()) {
             this.miDebugger.sendCommand(cmd);
         }
@@ -673,9 +673,9 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private formatRadixGdbCommand(): string[] {
+    private formatRadixGdbCommand(forced: string | null = null): string[] {
         // radix setting affects future inerpretations of values, so format it unambigiously with hex values
-        const radix = this.args.variableUseNaturalFormat ? '0xa' : '0x10';
+        const radix = forced || (this.args.variableUseNaturalFormat ? '0xa' : '0x10');
         // If we set just the output radix, it will affect setting values. Always leave input radix in decimal
         // Also, don't understand why setting the output-radix modifies the input radix as well
         const cmds = [
@@ -822,6 +822,14 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
+        if (!this.args.variableUseNaturalFormat) {
+            // requesting a radix on the register-values does not work unless the output radix is
+            // decimal. bug in gdb I think. We temporarily force to decimal and then restore later
+            for (const cmd of this.formatRadixGdbCommand('0xa')) {
+                this.miDebugger.sendCommand(cmd);
+            }
+        }
+
         const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
         this.miDebugger.sendCommand(`data-list-register-values ${fmt}`).then((node) => {
             if (node.resultRecords.resultClass === 'done') {
@@ -845,6 +853,12 @@ export class GDBDebugSession extends DebugSession {
             this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
         });
+
+        if (!this.args.variableUseNaturalFormat) {
+            for (const cmd of this.formatRadixGdbCommand()) {
+                this.miDebugger.sendCommand(cmd);
+            }
+        }
     }
 
     protected readRegisterListRequest(response: DebugProtocol.Response) {

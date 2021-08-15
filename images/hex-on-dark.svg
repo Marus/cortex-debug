@@ -3,7 +3,7 @@
     .small {font: bold 30px "Arial";}
   </style>
 
-  <text x="50%" y="55%" fill="#ffffff"
+  <text x="50%" y="55%" fill="#cccccc"
         class="small"
         dominant-baseline="middle"
         text-anchor="middle">n</text>  
