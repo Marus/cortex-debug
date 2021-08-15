@@ -52,7 +52,7 @@ categories[category_name] = category_list
 # pp.pprint(categories)
 
 MISSING_ATTRIBUTES = ['extensionPath',
-                      'flattenAnonymous', 'registerUseNaturalFormat', 'toolchainPath']
+                      'flattenAnonymous', 'registerUseNaturalFormat', 'variableUseNaturalFormat', 'toolchainPath']
 
 all_properties = {**attach_properties, **launch_properties}
 

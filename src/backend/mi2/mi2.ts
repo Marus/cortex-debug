@@ -157,7 +157,7 @@ export class MI2 extends EventEmitter implements IBackend {
                                     this.emit('running', parsed);
                                 }
                                 else if (record.asyncClass === 'stopped') {
-                                    let reason = parsed.record('reason');
+                                    const reason = parsed.record('reason');
                                     if (trace) {
                                         this.log('stderr', 'stop: ' + reason);
                                     }
@@ -181,7 +181,6 @@ export class MI2 extends EventEmitter implements IBackend {
                                         this.emit('exited-normally', parsed);
                                     }
                                     else {
-                                        let msg = 'Not implemented stop reason (assuming exception): ';
                                         if ((reason === undefined) && this.firstStop) {
                                             this.log('console', 'Program stopped, probably due to a reset and/or halt issued by debugger');
                                             this.emit('stopped', parsed, 'entry');
@@ -323,18 +322,18 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public goto(filename: string, line: number): Thenable<boolean> {
-		if (trace) {
-			this.log('stderr', 'goto');
+        if (trace) {
+            this.log('stderr', 'goto');
         }
-		return new Promise((resolve, reject) => {
-			const target: string = '"' + (filename ? escape(filename) + ":" : "") + line.toString() + '"';
-			this.sendCommand("break-insert -t " + target).then(() => {
-				this.sendCommand("exec-jump " + target).then((info) => {
-					resolve(info.resultRecords.resultClass === 'running');
-				}, reject);
-			}, reject);
-		});
-	}
+        return new Promise((resolve, reject) => {
+            const target: string = '"' + (filename ? escape(filename) + ':' : '') + line.toString() + '"';
+            this.sendCommand('break-insert -t ' + target).then(() => {
+                this.sendCommand('exec-jump ' + target).then((info) => {
+                    resolve(info.resultRecords.resultClass === 'running');
+                }, reject);
+            }, reject);
+        });
+    }
 
     public restart(commands: string[]): Thenable<boolean> {
         if (trace) {

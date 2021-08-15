@@ -7,7 +7,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName, CortexDebugKeys } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -33,6 +33,7 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { nextTick } from 'process';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -404,6 +405,10 @@ export class GDBDebugSession extends DebugSession {
                     commands.push('interpreter-exec console "set print asm-demangle on"');
                 }
 
+                if (!this.args.variableUseNaturalFormat) {
+                    commands.push(...this.formatRadixGdbCommand());
+                }
+
                 try {
                     commands.push(...this.serverController.initCommands());
                     
@@ -620,8 +625,14 @@ export class GDBDebugSession extends DebugSession {
                 if (this.stopped === false) { return ; }
                 this.writeMemoryRequestCustom(response, args['address'], args['data']);
                 break;
+            case 'set-var-format':
+                // if (this.stopped === false) { return ; }
+                this.args.variableUseNaturalFormat = (args && args.hex) ? false : true;
+                this.setGdbOutputRadix(true);
+                break;
             case 'read-registers':
                 if (this.stopped === false) { return ; }
+                this.args.registerUseNaturalFormat = (args && args.hex) ? false : true;
                 this.readRegistersRequest(response);
                 break;
             case 'read-register-list':
@@ -648,6 +659,30 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
         }
+    }
+
+    protected setGdbOutputRadix(forceUpdate = false) {
+        for (const cmd of this.formatRadixGdbCommand()) {
+            this.miDebugger.sendCommand(cmd);
+        }
+        if (this.stopped) {
+            // We area already stopped but this fakes a stop again which referhes all debugger windows
+            // We don't have a way to only referesh portions. It is all or nothing, there is a bit
+            // of screen flashing and causes changes in GUI contexts (stack for instance)
+             this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+        }
+    }
+
+    private formatRadixGdbCommand(): string[] {
+        // radix setting affects future inerpretations of values, so format it unambigiously with hex values
+        const radix = this.args.variableUseNaturalFormat ? '0xa' : '0x10';
+        // If we set just the output radix, it will affect setting values. Always leave input radix in decimal
+        // Also, don't understand why setting the output-radix modifies the input radix as well
+        const cmds = [
+            `interpreter-exec console "set output-radix ${radix}"`,
+            'interpreter-exec console "set input-radix 0xa"'
+        ];
+        return cmds;
     }
 
     protected async disassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {

@@ -1,5 +1,6 @@
 import { MINode } from './mi_parse';
 import { DebugProtocol } from 'vscode-debugprotocol/lib/debugProtocol';
+import { parseHexOrDecInt } from '../common';
 
 export interface Breakpoint {
     file?: string;
@@ -72,6 +73,34 @@ export class VariableObject {
         this.children = {};
         // TODO: use has_more when it's > 0
         this.hasMore = !!MINode.valueOf(node, 'has_more');
+        this.adjustTypeToolTip();
+    }
+
+    public adjustTypeToolTip() {
+        if (this.isCompound()) { return; }
+
+        let val = 0;
+        if ((/^0[xX][0-9A-Fa-f]+/.test(this.value)) || /^[-]?[0-9]+/.test(this.value)) {
+            val = parseInt(this.value.toLowerCase());
+
+            this.type += `\ndec: ${val}`;
+            if (this.value.startsWith('-')) {
+                val = val < 0 ? -val : val;
+                val = ((val ^ 0xffffffff) + 1) >>> 0;
+            }
+            let str = val.toString(16);
+            str = '0x' + '0'.repeat(8 - str.length) + str;
+            this.type += `\nhex: ${str}`;
+
+            str = val.toString(8);
+            str = '0'.repeat(12 - str.length) + str;
+            this.type += `\noct: ${str}`;
+
+            str = val.toString(2);
+            str = '0'.repeat(32 - str.length) + str;
+            str = str.substr(0, 8) + ' ' + str.substr(8, 8) + ' ' + str.substr(16, 8) + ' ' + str.substr(24, 8);
+            this.type += `\nbin: ${str}`;
+        }
     }
 
     public applyChanges(node: MINode) {
