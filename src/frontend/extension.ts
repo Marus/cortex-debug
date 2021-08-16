@@ -92,6 +92,7 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.peripherals.unpin', this.peripheralsTogglePin.bind(this)),
             
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.registers.refresh', this.registersRefresh.bind(this)),
             vscode.commands.registerCommand('cortex-debug.registers.regHexModeTurnOn', this.registersNaturalMode.bind(this, false)),
             vscode.commands.registerCommand('cortex-debug.registers.regHexModeTurnOff', this.registersNaturalMode.bind(this, true)),
             vscode.commands.registerCommand('cortex-debug.registers.varHexModeTurnOn', this.variablesNaturalMode.bind(this, false)),
@@ -405,9 +406,13 @@ export class CortexDebugExtension {
     }
 
     private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
-        node.getPeripheral().updateData().then((e) => {
+        if (node) {
+            node.getPeripheral().updateData().then((e) => {
+                this.peripheralProvider.refresh();
+            });
+        } else {
             this.peripheralProvider.refresh();
-        });
+        }
     }
 
     private async peripheralsTogglePin(node: PeripheralBaseNode): Promise<void> {
@@ -423,6 +428,10 @@ export class CortexDebugExtension {
                 Reporting.sendEvent('Register View', 'Copy Value');
             });
         }
+    }
+
+    private registersRefresh(): void {
+        this.registerProvider.refresh();
     }
 
     // Settings changes

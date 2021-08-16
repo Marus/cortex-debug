@@ -130,6 +130,11 @@
                 "icon": "$(files)"
             },
             {
+                "command": "cortex-debug.registers.refresh",
+                "title": "Refresh",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "cortex-debug.registers.regHexModeTurnOff",
                 "title": "Enable Natural mode",
                 "icon": {
@@ -167,7 +172,8 @@
             },
             {
                 "command": "cortex-debug.peripherals.forceRefresh",
-                "title": "Refresh"
+                "title": "Refresh",
+                "icon": "$(refresh)"
             },
             {
                 "command": "cortex-debug.peripherals.pin",
@@ -2098,24 +2104,34 @@
             "view/title": [
                 {
                     "command": "cortex-debug.registers.regHexModeTurnOn",
-                    "when": "view == cortex-debug.registers &&  cortex-debug:registerUseNaturalFormat",
+                    "when": "view == cortex-debug.registers && debugState == stopped &&  cortex-debug:registerUseNaturalFormat",
                     "group": "navigation"
                 },
                 {
                     "command": "cortex-debug.registers.regHexModeTurnOff",
-                    "when": "view == cortex-debug.registers && !cortex-debug:registerUseNaturalFormat",
+                    "when": "view == cortex-debug.registers && debugState == stopped && !cortex-debug:registerUseNaturalFormat",
+                    "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.registers.refresh",
+                    "when": "view == cortex-debug.registers && debugState == stopped",
+                    "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.peripherals.forceRefresh",
+                    "when": "view == cortex-debug.peripherals && debugState == stopped",
                     "group": "navigation"
                 }
             ],
             "debug/variables/context": [
                 {
                     "command": "cortex-debug.registers.varHexModeTurnOn",
-                    "when": "inDebugMode && debugType == 'cortex-debug' &&  cortex-debug:variableUseNaturalFormat",
+                    "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
                     "group": "navigation"
                 },
                 {
                     "command": "cortex-debug.registers.varHexModeTurnOff",
-                    "when": "inDebugMode && debugType == 'cortex-debug' && !cortex-debug:variableUseNaturalFormat",
+                    "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped && !cortex-debug:variableUseNaturalFormat",
                     "group": "navigation"
                 }
             ]

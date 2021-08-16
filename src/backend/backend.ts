@@ -1,7 +1,5 @@
 import { MINode } from './mi_parse';
 import { DebugProtocol } from 'vscode-debugprotocol/lib/debugProtocol';
-import { parseHexOrDecInt } from '../common';
-
 export interface Breakpoint {
     file?: string;
     line?: number;
@@ -99,7 +97,7 @@ export class VariableObject {
             str = val.toString(2);
             str = '0'.repeat(32 - str.length) + str;
             str = str.substr(0, 8) + ' ' + str.substr(8, 8) + ' ' + str.substr(16, 8) + ' ' + str.substr(24, 8);
-            this.type += `\nbin: ${str}`;
+            this.type += `\nbin: ${str}`;       
         }
     }
 
