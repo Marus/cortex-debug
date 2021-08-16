@@ -1,10 +1,14 @@
 ChangeLog
 # V0.4.2
 
+* Now you can toggle Hex mode for Registers and Variables independently from the Debug Panel.
+  * The title bar of the Registers View contains a button to toggle between Hex and Natural modes
+  * In the Variable Window, you can right click on any variable and it allows you to toggle the Hex mode. This setting applies also applies to Watch variables.
+* There is now a Refresh button in the title bars of the Registers and Peripheral Windows. The registers window, when refreshed will use the current stack/frame to retrieve the values.
 * Terminal input:
   * Support for `Paste` in RTT in RTT terminals (See Issue #463)
   * Input entered into RTT Terminals can now have thier encoding be use using the `iencoding` option for the `console` and `binary` encoders
-* Global variables are now sorted in the Variables Windows
+* Global variables are now sorted in the Variables Windows. But all variables starting with double underscores `__` are pushed to the bottom.
 
 # V0.4.1
 
