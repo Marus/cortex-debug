@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { NodeSetting } from '../../common';
+import { CortexDebugKeys, NodeSetting } from '../../common';
 import { RegisterNode, RegisterValue } from './nodes/registernode';
 import { MessageNode } from './nodes/messagenode';
 import { BaseNode } from './nodes/basenode';
@@ -38,7 +38,10 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     }
 
     public _refreshRegisterValues() {
-        debug.activeDebugSession.customRequest('read-registers').then((data) => {
+        const config = vscode.workspace.getConfiguration('cortex-debug');
+        const val = config.get(CortexDebugKeys.REGISTER_DISPLAY_MODE);
+        const args = { hex: !val };
+        debug.activeDebugSession.customRequest('read-registers', args).then((data) => {
             data.forEach((reg) => {
                 const index = parseInt(reg.number, 10);
                 const regNode = this.registerMap[index];

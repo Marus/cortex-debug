@@ -41,7 +41,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     }
 
     private createVSCodeTerminal(config: SWOConsoleDecoderConfig) {
-        const options : IPtyTerminalOptions = {
+        const options: IPtyTerminalOptions = {
             name: this.createName(config),
             prompt: '',
             inputMode: TerminalInputMode.DISABLED

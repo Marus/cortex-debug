@@ -1,0 +1,10 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .small {font: bold 30px "Arial";}
+  </style>
+
+  <text x="50%" y="55%" fill="#cccccc"
+        class="small"
+        dominant-baseline="middle"
+        text-anchor="middle">n</text>  
+</svg>

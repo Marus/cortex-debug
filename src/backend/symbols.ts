@@ -84,7 +84,7 @@ export class SymbolTable {
             const restored = this.deSerializeFileMaps(this.executable);
             const options = ['--syms'];
             if (!restored) {
-                options.push('-Wi');    // WARING! Creates super large output
+                options.push('-Wi');    // WARNING! Creates super large output
             }
             if (this.demangle) {
                 options.push('-C');
@@ -137,11 +137,29 @@ export class SymbolTable {
                 this.allSymbols.push(sym);
             }
             this.categorizeSymbols();
+            this.sortGlobalVars();
+
             if (!restored) {
                 this.serializeFileMaps(this.executable);
             }
         }
         catch (e) { }
+    }
+
+    private sortGlobalVars() {
+        // We only sort globalVars. Want to preserve statics original order though.
+        this.globalVars.sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+
+        // double underscore variables are less interesting. Push it down to the bottom
+        const doubleUScores: SymbolInformation[] = [];
+        while (this.globalVars.length > 0) {
+            if (this.globalVars[0].name.startsWith('__')) {
+                doubleUScores.push(this.globalVars.shift());
+            } else {
+                break;
+            }
+        }
+        this.globalVars = this.globalVars.concat(doubleUScores);
     }
 
     private categorizeSymbols() {
@@ -408,7 +426,7 @@ export class SymbolTable {
         }
 
         return null;
-    }    
+    }
 
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }

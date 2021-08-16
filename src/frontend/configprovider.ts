@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
+import { CortexDebugKeys } from '../common';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'nuttx', 'auto'];
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS', 'Zephyr'];
@@ -17,7 +18,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
         if (GDBServerConsole.BackendPort <= 0) {
             vscode.window.showErrorMessage('GDB server console not yet ready. Please try again. Report this problem');
-            return undefined;            
+            return undefined;
         }
         config.gdbServerConsolePort = GDBServerConsole.BackendPort;
         
@@ -141,7 +142,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         config.flattenAnonymous = configuration.flattenAnonymous;
-        config.registerUseNaturalFormat = configuration.registerUseNaturalFormat;
+        config.registerUseNaturalFormat = configuration.get(CortexDebugKeys.REGISTER_DISPLAY_MODE, true);
+        config.variableUseNaturalFormat = configuration.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true);
         
         if (validationResponse) {
             vscode.window.showErrorMessage(validationResponse);
@@ -343,7 +345,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             else if (config.swoConfig.source !== 'socket' && !config.swoConfig.swoPath) {
                 vscode.window.showWarningMessage(`SWO source type "${config.swoConfig.source}" requires a "swoPath". Disabling SWO support.`);
                 config.swoConfig = { enabled: false };
-                config.graphConfig = [];                
+                config.graphConfig = [];
             }
         }
 

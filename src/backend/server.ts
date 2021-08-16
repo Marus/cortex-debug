@@ -74,7 +74,7 @@ export class GDBServer extends EventEmitter {
                 });
             }
             else { // For servers like BMP that are always running directly on the probe
-                this.connectToConsole(); 
+                this.connectToConsole();
                 resolve(true);
             }
         });
@@ -173,7 +173,7 @@ export class GDBServer extends EventEmitter {
         if (this.consoleSocket) {
             this.consoleSocket.write(data);
         } else {
-            console.error('sendToConsole: console not open. How did this happen?')
+            console.error('sendToConsole: console not open. How did this happen?');
         }
     }
 

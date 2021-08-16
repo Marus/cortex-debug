@@ -33,7 +33,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     }
 
     private createVSCodeTerminal(config: SWOBinaryDecoderConfig) {
-        const options : IPtyTerminalOptions = {
+        const options: IPtyTerminalOptions = {
             name: this.createName(config),
             prompt: '',
             inputMode: TerminalInputMode.DISABLED

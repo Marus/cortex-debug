@@ -4,6 +4,11 @@ import { EventEmitter } from 'events';
 import { TcpPortScanner } from './tcpportscanner';
 import { GDBServer } from './backend/server';
 
+export enum CortexDebugKeys {
+    REGISTER_DISPLAY_MODE = 'registerUseNaturalFormat',
+    VARIABLE_DISPLAY_MODE = 'variableUseNaturalFormat'
+}
+
 export enum NumberFormat {
     Auto = 0,
     Hexidecimal,
@@ -78,17 +83,31 @@ export interface RTTCommonDecoderOpts {
     ports: number[];
 }
 
+export enum TextEncoding {
+    UTF8 = 'utf8',
+    UTF16LE = 'utf16le',
+    ASCII = 'ascii',
+    UCS2 = 'ucs2'
+}
+
+export enum BinaryEncoding {
+    UNSIGNED = 'unsigned',
+    SIGNED = 'signed',
+    Q1616 = 'Q16.16',
+    FLOAT = 'float'
+}
 export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     // Console  options
-    encoding: string; // 'utf8', 'ascii', etc.
-    label: string;    // label for window
-    prompt: string;   // Prompt to use
-    noprompt: boolean;// disable prompt
-    noclear: boolean; // do not vlear screen buffer on connect
-    logfile: string;  // log IO to file
+    label: string;      // label for window
+    prompt: string;     // Prompt to use
+    noprompt: boolean;  // disable prompt
+    noclear: boolean;   // do not vlear screen buffer on connect
+    logfile: string;    // log IO to file
     inputmode: TerminalInputMode;
+    iencoding: TextEncoding;       // Encoding used for input
     // Binary only options
     scale: number;
+    encoding: BinaryEncoding;
 }
 
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
@@ -141,7 +160,7 @@ export interface RTTConfiguration {
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
-    request: string,
+    request: string;
     toolchainPath: string;
     toolchainPrefix: string;
     executable: string;
@@ -179,6 +198,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     runToEntryPoint: string;
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
+    variableUseNaturalFormat: boolean;
 
     numberOfProcessors: number;
     targetProcessor: number;
@@ -256,7 +276,7 @@ export class RTTServerHelper {
     // a multple clients connect to the same channel. Perhaps in the future
     // it wil
     public rttPortsPending: number = 0;
-    public allocateRTTPorts(cfg: RTTConfiguration, startPort:number = 60000) {
+    public allocateRTTPorts(cfg: RTTConfiguration, startPort: number = 60000) {
         if (!cfg || !cfg.enabled || !cfg.decoders || cfg.decoders.length === 0) {
             return;
         }
@@ -279,8 +299,8 @@ export class RTTServerHelper {
 
         this.rttPortsPending = Object.keys(this.rttLocalPortMap).length;
         const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: this.rttPortsPending, consecutive: false };
-        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {    
-            this.rttPortsPending = 0;    
+        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
+            this.rttPortsPending = 0;
             for (const dec of cfg.decoders) {
                 if (dec.ports && (dec.ports.length > 0)) {
                     this.rttPortsPending = this.rttPortsPending + dec.ports.length;
@@ -296,7 +316,7 @@ export class RTTServerHelper {
                 } else {
                     let str = this.rttLocalPortMap[dec.port];
                     if (str === dummy) {
-                        str = ports.shift().toString(); 
+                        str = ports.shift().toString();
                         this.rttLocalPortMap[dec.port] = str;
                     }
                     dec.tcpPort = str;
@@ -315,7 +335,7 @@ export class RTTServerHelper {
                     }));
                 }
             }
-        }        
+        }
     }
 }
 
@@ -348,7 +368,7 @@ export function getAnyFreePort(preferred: number): Promise<number> {
                 resolve(ports[0]);
             }).catch((e) => {
                 reject(e);
-            });        
+            });
         }
         
         if (preferred > 0) {
@@ -397,7 +417,7 @@ export class ResettableInterval {
     protected intervalId: NodeJS.Timeout;
     protected args: any[];
 
-    constructor(protected cb: (...args) => void, protected interval:number, runNow: boolean = false, ...args) {
+    constructor(protected cb: (...args) => void, protected interval: number, runNow: boolean = false, ...args) {
         this.args = args;
         if (runNow) {
             this.cb(...this.args);
@@ -427,7 +447,7 @@ export class ResettableTimeout {
     protected timeoutId: NodeJS.Timeout = null;
     protected args: any[];
 
-    constructor(protected cb: (...args: any) => void, protected interval:number, ...args: any[]) {
+    constructor(protected cb: (...args: any) => void, protected interval: number, ...args: any[]) {
         this.args = args;
         this.timeoutId = setTimeout((...args) => {
             this.timeoutId = null;

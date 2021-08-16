@@ -7,7 +7,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName, CortexDebugKeys } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -33,6 +33,7 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { nextTick } from 'process';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -170,7 +171,7 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
         response.body.supportsRestartRequest = true;
-        response.body.supportsGotoTargetsRequest = true;     
+        response.body.supportsGotoTargetsRequest = true;
         this.sendResponse(response);
     }
 
@@ -190,8 +191,8 @@ export class GDBDebugSession extends DebugSession {
             const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
             if (!rttSym) {
                 this.args.rttConfig.enabled = false;
-                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` + 
-                    `Make sure you complile/link with debug ON or you can specify your own RTT address\n`);
+                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
+                    'Make sure you complile/link with debug ON or you can specify your own RTT address\n');
             } else {
                 const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
                 this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
@@ -348,7 +349,7 @@ export class GDBDebugSession extends DebugSession {
                 this.sendErrorResponse(
                     response,
                     107,
-                    `GDB Server Console tcp port is undefined.`
+                    'GDB Server Console tcp port is undefined.'
                 );
                 return;
             }
@@ -402,6 +403,10 @@ export class GDBDebugSession extends DebugSession {
                 if (this.args.demangle) {
                     commands.push('interpreter-exec console "set print demangle on"');
                     commands.push('interpreter-exec console "set print asm-demangle on"');
+                }
+
+                if (!this.args.variableUseNaturalFormat) {
+                    commands.push(...this.formatRadixGdbCommand());
                 }
 
                 try {
@@ -620,8 +625,14 @@ export class GDBDebugSession extends DebugSession {
                 if (this.stopped === false) { return ; }
                 this.writeMemoryRequestCustom(response, args['address'], args['data']);
                 break;
+            case 'set-var-format':
+                // if (this.stopped === false) { return ; }
+                this.args.variableUseNaturalFormat = (args && args.hex) ? false : true;
+                this.setGdbOutputRadix();
+                break;
             case 'read-registers':
                 if (this.stopped === false) { return ; }
+                this.args.registerUseNaturalFormat = (args && args.hex) ? false : true;
                 this.readRegistersRequest(response);
                 break;
             case 'read-register-list':
@@ -648,6 +659,30 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
         }
+    }
+
+    protected setGdbOutputRadix() {
+        for (const cmd of this.formatRadixGdbCommand()) {
+            this.miDebugger.sendCommand(cmd);
+        }
+        if (this.stopped) {
+            // We area already stopped but this fakes a stop again which referhes all debugger windows
+            // We don't have a way to only referesh portions. It is all or nothing, there is a bit
+            // of screen flashing and causes changes in GUI contexts (stack for instance)
+             this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+        }
+    }
+
+    private formatRadixGdbCommand(forced: string | null = null): string[] {
+        // radix setting affects future inerpretations of values, so format it unambigiously with hex values
+        const radix = forced || (this.args.variableUseNaturalFormat ? '0xa' : '0x10');
+        // If we set just the output radix, it will affect setting values. Always leave input radix in decimal
+        // Also, don't understand why setting the output-radix modifies the input radix as well
+        const cmds = [
+            `interpreter-exec console "set output-radix ${radix}"`,
+            'interpreter-exec console "set input-radix 0xa"'
+        ];
+        return cmds;
     }
 
     protected async disassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {
@@ -787,6 +822,14 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
+        if (!this.args.variableUseNaturalFormat) {
+            // requesting a radix on the register-values does not work unless the output radix is
+            // decimal. bug in gdb I think. We temporarily force to decimal and then restore later
+            for (const cmd of this.formatRadixGdbCommand('0xa')) {
+                this.miDebugger.sendCommand(cmd);
+            }
+        }
+
         const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
         this.miDebugger.sendCommand(`data-list-register-values ${fmt}`).then((node) => {
             if (node.resultRecords.resultClass === 'done') {
@@ -810,6 +853,12 @@ export class GDBDebugSession extends DebugSession {
             this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
         });
+
+        if (!this.args.variableUseNaturalFormat) {
+            for (const cmd of this.formatRadixGdbCommand()) {
+                this.miDebugger.sendCommand(cmd);
+            }
+        }
     }
 
     protected readRegisterListRequest(response: DebugProtocol.Response) {
@@ -1064,7 +1113,7 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
     }
 
-    protected stopEvent(info: MINode, reason:string = 'exception') {
+    protected stopEvent(info: MINode, reason: string = 'exception') {
         if (!this.started) { this.crashed = true; }
         if (!this.quit) {
             this.stopped = true;
@@ -2133,20 +2182,20 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): void {
-		this.miDebugger.goto(args.source.path, args.line).then(done => {
-			response.body = {
-				targets: [{
-					id: 1,
-					label: args.source.name,
-					column: args.column,
-					line : args.line
-				}]
-			};
-			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 16, `Could not jump to: ${msg}`);
-		});
-	}
+        this.miDebugger.goto(args.source.path, args.line).then((done) => {
+            response.body = {
+                targets: [{
+                    id: 1,
+                    label: args.source.name,
+                    column: args.column,
+                    line: args.line
+                }]
+            };
+            this.sendResponse(response);
+        }, (msg) => {
+            this.sendErrorResponse(response, 16, `Could not jump to: ${msg}`);
+        });
+    }
 }
 
 function prettyStringArray(strings) {
