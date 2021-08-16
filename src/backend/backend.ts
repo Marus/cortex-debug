@@ -71,34 +71,42 @@ export class VariableObject {
         this.children = {};
         // TODO: use has_more when it's > 0
         this.hasMore = !!MINode.valueOf(node, 'has_more');
-        this.adjustTypeToolTip();
     }
 
-    public adjustTypeToolTip() {
-        if (this.isCompound()) { return; }
+    public createToolTip(name: string, value: string): string {
+        let ret = this.type;
+        if (this.isCompound()) {
+            return ret;
+        }
 
         let val = 0;
-        if ((/^0[xX][0-9A-Fa-f]+/.test(this.value)) || /^[-]?[0-9]+/.test(this.value)) {
-            val = parseInt(this.value.toLowerCase());
+        if ((/^0[xX][0-9A-Fa-f]+/.test(value)) || /^[-]?[0-9]+/.test(value)) {
+            val = parseInt(value.toLowerCase());
 
-            this.type += `\ndec: ${val}`;
+            ret += ' ' + name + ';' ;
+            if (this.value.startsWith('<')) {
+                console.log(this);
+            }
+
+            ret += `\ndec: ${val}`;
             if (this.value.startsWith('-')) {
                 val = val < 0 ? -val : val;
                 val = ((val ^ 0xffffffff) + 1) >>> 0;
             }
             let str = val.toString(16);
             str = '0x' + '0'.repeat(8 - str.length) + str;
-            this.type += `\nhex: ${str}`;
+            ret += `\nhex: ${str}`;
 
             str = val.toString(8);
             str = '0'.repeat(12 - str.length) + str;
-            this.type += `\noct: ${str}`;
+            ret += `\noct: ${str}`;
 
             str = val.toString(2);
             str = '0'.repeat(32 - str.length) + str;
             str = str.substr(0, 8) + ' ' + str.substr(8, 8) + ' ' + str.substr(16, 8) + ' ' + str.substr(24, 8);
-            this.type += `\nbin: ${str}`;       
+            ret += `\nbin: ${str}`;       
         }
+        return ret;
     }
 
     public applyChanges(node: MINode) {
@@ -128,9 +136,8 @@ export class VariableObject {
             },
             variablesReference: this.id
         };
-        if (this.displayhint) {
-            // res.kind = this.displayhint;
-        }
+
+        res.type = this.createToolTip(res.name, res.value);      // This ends up becoming a tool-tip
         return res;
     }
 }
