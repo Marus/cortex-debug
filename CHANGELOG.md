@@ -3,9 +3,14 @@ ChangeLog
 
 * Now you can toggle Hex mode for Registers and Variables independently from the Debug Panel.
   * The title bar of the Registers View contains a button to toggle between Hex and Natural modes
-  * In the Variable Window, you can right click on any variable and it allows you to toggle the Hex mode. This setting applies also applies to Watch variables.
+    <img src=https://user-images.githubusercontent.com/41269583/129577447-473bfbde-a748-441c-83f1-315c1568cb5a.png width="250" />
+  * In the Variable Window, you can right click on any variable and it allows you to toggle the Hex mode. This setting applies also applies to Watch variables. Too bad we don't have access to the title bar and there is no good way of implementing a per-variable format
+
+    <img src=https://user-images.githubusercontent.com/41269583/129577748-ffd64c20-4e0b-4508-9434-63cef9a74329.png width=250 />
 * There is now a Refresh button in the title bars of the Registers and Peripheral Windows. The registers window, when refreshed will use the current stack/frame to retrieve the values.
-* Terminal input:
+* You can hover over a scalar variable name and get a tool-tip that gives you decimal, hex, octal and binary forms of the same.
+  <img src=https://user-images.githubusercontent.com/41269583/129586732-71228fee-6d6c-4993-ac8f-c9ca93b7772f.png width=350 />
+* Terminal input
   * Support for `Paste` in RTT in RTT terminals (See Issue #463)
   * Input entered into RTT Terminals can now have thier encoding be use using the `iencoding` option for the `console` and `binary` encoders
 * Global variables are now sorted in the Variables Windows. But all variables starting with double underscores `__` are pushed to the bottom.
