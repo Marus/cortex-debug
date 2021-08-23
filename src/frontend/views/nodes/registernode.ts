@@ -1,8 +1,8 @@
-import { TreeItem, TreeItemCollapsibleState } from 'vscode';
+import { TreeItem, TreeItemLabel, TreeItemCollapsibleState } from 'vscode';
 
 import { BaseNode } from './basenode';
 import { FieldNode } from './fieldnode';
-import { NodeSetting } from '../../../common';
+import { NodeSetting, toStringDecHexOctBin } from '../../../common';
 
 import { hexFormat, binaryFormat, createMask, extractBits } from '../../utils';
 
@@ -15,6 +15,7 @@ export class RegisterNode extends BaseNode {
     private fields: FieldNode[];
     private currentValue: number;
     private currentNaturalValue: string;
+    private prevNaturalValue: string;
 
     constructor(public name: string, public index: number) {
         super(null);
@@ -45,6 +46,7 @@ export class RegisterNode extends BaseNode {
 
         this.currentValue = 0x00;
         this.currentNaturalValue = '0x00000000';
+        this.prevNaturalValue = '';
     }
 
     public extractBits(offset: number, width: number): number {
@@ -56,9 +58,18 @@ export class RegisterNode extends BaseNode {
             (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
             : TreeItemCollapsibleState.None;
         
-        const item = new TreeItem(this.name, state);
+        const label: TreeItemLabel = {
+            label: this.name
+        }
+        if (this.prevNaturalValue && (this.prevNaturalValue !== this.currentNaturalValue)) {
+            label.highlights = [[0, label.label.length]];
+        }
+        this.prevNaturalValue = this.currentNaturalValue;
+        
+        const item = new TreeItem(label, state);
         item.description = this.currentNaturalValue;
         item.contextValue = 'register';
+        item.tooltip = '$' + this.name + '\n' + toStringDecHexOctBin(this.currentValue);
 
         return item;
     }

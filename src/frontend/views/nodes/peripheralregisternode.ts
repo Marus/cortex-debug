@@ -7,7 +7,6 @@ import { AccessType } from '../../svd';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../../common';
 import { AddressRangesInUse } from '../../addrranges';
-import { MessageChannel } from 'worker_threads';
 
 export interface PeripheralRegisterOptions {
     name: string;

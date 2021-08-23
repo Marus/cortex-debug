@@ -1,5 +1,7 @@
 import { MINode } from './mi_parse';
 import { DebugProtocol } from 'vscode-debugprotocol/lib/debugProtocol';
+import { toStringDecHexOctBin } from '../common';
+
 export interface Breakpoint {
     file?: string;
     line?: number;
@@ -83,28 +85,8 @@ export class VariableObject {
         if ((/^0[xX][0-9A-Fa-f]+/.test(value)) || /^[-]?[0-9]+/.test(value)) {
             val = parseInt(value.toLowerCase());
 
-            ret += ' ' + name + ';' ;
-            if (this.value.startsWith('<')) {
-                console.log(this);
-            }
-
-            ret += `\ndec: ${val}`;
-            if (this.value.startsWith('-')) {
-                val = val < 0 ? -val : val;
-                val = ((val ^ 0xffffffff) + 1) >>> 0;
-            }
-            let str = val.toString(16);
-            str = '0x' + '0'.repeat(8 - str.length) + str;
-            ret += `\nhex: ${str}`;
-
-            str = val.toString(8);
-            str = '0'.repeat(12 - str.length) + str;
-            ret += `\noct: ${str}`;
-
-            str = val.toString(2);
-            str = '0'.repeat(32 - str.length) + str;
-            str = str.substr(0, 8) + ' ' + str.substr(8, 8) + ' ' + str.substr(16, 8) + ' ' + str.substr(24, 8);
-            ret += `\nbin: ${str}`;       
+            ret += ' ' + name + ';\n' ;
+            ret += toStringDecHexOctBin(val);       
         }
         return ret;
     }

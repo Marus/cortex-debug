@@ -389,6 +389,27 @@ export function parseHexOrDecInt(str: string): number {
     return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
 }
 
+export function toStringDecHexOctBin(val: number): string {
+    let ret = `dec: ${val}`;
+    if (val < 0) {
+        val = -val;
+        val = ((val ^ 0xffffffff) + 1) >>> 0;
+    }
+    let str = val.toString(16);
+    str = '0x' + '0'.repeat(8 - str.length) + str;
+    ret += `\nhex: ${str}`;
+
+    str = val.toString(8);
+    str = '0'.repeat(12 - str.length) + str;
+    ret += `\noct: ${str}`;
+
+    str = val.toString(2);
+    str = '0'.repeat(32 - str.length) + str;
+    str = str.substr(0, 8) + ' ' + str.substr(8, 8) + ' ' + str.substr(16, 8) + ' ' + str.substr(24, 8);
+    ret += `\nbin: ${str}`;
+    return ret ;
+}
+
 export function parseHostPort(hostPort: string) {
     let port: number;
     let host = '127.0.0.1';
