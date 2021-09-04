@@ -805,7 +805,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }, (error) => {
             response.body = { error: error };
-            this.sendErrorResponse(response, 114, `Unable to read memory: ${error.toString()}`);
+            this.sendErrorResponse(response, 114, `Read memory error: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', `${startAddress}-${length.toString(16)}`));
         });
     }
@@ -816,7 +816,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }, (error) => {
             response.body = { error: error };
-            this.sendErrorResponse(response, 114, `Unable to write memory: ${error.toString()}`);
+            this.sendErrorResponse(response, 114, `Write memory error: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Writing Memory', `${startAddress.toString(16)}-${data.length.toString(16)}`));
         });
     }
