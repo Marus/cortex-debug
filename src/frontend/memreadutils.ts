@@ -1,3 +1,4 @@
+import { rawListeners } from 'process';
 import * as vscode from 'vscode';
 import { AddrRange, AddressRangesInUse } from './addrranges';
 
@@ -23,17 +24,28 @@ export class MemReadUtils {
                     }
                     resolve(true);
                 }, (e) => {
+                    let dst = r.base - startAddr;
+                    for (let ix = 0; ix < r.length; ix++) {
+                        storeTo[dst++] = 0xff;
+                    }
                     reject(e);
                 });
             });
         });
 
-        return new Promise((resolve, reject) => {
-            Promise.all(promises).then((_) => {
-                resolve(true);
-            }).catch((e) => {
-                reject(e);
+        return new Promise(async (resolve, reject) => {
+            const results = await Promise.all(promises.map(p => p.catch(e => e)));
+            const errs: string[] = [];
+            results.map((e) => {
+                if (e instanceof Error) {
+                    errs.push(e.message);
+                }
             });
+            if (errs.length !== 0) {
+                reject(new Error(errs.join('\n')));
+            } else {
+                resolve(true);
+            }
         });
     }
 
