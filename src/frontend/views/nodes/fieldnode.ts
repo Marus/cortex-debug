@@ -4,7 +4,7 @@ import { RegisterNode } from './registernode';
 import { toStringDecHexOctBin } from '../../../common';
 
 export class FieldNode extends BaseNode {
-    public preValue: string = '';
+    public prevValue: string = '';
     public value: string = ''
     
     constructor(public name: string, private offset: number, private size: number, private register: RegisterNode) {
@@ -20,15 +20,15 @@ export class FieldNode extends BaseNode {
         this.value = value.toString();
 
         const label: TreeItemLabel = {
-            label: this.name
+            label: this.name + ' ' + this.value
         }
-        if (this.preValue && (this.preValue !== this.value)) {
-            label.highlights = [[0, label.label.length]];
+        if (this.prevValue && (this.prevValue !== this.value)) {
+            label.highlights = [[this.name.length + 1, label.label.length]];
         }
-        this.preValue = this.value;
+        this.prevValue = this.value;
         
         const ti = new TreeItem(label, TreeItemCollapsibleState.None);
-        ti.description = this.value;
+        // ti.description = this.value;
         ti.contextValue = 'field';
         ti.tooltip = '$' + this.register.name + '.' + this.name + '\n' + toStringDecHexOctBin(value);
         

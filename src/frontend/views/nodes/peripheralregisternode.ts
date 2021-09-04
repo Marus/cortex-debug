@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCollapsibleState, window, debug, MarkdownString } from 'vscode';
+import { TreeItem, TreeItemCollapsibleState, TreeItemLabel, window, debug, MarkdownString } from 'vscode';
 import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import { PeripheralBaseNode } from './basenode';
@@ -31,6 +31,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     private hexRegex: RegExp;
     private binaryRegex: RegExp;
     private currentValue: number;
+    private prevValue: string = '';
     
     constructor(public parent: PeripheralNode | PeripheralClusterNode, options: PeripheralRegisterOptions) {
         super(parent);
@@ -81,10 +82,18 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
             ? (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
             : TreeItemCollapsibleState.None;
 
-        const item = new TreeItem(label, collapseState);
+        const displayValue = this.getFormattedValue(this.getFormat());
+        const labelItem: TreeItemLabel = {
+            label: label + ' ' + displayValue
+        }
+        if (displayValue !== this.prevValue) {
+            labelItem.highlights = [[label.length + 1, labelItem.label.length]];
+            this.prevValue = displayValue;
+        }
+        const item = new TreeItem(labelItem, collapseState);
         item.contextValue = this.accessType === AccessType.ReadWrite ? 'registerRW' : (this.accessType === AccessType.ReadOnly ? 'registerRO' : 'registerWO');
         item.tooltip = this.generateTooltipMarkdown();
-        item.description = this.getFormattedValue(this.getFormat());
+        // item.description = this.getFormattedValue(this.getFormat());
 
         return item;
     }

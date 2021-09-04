@@ -8,6 +8,7 @@ import { hexFormat } from '../../utils';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import * as vscode from 'vscode';
+import { rejects } from 'assert';
 
 export interface PeripheralOptions {
     name: string;
@@ -108,26 +109,35 @@ export class PeripheralNode extends PeripheralBaseNode {
             if (!this.expanded) { resolve(false); return; }
 
             this.readMemory().then((unused) => {
-                const promises = this.children.map((r) => r.updateData());
-
-                Promise.all(promises).then((_) => {
-                    resolve(true);
-                }).catch((e) => {
-                    const msg = e.message || 'unknown error';
-                    const str = `Failed to update peripheral ${this.name}: ${msg}`;
-                    if (vscode.debug.activeDebugConsole) {
-                        vscode.debug.activeDebugConsole.appendLine(str);
-                    }
-                    reject(new Error(str));
-                });
+                this.updateChildData(resolve, reject, null);
             }, (e) => {
                 const msg = e.message || 'unknown error';
                 const str = `Failed to update peripheral ${this.name}: ${msg}`;
                 if (vscode.debug.activeDebugConsole) {
                     vscode.debug.activeDebugConsole.appendLine(str);
                 }
-                reject(new Error(str));
+                this.updateChildData(null, reject, new Error(str));
             });
+        });
+    }
+
+    // Finish updating all the children as much as possible. If we already had an error, use that
+    // and if a new error occurs, then use that.
+    private updateChildData(resolve, reject, error: Error) {
+        const promises = this.children.map((r) => r.updateData());
+        Promise.all(promises).then((_) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(true);
+            }
+        }).catch((e) => {
+            const msg = e.message || 'unknown error';
+            const str = `Failed to update peripheral ${this.name}: ${msg}`;
+            if (vscode.debug.activeDebugConsole) {
+                vscode.debug.activeDebugConsole.appendLine(str);
+            }
+            reject(error ? error : new Error(str));
         });
     }
 

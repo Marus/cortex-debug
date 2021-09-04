@@ -33,6 +33,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     private enumeration: EnumerationMap;
     private enumerationValues: string[];
     private enumerationMap: any;
+    private prevValue: string = '';
 
     constructor(public parent: PeripheralRegisterNode, options: FieldOptions) {
         super(parent);
@@ -80,12 +81,20 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
 
         const rangestart = this.offset;
         const rangeend = this.offset + this.width - 1;
-        
-        const item = new TreeItem(`${this.name} [${rangeend}:${rangestart}]`, TreeItemCollapsibleState.None);
+        const label = `${this.name} [${rangeend}:${rangestart}]`;
+        const displayValue = this.getFormattedValue(this.getFormat());
+        const labelItem: TreeItemLabel = {
+            label: label + ' ' + displayValue
+        }
+        if (displayValue !== this.prevValue) {
+            labelItem.highlights = [[label.length + 1, labelItem.label.length]];
+            this.prevValue = displayValue;
+        }        
+        const item = new TreeItem(labelItem, TreeItemCollapsibleState.None);
         
         item.contextValue = context;
         item.tooltip = this.generateTooltipMarkdown(isReserved);
-        item.description = this.getFormattedValue(this.getFormat());
+        // item.description = this.getFormattedValue(this.getFormat());
 
         return item;
     }

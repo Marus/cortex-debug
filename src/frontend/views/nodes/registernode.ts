@@ -59,17 +59,19 @@ export class RegisterNode extends BaseNode {
             : TreeItemCollapsibleState.None;
         
         const label: TreeItemLabel = {
-            label: this.name
+            label: this.name + ' ' + this.currentNaturalValue
         }
         if (this.prevNaturalValue && (this.prevNaturalValue !== this.currentNaturalValue)) {
-            label.highlights = [[0, label.label.length]];
+            label.highlights = [[this.name.length + 1, label.label.length]];
         }
         this.prevNaturalValue = this.currentNaturalValue;
         
         const item = new TreeItem(label, state);
-        item.description = this.currentNaturalValue;
+        // item.description = this.currentNaturalValue;
         item.contextValue = 'register';
-        item.tooltip = '$' + this.name + '\n' + toStringDecHexOctBin(this.currentValue);
+        if (!(/^[sd][0-9]/.test(this.name))) {
+            item.tooltip = '$' + this.name + '\n' + toStringDecHexOctBin(parseInt(this.currentNaturalValue));
+        }
 
         return item;
     }
