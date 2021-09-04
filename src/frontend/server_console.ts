@@ -99,11 +99,11 @@ export class GDBServerConsole {
         this.toBackend = socket;
         this.ptyTerm.resume();
         this.clearTerminal();
-        this.debugMsg('onBackendConnect: gdb-server program connected');
+        this.debugMsg('onBackendConnect: gdb-server session connected');
         socket.setKeepAlive(true);
         socket.on('close', () => {
-            this.debugMsg('onBackendConnect: gdb-server program closed');
-            magentaWrite('GDB server exited. Waiting for next server to start...', this.ptyTerm);
+            this.debugMsg('onBackendConnect: gdb-server session closed');
+            magentaWrite('GDB server session ended. Waiting for next server session to start...', this.ptyTerm);
             this.toBackend = null;
             this.ptyTerm.pause();
         });
