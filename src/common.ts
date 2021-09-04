@@ -390,6 +390,9 @@ export function parseHexOrDecInt(str: string): number {
 }
 
 export function toStringDecHexOctBin(val: number): string {
+    if (Number.isNaN(val)) {
+        return 'NaN: Not a number';
+    }
     let ret = `dec: ${val}`;
     if (val < 0) {
         val = -val;
