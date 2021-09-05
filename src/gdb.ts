@@ -141,6 +141,8 @@ export class GDBDebugSession extends DebugSession {
     protected onConfigDone: EventEmitter = new EventEmitter();
     protected configDone: boolean;
 
+    protected suppressRadixMsgs = false;
+
     public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
         super(debuggerLinesStartAt1, isServer);
     }
@@ -822,42 +824,57 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readRegistersRequest(response: DebugProtocol.Response) {
-        if (!this.args.variableUseNaturalFormat) {
-            // requesting a radix on the register-values does not work unless the output radix is
-            // decimal. bug in gdb I think. We temporarily force to decimal and then restore later
-            for (const cmd of this.formatRadixGdbCommand('0xa')) {
-                this.miDebugger.sendCommand(cmd);
+        try {
+            if (!this.args.variableUseNaturalFormat) {
+                // requesting a radix on the register-values does not work unless the output radix is
+                // decimal. bug in gdb I think. We temporarily force to decimal and then restore later
+                this.suppressRadixMsgs = true;    
+                for (const cmd of this.formatRadixGdbCommand('0xa')) {
+                    this.miDebugger.sendCommand(cmd);
+                }
+            }
+
+            const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
+            this.miDebugger.sendCommand(`data-list-register-values ${fmt}`).then((node) => {
+                if (node.resultRecords.resultClass === 'done') {
+                    const rv = node.resultRecords.results[0][1];
+                    response.body = rv.map((n) => {
+                        const val = {};
+                        n.forEach((x) => {
+                            val[x[0]] = x[1];
+                        });
+                        return val;
+                    });
+                }
+                else {
+                    response.body = {
+                        error: 'Unable to parse response'
+                    };
+                }
+                this.sendResponse(response);
+            }, (error) => {
+                response.body = { error: error };
+                this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
+                this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
+            });
+
+            if (!this.args.variableUseNaturalFormat) {
+                const cmds = this.formatRadixGdbCommand();
+                for (let ix = 0; ix < cmds.length; ix++ ) {
+                    this.miDebugger.sendCommand(cmds[ix]).then((_) => {
+                        if (ix === (cmds.length-1)) {   // Last one
+                            this.suppressRadixMsgs = false;
+                        }
+                    }), (_) => {
+                        if (ix === (cmds.length-1)) {   // Last one
+                            this.suppressRadixMsgs = false;
+                        }                        
+                    }
+                }
             }
         }
-
-        const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
-        this.miDebugger.sendCommand(`data-list-register-values ${fmt}`).then((node) => {
-            if (node.resultRecords.resultClass === 'done') {
-                const rv = node.resultRecords.results[0][1];
-                response.body = rv.map((n) => {
-                    const val = {};
-                    n.forEach((x) => {
-                        val[x[0]] = x[1];
-                    });
-                    return val;
-                });
-            }
-            else {
-                response.body = {
-                    error: 'Unable to parse response'
-                };
-            }
-            this.sendResponse(response);
-        }, (error) => {
-            response.body = { error: error };
-            this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
-            this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
-        });
-
-        if (!this.args.variableUseNaturalFormat) {
-            for (const cmd of this.formatRadixGdbCommand()) {
-                this.miDebugger.sendCommand(cmd);
-            }
+        catch {
+            this.suppressRadixMsgs = false;
         }
     }
 
@@ -985,6 +1002,10 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected handleMsg(type: string, msg: string) {
+        if (this.suppressRadixMsgs && (type === 'console') && /radix/.test(msg)) {
+            // Filter out unneccessary radix change messages
+            return;
+        }
         if (type === 'target') { type = 'stdout'; }
         if (type === 'log') { type = 'stderr'; }
         this.sendEvent(new OutputEvent(this.wrapTimeStamp(msg), type));
