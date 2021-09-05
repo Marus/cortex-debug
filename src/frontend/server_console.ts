@@ -10,6 +10,7 @@ export class GDBServerConsole {
     protected toBackend: net.Socket = null;
     protected toBackendPort: number = -1;
     protected logFd = -1;
+    protected didShow = false;
 
     public ptyTerm: PtyTerminal = null;
     protected ptyOptions: IPtyTerminalOptions;
@@ -23,9 +24,6 @@ export class GDBServerConsole {
         };
         this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null);
         this.setupTerminal();
-        setTimeout(() => {
-            this.ptyTerm.terminal.show();
-        }, 10);
         try {
             const tmpdir = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
             const fname = `${tmpdir}/gdb-server-console-${process.pid}`;
@@ -34,7 +32,15 @@ export class GDBServerConsole {
         catch {}
     }
 
+    public showIfFirstTime() {
+        if (this.ptyTerm && !this.didShow) {
+            this.ptyTerm.terminal.show();
+            this.didShow = true;
+        }
+    }    
+
     private setupTerminal() {
+        this.didShow = false;
         this.ptyTerm = new PtyTerminal(this.ptyOptions);
         this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
         this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
@@ -108,6 +114,7 @@ export class GDBServerConsole {
             this.ptyTerm.pause();
         });
         socket.on('data', (data) => {
+            this.showIfFirstTime();
             this.ptyTerm.write(data);
             try {
                 if (this.logFd >= 0) {
