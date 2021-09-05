@@ -397,7 +397,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     }
                     else if (parseInt(match) !== 0) {
                         location += '-t -i ' + parseInt(match) + ' ';
-                         }
+                    }
                 }
             }
 
@@ -411,6 +411,10 @@ export class MI2 extends EventEmitter implements IBackend {
             this.sendCommand(`break-insert ${location}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
+                    if (breakpoint.line !== undefined) {
+                        const line = result.result('bkpt.line');
+                        breakpoint.line = line ? parseInt(line) : breakpoint.line;
+                    }
                     breakpoint.number = bkptNum;
 
                     if (breakpoint.condition) {
