@@ -1,4 +1,11 @@
 ChangeLog
+
+# V0.4.3
+
+* Registers (CPU and Peripheral) now indicate with a highlighted value, which ones changed since last update
+* Line-based Breakpoints now visually indicate which line a breakpoint is actually set when different from what was requested. Normal VSCode behavior is to revert back to the original line when debug session ends.
+* Perhpieral update will try to update as much as possible instead of bailing entire peripheral update after a single memory read failure. Failed reads are now indicated with `0xffffffff`
+
 # V0.4.2
 
 * Now you can toggle Hex mode for Registers and Variables independently from the Debug Panel.

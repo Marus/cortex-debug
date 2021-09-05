@@ -105,6 +105,7 @@ export class GDBServerConsole {
         this.toBackend = socket;
         this.ptyTerm.resume();
         this.clearTerminal();
+        this.showIfFirstTime();
         this.debugMsg('onBackendConnect: gdb-server session connected');
         socket.setKeepAlive(true);
         socket.on('close', () => {
@@ -114,7 +115,6 @@ export class GDBServerConsole {
             this.ptyTerm.pause();
         });
         socket.on('data', (data) => {
-            this.showIfFirstTime();
             this.ptyTerm.write(data);
             try {
                 if (this.logFd >= 0) {
