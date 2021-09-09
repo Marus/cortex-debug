@@ -17,6 +17,7 @@ New Features
               ]
 ```
 * **Auto-continue**: Operations `Launch`, `Reset`, and `Restart` will issue a `continue` to gdb upon sussesful reset-halt. For `Launch` this is not done if `runToEntryPoint` has been enabled. It is also not done if the corresponding action has a post-session-start commands set (i.e., `postStartSessionCommands`, `postRestartSessionCommands`). This does not apply to `Attach` since that always stops on an successful `Attach`. You can disable the auto-continue behavior using `doNotContinueAfterReset`
+* JLinkGDBServer will no longer display a graphical progress bar at `Launch`. If you need it, you can use the `-gui` command-line option in `launch.json`'s `serverArgs`
 
 # V0.4.3
 
