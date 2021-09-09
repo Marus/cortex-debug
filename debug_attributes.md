@@ -4,6 +4,7 @@
 | cwd | Common | Path of project
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
 | device | Common | Target Device Identifier
+| doNotContinueAfterReset | Common | Do not 'continue' execution after a 'Launch', 'Reset' or 'Restart'. Program will stop at the reset-vector instead
 | executable | Common | Path of executable
 | gdbPath | Common | This setting can be used to overrride the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.
 | graphConfig | Common | (unknown)
@@ -21,6 +22,7 @@
 | preAttachCommands | Common | Additional GDB Commands to be executed at the start of the main attach sequence (immediately after attaching to target).
 | preLaunchCommands | Common | Additional GDB Commands to be executed at the start of the main launch sequence (immediately after attaching to target).
 | preRestartCommands | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution).
+| pvtRestartOrReset | Common | ????
 | request | Common | ????
 | rtos | Common | RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.
 | rttConfig | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future
