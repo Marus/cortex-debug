@@ -102,6 +102,8 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
 
+            vscode.commands.registerCommand('cortex-debug.resetDevice', this.resetDevice.bind(this)),
+
             vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
             vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
@@ -131,6 +133,10 @@ export class CortexDebugExtension {
                 e.element.expanded = false;
             })
         );
+    }
+
+    private resetDevice() {
+        vscode.debug.activeDebugSession.customRequest('reset-device');
     }
 
     private startServerConsole(context: vscode.ExtensionContext): Promise<void> {

@@ -182,6 +182,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     postStartSessionCommands: string[];
     postRestartSessionCommands: string[];
     overrideGDBServerStartedRegex: string;
+    doNotContinueAfterReset: boolean;
     svdFile: string;
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
@@ -199,6 +200,8 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
     variableUseNaturalFormat: boolean;
+
+    pvtRestartOrReset: boolean;
 
     numberOfProcessors: number;
     targetProcessor: number;

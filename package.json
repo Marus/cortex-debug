@@ -1,5 +1,5 @@
 {
-    "version": "0.4.3",
+    "version": "0.4.4",
     "activationEvents": [
         "onDebugResolve:cortex-debug"
     ],
@@ -114,6 +114,11 @@
             }
         },
         "commands": [
+            {
+                "command": "cortex-debug.resetDevice",
+                "title": "Reset device",
+                "icon": "./images/reset.svg"
+            },
             {
                 "command": "cortex-debug.peripherals.updateNode",
                 "title": "Update Value",
@@ -329,6 +334,11 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the re-start sequence, after a debug session has already started."
+                            },
+                            "doNotContinueAfterReset": {
+                                "default": false,
+                                "type": "boolean",
+                                "description": "Do not 'continue' execution after a 'Launch', 'Reset' or 'Restart'. Program will stop at the reset-vector instead"
                             },
                             "overrideGDBServerStartedRegex": {
                                 "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB server that is looked for to determine if the GDB server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB server types.",
@@ -1141,6 +1151,11 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the re-start sequence, after a debug session has already started."
+                            },
+                            "doNotContinueAfterReset": {
+                                "default": false,
+                                "type": "boolean",
+                                "description": "Do not 'continue' execution after a 'Launch', 'Reset' or 'Restart'. Program will stop at the reset-vector instead"
                             },
                             "overrideGDBServerStartedRegex": {
                                 "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB server that is looked for to determine if the GDB server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB server types.",
@@ -2021,6 +2036,13 @@
                 },
                 {
                     "command": "cortex-debug.setForceDisassembly",
+                    "when": "debugType == cortex-debug"
+                }
+            ],
+            "debug/toolBar": [
+                {
+					"command": "cortex-debug.resetDevice",
+					"group": "navigation",
                     "when": "debugType == cortex-debug"
                 }
             ],

@@ -70,7 +70,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public rttCommands(): string[] {
         const commands = [];
-        if (this.args.rttConfig.enabled && !(this.args as any).pvtRestart) {
+        if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
             const cfg = this.args.rttConfig;
             if (this.rttHelper.rttPortsPending > 0) {
                 // If we are getting here, we will need some serious re-factoring

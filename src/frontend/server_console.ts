@@ -22,8 +22,6 @@ export class GDBServerConsole {
             prompt    : '',             // Can't have a prompt since the gdb-server or semihosting may have one
             inputMode : TerminalInputMode.COOKED
         };
-        this.ptyOptions.name = GDBServerConsole.createTermName(this.ptyOptions.name, null);
-        this.setupTerminal();
         try {
             const tmpdir = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
             const fname = `${tmpdir}/gdb-server-console-${process.pid}`;
@@ -32,7 +30,10 @@ export class GDBServerConsole {
         catch {}
     }
 
-    public showIfFirstTime() {
+    protected createAndShowTerminal() {
+        if (!this.ptyTerm) {
+            this.setupTerminal();
+        }
         if (this.ptyTerm && !this.didShow) {
             this.ptyTerm.terminal.show();
             this.didShow = true;
@@ -41,6 +42,7 @@ export class GDBServerConsole {
 
     private setupTerminal() {
         this.didShow = false;
+        this.ptyOptions.name = GDBServerConsole.createTermName('gdb-server', null);
         this.ptyTerm = new PtyTerminal(this.ptyOptions);
         this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
         this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
@@ -103,9 +105,9 @@ export class GDBServerConsole {
     // The gdb-server running in the backend
     protected onBackendConnect(socket: net.Socket) {
         this.toBackend = socket;
+        this.createAndShowTerminal();
         this.ptyTerm.resume();
         this.clearTerminal();
-        this.showIfFirstTime();
         this.debugMsg('onBackendConnect: gdb-server session connected');
         socket.setKeepAlive(true);
         socket.on('close', () => {

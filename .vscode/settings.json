@@ -16,5 +16,6 @@
 		"binary_modules": true,
 		"tmp": true
 	},
-	"typescript.tsdk": "./node_modules/typescript/lib" // we want to use the TS server from our node_modules folder to control its version
+	"typescript.tsdk": "./node_modules/typescript/lib", // we want to use the TS server from our node_modules folder to control its version
+	"svg.preview.background": "transparent"
 }

@@ -7,7 +7,8 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError } from './backend/backend';
-import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, AdapterOutputEvent, DisassemblyInstruction, createPortName, CortexDebugKeys } from './common';
+import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
+    AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
 import { GDBServer } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
@@ -33,7 +34,6 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
-import { nextTick } from 'process';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -45,6 +45,13 @@ const SERVER_TYPE_MAP = {
     bmp: BMPServerController,
     qemu: QEMUServerController,
     external: ExternalServerController
+};
+
+enum SessionMode {
+    LAUNCH,
+    ATTACH,
+    RESTART,
+    RESET
 };
 
 class ExtendedVariable {
@@ -471,10 +478,10 @@ export class GDBDebugSession extends DebugSession {
 
                     const runPostStartSession = () => {
                         if (this.configDone) {
-                            this.runPostStartSessionCommands(false);
+                            this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH);
                         } else {
                             this.onConfigDone.once('done', () => {
-                                this.runPostStartSessionCommands(false);
+                                this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH);
                             });
                         }
                     };
@@ -564,8 +571,27 @@ export class GDBDebugSession extends DebugSession {
     }
 
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening
-    protected runPostStartSessionCommands(isRestart: boolean, interval: number = 10): void {
-        let commands = isRestart ? this.args.postRestartSessionCommands : this.args.postStartSessionCommands;
+    protected runPostStartSessionCommands(mode: SessionMode, interval: number = 10): void {
+        let commands: string[] = null;
+        switch (mode) {
+            case SessionMode.RESTART:
+                commands = this.args.postRestartSessionCommands;
+                break;
+            case SessionMode.RESET:
+                commands = this.args.postRestartSessionCommands;
+                break;
+            default:
+                commands = this.args.postStartSessionCommands;
+                break;
+        }
+
+        // Note that for commands, an empty array is totall valid. Meaning don't do anything. Not even a 'continue'
+        if (!this.args.doNotContinueAfterReset) {
+            if ((commands == null) && (mode !== SessionMode.ATTACH) && !((mode === SessionMode.LAUNCH) && this.args.runToEntryPoint)) {
+                commands = ['continue'];
+            }
+        }
+
         if (commands && (commands.length > 0)) {
             let curToken = this.miDebugger.getCurrentToken();
             commands = commands.map(COMMAND_MAP);
@@ -655,6 +681,9 @@ export class GDBDebugSession extends DebugSession {
                     response.body = error;
                     this.sendErrorResponse(response, 110, 'Unable to execute command');
                 });
+                break;
+            case 'reset-device':
+                this.resetDevice(response, args);
                 break;
             default:
                 response.body = { error: 'Invalid command.' };
@@ -938,16 +967,16 @@ export class GDBDebugSession extends DebugSession {
 
     //
     // I don't think we are following the protocol here. but the protocol doesn't make sense. I got a
-    // clarification that for an attach session, restart means detach and re-attach. How does this make
-    // any sense? Isn't that like a null operation?
+    // clarification that for an attach session, restart means detach and re-attach. Doesn't make
+    // any sense for embedded?
     //
     // https://github.com/microsoft/debug-adapter-protocol/issues/73
     //
-    protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): void {
+    protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): void {
         const restartProcessing = async () => {
             this.disableSendStoppedEvents = false;
             const commands = [];
-            (this.args as any).pvtRestart = true;
+            this.args.pvtRestartOrReset = true;
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
             const restartCommands = this.args.overrideRestartCommands != null ?
@@ -959,12 +988,13 @@ export class GDBDebugSession extends DebugSession {
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);
                 setTimeout(() => {
+                    const isReset = (args as any).isReset;
                     this.stopped = true;        // This should aleady be true??
-                    this.stoppedReason = 'restart';
+                    this.stoppedReason = isReset ? 'reset' : 'restart';
                     this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
-                    this.sendEvent(new StoppedEvent('restart', this.currentThreadId, true));
-                    this.sendEvent(new CustomStoppedEvent('restart', this.currentThreadId));
-                    this.runPostStartSessionCommands(true, 50);
+                    this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+                    this.sendEvent(new CustomStoppedEvent(this.stoppedReason, this.currentThreadId));
+                    this.runPostStartSessionCommands(isReset ? SessionMode.RESET : SessionMode.RESTART, 50);
                 }, 50);
             }, (msg) => {
                 this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
@@ -979,6 +1009,17 @@ export class GDBDebugSession extends DebugSession {
             this.miDebugger.once('generic-stopped', restartProcessing);
             this.miDebugger.sendCommand('exec-interrupt');
         }
+    }
+
+    protected getResetCommands(): string[] {
+        if (this.args.overrideRestartCommands != null) {
+            return this.args.overrideRestartCommands.map(COMMAND_MAP);
+        }
+        return this.serverController.restartCommands();
+    }
+
+    protected resetDevice(response: DebugProtocol.Response, args: any): void {
+        this.restartRequest(response, {isReset: true});
     }
 
     protected timeStart = Date.now();
