@@ -588,7 +588,7 @@ export class GDBDebugSession extends DebugSession {
         // Note that for commands, an empty array is totall valid. Meaning don't do anything. Not even a 'continue'
         if (!this.args.doNotContinueAfterReset) {
             if ((commands == null) && (mode !== SessionMode.ATTACH) && !((mode === SessionMode.LAUNCH) && this.args.runToEntryPoint)) {
-                commands = ['continue'];
+                commands = ['-exec-continue'];
             }
         }
 
