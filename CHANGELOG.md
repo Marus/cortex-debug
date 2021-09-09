@@ -1,5 +1,12 @@
 ChangeLog
 
+# V0.4.4
+
+New Features
+* **Reset button**: There is now a button for resetting the device in the Debug Toolbar. This is distinct from the `Restart` button provided by VSCode. The `Reset` button does not trigger a rebuild but other than that, the behaviour *should* be the same. The customization commands for `Restart` are also used for `Reset`. Those are `preRestartCommands`, `overrideRestartCommands`, `postRestartCommands` and `postRestartSessionCommands`.
+  * The only place we could put the `Reset` button was at the beginning. We would have rather put it closer to the end but there isn't an API to do that as far as we know. Note that the toolbar appears in docking and floating modes and it is the docking mode where this was not possible. Hopefully, it is not a hinderance.
+* **Auto-continue**: Operations `Launch`, `Reset`, and `Restart` will issue a `continue` to gdb upon sussesful reset-halt. For `Launch` this is not done if `runToEntryPoint` has been enabled. It is also not done if the corresponding action has a post-session-start commands set (i.e., `postStartSessionCommands`, `postRestartSessionCommands`). This does not apply to `Attach` since that always stops on an successful `Attach`. You can disable the auto-continue behavior using `doNotContinueAfterReset`
+
 # V0.4.3
 
 * Registers (CPU and Peripheral) now indicate with a highlighted value, which ones changed since last update
