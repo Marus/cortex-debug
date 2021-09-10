@@ -9,6 +9,7 @@ New Features
 
   * The only place we could put the `Reset` button was at the beginning. We would have rather put it closer to the end but there isn't an API to do that as far as we know. Note that the toolbar appears in docking and floating modes and it is the docking mode where this was not possible. Hopefully, it is not a hinderance.
   * Some gdb-servers do not respond appropriately to being reset to be compatible with `gdb`. You will have to find out what set of gdb-server/gdb commands work for you and use appropriate options in the `launch.json`. For instance, just after 'reset halt' some versions of OpenOCD do not provide `gdb` the updated registers (SP, PC, LR, etc.). Some devices may have a more complicated, customized reset mechanism, boot-loaders, etc. To force a synchronization between `OpenOCD` and `gdb`, you can do the following in `launch.json`.
+  * `svdAddrGapThreshold` `launch.json` option. Normally adjacent register addresses with small gaps are combined to reduce the number of device memory reads. Default is 16 bytes. You can now control the number of bytes the gap can be including zero. Zero means strict reading of bytes but adjacent registers are still combined if there is no gap.
 
 ```
               "postRestartSessionCommands": [

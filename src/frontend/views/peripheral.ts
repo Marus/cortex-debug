@@ -18,6 +18,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     private peripherials: PeripheralNode[] = [];
     private loaded: boolean = false;
     private svdFileName: string | null;
+    private gapThreshold: number = 16;
     
     constructor() {
 
@@ -46,7 +47,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
             this.svdFileName = SVDFile;
             try {
-                return SVDParser.parseSVD(SVDFile).then((peripherals) => {
+                return SVDParser.parseSVD(SVDFile, this.gapThreshold).then((peripherals) => {
                     this.peripherials = peripherals;
                     this.loaded = true;
                     resolve(true);
@@ -98,11 +99,14 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
-    public debugSessionStarted(svdfile: string): Thenable<any> {
+    public debugSessionStarted(svdfile: string, thresh: any): Thenable<any> {
         return new Promise<void>((resolve, reject) => {
             this.peripherials = [];
             this.loaded = false;
             this._onDidChangeTreeData.fire(undefined);
+
+            // Set the threshold between 0 and 32, with a default of 16 and a mukltiple of 8
+            this.gapThreshold = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
             
             if (svdfile) {
                 setTimeout(() => {

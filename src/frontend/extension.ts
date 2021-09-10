@@ -496,7 +496,7 @@ export class CortexDebugExtension {
             if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
 
             this.registerProvider.debugSessionStarted();
-            this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null);
+            this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null, args.svdAddrGapThreshold);
             this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments

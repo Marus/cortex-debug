@@ -33,6 +33,7 @@
 | servertype | Common | GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external
 | showDevDebugOutput | Common | Prints all GDB responses to the console
 | showDevDebugTimestamps | Common | Show timestamps when 'showDevDebugOutput' is true
+| svdAddrGapThreshold | Common | If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device
 | svdFile | Common | Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.
 | swoConfig | Common | (unknown)
 | targetId | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)

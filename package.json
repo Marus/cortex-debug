@@ -570,6 +570,14 @@
                                 "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
                             },
+                            "svdAddrGapThreshold": {
+                                "default": 16,
+                                "type": "number",
+                                "multipleOf": 8,
+                                "minimum": 0,
+                                "maximum": 32,
+                                "description": "If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device"
+                            },
                             "rttConfig": {
                                 "type": "object",
                                 "description": "SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future",
@@ -1395,6 +1403,14 @@
                                 "default": null,
                                 "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
+                            },
+                            "svdAddrGapThreshold": {
+                                "default": 16,
+                                "type": "number",
+                                "multipleOf": 8,
+                                "minimum": 0,
+                                "maximum": 32,
+                                "description": "If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device"
                             },
                             "rttConfig": {
                                 "type": "object",

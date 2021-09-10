@@ -184,6 +184,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     overrideGDBServerStartedRegex: string;
     doNotContinueAfterReset: boolean;
     svdFile: string;
+    svdAddrGapThreshold: number;
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
     graphConfig: any[];

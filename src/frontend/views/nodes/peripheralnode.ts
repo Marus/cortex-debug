@@ -36,7 +36,7 @@ export class PeripheralNode extends PeripheralBaseNode {
     
     private currentValue: number[];
 
-    constructor(options: PeripheralOptions) {
+    constructor(public gapThreshold, options: PeripheralOptions) {
         super(null);
 
         this.name = options.name;
@@ -156,10 +156,9 @@ export class PeripheralNode extends PeripheralBaseNode {
         if (skipAddressGaps) {
             // Split the entire range into a set of smaller ranges. Some svd files specify
             // a very large address space but may use very little of it.
-            const gapThreshold = 16;    // Merge gaps less than this many bytes, avoid too many gdb requests
             const addresses = new AddressRangesInUse(this.totalLength);
             this.children.map((child) => child.markAddresses(addresses));
-            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, gapThreshold);
+            ranges = addresses.getAddressRangesOptimized(this.baseAddress, false, this.gapThreshold);
         }
 
         // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)

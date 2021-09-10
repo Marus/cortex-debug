@@ -24,8 +24,10 @@ const ACCESS_TYPE_MAP = {
 export class SVDParser {
     private static enumTypeValuesMap = {};
     private static peripheralRegisterMap = {};
+    private static gapThreshold: number = 16;
 
-    public static parseSVD(path: string): Promise<PeripheralNode[]> {
+    public static parseSVD(path: string, gapThreshold: number): Promise<PeripheralNode[]> {
+        SVDParser.gapThreshold = gapThreshold;
         SVDParser.enumTypeValuesMap = {};
         SVDParser.peripheralRegisterMap = {};
         return new Promise((resolve, reject) => {
@@ -405,7 +407,7 @@ export class SVDParser {
         if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
         if (p.groupName) { options.groupName = p.groupName[0]; }
         
-        const peripheral = new PeripheralNode(options);
+        const peripheral = new PeripheralNode(SVDParser.gapThreshold, options);
 
         if (p.registers) {
             if (p.registers[0].register) {
