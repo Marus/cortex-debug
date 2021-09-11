@@ -182,7 +182,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     postStartSessionCommands: string[];
     postRestartSessionCommands: string[];
     overrideGDBServerStartedRegex: string;
-    doNotContinueAfterReset: boolean;
+    breakAfterReset: boolean;
     svdFile: string;
     svdAddrGapThreshold: number;
     rttConfig: RTTConfiguration;

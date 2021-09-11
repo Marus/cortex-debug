@@ -49,6 +49,7 @@ export class CortexDebugExtension {
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
     private debuggerStatus: 'started' | 'stopped' | 'running' | 'none';
+    private currentArgs: any = null;
 
     constructor(private context: vscode.ExtensionContext) {
         this.startServerConsole(context);           // Make this the first thing we do so it is ready for the session
@@ -162,7 +163,9 @@ export class CortexDebugExtension {
                 if (this.debuggerStatus === 'running') {
                     vscode.window.showInformationMessage(msg);
                 } else {
-                    this.registerProvider.refresh();
+                    if (this.currentArgs && !this.currentArgs.noDebug) {
+                        this.registerProvider.refresh();
+                    }
                 }
             }
         }
@@ -437,7 +440,9 @@ export class CortexDebugExtension {
     }
 
     private registersRefresh(): void {
-        this.registerProvider.refresh();
+        if (this.currentArgs && !this.currentArgs.noDebug) {
+            this.registerProvider.refresh();
+        }
     }
 
     // Settings changes
@@ -485,6 +490,7 @@ export class CortexDebugExtension {
         this.debuggerStatus = 'started';
 
         session.customRequest('get-arguments').then((args) => {
+            this.currentArgs = args;
             let svdfile = args.svdFile;
             if (!svdfile) {
                 svdfile = this.getSVDFile(args.device);
@@ -495,8 +501,10 @@ export class CortexDebugExtension {
             if (this.swoSource) { this.initializeSWO(args); }
             if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
 
-            this.registerProvider.debugSessionStarted();
-            this.peripheralProvider.debugSessionStarted(svdfile ? svdfile : null, args.svdAddrGapThreshold);
+            if (!this.currentArgs.noDebug) {
+                this.registerProvider.debugSessionStarted();
+            }
+            this.peripheralProvider.debugSessionStarted((svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
             this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments
@@ -510,7 +518,9 @@ export class CortexDebugExtension {
             Reporting.endSession();
 
             this.debuggerStatus = 'none';
-            this.registerProvider.debugSessionTerminated();
+            if (!this.currentArgs.noDebug) {
+                this.registerProvider.debugSessionTerminated();
+            }
             this.peripheralProvider.debugSessionTerminated();
             if (this.swo) {
                 this.swo.debugSessionTerminated();
@@ -534,6 +544,7 @@ export class CortexDebugExtension {
             this.rttPortMap = {};
 
             this.clearAdapterOutputChannel = true;
+            this.currentArgs = null;
         }
         catch (e) {
             vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
@@ -570,7 +581,9 @@ export class CortexDebugExtension {
     private receivedStopEvent(e) {
         this.debuggerStatus = 'stopped';
         this.peripheralProvider.debugStopped();
-        this.registerProvider.debugStopped();
+        if (this.currentArgs && !this.currentArgs.noDebug) {
+            this.registerProvider.debugStopped();
+        }
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
         if (this.swo) { this.swo.debugStopped(); }
@@ -580,7 +593,9 @@ export class CortexDebugExtension {
     private receivedContinuedEvent(e) {
         this.debuggerStatus = 'running';
         this.peripheralProvider.debugContinued();
-        this.registerProvider.debugContinued();
+        if (this.currentArgs && !this.currentArgs.noDebug) {
+            this.registerProvider.debugContinued();
+        }
         if (this.swo) { this.swo.debugContinued(); }
         if (this.rtt) { this.rtt.debugContinued(); }
     }

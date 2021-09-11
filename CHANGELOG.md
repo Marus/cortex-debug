@@ -8,16 +8,28 @@ New Features
   <img src=https://user-images.githubusercontent.com/41269583/132694054-e4a2e085-132c-4bac-9c79-f5fdbdd9b1f8.png width=200 />
 
   * The only place we could put the `Reset` button was at the beginning. We would have rather put it closer to the end but there isn't an API to do that as far as we know. Note that the toolbar appears in docking and floating modes and it is the docking mode where this was not possible. Hopefully, it is not a hinderance.
-  * Some gdb-servers do not respond appropriately to being reset to be compatible with `gdb`. You will have to find out what set of gdb-server/gdb commands work for you and use appropriate options in the `launch.json`. For instance, just after 'reset halt' some versions of OpenOCD do not provide `gdb` the updated registers (SP, PC, LR, etc.). Some devices may have a more complicated, customized reset mechanism, boot-loaders, etc. To force a synchronization between `OpenOCD` and `gdb`, you can do the following in `launch.json`.
-  * `svdAddrGapThreshold` `launch.json` option. Normally adjacent register addresses with small gaps are combined to reduce the number of device memory reads. Default is 16 bytes. You can now control the number of bytes the gap can be including zero. Zero means strict reading of bytes but adjacent registers are still combined if there is no gap.
+  * `Restart` causes VSCode to clear the `Debug Console` but `Reset` does not do that as VSCode is not involved.
+  * Some gdb-servers do not respond appropriately to being reset and are not compatible with `gdb` expectations. You will have to find out what set of gdb-server/gdb commands work for you and use appropriate options in the `launch.json`. For instance, just after 'reset halt' some versions of OpenOCD do not provide `gdb` the updated registers (SP, PC, LR, etc.). Some devices may have a more complicated, customized reset mechanism, boot-loaders, etc. To force a synchronization between `OpenOCD` and `gdb`, you can do the following in `launch.json`.
+```
+     "postRestartSessionCommands": [ // OpenOCD only
+       "monitor gdb_sync",
+       "stepi"    // Because of the command above, this is a no-op. No code is actually executed
+     ]
+```  
+* **`Run Without Debugging (^F5)`**: Experimental. This will now work but VSCode does not clearly define what this button should do. In an embedded cases, that is even murkier because without GDB and a gdb-server, there is no way to start the program. Between VSCode and Cortex-Debug, the end result is as follows
+    * VSCode does not transmit any breakpoints to Cortex-Debug and hence no breakpoints
+    * VSCode does show a pause button in active mode but pressing on it does nothing because that action is not sent to Cortex-Debug
+    * `runToEntryPoint` is disregarded and there will not be a stop after a Reset either
+    * If however your program halts because of an exception or any other reason, it is handled normally and now you will enter the normal debugger
+    * You can still Restart/Reset and the program restarts and continues to run
 
-```
-              "postRestartSessionCommands": [
-                "monitor gdb_sync",
-                "stepi"    // Because of the command above, this is a no-op. No code is actually executed
-              ]
-```
-* **Auto-continue**: Operations `Launch`, `Reset`, and `Restart` will issue a `continue` to gdb upon sussesful reset-halt. For `Launch` this is not done if `runToEntryPoint` has been enabled. It is also not done if the corresponding action has a post-session-start commands set (i.e., `postStartSessionCommands`, `postRestartSessionCommands`). This does not apply to `Attach` since that always stops on an successful `Attach`. You can disable the auto-continue behavior using `doNotContinueAfterReset`
+* **Auto-continue**: New behavior. Operations `Launch`, `Reset`, and `Restart` will now issue a `continue` to gdb upon sussesful reset-halt. This is not done in the followin cases
+  * `runToEntryPoint` has been used for a `Launch` session or it is an `Attach` session
+  * If a post-session-start commands (i.e., `postStartSessionCommands`, `postRestartSessionCommands`) are used; you can insert the `continue` command in there.
+  * Or you have used the `"breakAfterReset" = true`
+
+* `svdAddrGapThreshold` option in `launch.json` option. Normally adjacent register addresses with small gaps are combined to reduce the number of device memory reads. Default is 16 bytes. You can now control the number of bytes the gap can be including zero. Zero means strict reading of bytes but adjacent registers are still combined if there is no gap.
+
 * JLinkGDBServer will no longer display a graphical progress bar at `Launch`. If you need it, you can use the `-gui` command-line option in `launch.json`'s `serverArgs`
 
 # V0.4.3

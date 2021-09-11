@@ -1,10 +1,10 @@
 | Attribute | Applies To | Description |
 | --------- | ---------- | ----------- |
+| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` if `runToEntryPoint` is used
 | cmsisPack | Common | Path to a CMSIS-Pack file. Use to add extra device support.
 | cwd | Common | Path of project
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
 | device | Common | Target Device Identifier
-| doNotContinueAfterReset | Common | Do not 'continue' execution after a 'Launch', 'Reset' or 'Restart'. Program will stop at the reset-vector instead
 | executable | Common | Path of executable
 | gdbPath | Common | This setting can be used to overrride the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.
 | graphConfig | Common | (unknown)
