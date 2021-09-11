@@ -3,7 +3,7 @@ ChangeLog
 # V0.4.4
 
 New Features
-* **Reset button**: There is now a button for resetting the device in the Debug Toolbar. This is distinct from the `Restart` button provided by VSCode. The `Reset` button does not trigger a rebuild but other than that, the behaviour *should* be the same. The customization commands for `Restart` are also used for `Reset`. Those are `preRestartCommands`, `overrideRestartCommands`, `postRestartCommands` and `postRestartSessionCommands`.
+* **Reset button**: There is now a button for resetting the device in the Debug Toolbar. This is distinct from the `Restart` button provided by VSCode framework. The `Reset` button does not trigger a rebuild but other than that, the behaviour *should* be the same. The customization commands for `Restart` are also used for `Reset`. Those are `preRestartCommands`, `overrideRestartCommands`, `postRestartCommands` and `postRestartSessionCommands`.
 
   <img src=https://user-images.githubusercontent.com/41269583/132694054-e4a2e085-132c-4bac-9c79-f5fdbdd9b1f8.png width=200 />
 
@@ -19,16 +19,15 @@ New Features
 * **`Run Without Debugging (^F5)`**: Experimental. This will now work but VSCode does not clearly define what this button should do. In an embedded cases, that is even murkier because without GDB and a gdb-server, there is no way to start the program. Between VSCode and Cortex-Debug, the end result is as follows
     * VSCode does not transmit any breakpoints to Cortex-Debug and hence no breakpoints
     * VSCode does show a pause button in active mode but pressing on it does nothing because that action is not sent to Cortex-Debug
-    * `runToEntryPoint` is disregarded and there will not be a stop after a Reset either
-    * If however your program halts because of an exception or any other reason, it is handled normally and now you will enter the normal debugger
-    * You can still Restart/Reset and the program restarts and continues to run
+    * `runToEntryPoint` and `breakAfterReset` options are disregarded
+    * If the program halts because of an exception or any other reason, it is handled normally and now you will enter the normal debugger
 
 * **Auto-continue**: New behavior. Operations `Launch`, `Reset`, and `Restart` will now issue a `continue` to gdb upon sussesful reset-halt. This is not done in the followin cases
   * `runToEntryPoint` has been used for a `Launch` session or it is an `Attach` session
   * If a post-session-start commands (i.e., `postStartSessionCommands`, `postRestartSessionCommands`) are used; you can insert the `continue` command in there.
   * Or you have used the `"breakAfterReset" = true`
 
-* `svdAddrGapThreshold` option in `launch.json` option. Normally adjacent register addresses with small gaps are combined to reduce the number of device memory reads. Default is 16 bytes. You can now control the number of bytes the gap can be including zero. Zero means strict reading of bytes but adjacent registers are still combined if there is no gap.
+* `svdAddrGapThreshold` option in `launch.json`. Normally adjacent register addresses with small gaps are combined to reduce the number of (slow) device memory reads. Default is 16 bytes. You can now control the number of bytes the gap can be including zero. Zero means strict reading of bytes but adjacent registers are still combined.
 
 * JLinkGDBServer will no longer display a graphical progress bar at `Launch`. If you need it, you can use the `-gui` command-line option in `launch.json`'s `serverArgs`
 
