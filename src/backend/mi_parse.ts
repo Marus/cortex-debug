@@ -147,7 +147,7 @@ export class MINode implements MIInfo {
     }
 
     public record(path: string): any {
-        if (!this.outOfBandRecord) {
+        if (!this.outOfBandRecord || (this.outOfBandRecord.length === 0)) {
             return undefined;
         }
         return MINode.valueOf(this.outOfBandRecord[0].output, path);

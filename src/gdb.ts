@@ -1266,7 +1266,12 @@ export class GDBDebugSession extends DebugSession {
                 const finalBrks = [];
                 breakpoints.forEach((brkp) => {
                     this.functionBreakpoints.push(brkp.number);
-                    if (brkp[0]) { finalBrks.push({ line: brkp[1].line }); }
+                    finalBrks.push({
+                        source: brkp.file,
+                        line: brkp.line,
+                        id: brkp.number,
+                        verified: true
+                    });
                 });
                 response.body = {
                     breakpoints: finalBrks
