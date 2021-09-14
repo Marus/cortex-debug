@@ -135,7 +135,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     this.log('log', 'GDB -> App: ' + JSON.stringify(parsed));
                 }
                 let handled = false;
-                if (parsed.token !== undefined) {
+                if (parsed.token !== undefined && parsed.resultRecords) {
                     if (this.handlers[parsed.token]) {
                         this.handlers[parsed.token](parsed);
                         delete this.handlers[parsed.token];
@@ -693,7 +693,7 @@ export class MI2 extends EventEmitter implements IBackend {
         const sel = this.currentToken++;
         return new Promise((resolve, reject) => {
             this.handlers[sel] = (node: MINode) => {
-                if (node && node.resultRecords && node.resultRecords.resultClass === 'error') {
+                if (node.resultRecords.resultClass === 'error') {
                     if (suppressFailure) {
                         this.log('stderr', `WARNING: Error executing command '${command}'`);
                         resolve(node);
