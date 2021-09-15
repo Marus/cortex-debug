@@ -24,14 +24,15 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
 
     }
 
-    private saveState(path: string): void {
+    private saveState(fspath: string): void {
         const state: NodeSetting[] = [];
         this.peripherials.forEach((p) => {
             state.push(... p.saveState());
         });
         
         try {
-            fs.writeFileSync(path, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+            fs.mkdirSync(path.dirname(fspath), { recursive: true });
+            fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
         }
         catch (e) {
             vscode.window.showWarningMessage(`Unable to save periperal preferences ${e}`);
