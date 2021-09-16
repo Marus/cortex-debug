@@ -32,24 +32,7 @@ export class GDBServer extends EventEmitter {
                     this.process.stderr.on('data', this.onStderr.bind(this));
                     this.process.on('exit', this.onExit.bind(this));
                     this.process.on('error', this.onError.bind(this));
-                        
-                    if ((typeof this.port === 'number') && (this.port > 0)) {
-                        // We monitor for port getting into Listening mode. This is a backup for initMatch
-                        // TcpPortScanner.waitForPortOpenOSUtil(this.port, 250, GDBServer.SERVER_TIMEOUT - 1000, true, false)
-                        TcpPortScanner.waitForPortOpen(this.port, GDBServer.LOCALHOST, true, 50, GDBServer.SERVER_TIMEOUT - 1000)
-                        .then(() => {
-                            if (this.initResolve) {
-                                this.initResolve(true);
-                                this.initReject = null;
-                                this.initResolve = null;
-                            }
-                        }).catch((e) => {
-                            // We could reject here if it is truly a timeout and not something else, caller already has a timeout
-                            // ALso, waitForPortOpenOSUtil is not bullet proof if it fails, we don't know why because of differences
-                            // in OSes, upgrades, etc. But, when it works, we know for sure it worked.
-                        });
-                    }
-
+                    
                     if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
                         // For some reason we are not able to capture the st-util output on Windows
                         // For now assume that it will launch properly within 1/2 second and resolve the init

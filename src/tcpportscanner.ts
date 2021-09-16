@@ -1,9 +1,14 @@
-// Author to Blame: haneefdm on github
-
 import os = require('os');
 import net = require('net');
 import child_process = require('child_process');
 import command_exists = require('command-exists');
+
+let logEnable = true;
+function ConsoleLog(...args: any) {
+    if (logEnable) {
+        console.log(...args);
+    }
+}
 
 export class TcpPortScanner {
     //
@@ -11,7 +16,7 @@ export class TcpPortScanner {
     //
     // 1. Client: Try to see if we can connect to that port. While this may be preferrable
     //    it is dangerous as we would be making connections to unknown servers that may be
-    //    expecting a particular type of client.
+    //    expecting a particular type of client and may not allow further connections
     //
     // 2. Server: See if we can create a server on that port. It is super fast on all platforms,
     //    but, we can only do this on a localhost. We use this method is we can quickly determine
@@ -35,6 +40,7 @@ export class TcpPortScanner {
      * in which case the Node.js default rules apply.
      */
     public static isPortInUse(port: number, host: string): Promise<boolean> {
+        ConsoleLog(`isPortInUse: testing port ${host}:${port}`);
         return new Promise((resolve, reject) => {
             const server = net.createServer((c) => {
             });
@@ -44,21 +50,24 @@ export class TcpPortScanner {
                     // console.log(`port ${host}:${port} is used`, code);
                     if (code === 'EACCES') {
                         // Technically, EACCES means permission denied, so we consider it as used
-                        console.log(`port ${host}:${port} returned code EACCES?`);
+                        ConsoleLog(`isPortInUse: port ${host}:${port} returned code EACCES?`);
                     }
+                    ConsoleLog(`isPortInUse: port ${host}:${port} is busy`);
                     resolve(true);				// Port in use
                 } else {
                     // This should never happen so, log it always
-                    console.log(`port ${host}:${port} unexpected error `, e);
+                    ConsoleLog(`isPortInUse: port ${host}:${port} unexpected error `, e);
                     reject(e);					// some other failure
                 }
                 server.close();
             });
 
-            server.listen(port, host, () => {
-                // Port not in use
-                // console.log(`port ${host}:${port} is in free`);
+            server.once('close', () => {
+                ConsoleLog(`isPortInUse: port ${host}:${port} is free`);
                 resolve(false);
+            });
+
+            server.listen(port, host, () => {
                 server.close();
             });
         });
@@ -72,30 +81,22 @@ export class TcpPortScanner {
      * instance 0.0.0.0, 127.0.0.1, ::1 are true aliases on some systems and distinct ones on others.
      * 
      * @param port port to use. Must be > 0 and <= 65535
-     * @param host host ip address to use.
+     * @param host host ip address to use. Ignored. All loopback addresses are checked
      */
-    public static isPortInUseEx(port: number, host: string): Promise<boolean> {
+    public static isPortInUseEx(port: number, _host: string): Promise<boolean> {
         const tries = TcpPortScanner.getLocalHostAliases();
-        let ix = 0;
-        // We don't use Promise.all method because we are trying to create a bunch of
-        // servers on the same machine/port, they could interfere with each other if you
-        // do it asynchronously/parallel.
-        // There is also a slight benefit that we can bail early if a port is in use
-        return new Promise((resolve, reject) => {
-            function next(port: number, host: string) {
-                TcpPortScanner.isPortInUse(port, host).then((inUse) => {
-                    if (inUse) {
-                        resolve(inUse);
-                    } else if (++ix === tries.length) {
-                        resolve(false);
-                    } else {
-                        next(port, tries[ix]);
-                    }
-                }).catch((err) => {
-                    reject(err);
-                });
+        const promises = tries.map((host) => TcpPortScanner.isPortInUse(port, host));
+
+        return new Promise(async (resolve, reject) => {
+            const results = await Promise.all(promises.map(p => p.then(x => x).catch(e => e)));
+            ConsoleLog(`isPortInUseEx: Results ${results}`);
+            for (const r of results) {
+                if (r !== false) {
+                    resolve(true);
+                    return;
+                }
+                resolve(false);
             }
-            next(port, tries[ix]);
         });
     }
 
@@ -121,6 +122,7 @@ export class TcpPortScanner {
                 doLog?: boolean;
             },
         host = TcpPortScanner.DefaultHost): Promise<number[]> | null {
+        logEnable = logEnable || doLog;
         let freePorts = [];
         const busyPorts = [];           // Mostly for debug
         const needed = retrieve;
@@ -130,25 +132,26 @@ export class TcpPortScanner {
                 return;
             }
             function next(port: number, host: string) {
+                ConsoleLog(`findFreePorts: ******** Next ${port}`);
                 const startTine = process.hrtime();
                 TcpPortScanner.isPortInUseEx(port, host).then((inUse) => {
                     const endTime = process.hrtime(startTine);
                     if (inUse) {
                         busyPorts.push(port);
+                        ConsoleLog(`Busy ports = ${busyPorts}`);
                     } else {
                         if (consecutive && (freePorts.length > 0) &&
                             (port !== (1 + freePorts[freePorts.length - 1]))) {
-                            if (doLog) {
-                                console.log('TcpPortHelper.find: Oops, reset for consecutive ports requirement');
-                            }
+                            ConsoleLog('TcpPortHelper.findFreePorts: Oops, reset for consecutive ports requirement');
                             freePorts = [];
                         }
                         freePorts.push(port);
+                        ConsoleLog(`Free ports = ${freePorts}`);
                     }
-                    if (doLog) {
+                    if (logEnable) {
                         const ms = (endTime[1] / 1e6).toFixed(2);
                         const t = `${endTime[0]}s ${ms}ms`;
-                        console.log(`TcpPortHelper.find Port ${host}:${port} ` +
+                        ConsoleLog(`TcpPortHelper.findFreePorts Port ${host}:${port} ` +
                             (inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ${t}`);
                     }
                     if (freePorts.length === needed) {
@@ -184,6 +187,7 @@ export class TcpPortScanner {
         const busyPorts = [];
         const needed = retrieve;
         let error = null;
+        logEnable = logEnable || doLog;
         if (needed <= 0) {
             return new Promise((resolve) => { resolve(freePorts); });
         }
@@ -200,23 +204,19 @@ export class TcpPortScanner {
                     } else {
                         if (consecutive && (freePorts.length > 0) &&
                             (port !== (1 + freePorts[freePorts.length - 1]))) {
-                            if (doLog) {
-                                console.log('TcpPortHelper.finnd: Oops, reset for consecutive requirement');
-                            }
+                            ConsoleLog('TcpPortHelper.finnd: Oops, reset for consecutive requirement');
                             freePorts = [];
                         }
                         freePorts.push(port);
                     }
-                    if (doLog) {
+                    if (logEnable) {
                         const ms = (endTime[1] / 1e6).toFixed(2);
                         const t = `${endTime[0]}s ${ms}ms`;
-                        console.log(`TcpPortHelper.find Port ${host}:${port} ` +
+                        ConsoleLog(`TcpPortHelper.find Port ${host}:${port} ` +
                             (inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ` + t);
                     }
                 }, (err) => {
-                    if (doLog) {
-                        console.error('Error on check:', err.message);
-                    }
+                    ConsoleLog('Error on check:', err.message);
                     error = err;
                 });
             if (error || (freePorts.length === needed)) {
@@ -294,13 +294,14 @@ export class TcpPortScanner {
      */
     public static waitForPortOpenOSUtl(port: number, retryTimeMs = 100, timeOutMs = 5000, fallback = true, doLog = true): Promise<void> {
         const cmd = TcpPortScanner.getOsNetProbeCmd().replace('XYZZY', port.toString());
-        if (doLog) { console.log(cmd); }
+        logEnable = logEnable || doLog;
+        ConsoleLog(cmd);
         if (fallback && (cmd === '?')) {
             return TcpPortScanner.waitForPortOpen(port, TcpPortScanner.DefaultHost, true, retryTimeMs, timeOutMs);
         }
 
         const rexStr = TcpPortScanner.OSNetProbeCmdRegexpStr.replace('XYZZY', port.toString());
-        if (doLog) { console.log(rexStr); }
+        ConsoleLog(rexStr);
         const rex = new RegExp(rexStr);
         const startTimeMs = Date.now();
         let first = true;
@@ -314,16 +315,16 @@ export class TcpPortScanner {
                     // lsof returns an error code if nothing matches. May match later
                     return reject(error);
                 } else if (rex.test(stdout)) {
-                    if (doLog) { console.log(stdout.match(rex).join('\n')); }
+                    ConsoleLog(stdout.match(rex).join('\n'));
                     return resolve();
                 } else {
                     if (first) {
-                        // if (doLog) { console.log(stdout); }
+                        // ConsoleLog(stdout);
                         first = false;
                     }
                     const t = Date.now() - startTimeMs;
                     if (t < timeOutMs) {
-                        if (doLog) { console.log(`waitForPortOpenOSUtl: Setting timeout for ${retryTimeMs}ms, curTime = ${t}ms`); }
+                        ConsoleLog(`waitForPortOpenOSUtl: Setting timeout for ${retryTimeMs}ms, curTime = ${t}ms`);
                         setTimeout(() => {
                             tryAgain(resolve, reject);
                         }, retryTimeMs);
@@ -346,7 +347,7 @@ export class TcpPortScanner {
         return new Promise(function tryAgain(resolve, reject) {
             functor(opts.port, opts.host)
                 .then((inUse) => {
-                    // console.log(`${functor.name} returned ${inUse}`)
+                    // ConsoleLog(`${functor.name} returned ${inUse}`)
                     if (inUse === opts.desiredStatus) {	// status match
                         return resolve();
                     } else {
@@ -358,7 +359,7 @@ export class TcpPortScanner {
                     } else {
                         const t = Date.now() - opts.startTimeMs;
                         if (t < opts.timeOutMs) {
-                            // console.log(`Setting timeout for ${opts.retryTimeMs}ms, curTime = ${t}ms`);
+                            // ConsoleLog(`Setting timeout for ${opts.retryTimeMs}ms, curTime = ${t}ms`);
                             setTimeout(() => {
                                 tryAgain(resolve, reject);
                             }, opts.retryTimeMs);
@@ -421,9 +422,9 @@ export class TcpPortScanner {
     private static localHostAliases: string[] = [];
     protected static getLocalHostAliases(): string[] {
         if (TcpPortScanner.localHostAliases.length === 0) {
-            // On Unixes, the first two are treated like true aliases but on Windows
-            // you have distint servers on all of them. So, try everything.
-            TcpPortScanner.localHostAliases = ['0.0.0.0', '127.0.0.1', ''];
+            // On Unixes, the two are treated like true aliases but on Windows
+            // you can have distint servers on all of them. So, try everything.
+            TcpPortScanner.localHostAliases = ['127.0.0.1', '0.0.0.0'];
             const ifaces = os.networkInterfaces();
             Object.keys(ifaces).forEach((ifname) => {
                 ifaces[ifname].forEach((iface) => {
@@ -435,7 +436,7 @@ export class TcpPortScanner {
                     }
                 });
             });
-            // console.log(aliases.join(','));
+            // ConsoleLog(aliases.join(','));
         }
         return TcpPortScanner.localHostAliases;
     }
