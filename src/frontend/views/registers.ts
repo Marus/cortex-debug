@@ -127,6 +127,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
         });
 
         try {
+            fs.mkdirSync(path.dirname(fspath), { recursive: true });
             fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
         }
         catch (e) {
