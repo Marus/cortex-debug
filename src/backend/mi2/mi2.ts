@@ -37,6 +37,7 @@ export class MI2 extends EventEmitter implements IBackend {
     protected process: ChildProcess.ChildProcess;
     protected stream;
     protected firstStop: boolean = true;
+    protected exited: boolean = false;
     
     constructor(public application: string, public args: string[]) {
         super();
@@ -52,7 +53,7 @@ export class MI2 extends EventEmitter implements IBackend {
             this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
             this.process.stdout.on('data', this.stdout.bind(this));
             this.process.stderr.on('data', this.stderr.bind(this));
-            this.process.on('exit', (() => { this.emit('quit'); }).bind(this));
+            this.process.on('exit', this.onExit.bind(this));
             this.process.on('error', ((err) => { this.emit('launcherror', err); }).bind(this));
 
             const asyncPromise = this.sendCommand('gdb-set target-async on', true);
@@ -64,6 +65,12 @@ export class MI2 extends EventEmitter implements IBackend {
                 resolve();
             }, reject);
         });
+    }
+
+    private onExit() {
+        console.log('GDB: exited')
+        this.exited = true;
+        this.emit('quit');
     }
 
     private stdout(data) {
@@ -234,12 +241,14 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private tryKill() {
-        const proc = this.process;
-        try {
-            process.kill(-proc.pid);
-        }
-        catch (e) {
-            this.log('log', `kill failed for ${-proc.pid}` + e);
+        if (!this.exited) {
+            const proc = this.process;
+            try {
+                process.kill(-proc.pid);
+            }
+            catch (e) {
+                this.log('log', `kill failed for ${-proc.pid}` + e);
+            }
         }
     }
     
@@ -247,21 +256,25 @@ export class MI2 extends EventEmitter implements IBackend {
         if (trace) {
             this.log('stderr', 'stop');
         }
-        const proc = this.process;
-        const to = setTimeout(() => { this.tryKill(); }, 1000);
-        this.process.on('exit', (code) => { clearTimeout(to); });
-        // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
-        // program is in paused state
-        await this.sendCommand('target-disconnect');
-        this.sendRaw('-gdb-exit');
+        if (!this.exited) {
+            const proc = this.process;
+            const to = setTimeout(() => { this.tryKill(); }, 1000);
+            this.process.on('exit', (code) => { clearTimeout(to); });
+            // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
+            // program is in paused state
+            await this.sendCommand('target-disconnect');
+            this.sendRaw('-gdb-exit');
+        }
     }
 
-    public async detach() {
+    public detach() {
         if (trace) {
             this.log('stderr', 'detach');
         }
-        await this.sendCommand('target-detach');
-        this.stop();
+        this.sendCommand('target-detach');  // This may not be successful, go ahead and stop gdb as well
+        setTimeout(() => {
+            this.stop();
+        }, 5);
     }
 
     public interrupt(arg: string = ''): Thenable<boolean> {

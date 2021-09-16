@@ -65,12 +65,15 @@ export class GDBServer extends EventEmitter {
 
     public exit(): void {
         if (this.process) {
+            console.log('GDBServer: forcing an exit')
             this.process.kill();
             this.process = null;
         }
     }
 
     private onExit(code, signal) {
+        console.log('GDBServer: exited')
+        this.process = null;
         this.emit('exit', code, signal);
         this.disconnectConsole();
     }

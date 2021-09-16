@@ -952,7 +952,7 @@ export class GDBDebugSession extends DebugSession {
                 finally {
                     this.sendResponse(response);
                 }
-            }, 50);
+            }, 500);
         };
 
         this.disableSendStoppedEvents = true;
