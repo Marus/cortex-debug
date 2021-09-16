@@ -3,7 +3,7 @@ import net = require('net');
 import child_process = require('child_process');
 import command_exists = require('command-exists');
 
-let logEnable = true;
+let logEnable = false;
 function ConsoleLog(...args: any) {
     if (logEnable) {
         console.log(...args);
