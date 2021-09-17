@@ -34,10 +34,10 @@ export class SymbolTable {
     // The following are caches that are either created on demand or on symbol load. Helps performance
     // on large executables since most of our searches are linear. Or, to avoid a search entirely if possible
     // Case sensitivity for path names is an issue: We follow just what gcc records so inherently case-sensitive
-    // or case-preserving. We don't try to re-interpret/massage those path-names. Maybe later
+    // or case-preserving. We don't try to re-interpret/massage those path-names. Maybe later.
     //
     // TODO: Support for source-maps for both gdb and for symbol/file lookups
-    // TODO: some of the arrays below should be maps. Later
+    // TODO: some of the arrays below should be maps. Later.
     private staticsByFile: {[file: string]: SymbolInformation[]} = {};
     private globalVars: SymbolInformation[] = [];
     private globalFuncsMap: {[key: string]: SymbolInformation} = {};    // Key is function name
@@ -50,28 +50,23 @@ export class SymbolTable {
 
     /**
      * Most symbol tables are manageable in size. Problem is by default, `objdump --syms` does not give
-     * give you actual file names, Just base file name. Well, that only works if all files are compiled
-     * in the current directory of source but you can have duplicates. We use the '-Wi' to dump debug section
-     * to determine all the compilation units and the directory they were from (relative path and a dir)
-     * Gdb uses the relative path (and the full path). This is needed when looking up static vars/funcs
-     *
-     * Most symbol tables are manageable in size. Problem is by default, `objdump --syms` does not give
-     * give you actual file names, Just base file name. Well, that only works if all files are compiled
+     * give you actual file names, just base file name. Well, that only works if all files are compiled
      * in the current directory of source and you can have duplicates. We use the '-Wi' to dump debug section
      * to determine all the compilation units and the directory they were from (relative path and a dir)
-     * Gdb uses the relative path (and the full path). This is needed when looking up static vars/funcs
+     * Gdb uses the relative path (and the full path). This is needed when looking up static vars/funcs.
      *
      * Problem is `-Wi` produces extremely huge output, that default `spawnSync` buffer overflows and we
-     * get truncated results. So we have to output to a file and read that file. Hope we all have SSDs
+     * get truncated results. So we have to output to a file and read that file. Hope we all have SSDs...
      *
      * Next problem is parsing line by line is very slow. We are talking multiple seconds even on a fast
      * machine. So, we try to parse the objdump output without converting to lines. The file mapping produced
      * by -Wi can be so large that we have to cache it in a tmp dir. So, we use the '-Wi' sparingly. For
-     * now, we do not cache the actual symbols because that JSON file would become huge. It is fasterr to
-     * re-parse the objdump output
+     * now, we do not cache the actual symbols because that JSON file would become huge. It is faster to
+     * re-parse the objdump output each time.
      * 
      * Even using the '-Wi', it is not bullet proof in matching sym-table to file names. A lot more work
-     * would be needed to do that. Wish gdb could give us that info rather than using objdump
+     * would be needed to do that. Wish gdb could give us that info rather than using objdump, but testing
+     * showed that it is both complex (including demangling C++ and Rust) and very slow.
      */
 
     public loadSymbols() {
@@ -174,7 +169,7 @@ export class SymbolTable {
                     if (scope === SymbolScope.Global) {
                         this.globalVars.push(sym);
                     } else {
-                        // These fail gdb create-vars. So ignoring them. C++ generates them
+                        // These fail gdb create-vars. So ignoring them. C++ generates them.
                         if (debugConsoleLogging) {
                             console.log('SymbolTable: ignoring non local object: ' + sym.name);
                         }
@@ -182,7 +177,7 @@ export class SymbolTable {
                 }
             } else if (sym.file) {
                 // Yes, you can have statics with no file association in C++. They are neither
-                // truly global or local. Some can be considered global but not sure how to filter
+                // truly global or local. Some can be considered global but not sure how to filter.
                 if (type === SymbolType.Object) {
                     this.staticVars.push(sym);
                 } else if (type === SymbolType.Function) {
@@ -276,7 +271,7 @@ export class SymbolTable {
                     const compDir = RegExp(COMP_DIR_REGEX);
                     match = compDir.exec(match[3]);
                     if (match) {
-                        // Do not use path.join below. Match[1] can be in non-native form. Will be fixed by addToFileMap
+                        // Do not use path.join below. Match[1] can be in non-native form. Will be fixed by addToFileMap.
                         this.addToFileMap(curSimpleName, match[2] + '/' + curName);
                     }
                     counter++;
