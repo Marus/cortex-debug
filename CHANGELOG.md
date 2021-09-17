@@ -1,5 +1,9 @@
 ChangeLog
 
+#V0.4.5-pre1
+* Issues #482 and #481 partially addressed
+* Integrated PR #480 -- creates .vscode director if it doesn't exist for saving register/perpheral states.
+
 # V0.4.4
 
 New Features
