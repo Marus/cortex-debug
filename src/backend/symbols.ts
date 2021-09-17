@@ -66,7 +66,7 @@ export class SymbolTable {
      * 
      * Even using the '-Wi', it is not bullet proof in matching sym-table to file names. A lot more work
      * would be needed to do that. Wish gdb could give us that info rather than using objdump, but testing
-     * showed that it is both complex (including demangling C++ and Rust) and very slow.
+     * showed that it is both complex and very slow.
      */
 
     public loadSymbols() {
