@@ -125,7 +125,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
             return mds;
         }
 
-        const hex = this.getFormattedValue(NumberFormat.Hexidecimal);
+        const hex = this.getFormattedValue(NumberFormat.Hexadecimal);
         const decimal = this.getFormattedValue(NumberFormat.Decimal);
         const binary = this.getFormattedValue(NumberFormat.Binary);
         

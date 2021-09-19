@@ -11,7 +11,7 @@ export enum CortexDebugKeys {
 
 export enum NumberFormat {
     Auto = 0,
-    Hexidecimal,
+    Hexadecimal,
     Decimal,
     Binary
 }
