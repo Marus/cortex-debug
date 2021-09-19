@@ -232,9 +232,9 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 * Changed core registers to be displayed using their "natural" formatting:
 	* `rXX` in decimal
 	* `sXX` in floating point
-	* stack pointers (`sp`, `msp`, `psp`) in hexidecimal
-	* program counter (`pc`) in hexidecimal with corresponding symbol location if available
-	* xPSR/cPSR/Control in hexidecimal (this is overridden from the GDB defaults for those registers)
+	* stack pointers (`sp`, `msp`, `psp`) in hexadecimal
+	* program counter (`pc`) in hexadecimal with corresponding symbol location if available
+	* xPSR/cPSR/Control in hexadecimal (this is overridden from the GDB defaults for those registers)
 
 	Note that with this change the ability to set formatting for these registers has been disabled; a more flexible formatting solution will be re-added in the future. You can also use a Watch expression for a register to the desired $reg,format to get the format you desire. For instance `$r0,x` will display the register value of `r0` in hexadecimal format.
 * Major refactor of the code for the Core Register and Peripheral Register displays; along with bringing (hopefully) improved formatting and UX to this views will make the code much easier to maintain and expand in the future.

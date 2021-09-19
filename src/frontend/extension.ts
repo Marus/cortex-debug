@@ -328,7 +328,7 @@ export class CortexDebugExtension {
         }
 
         vscode.window.showInputBox({
-            placeHolder: 'Enter a valid C/gdb expression. Use 0x prefix for hexidecimal numbers',
+            placeHolder: 'Enter a valid C/gdb expression. Use 0x prefix for hexadecimal numbers',
             ignoreFocusOut: true,
             prompt: 'Memory Address'
         }).then(
@@ -341,7 +341,7 @@ export class CortexDebugExtension {
                 }
 
                 vscode.window.showInputBox({
-                    placeHolder: 'Enter a constant value. Prefix with 0x for hexidecimal format.',
+                    placeHolder: 'Enter a constant value. Prefix with 0x for hexadecimal format.',
                     ignoreFocusOut: true,
                     prompt: 'Length'
                 }).then(
@@ -401,7 +401,7 @@ export class CortexDebugExtension {
     private async peripheralsSetFormat(node: PeripheralBaseNode): Promise<void> {
         const result = await vscode.window.showQuickPick([
             { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
-            { label: 'Hex', description: 'Format value in hexidecimal', value: NumberFormat.Hexidecimal },
+            { label: 'Hex', description: 'Format value in hexadecimal', value: NumberFormat.Hexadecimal },
             { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
             { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
         ]);

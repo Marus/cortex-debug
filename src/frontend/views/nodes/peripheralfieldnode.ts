@@ -190,7 +190,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
             case NumberFormat.Binary:
                 formatted = binaryFormat(value, this.width);
                 break;
-            case NumberFormat.Hexidecimal:
+            case NumberFormat.Hexadecimal:
                 formatted = hexFormat(value, Math.ceil(this.width / 4), true);
                 break;
             default:
@@ -252,7 +252,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
                 return value.toString();
             case NumberFormat.Binary:
                 return binaryFormat(value, this.width);
-            case NumberFormat.Hexidecimal:
+            case NumberFormat.Hexadecimal:
                 return hexFormat(value, Math.ceil(this.width / 4), true);
             default:
                 return this.width >= 4 ? hexFormat(value, Math.ceil(this.width / 4), true) : binaryFormat(value, this.width);
