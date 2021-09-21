@@ -72,7 +72,7 @@ export class GDBServer extends EventEmitter {
     }
 
     private onExit(code, signal) {
-        console.log('GDBServer: exited')
+        console.log(`GDBServer: exited ${code} ${signal}`);
         this.process = null;
         this.emit('exit', code, signal);
         this.disconnectConsole();

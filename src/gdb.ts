@@ -110,7 +110,6 @@ export class GDBDebugSession extends DebugSession {
     protected started: boolean;
     protected debugReady: boolean;
     protected miDebugger: MI2;
-    protected commandServer: net.Server;
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
     // currentThreadId is the currently selected thread or where execution has stopped. It not very
@@ -947,8 +946,27 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
+        let bkptsDeleted = false;
         const doDisconnectProcessing = () => {
-            this.miDebugger.sendCommand('break-delete');
+            if (!bkptsDeleted) {
+                this.miDebugger.sendCommand('break-delete');
+            }
+            this.disableSendStoppedEvents = false;
+            this.attached = false;
+            let to = setTimeout(() => {      // Give gdb a chance to disconnect and exit normally
+                to = null;
+                try {
+                    this.server.exit();
+                }
+                catch (e) {}
+            }, 600);    // Bit more than gbd-kill
+            this.server.once('exit', () => {
+                if (to) {
+                    clearTimeout(to);
+                }
+                this.sendResponse(response);
+            });
+
             if (args.terminateDebuggee || args.suspendDebuggee) {
                 // There is no such thing as terminate for us. Hopefully, the gdb-server will
                 // do the right thing and remain in halted state
@@ -958,29 +976,25 @@ export class GDBDebugSession extends DebugSession {
                 // should continue
                 this.miDebugger.detach();
             }
-            this.attached = false;
-            if (this.commandServer) {
-                this.commandServer.close();
-                this.commandServer = undefined;
-            }
-            setTimeout(() => {      // Give gdb a chance to disconnect and exit normally
-                try {
-                    this.disableSendStoppedEvents = false;
-                    this.server.exit();
-                }
-                catch (e) {}
-                finally {
-                    this.sendResponse(response);
-                }
-            }, 600);    // Bit more than gbd-kill
         };
 
         this.disableSendStoppedEvents = true;
         if (this.miDebugger) {
+            if (this.stopped) {
+                bkptsDeleted = true;
+                this.miDebugger.sendCommand('break-delete');                
+            }
+             let deferred = false;
             if (/*(this.attached && !this.stopped) || */ args.terminateDebuggee || args.suspendDebuggee) {
-                this.miDebugger.once('generic-stopped', doDisconnectProcessing);
-                this.miDebugger.sendCommand('exec-interrupt');
-            } else {
+                if (!this.stopped) {
+                    deferred = true;
+                    this.miDebugger.once('generic-stopped', doDisconnectProcessing);
+                    this.miDebugger.sendCommand('exec-interrupt');
+                }
+            } else if (this.stopped) {
+                this.sendContinue(true);
+            }
+            if (!deferred) {
                 doDisconnectProcessing();
             }
         }
