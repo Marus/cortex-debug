@@ -1,6 +1,6 @@
 ChangeLog
 
-#V0.4.5-pre2
+#V0.4.5-pre3
 * Support for resume/suspend after Launch/Attach. With new features added to VSCode, the Stop button (after `Launch`) can now also be used for a Disconnect using keyboard shortcuts. The reverse is true when using an `Attach` type session. But this requires co-operation from the gdb-server to comply. Certain versions of OpenOCD do comply, JLink always seems to resume.
 * Issues #482 and #481 partially addressed
 * Integrated PR #480 -- creates .vscode director if it doesn't exist for saving register/peripheral states.
