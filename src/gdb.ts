@@ -600,11 +600,13 @@ export class GDBDebugSession extends DebugSession {
 
         if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
             if (!commands) { commands = []; }
-            this.continuing = true;
+            // Since this is part of startup/reset/restart, don't set this flag. Interfers if we continue afger reset (Jlink)
+            // this.continuing = true;
             commands.push('-exec-continue');
         } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (!commands || (commands.length === 0))) {
             // This function is not called if 'runToEntryPoint' was used
-            this.continuing = true;
+            // Since this is part of startup/reset/restart, don't set this flag. Interfers if we continue afger reset (Jlink)
+            // this.continuing = true;
             commands = ['-exec-continue'];
         }
 
