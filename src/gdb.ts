@@ -130,6 +130,7 @@ export class GDBDebugSession extends DebugSession {
 
     private stopped: boolean = false;
     private stoppedReason: string = '';
+    private continuing: boolean = false;
 
     // stoppedThreadId represents where execution stopped because of a pause, exception, step or breakpoint
     // Generally continuing execution can only work from that thread for embedded processors. It is bit
@@ -180,6 +181,8 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsSetVariable = true;
         response.body.supportsRestartRequest = true;
         response.body.supportsGotoTargetsRequest = true;
+        response.body.supportSuspendDebuggee = true;
+        response.body.supportTerminateDebuggee = true;
         this.sendResponse(response);
     }
 
@@ -294,6 +297,7 @@ export class GDBDebugSession extends DebugSession {
         this.started = false;
         this.debugReady = false;
         this.stopped = false;
+        this.continuing = false;
         this.activeThreadIds.clear();
 
         const totalPortsNeeded = this.calculatePortsNeeded();
@@ -466,22 +470,23 @@ export class GDBDebugSession extends DebugSession {
                     const launchComplete = () => {
                         this.disableSendStoppedEvents = false;
                         if (!this.args.noDebug) {
-                                setTimeout(() => {
+                            setTimeout(() => {
+                                this.continuing = false;
                                 this.stopped = true;
                                 this.stoppedReason = 'start';
                                 this.stoppedThreadId = this.currentThreadId;
                                 this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
                                 this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
-                            }, 50);
+                            }, 40); // Less delay than 'runPostStartSessionCommands'
                         }
                     };
 
                     const runPostStartSession = () => {
                         if (this.configDone) {
-                            this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH);
+                            this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH, 50);
                         } else {
                             this.onConfigDone.once('done', () => {
-                                this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH);
+                                this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH, 50);
                             });
                         }
                     };
@@ -494,10 +499,10 @@ export class GDBDebugSession extends DebugSession {
                             // during setting of any additional breakpoints. Note that configDone may already
                             // have happened if there were no user breakpoints.
                             if (this.configDone) {
-                                this.miDebugger.sendCommand('exec-continue');
+                                this.sendContinue();
                             } else {
                                 this.onConfigDone.once('done', () => {
-                                    this.miDebugger.sendCommand('exec-continue');
+                                    this.sendContinue();
                                 });
                             }
                         }, (err) => {
@@ -534,6 +539,15 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
             this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    private async sendContinue(wait: boolean = false) {
+        this.continuing = true;
+        if (wait) {
+            await this.miDebugger.sendCommand('exec-continue');
+        } else {
+            this.miDebugger.sendCommand('exec-continue');
+        }
     }
 
     // When we have a multi-core device, we have to allocate as many ports as needed
@@ -587,9 +601,11 @@ export class GDBDebugSession extends DebugSession {
 
         if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
             if (!commands) { commands = []; }
+            this.continuing = true;
             commands.push('-exec-continue');
         } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (!commands || (commands.length === 0))) {
             // This function is not called if 'runToEntryPoint' was used
+            this.continuing = true;
             commands = ['-exec-continue'];
         }
 
@@ -647,11 +663,11 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
             case 'read-memory':
-                if (this.stopped === false) { return ; }
+                if (!this.stopped || this.continuing) { return ; }
                 this.readMemoryRequestCustom(response, args['address'], args['length']);
                 break;
             case 'write-memory':
-                if (this.stopped === false) { return ; }
+                if (!this.stopped || this.continuing) { return ; }
                 this.writeMemoryRequestCustom(response, args['address'], args['data']);
                 break;
             case 'set-var-format':
@@ -660,12 +676,12 @@ export class GDBDebugSession extends DebugSession {
                 this.setGdbOutputRadix();
                 break;
             case 'read-registers':
-                if (this.stopped === false) { return ; }
+                if (!this.stopped || this.continuing) { return ; }
                 this.args.registerUseNaturalFormat = (args && args.hex) ? false : true;
                 this.readRegistersRequest(response);
                 break;
             case 'read-register-list':
-                if (this.stopped === false) { return ; }
+                if (!this.stopped || this.continuing) { return ; }
                 this.readRegisterListRequest(response);
                 break;
             case 'disassemble':
@@ -933,12 +949,16 @@ export class GDBDebugSession extends DebugSession {
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
         const doDisconnectProcessing = () => {
             this.miDebugger.sendCommand('break-delete');
-            if (this.attached) {
-                this.attached = false;
-                this.miDebugger.detach();
-            } else {
+            if (args.terminateDebuggee || args.suspendDebuggee) {
+                // There is no such thing as terminate for us. Hopefully, the gdb-server will
+                // do the right thing and remain in halted state
                 this.miDebugger.stop();
+            } else {
+                // If the gdb-server behaves like gdb (and us) expects it do, then the program
+                // should continue
+                this.miDebugger.detach();
             }
+            this.attached = false;
             if (this.commandServer) {
                 this.commandServer.close();
                 this.commandServer = undefined;
@@ -952,12 +972,12 @@ export class GDBDebugSession extends DebugSession {
                 finally {
                     this.sendResponse(response);
                 }
-            }, 500);
+            }, 600);    // Bit more than gbd-kill
         };
 
         this.disableSendStoppedEvents = true;
         if (this.miDebugger) {
-            if (this.attached && !this.stopped) {
+            if (/*(this.attached && !this.stopped) || */ args.terminateDebuggee || args.suspendDebuggee) {
                 this.miDebugger.once('generic-stopped', doDisconnectProcessing);
                 this.miDebugger.sendCommand('exec-interrupt');
             } else {
@@ -991,6 +1011,7 @@ export class GDBDebugSession extends DebugSession {
                 setTimeout(() => {
                     const isReset = (args as any).isReset;
                     if (!this.args.noDebug) {
+                        this.continuing = false;
                         this.stopped = true;        // This should aleady be true??
                         this.stoppedReason = isReset ? 'reset' : 'restart';
                         this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
@@ -1057,6 +1078,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected handleRunning(info: MINode) {
         this.stopped = false;
+        this.continuing = false;
         this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
         this.sendEvent(new CustomContinuedEvent(this.currentThreadId, true));
     }
@@ -1080,6 +1102,7 @@ export class GDBDebugSession extends DebugSession {
     }
     
     protected handleBreakpoint(info: MINode) {
+        this.continuing = false;
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
         this.findPausedThread(info);
@@ -1092,6 +1115,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected handleBreak(info: MINode) {
+        this.continuing = false;
         this.stopped = true;
         this.stoppedReason = 'step';
         this.findPausedThread(info);
@@ -1111,6 +1135,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected handlePause(info: MINode) {
+        this.continuing = false;
         this.stopped = true;
         this.stoppedReason = 'user request';
         this.findPausedThread(info);
@@ -1180,6 +1205,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected stopEvent(info: MINode, reason: string = 'exception') {
         if (!this.quit) {
+            this.continuing = false;
             this.stopped = true;
             this.stoppedReason = reason;
             this.findPausedThread(info);
@@ -1282,7 +1308,7 @@ export class GDBDebugSession extends DebugSession {
                 this.sendErrorResponse(response, 10, msg.toString());
             }
             if (shouldContinue) {
-                await this.miDebugger.sendCommand('exec-continue');
+                this.sendContinue(true);
             }
         };
 
@@ -1378,7 +1404,7 @@ export class GDBDebugSession extends DebugSession {
             }
 
             if (shouldContinue) {
-                await this.miDebugger.sendCommand('exec-continue');
+                this.sendContinue(true);
             }
         };
 
@@ -1398,7 +1424,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        if (!this.stopped || this.disableSendStoppedEvents) {
+        if (!this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { threads: [] };
             this.sendResponse(response);
             return Promise.resolve();
@@ -1768,6 +1794,11 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        if (!this.stopped || this.disableSendStoppedEvents || this.continuing) {
+            response.body = { variables: [] };
+            this.sendResponse(response);
+            return Promise.resolve();
+        }
         const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
