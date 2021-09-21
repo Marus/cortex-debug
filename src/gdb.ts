@@ -68,6 +68,7 @@ const VAR_HANDLES_START = 0x020000;
 
 const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${ c.replace(/"/g, '\\"') }"`;
 
+// let dbgResumeStopCounter = 0;
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
         reason: string,
@@ -77,6 +78,8 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 
     constructor(reason: string, threadID: number) {
         super('custom-stop', { reason: reason, threadID: threadID });
+        // console.log(`${dbgResumeStopCounter} **** Stopped reason:${reason} thread:${threadID}`);
+        // dbgResumeStopCounter++;
     }
 }
 
@@ -89,6 +92,8 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
 
     constructor(threadID: number, allThreads: boolean = true) {
         super('custom-continued', { threadID: threadID, allThreads: allThreads });
+        // console.log(`${dbgResumeStopCounter} **** Running thread:${threadID}`);
+        // dbgResumeStopCounter++;
     }
 }
 
@@ -298,6 +303,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = false;
         this.continuing = false;
         this.activeThreadIds.clear();
+        // dbgResumeStopCounter = 0;
 
         const totalPortsNeeded = this.calculatePortsNeeded();
         const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
@@ -600,13 +606,9 @@ export class GDBDebugSession extends DebugSession {
 
         if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
             if (!commands) { commands = []; }
-            // Since this is part of startup/reset/restart, don't set this flag. Interfers if we continue afger reset (Jlink)
-            // this.continuing = true;
             commands.push('-exec-continue');
         } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (!commands || (commands.length === 0))) {
-            // This function is not called if 'runToEntryPoint' was used
-            // Since this is part of startup/reset/restart, don't set this flag. Interfers if we continue afger reset (Jlink)
-            // this.continuing = true;
+            // Note: This function is not called if 'runToEntryPoint' was used
             commands = ['-exec-continue'];
         }
 
