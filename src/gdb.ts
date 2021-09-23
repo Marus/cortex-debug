@@ -398,14 +398,13 @@ export class GDBDebugSession extends DebugSession {
             }, GDBServer.SERVER_TIMEOUT);
 
             this.serverController.serverLaunchStarted();
-            this.server.init().then((started) => {
+            this.server.init().then(async (started) => {
                 if (timeout) {
                     clearTimeout(timeout);
                     timeout = null;
                 }
 
-                this.serverController.serverLaunchCompleted();
-                
+                await this.serverController.serverLaunchCompleted();
                 let gdbargs = ['-q', '--interpreter=mi2'];
                 gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
 

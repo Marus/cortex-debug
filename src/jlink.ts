@@ -186,7 +186,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     }
 
     public serverLaunchStarted(): void {}
-    public serverLaunchCompleted(): void {
+    public serverLaunchCompleted(): Promise<void> {
         if (this.args.swoConfig.enabled) {
             if ((this.args.swoConfig.source === 'probe') || (this.args.swoConfig.source === 'socket')) {
                 const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
@@ -200,6 +200,18 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 }));
             }
         }
+
+        /* The JLink Server will output its initMatch line before it's actually ready to
+         * process commands from a GDB client. This causes the JLink server's state to fall out of
+         * sync with the debugger chip from the beginning, and the GDB client will fail to start
+         * the processor correctly. This typically surfaces as a "Failed to start CPU" line in
+         * the Adapter output and all registers read as 0xdeadbeee or 0xdeadbeef until the debugger
+         * chip is reset with "monitor reset".
+         *
+         * Sleep for 500ms at the end of the server launch to give the JLink server time to
+         * settle:
+         */
+        return new Promise(resolve => setTimeout(resolve, 500));
     }
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {

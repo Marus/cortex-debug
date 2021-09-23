@@ -267,7 +267,7 @@ export interface GDBServerController extends EventEmitter {
     serverArguments(): string[];
     initMatch(): RegExp;
     serverLaunchStarted(): void;
-    serverLaunchCompleted(): void;
+    serverLaunchCompleted(): Promise<void> | void;
     debuggerLaunchStarted(): void;
     debuggerLaunchCompleted(): void;
 }
