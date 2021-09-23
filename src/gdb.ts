@@ -498,7 +498,16 @@ export class GDBDebugSession extends DebugSession {
 
                     if (!this.args.noDebug && this.args.runToEntryPoint) {
                         this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
-                            this.miDebugger.once('generic-stopped', launchComplete);
+                            const timeout = setTimeout(() => {
+                                this.handleMsg('stderr', `Run to ${this.args.runToEntryPoint} timed out.`);
+                                this.miDebugger.interrupt();
+                            }, 3000);
+
+                            this.miDebugger.once('generic-stopped', () => {
+                                clearTimeout(timeout);
+                                launchComplete();
+                            });
+
                             // To avoid race conditions between finishing configuration, we should stay
                             // in stopped mode. Or, we end up clobbering the stopped event that might come
                             // during setting of any additional breakpoints. Note that configDone may already
