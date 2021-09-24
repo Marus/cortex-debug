@@ -1308,23 +1308,47 @@ export class GDBDebugSession extends DebugSession {
             await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
             this.functionBreakpoints = [];
 
-            const all = [];
+            const all = new Array<Promise<Breakpoint | MIError>>();
             args.breakpoints.forEach((brk) => {
-                all.push(this.miDebugger.addBreakPoint({ raw: brk.name, condition: brk.condition, countCondition: brk.hitCondition }));
+                all.push(
+                    this.miDebugger.addBreakPoint({
+                        raw: brk.name,
+                        condition: brk.condition,
+                        countCondition: brk.hitCondition,
+                    }).catch((err: MIError) => err)
+                );
             });
-            
+
             try {
                 const breakpoints = await Promise.all(all);
-                const finalBrks = [];
-                breakpoints.forEach((brkp) => {
-                    this.functionBreakpoints.push(brkp.number);
-                    finalBrks.push({
-                        source: brkp.file,
-                        line: brkp.line,
-                        id: brkp.number,
-                        verified: true
-                    });
-                });
+                const finalBrks: DebugProtocol.Breakpoint[] = breakpoints.map(
+                    (brkp) => {
+                        if (brkp instanceof MIError) {
+                            /* Failed breakpoints should be reported with
+                             * verified: false, so they can be greyed out
+                             * in the UI. The attached message will be
+                             * presented as a tooltip.
+                             */
+                            return {
+                                verified: false,
+                                message: brkp.message,
+                            };
+                        }
+
+                        this.functionBreakpoints.push(brkp.number);
+
+                        return {
+                            source: {
+                                path: brkp.file,
+                                name: brkp.raw
+                            },
+                            line: brkp.line,
+                            id: brkp.number,
+                            verified: true,
+                        } as DebugProtocol.Breakpoint;
+                    }
+                );
+
                 response.body = {
                     breakpoints: finalBrks
                 };
@@ -1361,7 +1385,7 @@ export class GDBDebugSession extends DebugSession {
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
                 this.breakpointMap.set(args.source.path, []);
                 
-                const all: Array<Promise<Breakpoint>> = [];
+                const all: Array<Promise<Breakpoint | MIError>> = [];
                 const sourcepath = decodeURIComponent(args.source.path);
 
                 if (sourcepath.startsWith('disassembly:/')) {
@@ -1392,7 +1416,16 @@ export class GDBDebugSession extends DebugSession {
                                     condition: brk.condition,
                                     countCondition: brk.hitCondition,
                                     raw: line.address
-                                }));
+                                }).catch((err: MIError) => err));
+                            } else {
+                                all.push(
+                                    Promise.resolve(
+                                        new MIError(
+                                            `${func} only contains ${symbol.instructions.length} instructions`,
+                                            "Set breakpoint"
+                                        )
+                                    )
+                                );
                             }
                         });
                     }
@@ -1404,16 +1437,26 @@ export class GDBDebugSession extends DebugSession {
                             line: brk.line,
                             condition: brk.condition,
                             countCondition: brk.hitCondition
-                        }));
+                        }).catch((err: MIError) => err));
                     });
                 }
 
                 const brkpoints = await Promise.all(all);
 
-                const finalBrks: Breakpoint[] = brkpoints.filter((bp) => bp !== null);
-
                 response.body = {
-                    breakpoints: finalBrks.map((bp) => {
+                    breakpoints: brkpoints.map((bp) => {
+                        if (bp instanceof MIError) {
+                            /* Failed breakpoints should be reported with
+                             * verified: false, so they can be greyed out
+                             * in the UI. The attached message will be
+                             * presented as a tooltip.
+                             */
+                            return {
+                                verified: false,
+                                message: bp.message,
+                            } as DebugProtocol.Breakpoint;
+                        }
+
                         return {
                             line: bp.line,
                             id: bp.number,
@@ -1422,7 +1465,7 @@ export class GDBDebugSession extends DebugSession {
                     })
                 };
 
-                this.breakpointMap.set(args.source.path, finalBrks);
+                this.breakpointMap.set(args.source.path, brkpoints.filter((bp) => !(bp instanceof MIError)) as Breakpoint[]);
                 this.sendResponse(response);
             }
             catch (msg) {

@@ -438,7 +438,7 @@ export class MI2 extends EventEmitter implements IBackend {
                             if (result.resultRecords.resultClass === 'done') {
                                 resolve(breakpoint);
                             } else {
-                                resolve(null);
+                                reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint condition`));
                             }
                         }, reject);
                     }
@@ -447,7 +447,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     }
                 }
                 else {
-                    resolve(null);
+                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${location}`));
                 }
             }, reject);
         });
