@@ -105,6 +105,7 @@ export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     logfile: string;    // log IO to file
     inputmode: TerminalInputMode;
     iencoding: TextEncoding;       // Encoding used for input
+    timestamp: boolean;
     // Binary only options
     scale: number;
     encoding: BinaryEncoding;

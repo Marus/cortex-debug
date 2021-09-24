@@ -63,17 +63,35 @@ export class GDBServer extends EventEmitter {
         });
     }
 
+    private exitTimeout: NodeJS.Timeout = null;
     public exit(): void {
         if (this.process) {
-            console.log('GDBServer: forcing an exit')
-            this.process.kill();
-            this.process = null;
+            try {
+                console.log('GDBServer: forcing an exit with SIGNINT');
+                // A log of gdb-servers want to recieve an Control-C equivalent first, so try that for
+                // a bit more graceful exit
+                this.process.kill('SIGINT');
+                setTimeout(() => {
+                    if (process != null) {      // Still not dead?
+                        console.log('GDBServer: forcing an exit with SIGTERM');
+                        this.process.kill();
+                    }
+                    this.process = null;
+                } , 1000);
+            }
+            catch (e) {
+                console.log(`Tring to force and exit failed ${e}`);
+            }
         }
     }
 
     private onExit(code, signal) {
         console.log(`GDBServer: exited ${code} ${signal}`);
         this.process = null;
+        if (this.exitTimeout) {
+            clearTimeout(this.exitTimeout);
+            this.exitTimeout = null;
+        }
         this.emit('exit', code, signal);
         this.disconnectConsole();
     }

@@ -673,6 +673,11 @@
                                                             "type": "string",
                                                             "default": ""
                                                         },
+                                                        "timestamp": {
+                                                            "description": "Add timestamps while printing for 'console' type. 'binary' type always prints timestamps",
+                                                            "type": "boolean",
+                                                            "default": false
+                                                        },
                                                         "encoding": {
                                                             "type": "string",
                                                             "description": "How binary data bytes are converted into a number. All little-endian",
@@ -1506,6 +1511,11 @@
                                                             "description": "log all raw data (input and output) to specified file",
                                                             "type": "string",
                                                             "default": ""
+                                                        },
+                                                        "timestamp": {
+                                                            "description": "Add timestamps while printing for 'console' type. 'binary' type always prints timestamps",
+                                                            "type": "boolean",
+                                                            "default": false
                                                         },
                                                         "encoding": {
                                                             "type": "string",

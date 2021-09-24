@@ -147,6 +147,8 @@ export class MI2 extends EventEmitter implements IBackend {
                         this.handlers[parsed.token](parsed);
                         delete this.handlers[parsed.token];
                         handled = true;
+                    } else {
+                        this.log('stderr', `Internal Error? Multiple results or no handler for query token '${parsed.token}''`);
                     }
                 }
                 if (!handled && parsed.resultRecords && parsed.resultRecords.resultClass === 'error') {

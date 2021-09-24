@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent, getAnyFreePort, parseHexOrDecInt, RTTConfigureEvent, RTTServerHelper } from './common';
+import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent, parseHexOrDecInt, RTTServerHelper } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -28,7 +28,16 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
         // JLink only support one TCP port and that too for channel 0 only. The config provider
         // makes sure that the rttConfig conforms.
-        this.rttHelper.allocateRTTPorts(args.rttConfig, this.defaultRttPort);
+        if (args.rttConfig && args.rttConfig.enabled && (!args.rttConfig.decoders || (args.rttConfig.decoders.length === 0))) {
+            // We do the RTT setup and pass the right args to JLink but not actually use the TCP Port ourselves. Decided
+            // Not to allocate a free port in this case either.
+
+            // getAnyFreePort(this.defaultRttPort).then((p) => {
+            //     this.defaultRttPort = p;
+            // });
+        } else {
+            this.rttHelper.allocateRTTPorts(args.rttConfig, this.defaultRttPort);
+        }
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -156,7 +165,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 // If we are getting here, we will need some serious re-factoring
                 throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time.');
             }
-            cmdargs.push('-rtttelnetport', this.rttHelper.rttLocalPortMap[0]);
+            cmdargs.push('-rtttelnetport', this.rttHelper.rttLocalPortMap[0] || this.defaultRttPort.toString());
         }
 
         if (this.args.serialNumber) {

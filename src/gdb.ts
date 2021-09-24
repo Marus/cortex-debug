@@ -347,7 +347,7 @@ export class GDBDebugSession extends DebugSession {
             }
 
             if (executable) {
-                this.handleMsg('log', `Please check OUTPUT tab (Adapter Output) for output from ${executable}` + '\n');
+                this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
                 const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => {
                     return '"' + s.replace(/"/g, '\\"') + '"';
                 }).join(' ') + '\n';
@@ -1326,8 +1326,7 @@ export class GDBDebugSession extends DebugSession {
                         if (brkp instanceof MIError) {
                             /* Failed breakpoints should be reported with
                              * verified: false, so they can be greyed out
-                             * in the UI. The attached message will be
-                             * presented as a tooltip.
+                             * in the UI.
                              */
                             return {
                                 verified: false,
