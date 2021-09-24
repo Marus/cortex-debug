@@ -69,21 +69,24 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         }
     }
 
+    private pushOutput(str: string) {
+        if (this.useTerminal) {
+            this.ptyTerm.write(str);
+        } else {
+            this.output.append(str);
+        }
+    }
+
     public softwareEvent(packet: Packet) {
         if (packet.port !== this.port) { return; }
 
         const letters = packet.data.toString(this.encoding);
 
-        if (this.useTerminal) {
-            this.ptyTerm.write(letters);
-            return;
-        }
-
         for (const letter of letters) {
             if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
 
             if (letter === '\n') {
-                this.output.append('\n');
+                this.pushOutput('\n');
                 this.position = 0;
                 return;
             }
@@ -91,19 +94,19 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             if (this.position === 0) {
                 const date = new Date();
                 const header = `[${date.toISOString()}]   `;
-                this.output.append(header);
+                this.pushOutput(header);
             }
 
-            this.output.append(letter);
+            this.pushOutput(letter);
             this.position += 1;
 
             if (this.position >= 80) {
-                this.output.append('\n');
+                this.pushOutput('\n');
                 this.position = 0;
             }
             else {
                 this.timeout = setTimeout(() => {
-                    this.output.append('\n');
+                    this.pushOutput('\n');
                     this.position = 0;
                     this.timeout = null;
                 }, 5000);
