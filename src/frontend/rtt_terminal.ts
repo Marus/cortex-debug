@@ -101,12 +101,18 @@ export class RTTTerminal {
 
     private writeNonBinary(buf: Buffer) {
         let start = 0;
+        let time = '';
+        if (this.options.timestamp) {
+            const date = new Date();
+            time = `[${date.toISOString()}] `;
+        }
+
         for (let ix = 1; ix < buf.length; ix++ ) {
             if (buf[ix - 1] !== 0xff) { continue; }
             const chr = buf[ix];
             if (((chr >= 48) && (chr <= 57)) || ((chr >= 65) && (chr <= 90))) {
                 if (ix >= 1) {
-                    this.ptyTerm.write(buf.slice(start, ix - 1));
+                    this.ptyTerm.writeWithHeader(buf.slice(start, ix - 1), time);
                 }
                 this.ptyTerm.write(`<switch to vTerm#${String.fromCharCode(chr)}>\n`);
                 buf = buf.slice(ix + 1);
@@ -115,7 +121,7 @@ export class RTTTerminal {
             }
         }
         if (buf.length > 0) {
-            this.ptyTerm.write(buf);
+            this.ptyTerm.writeWithHeader(buf, time);
         }
     }
 

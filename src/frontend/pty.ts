@@ -474,6 +474,29 @@ export class PtyTerminal extends EventEmitter {
         this.cursorPos = 1;
     }
 
+    public writeWithHeader(data: string | Buffer, header: string) {
+        if (!header) {
+            this.write(data);
+            return;
+        }
+        let str: string;
+        if ((typeof data !== 'string') && !(data instanceof String)) {
+            str = data.toString('utf8');
+        } else {
+            str = data as string;
+        }
+        if (this.cursorPos === 1) {
+            this.write(header);
+        }
+        let endsWithNl = false;
+        while (str.endsWith('\n')) {
+            str = str.substr(0, str.length-1);
+            endsWithNl = true;
+        }
+        str = str.replace(/\n/g, '\n' + header);
+        this.write(endsWithNl ? str + '\n' : str);
+    }
+
     public write(data: string | Buffer) {
         if (!this.isReady) {
             this.pendingWrites.push(data);
