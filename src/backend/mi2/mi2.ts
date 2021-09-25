@@ -259,7 +259,6 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'stop');
         }
         if (!this.exited) {
-            const proc = this.process;
             const to = setTimeout(() => { this.tryKill(); }, 500);
             this.process.on('exit', (code) => { clearTimeout(to); });
             // Disconnect first. Not doing so and exiting will cause an unwanted detach if the

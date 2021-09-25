@@ -67,17 +67,19 @@ export class GDBServer extends EventEmitter {
     public exit(): void {
         if (this.process) {
             try {
-                console.log('GDBServer: forcing an exit with SIGNINT');
-                // A log of gdb-servers want to recieve an Control-C equivalent first, so try that for
+                console.log('GDBServer: requesting an exit with SIGNINT');
+                // Some of gdb-servers want to recieve an Control-C equivalent first, so try that for
                 // a bit more graceful exit
+                this.process.once('SIGINT', () => {
+                    console.log('Server got SIGINT');
+                })
                 this.process.kill('SIGINT');
                 setTimeout(() => {
-                    if (process != null) {      // Still not dead?
-                        console.log('GDBServer: forcing an exit with SIGTERM');
+                    if (this.process != null) {      // Still not dead?
+                        console.log('GDBServer: forcing an exit with kill()');
                         this.process.kill();
                     }
-                    this.process = null;
-                } , 1000);
+                }, 100);
             }
             catch (e) {
                 console.log(`Tring to force and exit failed ${e}`);

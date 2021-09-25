@@ -165,7 +165,13 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 // If we are getting here, we will need some serious re-factoring
                 throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time.');
             }
-            cmdargs.push('-rtttelnetport', this.rttHelper.rttLocalPortMap[0] || this.defaultRttPort.toString());
+            const keys = Object.keys(this.rttHelper.rttLocalPortMap);
+            let tcpPort = this.defaultRttPort.toString();
+            if (keys && (keys.length > 0)) {
+                // We only support one port because JLink gdb-server only supports one port
+                tcpPort = this.rttHelper.rttLocalPortMap[keys[0]];
+            }
+            cmdargs.push('-rtttelnetport', tcpPort);
         }
 
         if (this.args.serialNumber) {
