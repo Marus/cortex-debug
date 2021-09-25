@@ -67,12 +67,9 @@ export class GDBServer extends EventEmitter {
     public exit(): void {
         if (this.process) {
             try {
-                console.log('GDBServer: requesting an exit with SIGNINT');
                 // Some of gdb-servers want to recieve an Control-C equivalent first, so try that for
                 // a bit more graceful exit
-                this.process.once('SIGINT', () => {
-                    console.log('Server got SIGINT');
-                })
+                console.log('GDBServer: requesting an exit with SIGINT');
                 this.process.kill('SIGINT');
                 setTimeout(() => {
                     if (this.process != null) {      // Still not dead?
