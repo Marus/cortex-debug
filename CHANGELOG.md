@@ -1,9 +1,13 @@
 ChangeLog
 
-#V0.4.5-pre3
-* Support for resume/suspend after Launch/Attach. With new features added to VSCode, the Stop button (after `Launch`) can now also be used for a Disconnect using keyboard shortcuts. The reverse is true when using an `Attach` type session. But this requires co-operation from the gdb-server to comply. Certain versions of OpenOCD do comply, JLink always seems to resume.
-* Issues #482 and #481 partially addressed
+#V0.4.5
+* Support for resume/suspend after Launch/Attach. With new UI features added to VSCode, the Stop button (after `Launch`) can now also be used for a Disconnect using keyboard shortcuts. The reverse is true when using an `Attach` type session. But this requires co-operation from the gdb-server to comply. Certain versions of OpenOCD do comply, JLink always seems to resume (see issue $481). Provided the gdb-server cooperates, the expected behavior now when you end a debug session is:
+  * `Stop` will leave the program in a halted state
+  * `Disconnect` will let the program continue
+* You can now have RTT console output lines contain a timestamp. Use the `timestamp` option for the RTT decoder. Default is false (no timestamp)
+* Issues #482 addressed for JLink. It always cleanly exits on it own. OpenOCD is still an issue where it has to be killed which once in a blue moon does not seem to work.
 * Integrated PR #480 -- creates .vscode director if it doesn't exist for saving register/peripheral states.
+* PRs #489, #490, #488, #478 submitted by @trond-snekvik merged. They fix issues and enhances your experience with Cortex-Debug in various ways. Thank you @trond-snekvik
 
 # V0.4.4
 
