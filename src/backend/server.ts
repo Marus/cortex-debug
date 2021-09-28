@@ -1,10 +1,25 @@
 import * as ChildProcess from 'child_process';
 import * as os from 'os';
 import * as net from 'net';
+import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
-import { TcpPortScanner } from '../tcpportscanner';
 
+const tmpDirName = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
+export function ServerConsoleLog(str: string) {
+    console.log(str);
+    try {
+        if (false) {
+            if (!str.endsWith('\n')) {
+                str += '\n';
+            }
+            fs.appendFileSync(`${tmpDirName}/cortex-debug-server-exiting-${process.pid}`, str);
+        }
+    }
+    catch (e) {
+        console.log(e.toString());
+    }
+}
 export class GDBServer extends EventEmitter {
     private process: ChildProcess.ChildProcess;
     private outBuffer: string = '';
@@ -67,25 +82,17 @@ export class GDBServer extends EventEmitter {
     public exit(): void {
         if (this.process) {
             try {
-                // Some of gdb-servers want to recieve an Control-C equivalent first, so try that for
-                // a bit more graceful exit
-                console.log('GDBServer: requesting an exit with SIGINT');
-                this.process.kill('SIGINT');
-                setTimeout(() => {
-                    if (this.process != null) {      // Still not dead?
-                        console.log('GDBServer: forcing an exit with kill()');
-                        this.process.kill();
-                    }
-                }, 100);
+                ServerConsoleLog('GDBServer: forcing an exit with kill()');
+                this.process.kill();
             }
             catch (e) {
-                console.log(`Tring to force and exit failed ${e}`);
+                ServerConsoleLog(`Tring to force and exit failed ${e}`);
             }
         }
     }
 
     private onExit(code, signal) {
-        console.log(`GDBServer: exited ${code} ${signal}`);
+        ServerConsoleLog(`GDBServer: exited ${code} ${signal}`);
         this.process = null;
         if (this.exitTimeout) {
             clearTimeout(this.exitTimeout);

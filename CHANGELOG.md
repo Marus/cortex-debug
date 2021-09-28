@@ -1,5 +1,8 @@
 ChangeLog
 
+#V0.4.6
+* Bugfix: Issue #493 In the previous release, we were trying to end OpenOCD using a SIGINT first and then SIGTERM. The way VSCode works, this did not work in production releases. Reverting back to the previous method of just using SIGTERM. Unfortunately. Still looking for a better method to end OpenOCD.
+
 #V0.4.5
 * Support for resume/suspend after Launch/Attach. With new UI features added to VSCode, the Stop button (after `Launch`) can now also be used for a Disconnect using keyboard shortcuts. The reverse is true when using an `Attach` type session. But this requires co-operation from the gdb-server to comply. Certain versions of OpenOCD do comply, JLink always seems to resume (see issue $481). Provided the gdb-server cooperates, the expected behavior now when you end a debug session is:
   * `Stop` will leave the program in a halted state
