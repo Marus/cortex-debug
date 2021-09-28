@@ -170,7 +170,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     public initMatch(): RegExp {
-        return /Listening at \*/g;
+        return /(Waiting for debugger connection|Listening at).*/ig;
     }
 
     public serverLaunchStarted(): void {}
