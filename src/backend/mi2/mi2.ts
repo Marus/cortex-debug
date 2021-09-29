@@ -272,7 +272,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (trace) {
             this.log('stderr', 'detach');
         }
-        this.sendCommand('target-detach');  // This may not be successful, go ahead and stop gdb as well
+        this.sendCommand('target-detach');  // This may not be successful, go ahead and stop gdb as well. Sometimes hangs!
         setTimeout(() => {
             this.stop();
         }, 5);

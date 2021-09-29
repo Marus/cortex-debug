@@ -102,6 +102,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public swoAndRTTCommands(): string[] {
         const commands = [];
+
+        if (!this.args.pvtRestartOrReset) {
+            // The following will add a handler to shutdown the server when gdb detaches from any of
+            // the targets. Technically, we should only do that for [target current] but the defintion
+            // of that is vague . This has to be done after 'init' when all the targets have already
+            // been created. So, technically we should find a better place to put this command
+            commands.push('interpreter-exec console "monitor foreach t [target names] { $t configure -event gdb-detach { shutdown } }"');
+        }
+
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);

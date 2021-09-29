@@ -78,6 +78,10 @@ export class GDBServer extends EventEmitter {
         });
     }
 
+    public isExternal(): boolean {
+        return !this.application;
+    }
+
     private exitTimeout: NodeJS.Timeout = null;
     public exit(): void {
         if (this.process) {

@@ -957,6 +957,36 @@ export class GDBDebugSession extends DebugSession {
         });
     }
 
+
+    private waitForServerExitAndRespond(response: DebugProtocol.DisconnectResponse) {
+        if (!this.server.isExternal()) {
+            let nTimes = 10;
+            let to = setInterval(() => {
+                if (nTimes === 0) {
+                    // We waited long enough so try to nuke the server and send VSCode a response
+                    // This is a really bad situation to be in, but not sure what else to do.
+                    clearInterval(to);
+                    to = null;
+                    this.server.exit();
+                    this.sendResponse(response);
+                } else {
+                    nTimes--;
+                }
+            }, 60);
+            this.server.once('exit', () => {
+                if (to) {
+                    clearInterval(to);
+                    to = null;
+                }
+                this.sendResponse(response);
+            });
+        } else {
+            this.miDebugger.once('quit', () => {
+                this.sendResponse(response);
+            });
+        }
+    }
+
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
         let bkptsDeleted = false;
         const doDisconnectProcessing = () => {
@@ -965,20 +995,7 @@ export class GDBDebugSession extends DebugSession {
             }
             this.disableSendStoppedEvents = false;
             this.attached = false;
-            let to = setTimeout(() => {      // Give gdb a chance to disconnect and exit normally
-                to = null;
-                try {
-                    this.server.exit();
-                }
-                catch (e) {}
-            }, 600);    // Bit more than gbd-kill
-            this.server.once('exit', () => {
-                if (to) {
-                    clearTimeout(to);
-                }
-                this.sendResponse(response);
-            });
-
+            this.waitForServerExitAndRespond(response);     // Will wait asynchronously until the following actions are done
             if (args.terminateDebuggee || args.suspendDebuggee) {
                 // There is no such thing as terminate for us. Hopefully, the gdb-server will
                 // do the right thing and remain in halted state
