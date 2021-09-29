@@ -2,7 +2,7 @@ ChangeLog
 
 #V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed
-* We may have **finally** found a way to exit OpenOCD without having to kill it and OpenOCD not hanging around after session ends. This is of course dependent on OpenOCD having as documented.
+* We may have **finally** found a way to exit OpenOCD without having to kill it and OpenOCD not hanging around after the session ends. This is of course dependent on OpenOCD behaving as documented.
 
 #V0.4.6
 * Bugfix: Issue #493 In the previous release, we were trying to end OpenOCD using a SIGINT first and then SIGTERM. The way VSCode works, this did not work in production releases. Reverting back to the previous method of just using SIGTERM. Unfortunately. Still looking for a better method to end OpenOCD.
