@@ -76,12 +76,14 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     }
 
     private pushOutput(str: string) {
-        if (this.useTerminal) {
-            if (this.ptyTerm) {
-                this.ptyTerm.write(str);
+        if (str) {
+            if (this.useTerminal) {
+                if (this.ptyTerm) {
+                    this.ptyTerm.write(str);
+                }
+            } else {
+                this.output.append(str);
             }
-        } else {
-            this.output.append(str);
         }
     }
 
@@ -98,21 +100,13 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
 
         const letters = packet.data.toString(this.encoding);
 
-        if (this.useTerminal) {
-            if (this.ptyTerm) {
-                this.ptyTerm.writeWithHeader(letters, this.createDateHeaderUs());
-            }
-            return;
-        }
-
-        // Following stuff will be deprecated soon
         for (const letter of letters) {
             if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
 
             if (letter === '\n') {
                 this.pushOutput('\n');
                 this.position = 0;
-                return;
+                continue;
             }
 
             if (this.position === 0) {
@@ -122,11 +116,10 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             this.pushOutput(letter);
             this.position += 1;
 
-            if (this.position >= 80) {
-                this.pushOutput('\n');
-                this.position = 0;
-            }
-            else {
+            if (this.timestamp && (this.position > 0)) {
+                if (this.timeout) {
+                    clearTimeout(this.timeout)
+                }
                 this.timeout = setTimeout(() => {
                     this.pushOutput('\n');
                     this.position = 0;

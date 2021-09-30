@@ -3,6 +3,8 @@ ChangeLog
 #V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed
 * We may have **finally** found a way to exit OpenOCD without having to kill it and OpenOCD not hanging around after the session ends. This is of course dependent on OpenOCD behaving as documented. Thanks to #482 and @bohdan-tymkiv for a solution
+* Timestamps for RTT and SWO have been standardized to be of the form `[ISO-Date-Time, +NNNNNNms]` where the first part is the date/time of day and the NNNNNNms is the number of milliseconds elapsed since the debug session began.
+* `timestamp` is now an option for SWO console decoders. Default is `false`. A timestamp is output only when a newline is received or a timeout of 5 seconds
 
 #V0.4.6
 * Bugfix: Issue #493 In the previous release, we were trying to end OpenOCD using a SIGINT first and then SIGTERM. The way VSCode works, this did not work in production releases. Reverting back to the previous method of just using SIGTERM. Unfortunately. Still looking for a better method to end OpenOCD.
