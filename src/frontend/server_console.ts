@@ -10,7 +10,6 @@ export class GDBServerConsole {
     protected toBackend: net.Socket = null;
     protected toBackendPort: number = -1;
     protected logFd = -1;
-    protected didShow = false;
 
     public ptyTerm: PtyTerminal = null;
     protected ptyOptions: IPtyTerminalOptions;
@@ -34,16 +33,12 @@ export class GDBServerConsole {
         if (!this.ptyTerm) {
             this.setupTerminal();
         }
-        if (this.ptyTerm && !this.didShow) {
-            this.ptyTerm.terminal.show();
-            this.didShow = true;
-        }
     }    
 
     private setupTerminal() {
-        this.didShow = false;
         this.ptyOptions.name = GDBServerConsole.createTermName('gdb-server', null);
         this.ptyTerm = new PtyTerminal(this.ptyOptions);
+        this.ptyTerm.terminal.show();
         this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
         this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
         if (this.toBackend === null) {
@@ -56,8 +51,14 @@ export class GDBServerConsole {
     }
 
     private onTerminalClosed() {
-        vscode.window.showInformationMessage('gdb-server terminal closed unexpectedly. Trying to reopen it');
-        this.setupTerminal();
+        this.ptyTerm = null;
+        if (this.toBackend) {
+            // Let the terminal close completely and try to re-launch
+            setTimeout(() => {
+                vscode.window.showInformationMessage('gdb-server terminal closed unexpectedly. Trying to reopen it');
+                this.setupTerminal();
+            }, 1);
+        }
     }
 
     public isServerAlive() {
@@ -112,7 +113,7 @@ export class GDBServerConsole {
         socket.setKeepAlive(true);
         socket.on('close', () => {
             this.debugMsg('onBackendConnect: gdb-server session closed');
-            magentaWrite('GDB server session ended. Waiting for next server session to start...', this.ptyTerm);
+            magentaWrite('GDB server session ended. This terminal will be reused, waiting for next session to start...', this.ptyTerm);
             this.toBackend = null;
             this.ptyTerm.pause();
         });
