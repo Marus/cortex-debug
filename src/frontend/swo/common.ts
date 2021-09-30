@@ -10,6 +10,7 @@ export interface SWOConsoleDecoderConfig extends SWOBasicDecoderConfig {
     label: string;
     encoding: string;
     showOnStartup: boolean;
+    timestamp: boolean;
 }
 
 export interface SWOBinaryDecoderConfig extends SWOBasicDecoderConfig {

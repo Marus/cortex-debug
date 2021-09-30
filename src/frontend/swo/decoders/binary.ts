@@ -4,7 +4,7 @@ import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
 import { Packet } from '../common';
 import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
-import { TerminalInputMode } from '../../../common';
+import { HrTimer, TerminalInputMode } from '../../../common';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
     return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
@@ -18,6 +18,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     private encoding: string;
     private useTerminal = true;
     private ptyTerm: PtyTerminal = null;
+    private hrTimer: HrTimer = new HrTimer();
 
     constructor(config: SWOBinaryDecoderConfig) {
         this.port = config.port;
@@ -64,8 +65,9 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         const hexvalue = packet.data.toString('hex');
         const decodedValue = parseEncoded(packet.data, this.encoding);
         const scaledValue = decodedValue * this.scale;
+        const timestamp = this.hrTimer.createDateTimestamp();
 
-        const str = `[${date.toISOString()}]   ${hexvalue} - ${decodedValue} - ${scaledValue}`;
+        const str = `${timestamp} ${hexvalue} - ${decodedValue} - ${scaledValue}`;
         if (this.useTerminal) {
             this.ptyTerm.write(str + '\n');
         } else {

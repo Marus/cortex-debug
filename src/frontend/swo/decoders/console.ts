@@ -4,7 +4,7 @@ import { SWORTTDecoder } from './common';
 import { SWOConsoleDecoderConfig } from '../common';
 import { Packet } from '../common';
 import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
-import { TerminalInputMode } from '../../../common';
+import { HrTimer, TerminalInputMode } from '../../../common';
 
 export class SWOConsoleProcessor implements SWORTTDecoder {
     private positionCount: number;
@@ -14,13 +14,16 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     public readonly format: string = 'console';
     private port: number;
     private encoding: string;
-    private showOutputTimer: any = null;
+    private showOutputTimer: NodeJS.Timeout = null;
     private useTerminal = true;
     private ptyTerm: PtyTerminal = null;
+    private timestamp: boolean = false;
+    private hrTimer: HrTimer = new HrTimer();
     
     constructor(config: SWOConsoleDecoderConfig) {
         this.port = config.port;
         this.encoding = config.encoding || 'utf8';
+        this.timestamp = !!config.timestamp;
         this.useTerminal = 'useTerminal' in config ? (config as any).useTerminal : true;   // TODO: Remove
         if (this.useTerminal) {
             this.createVSCodeTerminal(config);
@@ -51,6 +54,9 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             this.ptyTerm.clearTerminalBuffer();
         } else {
             this.ptyTerm = new PtyTerminal(options);
+            this.ptyTerm.on('close', () => {
+                this.ptyTerm = null;
+            })
             if (config.showOnStartup) {
                 this.ptyTerm.terminal.show();
             }
@@ -71,9 +77,19 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
 
     private pushOutput(str: string) {
         if (this.useTerminal) {
-            this.ptyTerm.write(str);
+            if (this.ptyTerm) {
+                this.ptyTerm.write(str);
+            }
         } else {
             this.output.append(str);
+        }
+    }
+
+    private createDateHeaderUs(): string {
+        if (this.timestamp) {
+            return this.hrTimer.createDateTimestamp() + ' ';
+        } else {
+            return '';
         }
     }
 
@@ -82,6 +98,14 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
 
         const letters = packet.data.toString(this.encoding);
 
+        if (this.useTerminal) {
+            if (this.ptyTerm) {
+                this.ptyTerm.writeWithHeader(letters, this.createDateHeaderUs());
+            }
+            return;
+        }
+
+        // Following stuff will be deprecated soon
         for (const letter of letters) {
             if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
 
@@ -92,9 +116,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             }
 
             if (this.position === 0) {
-                const date = new Date();
-                const header = `[${date.toISOString()}]   `;
-                this.pushOutput(header);
+                this.pushOutput(this.createDateHeaderUs());
             }
 
             this.pushOutput(letter);

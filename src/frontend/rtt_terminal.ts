@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { RTTConsoleDecoderOpts, TerminalInputMode, TextEncoding, BinaryEncoding } from '../common';
+import { RTTConsoleDecoderOpts, TerminalInputMode, TextEncoding, BinaryEncoding, HrTimer } from '../common';
 import { IPtyTerminalOptions, magentaWrite, PtyTerminal, RESET } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 import { SocketRTTSource } from './swo/sources/socket';
@@ -12,6 +12,7 @@ export class RTTTerminal {
     private source: SocketRTTSource;
     public inUse = true;
     protected logFd: number;
+    protected hrTimer: HrTimer = new HrTimer();
     public get terminal(): vscode.Terminal {
         return this.ptyTerm ? this.ptyTerm.terminal : null;
     }
@@ -23,12 +24,13 @@ export class RTTTerminal {
         this.ptyOptions = this.createTermOptions(null);
         this.createTerminal();
         this.sanitizeEncodings(this.options);
-        this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
         this.connectToSource(src);
         this.openLogFile();
     }
 
     private connectToSource(src: SocketRTTSource) {
+        this.hrTimer = new HrTimer();
+        this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
         src.once('disconnected', () => { this.onClose(); });
         src.on('error', (e) => {
             const code: string = (e as any).code;
@@ -103,8 +105,7 @@ export class RTTTerminal {
         let start = 0;
         let time = '';
         if (this.options.timestamp) {
-            const date = new Date();
-            time = `[${date.toISOString()}] `;
+            time = this.hrTimer.createDateTimestamp() + ' ';
         }
 
         for (let ix = 1; ix < buf.length; ix++ ) {
@@ -187,6 +188,7 @@ export class RTTTerminal {
     // since there no way to rename it. If successful, tt will reset the Terminal options and mark it as
     // used (inUse = true) as well
     public tryReuse(options: RTTConsoleDecoderOpts, src: SocketRTTSource): boolean {
+        if (!this.ptyTerm || !this.ptyTerm.terminal) { return false; }
         this.sanitizeEncodings(this.options);
         const newTermName = RTTTerminal.createTermName(options, this.ptyOptions.name);
         if (newTermName === this.ptyOptions.name) {
@@ -207,7 +209,6 @@ export class RTTTerminal {
             this.options = options;
             this.ptyOptions = this.createTermOptions(newTermName);
             this.ptyTerm.resetOptions(this.ptyOptions);
-            this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
             this.connectToSource(src);
             return true;
         }
@@ -254,6 +255,7 @@ class BinaryFormatter {
     private readonly bytesNeeded = 4;
     private buffer = Buffer.alloc(4);
     private bytesRead = 0;
+    private hrTimer = new HrTimer();
 
     constructor(
         protected ptyTerm: PtyTerminal,
@@ -266,7 +268,7 @@ class BinaryFormatter {
 
     public writeBinary(input: string | Buffer) {
         const data: Buffer = Buffer.from(input);
-        const date = new Date();
+        const timestamp = this.hrTimer.createDateTimestamp();
         for (const chr of data) {
             this.buffer[this.bytesRead] = chr;
             this.bytesRead = this.bytesRead + 1;
@@ -285,7 +287,7 @@ class BinaryFormatter {
                 const decodedStr = padLeft(`${decodedValue}`, 12);
                 const scaledValue = padLeft(`${decodedValue * this.scale}`, 12);
                 
-                this.ptyTerm.write(`[${date.toISOString()}]  ${chars}  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
+                this.ptyTerm.write(`${timestamp} ${chars}  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
                 this.bytesRead = 0;
             }
         }

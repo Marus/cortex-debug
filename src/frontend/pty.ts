@@ -475,7 +475,10 @@ export class PtyTerminal extends EventEmitter {
     }
 
     public writeWithHeader(data: string | Buffer, header: string) {
-        if (!header) {
+        if (!this.terminal) {       // Writes after a terminal is closed
+            return;
+        }
+        if (!header || !data) {
             this.write(data);
             return;
         }
@@ -498,6 +501,9 @@ export class PtyTerminal extends EventEmitter {
     }
 
     public write(data: string | Buffer) {
+        if (!this.terminal) {       // Writes after a terminal is closed
+            return;
+        }
         if (!this.isReady) {
             this.pendingWrites.push(data);
             return;

@@ -844,15 +844,20 @@
                                                             "description": "A label for the output window.",
                                                             "type": "string"
                                                         },
-                                                        "showOnStartup": {
-                                                            "description": "If true, switches to this output when starting a debug session.",
-                                                            "type": "boolean"
-                                                        },
                                                         "port": {
                                                             "description": "ITM Port Number",
                                                             "maximum": 31,
                                                             "minimum": 0,
                                                             "type": "number"
+                                                        },
+                                                        "showOnStartup": {
+                                                            "description": "If true, switches to this output when starting a debug session.",
+                                                            "type": "boolean"
+                                                        },
+                                                        "timestamp": {
+                                                            "description": "Add timestamps while printing",
+                                                            "type": "boolean",
+                                                            "default": false
                                                         },
                                                         "type": {
                                                             "enum": [
@@ -1688,6 +1693,15 @@
                                                             "maximum": 31,
                                                             "minimum": 0,
                                                             "type": "number"
+                                                        },
+                                                        "showOnStartup": {
+                                                            "description": "If true, switches to this output when starting a debug session.",
+                                                            "type": "boolean"
+                                                        },
+                                                        "timestamp": {
+                                                            "description": "Add timestamps while printing",
+                                                            "type": "boolean",
+                                                            "default": false
                                                         },
                                                         "type": {
                                                             "enum": [
