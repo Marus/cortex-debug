@@ -1,7 +1,7 @@
 ChangeLog
 
 #V0.4.7
-* Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed
+* Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed. Issue #494
 * We may have **finally** found a way to exit OpenOCD without having to kill it and OpenOCD not hanging around after the session ends. This is of course dependent on OpenOCD behaving as documented. Thanks to #482 and @bohdan-tymkiv for a solution
 * Timestamps for RTT and SWO have been standardized to be of the form `[ISO-Date-Time, +NNNNNNms]` where the first part is the date/time of day and the NNNNNNms is the number of milliseconds elapsed since the debug session began.
 * `timestamp` is now an option for SWO console decoders. Default is `false`. A timestamp is output only when a newline is received or a timeout of 5 seconds
