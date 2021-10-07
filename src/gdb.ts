@@ -379,7 +379,7 @@ export class GDBDebugSession extends DebugSession {
                     this.sendErrorResponse(
                         response,
                         103,
-                        `${this.serverController.name} GDB Server Quit Unexpectedly. See Adapter Output for more details.`
+                        `${this.serverController.name} GDB Server Quit Unexpectedly. See gdb-server output for more details.`
                     );
                 }
             });
@@ -533,6 +533,7 @@ export class GDBDebugSession extends DebugSession {
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
+                    this.server.exit();
                 });
 
             }, (error) => {
@@ -546,6 +547,7 @@ export class GDBDebugSession extends DebugSession {
                     `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
                 ));
                 this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
+                this.server.exit();
             });
             
         }, (err) => {
@@ -1264,6 +1266,9 @@ export class GDBDebugSession extends DebugSession {
     protected quitEvent() {
         if (traceThreads) {
             this.handleMsg('log', '**** quit event\n');
+        }
+        if (this.server && !this.debugReady) {
+            this.server.exit();
         }
         this.quit = true;
         this.sendEvent(new TerminatedEvent());
