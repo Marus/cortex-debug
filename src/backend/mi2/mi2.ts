@@ -7,6 +7,7 @@ import * as net from 'net';
 import * as fs from 'fs';
 import { posix } from 'path';
 import * as nativePath from 'path';
+import { ServerConsoleLog } from '../server';
 const path = posix;
 
 export function escape(str: string) {
@@ -246,6 +247,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (!this.exited) {
             const proc = this.process;
             try {
+                ServerConsoleLog('GDB kill()');
                 process.kill(-proc.pid);
             }
             catch (e) {

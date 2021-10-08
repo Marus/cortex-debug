@@ -9,7 +9,7 @@ import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError } from './backend/backend';
 import { TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
     AdapterOutputEvent, DisassemblyInstruction, createPortName } from './common';
-import { GDBServer } from './backend/server';
+import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import * as os from 'os';
@@ -963,12 +963,13 @@ export class GDBDebugSession extends DebugSession {
         if (!this.server.isExternal()) {
             let nTimes = 10;
             let to = setInterval(() => {
-                if (nTimes === 0) {
+                if ((nTimes === 0) || this.quit) {
                     // We waited long enough so try to nuke the server and send VSCode a response
                     // This is a really bad situation to be in, but not sure what else to do.
                     clearInterval(to);
                     to = null;
                     this.server.exit();
+                    ServerConsoleLog('Begin disconnectRequest sendResponse 3');
                     this.sendResponse(response);
                 } else {
                     nTimes--;
@@ -978,17 +979,21 @@ export class GDBDebugSession extends DebugSession {
                 if (to) {
                     clearInterval(to);
                     to = null;
+                    ServerConsoleLog('Begin disconnectRequest sendResponse 2');
+                    this.sendResponse(response);
                 }
-                this.sendResponse(response);
             });
+            // Note: If gdb exits first, then we kill the server anyways
         } else {
             this.miDebugger.once('quit', () => {
+                ServerConsoleLog('Begin disconnectRequest sendResponse 1');
                 this.sendResponse(response);
             });
         }
     }
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
+        ServerConsoleLog('Begin disconnectRequest');
         let bkptsDeleted = false;
         const doDisconnectProcessing = () => {
             if (!bkptsDeleted) {
@@ -1266,7 +1271,8 @@ export class GDBDebugSession extends DebugSession {
         if (traceThreads) {
             this.handleMsg('log', '**** quit event\n');
         }
-        if (this.server && !this.debugReady) {
+        if (this.server) {
+            ServerConsoleLog('quitEvent: Killing server');
             this.server.exit();
         }
         this.quit = true;
