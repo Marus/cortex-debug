@@ -961,7 +961,7 @@ export class GDBDebugSession extends DebugSession {
 
     private waitForServerExitAndRespond(response: DebugProtocol.DisconnectResponse) {
         if (!this.server.isExternal()) {
-            let nTimes = 10;
+            let nTimes = 60;
             let to = setInterval(() => {
                 if ((nTimes === 0) || this.quit) {
                     // We waited long enough so try to nuke the server and send VSCode a response
@@ -974,7 +974,7 @@ export class GDBDebugSession extends DebugSession {
                 } else {
                     nTimes--;
                 }
-            }, 60);
+            }, 10);
             this.server.once('exit', () => {
                 if (to) {
                     clearInterval(to);
@@ -1272,11 +1272,18 @@ export class GDBDebugSession extends DebugSession {
             this.handleMsg('log', '**** quit event\n');
         }
         if (this.server) {
+            // A gdb quit may be happening with VSCode asking us to finish or a crash or user doing something
             ServerConsoleLog('quitEvent: Killing server');
             this.server.exit();
         }
         this.quit = true;
-        this.sendEvent(new TerminatedEvent());
+        setTimeout (() => {
+            // In case GDB quit because of normal processing, let that process finish. Wait for,\
+            // a disconnect reponse to be sent before we send a TerminatedEvent();. Note that we could
+            // also be here because the server crashed/quit on us before gdb-did
+            ServerConsoleLog('quitEvent: sending VSCode TerminatedEvent');
+            this.sendEvent(new TerminatedEvent());
+        }, 10);
     }
 
     protected launchError(err: any) {
