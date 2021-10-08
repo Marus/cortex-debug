@@ -7,13 +7,15 @@ import { setTimeout } from 'timers';
 
 const tmpDirName = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
 export function ServerConsoleLog(str: string) {
-    console.log(str);
     try {
-        if (false) {
+        const date = new Date();
+        str = `[${date.toISOString()}] ` + str;
+        console.log(str);
+        if (true) {
             if (!str.endsWith('\n')) {
                 str += '\n';
             }
-            fs.appendFileSync(`${tmpDirName}/cortex-debug-server-exiting-${process.pid}`, str);
+            fs.appendFileSync(`${tmpDirName}/cortex-debug-server-exiting.log`, str);
         }
     }
     catch (e) {

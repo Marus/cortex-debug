@@ -52,7 +52,7 @@ enum SessionMode {
     ATTACH,
     RESTART,
     RESET
-};
+}
 
 class ExtendedVariable {
     constructor(public name, public options) {
@@ -887,7 +887,7 @@ export class GDBDebugSession extends DebugSession {
             if (!this.args.variableUseNaturalFormat) {
                 // requesting a radix on the register-values does not work unless the output radix is
                 // decimal. bug in gdb I think. We temporarily force to decimal and then restore later
-                this.suppressRadixMsgs = true;    
+                this.suppressRadixMsgs = true;
                 for (const cmd of this.formatRadixGdbCommand('0xa')) {
                     this.miDebugger.sendCommand(cmd);
                 }
@@ -921,14 +921,14 @@ export class GDBDebugSession extends DebugSession {
                 const cmds = this.formatRadixGdbCommand();
                 for (let ix = 0; ix < cmds.length; ix++ ) {
                     this.miDebugger.sendCommand(cmds[ix]).then((_) => {
-                        if (ix === (cmds.length-1)) {   // Last one
+                        if (ix === (cmds.length - 1)) {   // Last one
                             this.suppressRadixMsgs = false;
                         }
-                    }), (_) => {
-                        if (ix === (cmds.length-1)) {   // Last one
+                    }, (_) => {
+                        if (ix === (cmds.length - 1)) {   // Last one
                             this.suppressRadixMsgs = false;
-                        }                        
-                    }
+                        }
+                    });
                 }
             }
         }
@@ -958,7 +958,6 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent('Error', 'Reading Register List', ''));
         });
     }
-
 
     private waitForServerExitAndRespond(response: DebugProtocol.DisconnectResponse) {
         if (!this.server.isExternal()) {
@@ -1013,9 +1012,9 @@ export class GDBDebugSession extends DebugSession {
         if (this.miDebugger) {
             if (this.stopped) {
                 bkptsDeleted = true;
-                this.miDebugger.sendCommand('break-delete');                
+                this.miDebugger.sendCommand('break-delete');
             }
-             let deferred = false;
+            let deferred = false;
             if (/*(this.attached && !this.stopped) || */ args.terminateDebuggee || args.suspendDebuggee) {
                 if (!this.stopped) {
                     deferred = true;
@@ -1336,7 +1335,7 @@ export class GDBDebugSession extends DebugSession {
                     this.miDebugger.addBreakPoint({
                         raw: brk.name,
                         condition: brk.condition,
-                        countCondition: brk.hitCondition,
+                        countCondition: brk.hitCondition
                     }).catch((err: MIError) => err)
                 );
             });
@@ -1352,7 +1351,7 @@ export class GDBDebugSession extends DebugSession {
                              */
                             return {
                                 verified: false,
-                                message: brkp.message,
+                                message: brkp.message
                             };
                         }
 
@@ -1365,7 +1364,7 @@ export class GDBDebugSession extends DebugSession {
                             },
                             line: brkp.line,
                             id: brkp.number,
-                            verified: true,
+                            verified: true
                         } as DebugProtocol.Breakpoint;
                     }
                 );
@@ -1443,7 +1442,7 @@ export class GDBDebugSession extends DebugSession {
                                     Promise.resolve(
                                         new MIError(
                                             `${func} only contains ${symbol.instructions.length} instructions`,
-                                            "Set breakpoint"
+                                            'Set breakpoint'
                                         )
                                     )
                                 );
@@ -1474,7 +1473,7 @@ export class GDBDebugSession extends DebugSession {
                              */
                             return {
                                 verified: false,
-                                message: bp.message,
+                                message: bp.message
                             } as DebugProtocol.Breakpoint;
                         }
 

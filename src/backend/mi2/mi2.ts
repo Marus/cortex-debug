@@ -68,7 +68,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private onExit() {
-        console.log('GDB: exited')
+        console.log('GDB: exited');
         this.exited = true;
         this.emit('quit');
     }
@@ -439,7 +439,7 @@ export class MI2 extends EventEmitter implements IBackend {
                             if (result.resultRecords.resultClass === 'done') {
                                 resolve(breakpoint);
                             } else {
-                                reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint condition`));
+                                reject(new MIError(result.result('msg') || 'Internal error', 'Setting breakpoint condition'));
                             }
                         }, reject);
                     }

@@ -508,7 +508,7 @@ export class HrTimer {
         this.start = process.hrtime.bigint();
     }
 
-    public getStart():bigint {
+    public getStart(): bigint {
         return this.start;
     }
 
@@ -541,6 +541,6 @@ export class HrTimer {
         const diff = process.hrtime.bigint() - this.start + BigInt((10 ** res) / 2);
         let ret = diff.toString();
         ret = ret.length <= res ? '0' : ret.substr(0, ret.length - res);
-        return ret;        
+        return ret;
     }
 }
