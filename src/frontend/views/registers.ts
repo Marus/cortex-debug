@@ -13,6 +13,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     // tslint:disable-next-line:variable-name
     public _onDidChangeTreeData: EventEmitter<BaseNode | undefined> = new EventEmitter<BaseNode | undefined>();
     public readonly onDidChangeTreeData: Event<BaseNode | undefined> = this._onDidChangeTreeData.event;
+    public session: vscode.DebugSession = null;
 
     private registers: RegisterNode[];
     private registerMap: { [index: number]: RegisterNode };
@@ -135,10 +136,16 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
         }
     }
 
-    public debugSessionTerminated() {
-        if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
-            const fspath = path.join(workspace.workspaceFolders[0].uri.fsPath, '.vscode', '.cortex-debug.registers.state.json');
-            this._saveState(fspath);
+    public debugSessionTerminated(session: vscode.DebugSession) {
+        if (this.session.id === session.id) {
+            // We don't have multi-session capability, yet, and this file should really be in workspace storage
+            if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
+                const fspath = path.join(session.workspaceFolder.uri.fsPath,
+                    /* workspace.workspaceFolders[0].uri.fsPath,*/
+                    '.vscode', '.cortex-debug.registers.state.json');
+                this._saveState(fspath);
+            }
+            this.session = null;
         }
 
         this.loaded = false;
@@ -147,7 +154,11 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
         this._onDidChangeTreeData.fire(undefined);
     }
 
-    public debugSessionStarted() {
+    public debugSessionStarted(session: vscode.DebugSession) {
+        if (!this.session) {
+            // This is to decide where to store settings
+            this.session = session;
+        }
         this.loaded = false;
         this.registers = [];
         this.registerMap = {};

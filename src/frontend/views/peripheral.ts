@@ -14,6 +14,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     // tslint:disable-next-line:variable-name
     public _onDidChangeTreeData: vscode.EventEmitter<PeripheralBaseNode | undefined> = new vscode.EventEmitter<PeripheralBaseNode | undefined>();
     public readonly onDidChangeTreeData: vscode.Event<PeripheralBaseNode | undefined> = this._onDidChangeTreeData.event;
+    public session: vscode.DebugSession = null;
     
     private peripherials: PeripheralNode[] = [];
     private loaded: boolean = false;
@@ -40,7 +41,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
     
     private loadSVD(SVDFile: string): Promise<any> {
-        return new Promise((resolve,reject) => {
+        return new Promise((resolve, reject) => {
             if (!path.isAbsolute(SVDFile)) {
                 const fullpath = path.normalize(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, SVDFile));
                 SVDFile = fullpath;
@@ -100,19 +101,19 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
-    public debugSessionStarted(svdfile: string, thresh: any): Thenable<any> {
+    public debugSessionStarted(session: vscode.DebugSession, svdfile: string, thresh: any): Thenable<any> {
         return new Promise<void>((resolve, reject) => {
             this.peripherials = [];
-            this.loaded = false;
             this._onDidChangeTreeData.fire(undefined);
 
             // Set the threshold between 0 and 32, with a default of 16 and a mukltiple of 8
             this.gapThreshold = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
             
-            if (svdfile) {
+            if (svdfile && !this.session && !this.loaded) {
                 setTimeout(() => {
                     this.loadSVD(svdfile).then(
                         () => {
+                            this.session = session;
                             vscode.workspace.findFiles('.vscode/.cortex-debug.peripherals.state.json', null, 1).then((value) => {
                                 if (value.length > 0) {
                                     const fspath = value[0].fsPath;
@@ -159,20 +160,26 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         });
     }
 
-    public debugSessionTerminated(): Thenable<any> {
-        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            const fspath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '.vscode', '.cortex-debug.peripherals.state.json');
-            this.saveState(fspath);
+    public debugSessionTerminated(session: vscode.DebugSession): Thenable<any> {
+        if (this.session.id === session.id) {
+            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+                // Path should really be in the workspace storage but this is where we will live for now
+                const fspath = path.join(
+                    session.workspaceFolder.uri.fsPath,
+                    /*vscode.workspace.workspaceFolders[0].uri.fsPath,*/
+                    '.vscode', '.cortex-debug.peripherals.state.json');
+                this.saveState(fspath);
+            }
+            this.session = null; 
+            this.peripherials = [];
+            this.loaded = false;
+            this._onDidChangeTreeData.fire(undefined);
         }
-        
-        this.peripherials = [];
-        this.loaded = false;
-        this._onDidChangeTreeData.fire(undefined);
         return Promise.resolve(true);
     }
 
-    public debugStopped() {
-        if (this.loaded) {
+    public debugStopped(session: vscode.DebugSession) {
+        if (this.loaded && (session.id === this.session.id)) {
             const promises = this.peripherials.map((p) => p.updateData());
             Promise.all(promises).then((_) => { this._onDidChangeTreeData.fire(undefined); }, (_) => { this._onDidChangeTreeData.fire(undefined); });
         }

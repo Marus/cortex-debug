@@ -502,9 +502,9 @@ export class CortexDebugExtension {
             if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
 
             if (!this.currentArgs.noDebug) {
-                this.registerProvider.debugSessionStarted();
+                this.registerProvider.debugSessionStarted(session);
             }
-            this.peripheralProvider.debugSessionStarted((svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
+            this.peripheralProvider.debugSessionStarted(session, (svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
             this.cleanupRTTTerminals();
         }, (error) => {
             // TODO: Error handling for unable to get arguments
@@ -519,9 +519,9 @@ export class CortexDebugExtension {
 
             this.debuggerStatus = 'none';
             if (!this.currentArgs.noDebug) {
-                this.registerProvider.debugSessionTerminated();
+                this.registerProvider.debugSessionTerminated(session);
             }
-            this.peripheralProvider.debugSessionTerminated();
+            this.peripheralProvider.debugSessionTerminated(session);
             if (this.swo) {
                 this.swo.debugSessionTerminated();
             }
@@ -580,7 +580,7 @@ export class CortexDebugExtension {
 
     private receivedStopEvent(e) {
         this.debuggerStatus = 'stopped';
-        this.peripheralProvider.debugStopped();
+        this.peripheralProvider.debugStopped(vscode.debug.activeDebugSession);
         if (this.currentArgs && !this.currentArgs.noDebug) {
             this.registerProvider.debugStopped();
         }
