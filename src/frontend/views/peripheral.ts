@@ -170,7 +170,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                     '.vscode', '.cortex-debug.peripherals.state.json');
                 this.saveState(fspath);
             }
-            this.session = null; 
+            this.session = null;
             this.peripherials = [];
             this.loaded = false;
             this._onDidChangeTreeData.fire(undefined);

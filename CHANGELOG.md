@@ -1,5 +1,10 @@
 ChangeLog
 
+#V0.4.8
+* Store register/peripheral settings in the appropriate folder instead of the first folder
+* Kill gdb-server if the user kills/exits gdb without using the proper disconnect/Stop buttons/process/commands
+* VSCode was terminating Cortex-Debug before it was done. st-util exit behavior was also not clean as it did not exit on a disconnect.
+
 #V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed. Issue #494
 * We may have **finally** found a way to exit OpenOCD without having to kill it and OpenOCD not hanging around after the session ends. This is of course dependent on OpenOCD behaving as documented. Thanks to #482 and @bohdan-tymkiv for a solution
