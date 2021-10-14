@@ -137,7 +137,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     }
 
     public debugSessionTerminated(session: vscode.DebugSession) {
-        if (this.session.id === session.id) {
+        if (this.session && (this.session.id === session.id)) {
             // We don't have multi-session capability, yet, and this file should really be in workspace storage
             if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
                 const fspath = path.join(session.workspaceFolder.uri.fsPath,

@@ -161,7 +161,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public debugSessionTerminated(session: vscode.DebugSession): Thenable<any> {
-        if (this.session.id === session.id) {
+        if (this.session && (this.session.id === session.id)) {
             if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
                 // Path should really be in the workspace storage but this is where we will live for now
                 const fspath = path.join(
