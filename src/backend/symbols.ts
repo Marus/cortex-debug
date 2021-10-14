@@ -69,14 +69,14 @@ export class SymbolTable {
      * showed that it is both complex and very slow.
      */
 
-    public loadSymbols() {
+    public loadSymbols(noCache: boolean = false) {
         try {
             let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
             if (this.toolchainPath) {
                 objdumpExePath = path.normalize(path.join(this.toolchainPath, objdumpExePath));
             }
 
-            const restored = this.deSerializeFileMaps(this.executable);
+            const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
             const options = ['--syms'];
             if (!restored) {
                 options.push('-Wi');    // WARNING! Creates super large output
@@ -134,7 +134,7 @@ export class SymbolTable {
             this.categorizeSymbols();
             this.sortGlobalVars();
 
-            if (!restored) {
+            if (!restored && !noCache) {
                 this.serializeFileMaps(this.executable);
             }
         }
