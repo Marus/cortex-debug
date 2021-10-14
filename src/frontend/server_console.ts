@@ -22,7 +22,7 @@ export class GDBServerConsole {
             inputMode : TerminalInputMode.COOKED
         };
         try {
-            const tmpdir = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
+            const tmpdir = os.tmpdir();
             const fname = `${tmpdir}/gdb-server-console-${process.pid}`;
             this.logFd = fs.openSync(fname, 'w');
         }
@@ -33,7 +33,7 @@ export class GDBServerConsole {
         if (!this.ptyTerm) {
             this.setupTerminal();
         }
-    }    
+    }
 
     private setupTerminal() {
         this.ptyOptions.name = GDBServerConsole.createTermName('gdb-server', null);
