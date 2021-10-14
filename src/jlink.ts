@@ -1,5 +1,6 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask, createPortName,SWOConfigureEvent, parseHexOrDecInt, RTTServerHelper } from './common';
+import { GDBServerController, ConfigurationArguments, calculatePortMask,
+    createPortName, SWOConfigureEvent, parseHexOrDecInt, RTTServerHelper } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -93,7 +94,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                 // misconfigure itself. Following will clear the RTT header which
                 // will cause the server to wait for the server to actually be initialized
                 let addr = parseHexOrDecInt(cfg.address);
-                for (var bytes = 0; bytes < cfg.searchId.length; bytes += 4) {
+                for (let bytes = 0; bytes < cfg.searchId.length; bytes += 4) {
                     commands.push(`interpreter-exec console "monitor exec memU32 0x${addr.toString(16)} = 0"`);
                     addr += 4;
                 }
@@ -101,7 +102,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             commands.push(`interpreter-exec console "monitor exec SetRTTAddr ${cfg.address}"`);
         }
         return commands;
-    }    
+    }
 
     public swoAndRTTCommands(): string[] {
         const commands = [];
@@ -226,7 +227,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
          * Sleep for 500ms at the end of the server launch to give the JLink server time to
          * settle:
          */
-        return new Promise(resolve => setTimeout(resolve, 500));
+        return new Promise((resolve) => setTimeout(resolve, 500));
     }
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {

@@ -88,6 +88,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 commands.push(`interpreter-exec console "monitor rtt polling_interval ${cfg.polling_interval}"`);
             }
 
+            // tslint:disable-next-line: forin
             for (const channel in this.rttHelper.rttLocalPortMap) {
                 const tcpPort = this.rttHelper.rttLocalPortMap[channel];
                 commands.push(`interpreter-exec console "monitor rtt server start ${tcpPort} ${channel}"`);
@@ -95,22 +96,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
             // We are starting way too early before the FW has a chance to initialize itself
             // but there is no other handshake mechanism
-            commands.push(`interpreter-exec console "monitor rtt start"`);
+            commands.push('interpreter-exec console "monitor rtt start"');
         }
         return commands;
     }
 
     public swoAndRTTCommands(): string[] {
         const commands = [];
-
-        if (!this.args.pvtRestartOrReset) {
-            // The following will add a handler to shutdown the server when gdb detaches from any of
-            // the targets. Technically, we should only do that for [target current] but the defintion
-            // of that is vague . This has to be done after 'init' when all the targets have already
-            // been created. So, technically we should find a better place to put this command
-            commands.push('interpreter-exec console "monitor foreach t [target names] { $t configure -event gdb-detach { shutdown } }"');
-        }
-
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
@@ -187,7 +179,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
 
         if (this.args.swoConfig.enabled) {
-            let tpiuIntExt = undefined;
+            let tpiuIntExt;
             const source = this.args.swoConfig.source;
             if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
                 const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
