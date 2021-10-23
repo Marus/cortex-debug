@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 
 import { SWORTTDecoder } from './common';
 import { SWOConsoleDecoderConfig } from '../common';
@@ -19,7 +20,9 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     private ptyTerm: PtyTerminal = null;
     private timestamp: boolean = false;
     private hrTimer: HrTimer = new HrTimer();
-    
+    private logFd: number = -1;
+    private logfile: string;
+
     constructor(config: SWOConsoleDecoderConfig) {
         this.port = config.port;
         this.encoding = config.encoding || 'utf8';
@@ -29,6 +32,16 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             this.createVSCodeTerminal(config);
         } else {
             this.createVSCodeChanne(config);
+        }
+        if (config.logfile) {
+            this.logfile = config.logfile;
+            try {
+                this.logFd = fs.openSync(config.logfile, 'w');
+            }
+            catch (e) {
+                const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
+                vscode.window.showErrorMessage(msg);
+            }
         }
     }
 
@@ -56,7 +69,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             this.ptyTerm = new PtyTerminal(options);
             this.ptyTerm.on('close', () => {
                 this.ptyTerm = null;
-            })
+            });
             if (config.showOnStartup) {
                 this.ptyTerm.terminal.show();
             }
@@ -97,8 +110,19 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
 
     public softwareEvent(packet: Packet) {
         if (packet.port !== this.port) { return; }
-
         const letters = packet.data.toString(this.encoding);
+
+        if (this.logFd >= 0) {
+            try {
+                fs.writeSync(this.logFd, letters);
+            }
+            catch (e) {
+                const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
+                vscode.window.showErrorMessage(msg);
+                try { fs.closeSync(this.logFd); } catch {}
+                this.logFd = -1;
+            }
+        }
 
         for (const letter of letters) {
             if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
@@ -118,7 +142,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
 
             if (this.timestamp && (this.position > 0)) {
                 if (this.timeout) {
-                    clearTimeout(this.timeout)
+                    clearTimeout(this.timeout);
                 }
                 this.timeout = setTimeout(() => {
                     this.pushOutput('\n');
@@ -141,6 +165,14 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         if (this.ptyTerm) {
             this.ptyTerm.dispose();
             this.ptyTerm = null;
+        }
+        this.close();
+    }
+
+    public close() {
+        if (this.logFd >= 0) {
+            fs.closeSync(this.logFd);
+            this.logFd = -1;
         }
     }
 }

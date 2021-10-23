@@ -4,6 +4,7 @@ export interface SWODecoderConfig {
 
 export interface SWOBasicDecoderConfig extends SWODecoderConfig {
     port: number;
+    logfile: string;
 }
 
 export interface SWOConsoleDecoderConfig extends SWOBasicDecoderConfig {

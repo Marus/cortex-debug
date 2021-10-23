@@ -7,6 +7,7 @@ export interface SWORTTDecoder {
     hardwareEvent(event: Packet);
     synchronized();
     lostSynchronization();
+    close();
 
     dispose();
 }
