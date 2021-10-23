@@ -85,13 +85,17 @@ export class SymbolTable {
                 options.push('-C');
             }
 
-            const tmpName = tmp.tmpNameSync();
-            const outFd = fs.openSync(tmpName, 'w');
-            const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
-                stdio: ['ignore', outFd, 'ignore']
-            });
-            fs.closeSync(outFd);
-
+            let tmpName: string;
+            if (noCache) {
+                tmpName = tmp.tmpNameSync();
+                const outFd = fs.openSync(tmpName, 'w');
+                const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
+                    stdio: ['ignore', outFd, 'ignore']
+                });
+                fs.closeSync(outFd);
+            } else {
+                tmpName = '/Users/hdm/Downloads/objdump.txt';
+            }
             const str = this.readLinesAndFileMaps(tmpName, !restored);
 
             const regex = RegExp(SYMBOL_REGEX);
