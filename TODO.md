@@ -16,4 +16,6 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
 # Other
 
 * High: WSL: First class support. This includes Docker, WSL and perhaps 'ssh'. VSCode and WSL seem to be maturing. Still not there but...there may be enough
-* 
+* Low: Live Debug: See if we can update program status without stopping the program. Not sure what will work and with which gdb-server
+  * invasive method: program is periodically paused and updates provided -- it has the look of live but is invasive for sure
+  * non-invasive (non-stop): Update without pausing the program. I should say minimally invasive.
