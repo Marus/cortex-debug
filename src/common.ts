@@ -6,7 +6,8 @@ import { GDBServer } from './backend/server';
 
 export enum CortexDebugKeys {
     REGISTER_DISPLAY_MODE = 'registerUseNaturalFormat',
-    VARIABLE_DISPLAY_MODE = 'variableUseNaturalFormat'
+    VARIABLE_DISPLAY_MODE = 'variableUseNaturalFormat',
+    SERVER_LOG_FILE_NAME = 'dbgServerLogfile'
 }
 
 export enum NumberFormat {
