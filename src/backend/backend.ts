@@ -11,6 +11,14 @@ export interface Breakpoint {
     number?: number;
 }
 
+export interface DataBreakpoint {
+    exp: string;
+    accessType: 'read' | 'write' | 'readWrite';
+    condition?: string;
+    countCondition?: string;
+    number?: number;
+}
+
 export interface Stack {
     level: number;
     address: string;
@@ -59,8 +67,10 @@ export class VariableObject {
     public hasMore: boolean;
     public id: number;
     public fullExp: string;
+    public parent: number;      // Variable Reference
     public children: {[name: string]: string};
-    constructor(node: any) {
+    constructor(p: number, node: any) {
+        this.parent = p;
         this.name = MINode.valueOf(node, 'name');
         this.exp = MINode.valueOf(node, 'exp');
         this.numchild = parseInt(MINode.valueOf(node, 'numchild'));
@@ -86,7 +96,7 @@ export class VariableObject {
             val = parseInt(value.toLowerCase());
 
             ret += ' ' + name + ';\n' ;
-            ret += toStringDecHexOctBin(val);       
+            ret += toStringDecHexOctBin(val);
         }
         return ret;
     }

@@ -118,24 +118,21 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
 
-        // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
-        if (!config.armToolchainPath && config.servertype === 'stlink') {
-           config.armToolchainPath = STLinkServerController.getArmToolchainPath();
-        }
-
         if (config.armToolchainPath) { config.toolchainPath = config.armToolchainPath; }
+        this.setOsSpecficConfigSetting(config, 'toolchainPath', 'armToolchainPath');
+
         if (!config.toolchainPath) {
-            config.toolchainPath = configuration.armToolchainPath;
+            // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
+            if (!config.armToolchainPath && config.servertype === 'stlink') {
+               config.armToolchainPath = STLinkServerController.getArmToolchainPath();
+            }
         }
         
         if (!config.toolchainPrefix) {
             config.toolchainPrefix = configuration.armToolchainPrefix || 'arm-none-eabi';
         }
         
-        if (!config.gdbPath) {
-            config.gdbPath = configuration.gdbPath;
-        }
-
+        this.setOsSpecficConfigSetting(config, 'gdbPath');
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.
@@ -153,8 +150,18 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         return config;
     }
 
+    private setOsSpecficConfigSetting(config: vscode.DebugConfiguration, dstName: string, propName: string = '') {
+        if (!config[dstName]) {
+            const configuration = vscode.workspace.getConfiguration('cortex-debug');
+            const osName = os.platform();
+            const osOverride = (propName || dstName) + '-' + ((osName === 'win32') ? 'windows' : (osName === 'darwin') ? 'osx' : 'linux');
+            config[dstName] = configuration.get(osOverride, configuration.get(propName, ''));
+        }
+    }
+
     private verifyQEMUConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.qemupath && !config.serverpath) { config.serverpath = config.qemupath; }
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'qemupath');
+        // if (config.qemupath && !config.serverpath) { config.serverpath = config.qemupath; }
 
         if (!config.cpu) { config.cpu = 'cortex-m3'; }
         if (!config.machine) { config.machine = 'lm3s6965evb'; }
@@ -173,14 +180,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifyJLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.jlinkpath && !config.serverpath) { config.serverpath = config.jlinkpath; }
+        if (config.jlinkpath && !config.serverpath) { config.serverpath = config.jlinkpath; }   // Obsolete
         if (!config.interface && config.jlinkInterface) { config.interface = config.jlinkInterface; }
         if (!config.interface) { config.interface = 'swd'; }
 
-        if (!config.serverpath) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.JLinkGDBServerPath;
-        }
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'JLinkGDBServerPath');
         if (config.rtos) {
             if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
                 if (!fs.existsSync(config.rtos)) {
@@ -212,11 +216,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifyOpenOCDConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.openOCDPath && !config.serverpath) { config.serverpath = config.openOCDPath; }
-        if (!config.serverpath) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.openocdPath;
-        }
+        if (config.openOCDPath && !config.serverpath) { config.serverpath = config.openOCDPath; }   // Obsolete
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'openocdPath');
 
         if (config.rtos && OPENOCD_VALID_RTOS.indexOf(config.rtos) === -1) {
             return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}`;
@@ -234,11 +235,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifySTUtilConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.stutilpath && !config.serverpath) { config.serverpath = config.stutilpath; }
-        if (!config.serverpath) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.stutilPath;
-        }
+        if (config.stutilpath && !config.serverpath) { config.serverpath = config.stutilpath; }     // obsolete
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'stutilPath');
 
         if (config.rtos) {
             return 'The st-util GDB Server does not have support for the rtos option.';
@@ -254,16 +252,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifySTLinkConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.stlinkPath && !config.serverpath) { config.serverpath = config.stlinkPath; }
-        if (!config.serverpath) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.stlinkPath;
-        }
-
-        if (!config.stm32cubeprogrammer) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.stm32cubeprogrammer = configuration.stm32cubeprogrammer;
-        }
+        if (config.stlinkPath && !config.serverpath) { config.serverpath = config.stlinkPath; } // Obsolete
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'stlinkPath');
+        this.setOsSpecficConfigSetting(config, 'stm32cubeprogrammer');
 
         if (config.rtos) {
             return 'The ST-Link GDB Server does not have support for the rtos option.';
@@ -279,11 +270,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifyPyOCDConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (config.pyocdPath && !config.serverpath) { config.serverpath = config.pyocdPath; }
-        if (!config.serverpath) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.pyocdPath;
-        }
+        if (config.pyocdPath && !config.serverpath) { config.serverpath = config.pyocdPath; }   // Obsolete
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'pyocdPath');
 
         if (config.rtos) {
             return 'The PyOCD GDB Server does not have support for the rtos option.';
@@ -315,10 +303,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifyPEConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
-        if (!config.serverpath) {
-            const configuration = vscode.workspace.getConfiguration('cortex-debug');
-            config.serverpath = configuration.PEGDBServerPath;
-        }
+        this.setOsSpecficConfigSetting(config, 'serverpath', 'PEGDBServerPath');
 
         if (config.configFiles && config.configFiles.length > 1) {
             return 'Only one pegdbserver Configuration File is allowed.';

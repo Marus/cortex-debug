@@ -52,7 +52,8 @@ export class CortexDebugExtension {
     private currentArgs: any = null;
 
     constructor(private context: vscode.ExtensionContext) {
-        this.startServerConsole(context);           // Make this the first thing we do so it is ready for the session
+        const config = vscode.workspace.getConfiguration('cortex-debug');
+        this.startServerConsole(context, config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '')); // Make this the first thing we do to be ready for the session
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
@@ -75,7 +76,6 @@ export class CortexDebugExtension {
             treeDataProvider: this.registerProvider
         });
 
-        const config = vscode.workspace.getConfiguration('cortex-debug');
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.REGISTER_DISPLAY_MODE}`,
             config.get(CortexDebugKeys.REGISTER_DISPLAY_MODE, true));
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`,
@@ -137,13 +137,15 @@ export class CortexDebugExtension {
     }
 
     private resetDevice() {
-        vscode.debug.activeDebugSession.customRequest('reset-device');
+        if (vscode.debug.activeDebugSession) {
+            vscode.debug.activeDebugSession.customRequest('reset-device');
+        }
     }
 
-    private startServerConsole(context: vscode.ExtensionContext): Promise<void> {
+    private startServerConsole(context: vscode.ExtensionContext, logFName: string = ''): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const rptMsg = 'Please report this problem.';
-            this.gdbServerConsole = new GDBServerConsole(context);
+            this.gdbServerConsole = new GDBServerConsole(context, logFName);
             this.gdbServerConsole.startServer().then(() => {
                 console.log('GDB server console created');
                 this.finishedTerminalSetup = true;
@@ -245,7 +247,9 @@ export class CortexDebugExtension {
             let url: string;
 
             if (functions.length === 0) {
-                vscode.window.showErrorMessage(`No function matching name/regexp '${funcname}' found.`);
+                vscode.window.showInformationMessage(`No function matching name/regexp '${funcname}' found.\n` +
+                    'Please report this problem if you think it in error. We will need your executable to debug.');
+                url = `disassembly:///${funcname}.cdasm`;
             }
             else if (functions.length === 1) {
                 if (!functions[0].file || (functions[0].scope === SymbolScope.Global)) {

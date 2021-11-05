@@ -25,9 +25,9 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
             this.client.on('error', (e) => {
                 const code: string = (e as any).code;
                 if ((code === 'ECONNRESET') && this.connected) {
-                    // Server closed the connection. We are done with this session
+                    // Server closed the connection. Done with this session. Should we emit('disconnected')?
                     this.connected = false;
-                    this.client = null;                    
+                    this.client = null;
                 } else if (code === 'ECONNREFUSED') {
                     // We expect 'ECONNREFUSED' if the server has not yet started.
                     (e as any).message = `Error: Failed to connect to port ${this.tcpPort} ` + e.toString() || code;

@@ -18,7 +18,6 @@
 			"name": "Debug Server",
 			"type": "node",
 			"request": "launch",
-
 			"runtimeArgs": [ "--nolazy", "--trace-warnings" ],
 			"program": "${workspaceRoot}/dist/debugadapter.js",
 			"stopOnEntry": false,

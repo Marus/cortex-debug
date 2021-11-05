@@ -493,7 +493,7 @@ export class PtyTerminal extends EventEmitter {
         }
         let endsWithNl = false;
         while (str.endsWith('\n')) {
-            str = str.substr(0, str.length-1);
+            str = str.substr(0, str.length - 1);
             endsWithNl = true;
         }
         str = str.replace(/\n/g, '\n' + header);

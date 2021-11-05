@@ -5,9 +5,9 @@ import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
 
-const tmpDirName = os.platform() === 'win32' ? process.env.TEMP || process.env.TMP || '.' : '/tmp';
 export function ServerConsoleLog(str: string) {
     try {
+        const tmpDirName = os.tmpdir();
         const date = new Date();
         str = `[${date.toISOString()}] ` + str;
         console.log(str);
@@ -85,10 +85,12 @@ export class GDBServer extends EventEmitter {
     }
 
     private exitTimeout: NodeJS.Timeout = null;
+    private killInProgress = false;
     public exit(): void {
-        if (this.process) {
+        if (this.process && !this.killInProgress) {
             try {
                 ServerConsoleLog('GDBServer: forcing an exit with kill()');
+                this.killInProgress = true;
                 this.process.kill();
             }
             catch (e) {

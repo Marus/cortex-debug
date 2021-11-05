@@ -2,6 +2,7 @@ import * as net from 'net';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
 import {IPtyTerminalOptions, magentaWrite, PtyTerminal } from './pty';
 import { getAnyFreePort, TerminalInputMode } from '../common';
 
@@ -10,23 +11,43 @@ export class GDBServerConsole {
     protected toBackend: net.Socket = null;
     protected toBackendPort: number = -1;
     protected logFd = -1;
+    protected logFName = '';
 
     public ptyTerm: PtyTerminal = null;
     protected ptyOptions: IPtyTerminalOptions;
     public static BackendPort: number = -1;
 
-    constructor(public context: vscode.ExtensionContext) {
+    constructor(public context: vscode.ExtensionContext, public logFileName = '') {
         this.ptyOptions = {
             name      : 'gdb-server',
             prompt    : '',             // Can't have a prompt since the gdb-server or semihosting may have one
             inputMode : TerminalInputMode.COOKED
         };
+
+        this.createLogFile(logFileName);
+    }
+
+    public createLogFile(logFileName: string) {
+        this.logFName = logFileName;
+        const showErr = !!this.logFName;
         try {
-            const tmpdir = os.tmpdir();
-            const fname = `${tmpdir}/gdb-server-console-${process.pid}`;
-            this.logFd = fs.openSync(fname, 'w');
+            if (this.logFName) {
+                const dir = path.dirname(this.logFName);
+                if (dir) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+                this.logFName = this.logFName.replace('${PID}', process.pid.toString());
+            } else {
+                const tmpdir = os.tmpdir();
+                this.logFName = `${tmpdir}/gdb-server-console-${process.pid}.log`;
+            }
+            this.logFd = fs.openSync(this.logFName, 'w');
         }
-        catch {}
+        catch (error) {
+            if (showErr) {
+                vscode.window.showErrorMessage(`Could not open log file: ${this.logFName}\n${error}`);
+            }
+        }
     }
 
     protected createAndShowTerminal() {

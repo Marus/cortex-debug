@@ -69,7 +69,7 @@ export class SymbolTable {
      * showed that it is both complex and very slow.
      */
 
-    public loadSymbols(noCache: boolean = false) {
+    public loadSymbols(noCache: boolean = false, useObjdump: string = '') {
         try {
             let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
             if (this.toolchainPath) {
@@ -85,14 +85,15 @@ export class SymbolTable {
                 options.push('-C');
             }
 
-            const tmpName = tmp.tmpNameSync();
-            const outFd = fs.openSync(tmpName, 'w');
-            const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
-                stdio: ['ignore', outFd, 'ignore']
-            });
-            fs.closeSync(outFd);
-
-            const str = this.readLinesAndFileMaps(tmpName, !restored);
+            if (!useObjdump || !fs.existsSync(useObjdump)) {
+                useObjdump = tmp.tmpNameSync();
+                const outFd = fs.openSync(useObjdump, 'w');
+                const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
+                    stdio: ['ignore', outFd, 'ignore']
+                });
+                fs.closeSync(outFd);
+            }
+            const str = this.readLinesAndFileMaps(useObjdump, !restored);
 
             const regex = RegExp(SYMBOL_REGEX);
             let currentFile: string = null;

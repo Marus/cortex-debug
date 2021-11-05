@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { SWORTTDecoder } from './common';
 import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
@@ -19,6 +20,8 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
     private useTerminal = true;
     private ptyTerm: PtyTerminal = null;
     private hrTimer: HrTimer = new HrTimer();
+    private logFd: number = -1;
+    private logfile: string;
 
     constructor(config: SWOBinaryDecoderConfig) {
         this.port = config.port;
@@ -30,6 +33,16 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
             this.createVSCodeTerminal(config);
         } else {
             this.createVSCodeChannel(config);
+        }
+        if (config.logfile) {
+            this.logfile = config.logfile;
+            try {
+                this.logFd = fs.openSync(config.logfile, 'w');
+            }
+            catch (e) {
+                const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
+                vscode.window.showErrorMessage(msg);
+            }
         }
     }
 
@@ -73,6 +86,18 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         } else {
             this.output.appendLine(str);
         }
+
+        if (this.logFd >= 0) {
+            try {
+                fs.writeSync(this.logFd, packet.data);
+            }
+            catch (e) {
+                const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
+                vscode.window.showErrorMessage(msg);
+                try { fs.closeSync(this.logFd); } catch {}
+                this.logFd = -1;
+            }
+        }
     }
 
     public hardwareEvent(event: Packet) {}
@@ -87,6 +112,14 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         if (this.ptyTerm) {
             this.ptyTerm.dispose();
             this.ptyTerm = null;
+        }
+        this.close();
+    }
+    
+    public close() {
+        if (this.logFd >= 0) {
+            fs.closeSync(this.logFd);
+            this.logFd = -1;
         }
     }
 }

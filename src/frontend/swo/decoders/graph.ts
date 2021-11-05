@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { SWORTTDecoder } from './common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
@@ -15,6 +16,8 @@ export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder 
     private scale: number;
     private encoding: string;
     private graphId: string;
+    private logFd: number = -1;
+    private logfile: string;
 
     constructor(config: SWOGraphDecoderConfig) {
         super();
@@ -23,6 +26,16 @@ export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder 
         this.encoding = config.encoding || 'unsigned';
         this.scale = config.scale || 1;
         this.graphId = config.graphId;
+        if (config.logfile) {
+            this.logfile = config.logfile;
+            try {
+                this.logFd = fs.openSync(config.logfile, 'w');
+            }
+            catch (e) {
+                const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
+                vscode.window.showErrorMessage(msg);
+            }
+        }
     }
 
     public softwareEvent(packet: Packet) {
@@ -34,10 +47,29 @@ export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder 
 
         const message: GrapherDataMessage = { type: 'data', data: scaledValue, id: this.graphId };
         this.emit('message', message);
+
+        if (this.logFd >= 0) {
+            try {
+                fs.writeSync(this.logFd, packet.data);
+            }
+            catch (e) {
+                const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
+                vscode.window.showErrorMessage(msg);
+                try { fs.closeSync(this.logFd); } catch {}
+                this.logFd = -1;
+            }
+        }
     }
 
     public hardwareEvent(event: Packet) {}
     public synchronized() {}
     public lostSynchronization() {}
-    public dispose() {}
+    public dispose() { this.close(); }
+
+    public close() {
+        if (this.logFd >= 0) {
+            fs.closeSync(this.logFd);
+            this.logFd = -1;
+        }
+    }
 }

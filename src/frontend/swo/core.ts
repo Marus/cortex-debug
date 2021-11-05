@@ -175,7 +175,7 @@ interface ConfigurationArguments {
     rttConfig: {
         enabled: boolean,
         decoders: RTTCommonDecoderOpts[]
-    }
+    };
     graphConfig: GraphConfiguration[];
 }
 
@@ -281,7 +281,7 @@ export class SWOCore extends SWORTTCoreBase {
         if (this.source.connected) { this.connected = true; }
         else { this.source.on('connected', () => { this.connected = true; }); }
         this.source.on('data', this.handleData.bind(this));
-        this.source.on('disconnected', () => { this.connected = false; });
+        this.source.on('disconnected', this.handleDisconnected.bind(this));
 
         if (args.graphConfig.length >= 1) {
             this.webview = new SWOWebview(extensionPath, args.graphConfig);
@@ -307,11 +307,11 @@ export class SWOCore extends SWORTTCoreBase {
                         processor = new SWORTTAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
-                        break;
                     }
                     catch (e) {
                         vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
                     }
+                    break;
                 default:
                     break;
             }
@@ -323,6 +323,13 @@ export class SWOCore extends SWORTTCoreBase {
         this.itmDecoder.on('lost-synchronization', this.lostSynchronization.bind(this));
         this.itmDecoder.on('timestamp', this.processTimestampPacket.bind(this));
         this.itmDecoder.on('overflow', this.overflow.bind(this));
+    }
+
+    private handleDisconnected(data: Buffer) {
+        for (const p of this.processors) {
+            p.close();
+        }
+        this.connected = false;
     }
 
     private handleData(data: Buffer) {
@@ -416,7 +423,7 @@ class RTTDecoder extends EventEmitter {
     public connected = false;
     private bytesRead: number = 0;
 
-    constructor (
+    constructor(
         public readonly source: SocketSWOSource,
         public readonly port: number,       // Thisis the rtt channel
         public readonly bytesNeeded: number) {
@@ -431,16 +438,16 @@ class RTTDecoder extends EventEmitter {
     }
 
     public onData(input: string | Buffer) {
-        let data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ; 
-        for (let ix = 0; ix < data.length; ix = ix + 1) {
-            this.buffer[this.bytesRead] = data[ix];
+        const data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ;
+        for (const elt of data) {
+            this.buffer[this.bytesRead] = elt;
             this.bytesRead = this.bytesRead + 1;
             if (this.bytesRead === this.bytesNeeded) {
                 const packet = {
                     type: PacketType.SOFTWARE,
                     port: this.port,
                     size: this.bytesRead,
-                    data: Buffer.from(this.buffer)                
+                    data: Buffer.from(this.buffer)
                 };
                 this.emit('software-event', packet);
                 this.bytesRead = 0;
@@ -465,7 +472,7 @@ export class RTTCore extends SWORTTCoreBase {
         args.rttConfig.decoders.forEach((conf) => {
             switch (conf.type) {
                 case 'graph':
-                    this.addRTTDecoder(this.sources[conf.port]);                    
+                    this.addRTTDecoder(this.sources[conf.port]);
                     const processor = new SWORTTGraphProcessor(conf as any as SWOGraphDecoderConfig);
                     if (this.webview) { this.webview.registerProcessors(processor); }
                     this.processors.push(processor);
@@ -473,7 +480,7 @@ export class RTTCore extends SWORTTCoreBase {
                 case 'advanced':
                     try {
                         for (const p of conf.ports) {
-                            this.addRTTDecoder(this.sources[p]);                    
+                            this.addRTTDecoder(this.sources[p]);
                         }
                         const processor = new SWORTTAdvancedProcessor(conf as any as SWOAdvancedDecoderConfig);
                         if (this.webview) { this.webview.registerProcessors(processor); }
