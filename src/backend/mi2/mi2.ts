@@ -1,4 +1,4 @@
-import { Breakpoint, IBackend, Stack, Variable, VariableObject, MIError } from '../backend';
+import { Breakpoint, DataBreakpoint, IBackend, Stack, Variable, VariableObject, MIError } from '../backend';
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
@@ -28,8 +28,7 @@ function couldBeOutput(line: string) {
 const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
-    public printCalls: boolean;
-    public debugOutput: boolean;
+    public debugOutput: boolean | 'raw' | 'raw-only';
     public procEnv: any;
     protected currentToken: number = 1;
     protected handlers: { [index: number]: (info: MINode) => any } = {};
@@ -140,7 +139,12 @@ export class MI2 extends EventEmitter implements IBackend {
             else {
                 const parsed = parseMI(line);
                 if (this.debugOutput) {
-                    this.log('log', 'GDB -> App: ' + JSON.stringify(parsed));
+                    if ((this.debugOutput === 'raw-only') || (this.debugOutput === 'raw')) {
+                        this.log('log', '-> ' + line);
+                    }
+                    if (this.debugOutput !== 'raw-only') {
+                        this.log('log', 'GDB -> App: ' + JSON.stringify(parsed));
+                    }
                 }
                 let handled = false;
                 if (parsed.token !== undefined && parsed.resultRecords) {
@@ -173,6 +177,13 @@ export class MI2 extends EventEmitter implements IBackend {
                                     }
                                     if (reason === 'breakpoint-hit') {
                                         this.emit('breakpoint', parsed);
+                                    }
+                                    else if (reason && (reason as string).includes('watchpoint-trigger')) {
+                                        this.emit('watchpoint', parsed);
+                                    }
+                                    else if (reason && (reason as string).includes('watchpoint-scope')) {
+                                        // When a local variable goes out of scope
+                                        this.emit('watchpoint-scope', parsed);
                                     }
                                     else if (reason === 'end-stepping-range') {
                                         this.emit('step-end', parsed);
@@ -244,7 +255,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private tryKill() {
-        if (!this.exited) {
+        if (!this.exited && this.process) {
             const proc = this.process;
             try {
                 ServerConsoleLog('GDB kill()');
@@ -274,10 +285,31 @@ export class MI2 extends EventEmitter implements IBackend {
         if (trace) {
             this.log('stderr', 'detach');
         }
-        this.sendCommand('target-detach');  // This may not be successful, go ahead and stop gdb as well. Sometimes hangs!
-        setTimeout(() => {
+        let to = setTimeout(() => {
+            if (to) {
+                ServerConsoleLog('target-detach hung: target probably running, thats okay, continue to stop()');
+                to = null;
+                this.stop();
+            }
+        }, 10);
+
+        // Following can hang if no response, or fail because the target is still running. Yes,
+        // we sometimes detach when target is still running. This also causes unhandled rejection
+        // warning/error from Node, so handle rejections.
+        this.sendCommand('target-detach').then(() => {
+            if (to) {
+                clearTimeout(to);
+                to = null;
+            }
             this.stop();
-        }, 5);
+        }, (e) => {
+            if (to) {
+                clearTimeout(to);
+                to = null;
+            }
+            ServerConsoleLog('target-detach failed: target probably running, thats okay, continue to stop()');
+            this.stop();
+        });
     }
 
     public interrupt(arg: string = ''): Thenable<boolean> {
@@ -473,6 +505,57 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
+    public addDataBreakPoint(breakpoint: DataBreakpoint): Promise<DataBreakpoint> {
+        if (trace) {
+            this.log('stderr', 'addBreakPoint');
+        }
+        return new Promise((resolve, reject) => {
+            let location = '';
+            if (breakpoint.countCondition) {
+                if (breakpoint.countCondition[0] === '>') {
+                    location += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
+                }
+                else {
+                    const match = numRegex.exec(breakpoint.countCondition)[0];
+                    if (match.length !== breakpoint.countCondition.length) {
+                        // tslint:disable-next-line:max-line-length
+                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.countCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
+                        location += '-t ';
+                    }
+                    else if (parseInt(match) !== 0) {
+                        location += '-t -i ' + parseInt(match) + ' ';
+                    }
+                }
+            }
+
+            location += breakpoint.exp;
+            const aType = breakpoint.accessType === 'read' ? '-r' : (breakpoint.accessType === 'readWrite' ? '-a' : '');
+            this.sendCommand(`break-watch ${aType} ${location}`).then((result) => {
+                if (result.resultRecords.resultClass === 'done') {
+                    const bkptNum = parseInt(result.result('bkpt.number'));
+                    const line = result.result('bkpt.line');
+                    breakpoint.number = bkptNum;
+
+                    if (breakpoint.condition) {
+                        this.setBreakPointCondition(bkptNum, breakpoint.condition).then((result) => {
+                            if (result.resultRecords.resultClass === 'done') {
+                                resolve(breakpoint);
+                            } else {
+                                reject(new MIError(result.result('msg') || 'Internal error', 'Setting breakpoint condition'));
+                            }
+                        }, reject);
+                    }
+                    else {
+                        resolve(breakpoint);
+                    }
+                }
+                else {
+                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${location}`));
+                }
+            }, reject);
+        });
+    }
+
     public getFrame(thread: number, frame: number): Thenable<Stack> {
         return new Promise((resolve, reject) => {
             const command = `stack-info-frame --thread ${thread} --frame ${frame}`;
@@ -600,7 +683,7 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(expression: string, name: string = '-', scope: string = '@'): Promise<VariableObject> {
+    public async varCreate(parent: number, expression: string, name: string = '-', scope: string = '@'): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
@@ -623,7 +706,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (overrideVal) {
             result = result.map((r: string[]) => r[0] === 'value' ?  ['value', overrideVal] : r);
         }
-        return new VariableObject(result);
+        return new VariableObject(parent, result);
     }
 
     public async varEvalExpression(name: string): Promise<MINode> {
@@ -633,7 +716,7 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.sendCommand(`var-evaluate-expression ${name}`);
     }
 
-    public async varListChildren(name: string, flattenAnonymous: boolean): Promise<VariableObject[]> {
+    public async varListChildren(parent: number, name: string, flattenAnonymous: boolean): Promise<VariableObject[]> {
         if (trace) {
             this.log('stderr', 'varListChildren');
         }
@@ -642,9 +725,9 @@ export class MI2 extends EventEmitter implements IBackend {
         const children = res.result('children') || [];
         const omg: VariableObject[] = [];
         for (const item of children) {
-            const child = new VariableObject(item[1]);
+            const child = new VariableObject(parent, item[1]);
             if (flattenAnonymous && child.exp.startsWith('<anonymous ')) {
-                omg.push(... await this.varListChildren(child.name, flattenAnonymous));
+                omg.push(... await this.varListChildren(parent, child.name, flattenAnonymous));
             } else {
                 omg.push(child);
             }
@@ -692,7 +775,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public sendRaw(raw: string) {
-        if (this.printCalls || trace) {
+        if (this.debugOutput || trace) {
             this.log('log', raw);
         }
         if (raw.includes('undefined')) {

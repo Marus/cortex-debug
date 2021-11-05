@@ -190,7 +190,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
     graphConfig: any[];
-    showDevDebugOutput: boolean;
+    showDevDebugOutput: boolean | 'raw' | 'raw-only';
     showDevDebugTimestamps: boolean;
     cwd: string;
     extensionPath: string;

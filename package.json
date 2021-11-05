@@ -778,12 +778,12 @@
                             },
                             "showDevDebugOutput": {
                                 "default": false,
-                                "description": "Prints all GDB responses to the console",
-                                "type": "boolean"
+                                "description": "Prints all GDB (parsed) responses to the console. Can also be a string 'raw' or 'raw-only'",
+                                "type": ["boolean", "string"]
                             },
                             "showDevDebugTimestamps": {
                                 "default": false,
-                                "description": "Show timestamps when 'showDevDebugOutput' is true",
+                                "description": "Show timestamps when 'showDevDebugOutput' is enabled",
                                 "type": "boolean"
                             },
                             "svdFile": {
@@ -1637,12 +1637,12 @@
                             },
                             "showDevDebugOutput": {
                                 "default": false,
-                                "description": "Prints all GDB responses to the console",
-                                "type": "boolean"
+                                "description": "Prints all GDB (parsed) responses to the console. Can also be a string 'raw' or 'raw-only'",
+                                "type": ["boolean", "string"]
                             },
                             "showDevDebugTimestamps": {
                                 "default": false,
-                                "description": "Show timestamps when 'showDevDebugOutput' is true",
+                                "description": "Show timestamps when 'showDevDebugOutput' is enabled",
                                 "type": "boolean"
                             },
                             "svdFile": {
