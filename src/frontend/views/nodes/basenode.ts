@@ -1,6 +1,6 @@
 import { Command, TreeItem } from 'vscode';
 import { NumberFormat, NodeSetting } from '../../../common';
-import { AddressRangesInUse } from '../../addrranges';
+import { AddressRangesInUse, AddrRange } from '../../addrranges';
 
 export abstract class BaseNode {
     public expanded: boolean;
@@ -45,6 +45,7 @@ export abstract class PeripheralBaseNode extends BaseNode {
     public abstract getPeripheral(): PeripheralBaseNode;
 
     public abstract markAddresses(a: AddressRangesInUse): void;
+    public abstract collectRanges(ary: AddrRange[]): void;      // Append addr range(s) to array
 
     public abstract saveState(path?: string): NodeSetting[];
     public abstract findByPath(path: string[]): PeripheralBaseNode;

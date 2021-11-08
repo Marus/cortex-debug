@@ -149,7 +149,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         return MemReadUtils.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
     }
 
-    public markAddresses(): void {
+    private pvt_markAddresses(): AddrRange[] {
         let ranges = [new AddrRange(this.baseAddress, this.totalLength)];   // Default range
         const skipAddressGaps = true;
         
@@ -166,7 +166,56 @@ export class PeripheralNode extends PeripheralBaseNode {
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
         // Another benefit, we can minimize gdb timeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
+        return AddressRangesInUse.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
+    }
+
+    public markAddresses(): void {
+        this.addrRanges = this.pvt_markAddresses();
+    }
+
+    public collectRanges(): void {
+        const addresses: AddrRange[] = [];
+        this.children.map((child) => child.collectRanges(addresses));
+        addresses.sort((a, b) => (a.base < b.base) ? -1 : ((a.base > b.base) ? 1 : 0));
+        addresses.map((r) => r.base += this.baseAddress);
+
+        const maxGap = this.gapThreshold;
+        let ranges: AddrRange[] = [];
+        if (maxGap >= 0) {
+            let last: AddrRange = null;
+            for (const r of addresses) {
+                if (last && ((last.nxtAddr() + maxGap) >= r.base)) {
+                    const max = Math.max(last.nxtAddr(), r.nxtAddr());
+                    last.length = max - last.base;
+                } else {
+                    ranges.push(r);
+                    last = r;
+                }
+            }
+        } else {
+            ranges = addresses;
+        }
+
+        // OpenOCD has an issue where the max number of bytes readable are 8191 (instead of 8192)
+        // which causes unaligned reads (via gdb) and silent failures. There is patch for this in OpenOCD
+        // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
+        // Another benefit, we can minimize gdb timeouts
+        const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
         this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
+
+        const verify = true;        // TODO: turn this off
+        if (verify && (maxGap >= 0)) {
+            const msg = 'PeripheralNode.collectRanges: address-range verification failed. Please report this problem to Cortex-Debug repo';
+            const golden = this.pvt_markAddresses();
+            if (this.addrRanges.length !== golden.length) {
+                throw new Error('1. ' + msg);
+            }
+            this.addrRanges.map((r, ix) => {
+                if ((r.base !== golden[ix].base) || (r.length !== golden[ix].length)) {
+                    throw new Error('2. ' + msg);
+                }
+            });
+        }
     }
 
     public getPeripheralNode(): PeripheralNode {

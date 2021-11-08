@@ -4,7 +4,7 @@ import { AccessType } from '../../svd';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralNode } from './peripheralnode';
 import { NodeSetting, NumberFormat } from '../../../common';
-import { AddressRangesInUse } from '../../addrranges';
+import { AddressRangesInUse, AddrRange } from '../../addrranges';
 import { hexFormat } from '../../utils';
 
 export interface ClusterOptions {
@@ -116,6 +116,10 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
         this.children.map((r) => { r.markAddresses(addrs); });
     }
 
+    public collectRanges(ary: AddrRange[]): void {
+        this.children.map((r) => { r.collectRanges(ary); });
+    }
+    
     public getPeripheral(): PeripheralBaseNode {
         return this.parent.getPeripheral();
     }

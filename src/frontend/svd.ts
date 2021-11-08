@@ -88,7 +88,8 @@ export class SVDParser {
                     peripherials.sort(PeripheralNode.compare);
 
                     for (const p of peripherials) {
-                        p.markAddresses();
+                        // p.markAddresses();
+                        p.collectRanges([]);
                     }
                     
                     resolve(peripherials);
@@ -212,8 +213,8 @@ export class SVDParser {
         return fields;
     }
 
-    private static parseRegisters(regInfo_: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
-        const regInfo = [...regInfo_];      // Make a shallow copy,. we will work on this
+    private static parseRegisters(regInfoOrig: any[], parent: PeripheralNode | PeripheralClusterNode): PeripheralRegisterNode[] {
+        const regInfo = [...regInfoOrig];      // Make a shallow copy,. we will work on this
         const registers: PeripheralRegisterNode[] = [];
 
         const localRegisterMap = {};
@@ -221,7 +222,7 @@ export class SVDParser {
             const nm = r.name[0];
             localRegisterMap[nm] = r;
             SVDParser.peripheralRegisterMap[parent.name + '.' + nm] = r;
-        };
+        }
 
         // It is wierd to iterate this way but it can handle forward references, are they legal? not sure
         // Or we could have done this work in the loop above. Not the best way, but it is more resilient to
@@ -386,7 +387,7 @@ export class SVDParser {
     }
 
     private static parsePeripheral(p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
-        let totalLength = 0
+        let totalLength = 0;
         if (p.addressBlock) {
             for (const ab of p.addressBlock) {
                 const offset = parseInteger(ab.offset[0]);

@@ -2,7 +2,7 @@ import { TreeItem, TreeItemCollapsibleState, window, debug, MarkdownString, Tree
 import { PeripheralBaseNode } from './basenode';
 import { AccessType } from '../../svd';
 import { PeripheralRegisterNode } from './peripheralregisternode';
-import { AddressRangesInUse } from '../../addrranges';
+import { AddressRangesInUse, AddrRange } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../../common';
 import { parseInteger, binaryFormat, hexFormat } from '../../utils';
 
@@ -85,11 +85,11 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         const displayValue = this.getFormattedValue(this.getFormat());
         const labelItem: TreeItemLabel = {
             label: label + ' ' + displayValue
-        }
+        };
         if (displayValue !== this.prevValue) {
             labelItem.highlights = [[label.length + 1, labelItem.label.length]];
             this.prevValue = displayValue;
-        }        
+        }
         const item = new TreeItem(labelItem, TreeItemCollapsibleState.None);
         
         item.contextValue = context;
@@ -287,6 +287,10 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
     }
 
     public markAddresses(a: AddressRangesInUse): void {
+        throw new Error('Method not implemented.');
+    }
+
+    public collectRanges(a: AddrRange[]): void {
         throw new Error('Method not implemented.');
     }
 }

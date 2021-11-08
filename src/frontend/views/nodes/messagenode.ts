@@ -1,6 +1,6 @@
 import { PeripheralBaseNode, BaseNode } from './basenode';
 import { TreeItem, TreeItemCollapsibleState } from 'vscode';
-import { AddressRangesInUse } from '../../addrranges';
+import { AddressRangesInUse, AddrRange } from '../../addrranges';
 import { NodeSetting } from '../../../common';
 
 export class MessageNode extends PeripheralBaseNode {
@@ -36,6 +36,9 @@ export class MessageNode extends PeripheralBaseNode {
     }
 
     public markAddresses(a: AddressRangesInUse): void {
+    }
+
+    public collectRanges(ary: AddrRange[]): void {
     }
 
     public saveState(path?: string): NodeSetting[] {

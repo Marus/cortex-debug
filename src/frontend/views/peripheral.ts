@@ -106,8 +106,12 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
             this.peripherials = [];
             this._onDidChangeTreeData.fire(undefined);
 
-            // Set the threshold between 0 and 32, with a default of 16 and a mukltiple of 8
-            this.gapThreshold = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
+            if (((typeof thresh) === 'number') && (thresh < 0)) {
+                this.gapThreshold = -1;     // Never merge register reads even if adjacent
+            } else {
+                // Set the threshold between 0 and 32, with a default of 16 and a mukltiple of 8
+                this.gapThreshold = ((((typeof thresh) === 'number') ? Math.max(0, Math.min(thresh, 32)) : 16) + 7) & ~0x7;
+            }
             
             if (svdfile && !this.session && !this.loaded) {
                 setTimeout(() => {

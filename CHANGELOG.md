@@ -4,6 +4,11 @@ ChangeLog
 * Store register/peripheral settings in the appropriate folder instead of the first folder
 * Kill gdb-server if the user kills/exits gdb without using the proper disconnect/Stop buttons/process/commands
 * VSCode was terminating Cortex-Debug before it was done. st-util exit behavior was also not clean as it did not exit on a disconnect.
+* Preliminary support for data watchpoints
+* svd now can allow no merge of consequtive addresses with a -1 specified for `svdAddrGapThreshold`
+* You can now save the output of a gdb-server into a text file by specifying `cortex-debug.dbgServerLogfile` in User/Workspace settings. This will save output from the servers from all sessions (not just the recent). This is primarily for debugging and for users when submitting issues.
+* Path names for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
+* SWO output can now be logged (saved) to a file just like RTT output
 
 #V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed. Issue #494

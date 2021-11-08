@@ -6,7 +6,7 @@ import { PeripheralFieldNode } from './peripheralfieldnode';
 import { AccessType } from '../../svd';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../../common';
-import { AddressRangesInUse } from '../../addrranges';
+import { AddressRangesInUse, AddrRange } from '../../addrranges';
 
 export interface PeripheralRegisterOptions {
     name: string;
@@ -85,7 +85,7 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         const displayValue = this.getFormattedValue(this.getFormat());
         const labelItem: TreeItemLabel = {
             label: label + ' ' + displayValue
-        }
+        };
         if (displayValue !== this.prevValue) {
             labelItem.highlights = [[label.length + 1, labelItem.label.length]];
             this.prevValue = displayValue;
@@ -304,5 +304,9 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
     public markAddresses(addrs: AddressRangesInUse): void {
         const finalOffset = this.parent.getOffset(this.offset);
         addrs.setAddrRange(finalOffset, this.size / 8);
+    }
+    public collectRanges(addrs: AddrRange[]): void {
+        const finalOffset = this.parent.getOffset(this.offset);
+        addrs.push(new AddrRange(finalOffset, this.size / 8));
     }
 }
