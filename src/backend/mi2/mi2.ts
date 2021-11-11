@@ -475,7 +475,15 @@ export class MI2 extends EventEmitter implements IBackend {
                             } else {
                                 reject(new MIError(result.result('msg') || 'Internal error', 'Setting breakpoint condition'));
                             }
-                        }, reject);
+                        },
+                        (reason) => {
+                            // Just delete the breakpoint we just created as the condition creation failed
+                            this.sendCommand(`break-delete ${bkptNum}`).then((x) => {}, (e) => {
+                                console.error('Breakpoint delete failed?');
+                                console.error(e);
+                            });
+                            reject(reason);     // Use this reason as reason for failing to create the breakpoint
+                        });
                     }
                     else {
                         resolve(breakpoint);
@@ -543,9 +551,13 @@ export class MI2 extends EventEmitter implements IBackend {
                             } else {
                                 reject(new MIError(result.result('msg') || 'Internal error', 'Setting breakpoint condition'));
                             }
-                        }, reject);
-                    }
-                    else {
+                        },
+                        (reason) => {
+                            // Just delete the breakpoint we just created as the condition creation failed
+                            this.sendCommand(`break-delete ${bkptNum}`).then((x) => {}, (e) => {});
+                            reject(reason);     // Use this reason as reason for failing to create the breakpoint
+                        });
+                    } else {
                         resolve(breakpoint);
                     }
                 }
