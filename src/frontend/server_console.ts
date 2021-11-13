@@ -30,6 +30,16 @@ export class GDBServerConsole {
     public createLogFile(logFileName: string) {
         this.logFName = logFileName;
         const showErr = !!this.logFName;
+
+        if (this.logFd >= 0) {
+            try {
+                fs.closeSync(this.logFd);
+            }
+            finally {
+                this.logFd = -1;
+            }
+        }
+
         try {
             if (this.logFName) {
                 const dir = path.dirname(this.logFName);
@@ -89,12 +99,14 @@ export class GDBServerConsole {
     protected debugMsg(msg: string) {
         if (true) {
             try {
-                msg = 'SERVER CONSOLE DEBUG: ' + msg;
+                const date = new Date();
+                msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ` + msg;
                 console.log(msg);
                 if (this.ptyTerm) {
                     msg += msg.endsWith('\n') ? '' : '\n';
                     magentaWrite(msg, this.ptyTerm);
                 }
+                this.logData(msg, true);
             }
             finally {}
         }
@@ -140,23 +152,31 @@ export class GDBServerConsole {
         });
         socket.on('data', (data) => {
             this.ptyTerm.write(data);
-            try {
-                if (this.logFd >= 0) {
-                    if (!this.ptyTerm.isReady) {
-                        // Maybe we should do our own buffering rather than the pty doing it. This can
-                        // help if the user kills the terminal. But we would have lost previous data anyways
-                        fs.writeFileSync(this.logFd, '******* Terminal not yet ready, buffering ******');
-                    }
-                    fs.writeFileSync(this.logFd, data.toString());
-                }
-            }
-            catch (e) {
-                this.logFd = -1;
-            }
+            this.logData(data);
         });
         socket.on('error', (e) => {
             this.debugMsg(`GDBServerConsole: onBackendConnect: gdb-server program client error ${e}`);
         });
+    }
+
+    private logData(data: Buffer | string, suppressNotReadMsg = false) {
+        try {
+            if (this.logFd >= 0) {
+                if (!this.ptyTerm.isReady && !suppressNotReadMsg) {
+                    // Maybe we should do our own buffering rather than the pty doing it. This can
+                    // help if the user kills the terminal. But we would have lost previous data anyways
+                    const date = new Date();
+                    const msg = `\n[${date.toISOString()}] SERVER CONSOLE DEBUG: ******* Terminal not yet ready, buffering... ******\n`;
+                    console.log(msg);
+                    fs.writeFileSync(this.logFd, msg);
+                }
+                fs.writeFileSync(this.logFd, data.toString());
+                fs.fdatasyncSync(this.logFd);
+            }
+        }
+        catch (e) {
+            this.logFd = -1;
+        }
     }
 
     public sendToBackend(data: string | Buffer) {

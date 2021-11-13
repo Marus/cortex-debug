@@ -181,6 +181,11 @@ export class CortexDebugExtension {
                 }
             }
         }
+        if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.SERVER_LOG_FILE_NAME}`)) {
+            const config = vscode.workspace.getConfiguration('cortex-debug');
+            const fName = config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '');
+            this.gdbServerConsole.createLogFile(fName);
+        }
     }
     
     private getSVDFile(device: string): string {

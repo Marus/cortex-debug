@@ -1,7 +1,8 @@
 {
     "version": "0.4.8-pre4",
     "activationEvents": [
-        "onDebugResolve:cortex-debug"
+        "onDebugResolve:cortex-debug",
+        "onStartupFinished"
     ],
     "categories": [
         "Debuggers"
@@ -328,8 +329,11 @@
                     "description": "If true, display variables in their natural format as specified by ARM. Hex otherwise."
                 },
                 "cortex-debug.dbgServerLogfile": {
-                    "type": "string",
-                    "default": "",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
                     "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
                 }
             }
