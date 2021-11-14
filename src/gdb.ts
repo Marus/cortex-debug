@@ -1465,6 +1465,7 @@ export class GDBDebugSession extends DebugSession {
         else { this.miDebugger.once('debug-ready', process); }
     }
 
+    protected pendingBkptResponse = false;
     protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments) {
         const createBreakpoints = async (shouldContinue) => {
             this.debugReady = true;
@@ -1557,9 +1558,11 @@ export class GDBDebugSession extends DebugSession {
 
                 this.breakpointMap.set(args.source.path, brkpoints.filter((bp) => !(bp instanceof MIError)) as Breakpoint[]);
                 this.sendResponse(response);
+                this.pendingBkptResponse = false;
             }
             catch (msg) {
                 this.sendErrorResponse(response, 9, msg.toString());
+                this.pendingBkptResponse = false;
             }
 
             if (shouldContinue) {
@@ -1578,8 +1581,22 @@ export class GDBDebugSession extends DebugSession {
             }
         };
 
-        if (this.debugReady) { process(); }
-        else { this.miDebugger.once('debug-ready', process); }
+        // Following will look crazy. VSCode will make this request before we have even finished
+        // the last one and without any user interaction either. To reproduce the problem,
+        // see https://github.com/Marus/cortex-debug/issues/525
+        // It happens with duplicate breakpoints created by the user and one of them is deleted
+        // VSCode will delete the first one and then delete the other one too but in a separate
+        // call
+        let intervalTime = 0;
+        const to = setInterval(() => {
+            if (!this.pendingBkptResponse) {
+                clearInterval(to);
+                this.pendingBkptResponse = true;
+                if (this.debugReady) { process(); }
+                else { this.miDebugger.once('debug-ready', process); }
+            }
+            intervalTime = 5;
+        }, intervalTime);
     }
 
     protected isVarRefGlobalOrStatic(varRef: number, id: any) {

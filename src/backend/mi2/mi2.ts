@@ -419,7 +419,7 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.sendCommand('gdb-set var ' + name + '=' + rawValue);
     }
 
-    public setBreakPointCondition(bkptNum, condition): Thenable<any> {
+    private setBreakPointCondition(bkptNum, condition): Thenable<any> {
         if (trace) {
             this.log('stderr', 'setBreakPointCondition');
         }
@@ -431,32 +431,36 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'addBreakPoint');
         }
         return new Promise((resolve, reject) => {
-            let location = '';
+            let bkptArgs = '';
             if (breakpoint.countCondition) {
                 if (breakpoint.countCondition[0] === '>') {
-                    location += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
+                    bkptArgs += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
                 }
                 else {
                     const match = numRegex.exec(breakpoint.countCondition)[0];
                     if (match.length !== breakpoint.countCondition.length) {
                         // tslint:disable-next-line:max-line-length
                         this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.countCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
-                        location += '-t ';
+                        bkptArgs += '-t ';
                     }
                     else if (parseInt(match) !== 0) {
-                        location += '-t -i ' + parseInt(match) + ' ';
+                        bkptArgs += '-t -i ' + parseInt(match) + ' ';
                     }
                 }
             }
 
+            if (breakpoint.condition) {
+                bkptArgs += `-c "${breakpoint.condition}" `;
+            }
+
             if (breakpoint.raw) {
-                location += '*' + escape(breakpoint.raw);
+                bkptArgs += '*' + escape(breakpoint.raw);
             }
             else {
-                location += '"' + escape(breakpoint.file) + ':' + breakpoint.line + '"';
+                bkptArgs += '"' + escape(breakpoint.file) + ':' + breakpoint.line + '"';
             }
             
-            this.sendCommand(`break-insert ${location}`).then((result) => {
+            this.sendCommand(`break-insert ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
                     const line = result.result('bkpt.line');
@@ -467,30 +471,10 @@ export class MI2 extends EventEmitter implements IBackend {
                         const file = result.result('bkpt.fullname') || result.record('bkpt.file');
                         breakpoint.file = file ? file : undefined;
                     }
-
-                    if (breakpoint.condition) {
-                        this.setBreakPointCondition(bkptNum, breakpoint.condition).then((result) => {
-                            if (result.resultRecords.resultClass === 'done') {
-                                resolve(breakpoint);
-                            } else {
-                                reject(new MIError(result.result('msg') || 'Internal error', 'Setting breakpoint condition'));
-                            }
-                        },
-                        (reason) => {
-                            // Just delete the breakpoint we just created as the condition creation failed
-                            this.sendCommand(`break-delete ${bkptNum}`).then((x) => {}, (e) => {
-                                console.error('Breakpoint delete failed?');
-                                console.error(e);
-                            });
-                            reject(reason);     // Use this reason as reason for failing to create the breakpoint
-                        });
-                    }
-                    else {
-                        resolve(breakpoint);
-                    }
+                    resolve(breakpoint);
                 }
                 else {
-                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${location}`));
+                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${bkptArgs}`));
                 }
             }, reject);
         });
@@ -518,27 +502,27 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'addBreakPoint');
         }
         return new Promise((resolve, reject) => {
-            let location = '';
+            let bkptArgs = '';
             if (breakpoint.countCondition) {
                 if (breakpoint.countCondition[0] === '>') {
-                    location += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
+                    bkptArgs += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
                 }
                 else {
                     const match = numRegex.exec(breakpoint.countCondition)[0];
                     if (match.length !== breakpoint.countCondition.length) {
                         // tslint:disable-next-line:max-line-length
                         this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.countCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
-                        location += '-t ';
+                        bkptArgs += '-t ';
                     }
                     else if (parseInt(match) !== 0) {
-                        location += '-t -i ' + parseInt(match) + ' ';
+                        bkptArgs += '-t -i ' + parseInt(match) + ' ';
                     }
                 }
             }
 
-            location += breakpoint.exp;
+            bkptArgs += breakpoint.exp;
             const aType = breakpoint.accessType === 'read' ? '-r' : (breakpoint.accessType === 'readWrite' ? '-a' : '');
-            this.sendCommand(`break-watch ${aType} ${location}`).then((result) => {
+            this.sendCommand(`break-watch ${aType} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
                     const line = result.result('bkpt.line');
@@ -562,7 +546,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     }
                 }
                 else {
-                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${location}`));
+                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${bkptArgs}`));
                 }
             }, reject);
         });

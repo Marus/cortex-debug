@@ -106,7 +106,7 @@ export class GDBServerConsole {
                     msg += msg.endsWith('\n') ? '' : '\n';
                     magentaWrite(msg, this.ptyTerm);
                 }
-                this.logData(msg, true);
+                this.logData(msg);
             }
             finally {}
         }
@@ -159,16 +159,16 @@ export class GDBServerConsole {
         });
     }
 
-    private logData(data: Buffer | string, suppressNotReadMsg = false) {
+    private logData(data: Buffer | string) {
         try {
             if (this.logFd >= 0) {
-                if (!this.ptyTerm.isReady && !suppressNotReadMsg) {
+                if (!this.ptyTerm.isReady) {
                     // Maybe we should do our own buffering rather than the pty doing it. This can
                     // help if the user kills the terminal. But we would have lost previous data anyways
                     const date = new Date();
-                    const msg = `\n[${date.toISOString()}] SERVER CONSOLE DEBUG: ******* Terminal not yet ready, buffering... ******\n`;
+                    const msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ******* Terminal not yet ready, buffering... ******`;
                     console.log(msg);
-                    fs.writeFileSync(this.logFd, msg);
+                    // fs.writeFileSync(this.logFd, msg);
                 }
                 fs.writeFileSync(this.logFd, data.toString());
                 fs.fdatasyncSync(this.logFd);
