@@ -6,9 +6,10 @@ ChangeLog
 * VSCode was terminating Cortex-Debug before it was done. st-util exit behavior was also not clean as it did not exit on a disconnect.
 * Preliminary support for data watchpoints
 * SVD now can allow no merge of consecutive addresses with a -1 specified for `svdAddrGapThreshold`. This will make peripheral updates very slow but certain devices may need this option.
-* You can now save the output of a gdb-server into a text file by specifying `cortex-debug.dbgServerLogfile` in User/Workspace settings. This will save output from the servers from all sessions (not just the recent ones). This is primarily for debugging and for users when submitting issues.
+* You can now save the output of a gdb-server into a text file by specifying `cortex-debug.dbgServerLogfile` in User/Workspace/Folder settings. This will save output from the servers from all sessions (not just the recent ones). This is primarily for debugging and for users when submitting issues.
 * Pathnames for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
 * SWO output can now be logged (saved) to a file just like RTT output
+* Issues #524 and #525
 
 #V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed. Issue #494
