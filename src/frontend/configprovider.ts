@@ -241,6 +241,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 if ('' === path.extname(config.rtos)) {
                     switch (os.platform()) {
                         case 'darwin':
+                            rtos_file_ext = '.dylib';
+                            break;
                         case 'linux':
                             rtos_file_ext = '.so';
                             break;
