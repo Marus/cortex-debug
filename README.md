@@ -59,7 +59,7 @@ See https://github.com/Marus/cortex-debug/wiki for usage information. This needs
 * `cd cortex-debug`
 * Optionally switch to a branch: `git checkout <existing-branch-name>`
 * `npm install`
-* Optional `npm run compie`
+* Optional `npm run compile`
 * Open VSCode in this folder and run the task `npm watch`. This will compile the code and watch for any changes and auto compile. The first time, it may take a minute or so for it to watch the entire folder. You can see the output of `npm watch` in the Terminal tab.
 
 ## How to debug

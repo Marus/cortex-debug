@@ -44,14 +44,14 @@ New Features
        "monitor gdb_sync",
        "stepi"    // Because of the command above, this is a no-op. No code is actually executed
      ]
-```  
+```
 * **`Run Without Debugging (^F5)`**: Experimental. This will now work but VSCode does not clearly define what this button should do. In an embedded cases, that is even murkier because without GDB and a gdb-server, there is no way to start the program. Between VSCode and Cortex-Debug, the end result is as follows
     * VSCode does not transmit any breakpoints to Cortex-Debug and hence no breakpoints
     * VSCode does show a pause button in active mode but pressing on it does nothing because that action is not sent to Cortex-Debug
     * `runToEntryPoint` and `breakAfterReset` options are disregarded
     * If the program halts because of an exception or any other reason, it is handled normally and now you will enter the normal debugger
 
-* **Auto-continue**: New behavior. Operations `Launch`, `Reset`, and `Restart` will now issue a `continue` to gdb upon sussesful reset-halt. This is not done in the followin cases
+* **Auto-continue**: New behavior. Operations `Launch`, `Reset`, and `Restart` will now issue a `continue` to gdb upon successful reset-halt. This is not done in the following cases
   * `runToEntryPoint` has been used for a `Launch` session or it is an `Attach` session
   * If a post-session-start commands (i.e., `postStartSessionCommands`, `postRestartSessionCommands`) are used; you can insert the `continue` command in there.
   * Or you have used the `"breakAfterReset" = true`
@@ -64,7 +64,7 @@ New Features
 
 * Registers (CPU and Peripheral) now indicate with a highlighted value, which ones changed since last update
 * Line-based Breakpoints now visually indicate which line a breakpoint is actually set when different from what was requested. Normal VSCode behavior is to revert back to the original line when debug session ends.
-* Perhpieral update will try to update as much as possible instead of bailing entire peripheral update after a single memory read failure. Failed reads are now indicated with `0xffffffff`
+* Peripheral update will try to update as much as possible instead of bailing entire peripheral update after a single memory read failure. Failed reads are now indicated with `0xffffffff`
 
 # V0.4.2
 
@@ -81,7 +81,7 @@ New Features
   <img src=https://user-images.githubusercontent.com/41269583/129586732-71228fee-6d6c-4993-ac8f-c9ca93b7772f.png width=350 />
 * Terminal input
   * Support for `Paste` in RTT in RTT terminals (See Issue #463)
-  * Input entered into RTT Terminals can now have thier encoding be use using the `iencoding` option for the `console` and `binary` encoders
+  * Input entered into RTT Terminals can now have their encoding be use using the `iencoding` option for the `console` and `binary` encoders
 * Global variables are now sorted in the Variables Windows. But all variables starting with double underscores `__` are pushed to the bottom.
 
 # V0.4.1
@@ -99,15 +99,15 @@ New Features:
        * For OpenOCD, you can customize the `polling_interval`, and the search string. The default `polling_interval` is 100ms as of today. 10ms seems more acceptable as a tradeoff between creating bus traffic and not losing/blocking data. If nothing changes in the MCU, then OpenOCD does not do much even if the interval is small.
        * It is perfectly fine to have Cortex-Debug enable RTT but not use any display features. This way you can use external tools (like JLink tools or custom ones)
        * You can plot RTT data just like you could with SWO. The setup in launch.json is identical. [See this comment](https://github.com/Marus/cortex-debug/issues/456#issuecomment-896021784).
-       * **Channel sharing:** You can use the same RTT channels in multiple ways. Corte-Debug reads the channel data from OpenOCD/JLink once and distributes to all subscribers (terminals & graphs & logfiles). For instance, you can plot a channel and also look at its binary data in a terminal. Just use two decoders with the same channel (actually called port) number.
+       * **Channel sharing:** You can use the same RTT channels in multiple ways. Cortex-Debug reads the channel data from OpenOCD/JLink once and distributes to all subscribers (terminals & graphs & logfiles). For instance, you can plot a channel and also look at its binary data in a terminal. Just use two decoders with the same channel (actually called port) number.
        * Note: JLink RTT has a limitation that it can ONLY work with one channel (channel 0). There is another artifact with RTT channels where you may see output from a previous run at the very beginning.
        * Note: This implementation does not support Virtual Terminals that you see in the JLink RTTViewer. All output goes to the same terminal.
    * SWO console and binary decoded text data now appears in a "TERMINAL" tab instead in the "OUTPUT" tab
    * All gdb-server (OpenOCD, JLink, etc.) output is also in the "TERMINAL" tab. In there you can also interact with your semihosting
-   * The terminals for all the features above have the following (optinal) features
+   * The terminals for all the features above have the following (optional) features
      * RTT and gdb-server terminals allow user input. Used to communicate with your FW
      * Set the prompt to be used (including no prompt)
-     * Set label used for the terminal. This label is used to the far right where you can switch between termainals
+     * Set label used for the terminal. This label is used to the far right where you can switch between terminals
      * In VSCode yuo can now drag a terminal window to the editor area or to on of the panels on the left
      * Your FW can emit ANSI escape sequences to set colors, font attributes, etc.
      * The terminal supports various `inputmode`s. The terminology was borrowed from age old Unix `stty`
@@ -116,9 +116,9 @@ New Features:
        * `rawecho` - Minimal processing is done. The terminal will echo characters you type and as such handle the Enter/Return keys as well. However, input is still sent to the FW as you type with zero processing
        * `disabled` - No user input is allowed. This is useful when the FW is not expecting any input and for unidirectional Terminals.
    * `demangle` is on by default. You can turn it off in `launch.json`
-   * Support in debugger for `Jump to Cursor`, thanks to [PR#417](https://github.com/Marus/cortex-debug/pull/417) 
+   * Support in debugger for `Jump to Cursor`, thanks to [PR#417](https://github.com/Marus/cortex-debug/pull/417)
    * A change in this pre-release, you will see some debug information in the gdb-server console. You will also see messages output by the extension that are not part of the actual output in bright magenta. This will happen in all terminals (RTT, SWO and console)
-   * WARNING: The `Adapter Output` window in the `OUTPUT` tab will go away. Replaced by the 'gdb-server' in the `TERMINAL` tab menntioned above.
+   * WARNING: The `Adapter Output` window in the `OUTPUT` tab will go away. Replaced by the 'gdb-server' in the `TERMINAL` tab mentioned above.
 
 A big thanks to Henrik Maier @hwmaier for helping me with the RTT feedback. Without that, it would have taken a lot longer and perhaps not as nice.
 # V0.3.13
@@ -135,7 +135,7 @@ New Features:
    * Support for `pyoocd` SWO over a TCP port. You can specify the SWO source as `probe`. This is rather new for `pyocd`, so it hasn't been extensively tested.
 
 Bug fixes and minor changes:
-   * Use the `pyocd` executable with `gdbserver` as first aregument instead of the `pyocd-gdbserver` executable. This is a potentially breaking change but long overdue as the old use model has been deprecated by `pyocd`.
+   * Use the `pyocd` executable with `gdbserver` as first argument instead of the `pyocd-gdbserver` executable. This is a potentially breaking change but long overdue as the old use model has been deprecated by `pyocd`.
    * Few other minor changes
 
 # V0.3.12
@@ -159,7 +159,7 @@ Also wanted to call out the `gdbPath` user setting that was introduced at V0.3.8
 
 New Features:
    * Added support for Linux ARM hosts (both aarch64 and armhf) to the binary modules
-   * Added the ability to pin certain perhiperals in the Perhiperal Register view so they remain at the top of the view. Thanks to [manuargue](https://github.com/manuargue) for the PR. This provides an alterate solution to issue [#370](https://github.com/Marus/cortex-debug/issues/370)
+   * Added the ability to pin certain peripherals in the Peripheral Register view so they remain at the top of the view. Thanks to [manuargue](https://github.com/manuargue) for the PR. This provides an alternate solution to issue [#370](https://github.com/Marus/cortex-debug/issues/370)
    * Added the ability to set `gdbPath` as an override in your launch.json file.
 
 # V0.3.9
@@ -198,7 +198,7 @@ Minor bug fix release
    * Fixed Issue [#263](https://github.com/Marus/cortex-debug/issues/263). Static functions were not properly detected because of the differences in how gdb and objdump reported pathnames. It made things like step/next to not work. Much thanks to @Lykkeberg and @stalyatech for reporting and testing solutions
    * When using multiple processors, TCP ports should be allocated consecutively, remote chance of failures avoided
    * `serialport` binary module updated for latest Node.js/Electron
-   * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed. There were also popus when setting a breakpoint while program was running and single stepping too fast and these are now suppressed.
+   * Watch and hovers caused too many popups. Something changed in VSCode. These are now suppressed. There were also popups when setting a breakpoint while program was running and single stepping too fast and these are now suppressed.
    * When `runToMain` was enabled, it caused a popup to appear for a failed stack trace. Again something changed in VSCode where it is requesting stack traces when program is not stopped.
 
 # V0.3.5
@@ -212,7 +212,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
    * Issues with `serialport` module: Updated to work with the latest version of VSCode/Electron. This will be an ongoing problem but hopefully, we can keep up with new releases of VSCode better in the future. When VSCode moves to a new version of Electron this extension has to be updated. For those adventurous enough, there is a script you can use to generate a compatible version yourself.
 2. New Features
    * Preliminary support for C++ de-mangled names. In `launch.json`, there is now a configuration option `"demangle"` to enable de-mangling of symbols both by GDB and Cortex-Debug. We may remove this property in the future and demangle all the time. All users are encouraged to enable this to see if it affects debugging in a negative way. With C++, there can be a lot of issues related to overloading and templates. Please report issues.
-   * There is a new `launch.json` configuration option `"serverArgs"` to add additional command-line arguments when launching any supported gdb-server (like J-Link, STlink, etc.)
+   * There is a new `launch.json` configuration option `"serverArgs"` to add additional command-line arguments when launching any supported gdb-server (like J-Link, ST-LINK, etc.)
    * Could be classified as a bug-fix. Before, setting static variable values in the Variables Window did not work. Now, it should work as expected.
    * There were some performance enhancements done for loading the Variables window when Global or Static scopes were expanded. Noticeable when single-stepping in large executables.
    * New setting `flattenAnonymous` which will flatten anonymous structs/unions. Default=false
@@ -244,7 +244,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 
 **NOTE: V0.3.0 has a few backwards incompatible changes that may require you to update your `launch.json` file.**
 1. The deprecated launch configuration types (`jlink-gdb`, `openocd-gdb`, `pyocd-gdb`, `stutil-gdb`, and `pe-gdb`) have now been removed - all launch configurations for Cortex-Debug should now use the `cortex-debug` type.
-2. There are now no SVD files bundled with the main Cortex-Debug extension; these SVD files added significant bulk to the download sizes for the main extension install and update while not being always needed and not changing often. The bundled SVD files will be separated out into separate "Device Support Pack" extensions that target particular microcontrollers (or families of microcontrollers); starting with packs for the STM32F1, STM32F4 and STM32L4 families that had been bundled previously. If you were using your own SVD file specified through the `svdFile` property in your `launch.json` then no configuration changes are needd, but if you were using one of the previously auto-detected SVD files through the `device` property then you will need to install the appropriate "Device Support Packs" (search for "Cortex-Debug" in the extension marketplace).
+2. There are now no SVD files bundled with the main Cortex-Debug extension; these SVD files added significant bulk to the download sizes for the main extension install and update while not being always needed and not changing often. The bundled SVD files will be separated out into separate "Device Support Pack" extensions that target particular microcontrollers (or families of microcontrollers); starting with packs for the STM32F1, STM32F4 and STM32L4 families that had been bundled previously. If you were using your own SVD file specified through the `svdFile` property in your `launch.json` then no configuration changes are needed, but if you were using one of the previously auto-detected SVD files through the `device` property then you will need to install the appropriate "Device Support Packs" (search for "Cortex-Debug" in the extension marketplace).
 
 ### Other Changes in V0.3.0
 * Added support for formatting watch values; add the following format strings:
@@ -252,8 +252,8 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 	* `h` or `x` - format in hexadecimal
 	* `d` - format in decimal
 	* `o` - format in octal
-	
-	These format sepecifiers are appended to the end of the watch expression separated by a `,` - eg. `*(unsigned int *)(0x40011004),b` would display the contents at address `0x40011004` in binary.
+
+	These format specifiers are appended to the end of the watch expression separated by a `,` - eg. `*(unsigned int *)(0x40011004),b` would display the contents at address `0x40011004` in binary.
 * Changed core registers to be displayed using their "natural" formatting:
 	* `rXX` in decimal
 	* `sXX` in floating point
@@ -365,8 +365,8 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 # V0.1.14
 
 * Workaround for issues with st-util GDB server on Windows environment
-* Added ability to select value for matting in the Core and Preipheral Register Views (Right click and Select "Set Value Format")
-* Perserve state for Core and Peripheral Register Views (Set format and expanded) from one debug session to the next.
+* Added ability to select value for matting in the Core and Peripheral Register Views (Right click and Select "Set Value Format")
+* Preserve state for Core and Peripheral Register Views (Set format and expanded) from one debug session to the next.
 * Syntax highlighting for the raw memory view.
 
 # V0.1.13
@@ -382,7 +382,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 # V0.1.11
 
 * Improved SVD parsing:
-    * Fields now support bit ranges being defined with <msb> and <lsb> elements; This would have impacted SVD files supplied by Nordi Semiconductor, Fujitsu and Spansion
+    * Fields now support bit ranges being defined with <msb> and <lsb> elements; This would have impacted SVD files supplied by Nordic Semiconductor, Fujitsu and Spansion
 	* Improved support for repeating fields/registers for "array" style repeats, versus explicitly named repeats; This would have impacted SVD files supplied by Nordic Semiconductor, Microchip/Atmel, and some of NXP's LPC line
 	* Support for register clusters, to group multiple closely related registers, within peripherals; This would have impacted SVD files supplied by Nordic Semiconductor and Microchip/Atmel
 	* Fixed issue with values being displayed as if they were signed.
@@ -403,20 +403,20 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 * A disassembly view has been added. This can show up in three possible ways:
     * You can manually view the disassembly for a particular function by selecting the "Cortex-Debug: View Disassembly (Function) command from the command palette and entering the function name. (While you can view the disassembly in this case, stepping will still be based upon source lines currently)
 	* If the source file cannot be located it will automatically disassemble and display the current function (In this case stepping is by instruction)
-	* You can force it to always disassembe through the "Cortex-Debug: Set Force Disassembly" command and selecting the "Forced" option.
+	* You can force it to always disassemble through the "Cortex-Debug: Set Force Disassembly" command and selecting the "Forced" option.
 * SWO Decoding has been significantly overhauled
 	* It is now possible to use a serial port (such as a FTDI USB to UART) to capture SWO data, allowing the use of SWO output on probes that do not support it natively or have poor performance. To use this set the "source" key under "swoConfig" to the UART device (COM port on Windows).
 	* The ITM, DWT and TPIU registers needed to match the configuration in the launch.json file will be set automatically; avoiding the need for your firmware to make the configurations. SWO output will still need to be enabled in your firmware though, as this part of the configuration is microcontroller specific.
 	* A number of configuration options have changed; please edit your launch.json file
-* Inital support for the Black Magic Probe has been added; this server has not been tested extensively yet, so there may still be some issues. SWO output through the probe is not currently support when using the Black Magic Probe.
+* Initial support for the Black Magic Probe has been added; this server has not been tested extensively yet, so there may still be some issues. SWO output through the probe is not currently support when using the Black Magic Probe.
 * Fixed issue with Peripheral Register viewer not working after the first launch request
 * Fixed a bug with the variables and watches view incorrectly updating the value on a struct/array when a contained element changed
 * Updated the view memory output format to match the format used by the hexdump for VSCode extension (https://marketplace.visualstudio.com/items?itemName=slevesque.vscode-hexdump) - this will enable the syntax highlighting, and hopefully in the future the inspector, from that plugin.
 
 # V0.1.9
 
-* Added initial support for texane's stlink utilites st-util GDB server (https://github.com/texane/stlink) - this configuration does not support SWO output.
-* Enabled updating registers and fields (Read/Write or Write-Only in the SVD defintion) in the Cortex Peripherals view - Right click on the register/field and select "Update"
+* Added initial support for texane's STLINK utilities st-util GDB server (https://github.com/texane/stlink) - this configuration does not support SWO output.
+* Enabled updating registers and fields (Read/Write or Write-Only in the SVD definition) in the Cortex Peripherals view - Right click on the register/field and select "Update"
 * Enabled copying registers and fields values in the Cortex Peripherals and Cortex Registers Views - Right click on the register/field and select "Copy Value"
 
 # V0.1.8
@@ -425,7 +425,7 @@ This is a pretty big release. The biggest change is to address C++ (and maybe Ru
 
 # V0.1.6
 
-* Improved parsing of SVD definitions (registers without fields; repeating registesr (dim, dimInteger, dimIncrement))
+* Improved parsing of SVD definitions (registers without fields; repeating registers (dim, dimInteger, dimIncrement))
 * Added initial support for PyOCD GDB Server (SWO not supported)
 
 # V0.1.5

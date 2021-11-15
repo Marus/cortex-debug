@@ -490,7 +490,7 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
@@ -504,7 +504,7 @@
                                 ]
                             },
                             "cwd": {
-                                "description": "Path of project",
+                                "description": "Directory to run commands from",
                                 "type": "string"
                             },
                             "debuggerArgs": {
@@ -566,7 +566,7 @@
                                 "description": "Applies to Restart/Reset/Launch, halt debugger after a reset."
                             },
                             "overrideGDBServerStartedRegex": {
-                                "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB server that is looked for to determine if the GDB server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB server types.",
+                                "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.",
                                 "type": "string",
                                 "default": null
                             },
@@ -596,7 +596,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, uCOS-III, or nuttx.",
+                                "description": "RTOS being used. For JLink this can be ChibiOS, embOS, FreeRTOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, uCOS-III, nuttx or auto.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
@@ -611,17 +611,17 @@
                             },
                             "serverpath": {
                                 "default": null,
-                                "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
+                                "description": "This setting can be used to override the GDB Server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
                                 "type": "string"
                             },
                             "gdbPath": {
                                 "default": null,
-                                "description": "This setting can be used to overrride the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
+                                "description": "This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
                                 "type": "string"
                             },
                             "serverArgs": {
                                 "default": [],
-                                "description": "Additional arguments to pass to gdb-server command line",
+                                "description": "Additional arguments to pass to GDB Server command line",
                                 "type": "array",
                                 "items": "string"
                             },
@@ -631,7 +631,7 @@
                             },
                             "gdbTarget": {
                                 "default": null,
-                                "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
+                                "description": "For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "demangle": {
@@ -792,7 +792,7 @@
                             },
                             "svdFile": {
                                 "default": null,
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "description": "Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
                             },
                             "svdAddrGapThreshold": {
@@ -1269,7 +1269,7 @@
                             },
                             "openOCDLaunchCommands": {
                                 "default": [],
-                                "description": "OpenOCD commands after config. files are loaded (-c options)",
+                                "description": "OpenOCD command(s) after configuration files are loaded (-c options)",
                                 "items": {
                                     "type": "string"
                                 },
@@ -1277,14 +1277,14 @@
                             },
                             "openOCDPreConfigLaunchCommands": {
                                 "default": [],
-                                "description": "OpenOCD commands before config. files are loaded (-c options)",
+                                "description": "OpenOCD command(s) before configuration files are loaded (-c options)",
                                 "items": {
                                     "type": "string"
                                 },
                                 "type": "array"
                             },
                             "configFiles": {
-                                "description": "OpenOCD/pegdbserver configuration file(s) to load",
+                                "description": "OpenOCD/pegdbserver configuration file(s) to use when debugging (-f option)",
                                 "items": {
                                     "type": "string"
                                 },
@@ -1292,7 +1292,7 @@
                             },
                             "searchDir": {
                                 "default": [],
-                                "description": "OpenOCD dir to search for config files and scripts",
+                                "description": "OpenOCD directories to search for config files and scripts (-s option). If no search directories are specified, it defaults to the configured cwd.",
                                 "items": {
                                     "type": "string"
                                 },
@@ -1325,7 +1325,7 @@
                             },
                             "BMPGDBSerialPort": {
                                 "type": "string",
-                                "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
+                                "description": "The serial port for the Black Magic Probe GDB Server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
                             },
                             "powerOverBMP": {
                                 "type": "string",
@@ -1340,7 +1340,7 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu and external",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
@@ -1354,7 +1354,7 @@
                                 ]
                             },
                             "cwd": {
-                                "description": "Path of project",
+                                "description": "Directory to run commands from",
                                 "type": "string"
                             },
                             "debuggerArgs": {
@@ -1416,7 +1416,7 @@
                                 "description": "Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` if `runToEntryPoint` is used"
                             },
                             "overrideGDBServerStartedRegex": {
-                                "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB server that is looked for to determine if the GDB server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB server types.",
+                                "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.",
                                 "type": "string",
                                 "default": null
                             },
@@ -1445,7 +1445,7 @@
                             },
                             "rtos": {
                                 "default": null,
-                                "description": "RTOS being used. For JLink this can be FreeRTOS, embOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, or uCOS-III.",
+                                "description": "RTOS being used. For JLink this can be ChibiOS, embOS, FreeRTOS, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, uCOS-III, nuttx or auto.",
                                 "type": "string"
                             },
                             "armToolchainPath": {
@@ -1460,17 +1460,17 @@
                             },
                             "serverpath": {
                                 "default": null,
-                                "description": "This setting can be used to override the gdb-server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
+                                "description": "This setting can be used to override the GDB Server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH",
                                 "type": "string"
                             },
                             "gdbPath": {
                                 "default": null,
-                                "description": "This setting can be used to overrride the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
+                                "description": "This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
                                 "type": "string"
                             },
                             "serverArgs": {
                                 "default": [],
-                                "description": "Additional arguments to pass to gdb-server command line",
+                                "description": "Additional arguments to pass to GDB Server command line",
                                 "type": "array",
                                 "items": "string"
                             },
@@ -1480,7 +1480,7 @@
                             },
                             "gdbTarget": {
                                 "default": null,
-                                "description": "For externally controlled GDB servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
+                                "description": "For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "runToMain": {
@@ -1651,7 +1651,7 @@
                             },
                             "svdFile": {
                                 "default": null,
-                                "description": "Path to an SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "description": "Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
                             },
                             "svdAddrGapThreshold": {
@@ -2148,7 +2148,7 @@
                                 "type": "array"
                             },
                             "configFiles": {
-                                "description": "OpenOCD configuration file(s) to load",
+                                "description": "OpenOCD configuration file(s) to use when debugging (-f option)",
                                 "items": {
                                     "type": "string"
                                 },
@@ -2156,7 +2156,7 @@
                             },
                             "searchDir": {
                                 "default": [],
-                                "description": "OpenOCD dir to search for config files and scripts",
+                                "description": "OpenOCD directories to search for config files and scripts (-s option). If no search directories are specified, it defaults to the configured cwd.",
                                 "items": {
                                     "type": "string"
                                 },
@@ -2199,7 +2199,7 @@
                             },
                             "BMPGDBSerialPort": {
                                 "type": "string",
-                                "description": "The serial port for the Black Magic Probe GDB server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
+                                "description": "The serial port for the Black Magic Probe GDB Server. On Windows this will be \"COM<num>\", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)"
                             },
                             "powerOverBMP": {
                                 "type": "string",
@@ -2219,7 +2219,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "showDevDebugOutput": false,
                             "servertype": "jlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink",
@@ -2232,7 +2231,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "showDevDebugOutput": false,
                             "servertype": "openocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
@@ -2245,10 +2243,9 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "showDevDebugOutput": false,
                             "servertype": "stutil"
                         },
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB server (https://github.com/texane/stlink)",
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB Server (https://github.com/texane/stlink)",
                         "label": "Cortex Debug: ST-Util"
                     },
                     {
@@ -2258,7 +2255,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "showDevDebugOutput": false,
                             "servertype": "stlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STMicroelectronic's ST-LINK_gdbserver part of STM32CubeIDE",
@@ -2271,7 +2267,6 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
-                            "showDevDebugOutput": false,
                             "servertype": "pyocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD",
