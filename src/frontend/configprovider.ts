@@ -4,6 +4,7 @@ import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
 import { CortexDebugKeys } from '../common';
+import * as path from 'path';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'nuttx', 'auto'];
 const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS', 'Zephyr'];
@@ -21,7 +22,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return undefined;
         }
         config.gdbServerConsolePort = GDBServerConsole.BackendPort;
-        
+
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
             case 'darwin': Object.assign(config, config.osx); delete config.osx; break;
@@ -33,7 +34,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.debuggerArgs = config.debugger_args;
         }
         if (!config.debuggerArgs) { config.debuggerArgs = []; }
-        
+
         const type = config.servertype;
 
         let validationResponse: string = null;
@@ -127,11 +128,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                config.armToolchainPath = STLinkServerController.getArmToolchainPath();
             }
         }
-        
+
         if (!config.toolchainPrefix) {
             config.toolchainPrefix = configuration.armToolchainPrefix || 'arm-none-eabi';
         }
-        
+
         this.setOsSpecficConfigSetting(config, 'gdbPath');
         config.extensionPath = this.context.extensionPath;
         if (os.platform() === 'win32') {
@@ -141,12 +142,38 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config.flattenAnonymous = configuration.flattenAnonymous;
         config.registerUseNaturalFormat = configuration.get(CortexDebugKeys.REGISTER_DISPLAY_MODE, true);
         config.variableUseNaturalFormat = configuration.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true);
-        
+
         if (validationResponse) {
             vscode.window.showErrorMessage(validationResponse);
             return undefined;
         }
-        
+
+        return config;
+    }
+
+    public resolveDebugConfigurationWithSubstitutedVariables(
+        folder: vscode.WorkspaceFolder | undefined,
+        config: vscode.DebugConfiguration,
+        token?: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.DebugConfiguration> {
+
+        let validationResponse: string = null;
+
+        switch (config.servertype) {
+            case 'jlink':
+                validationResponse = this.verifyJLinkConfigurationAfterSubstitution(folder, config);
+                break;
+            default:
+                /* config.servertype was already checked in resolveDebugConfiguration */
+                validationResponse = null;
+                break;
+        }
+
+        if (validationResponse) {
+            vscode.window.showErrorMessage(validationResponse);
+            return undefined;
+        }
+
         return config;
     }
 
@@ -175,7 +202,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.rtos) {
             return 'RTOS support is not available when using QEMU';
         }
-        
+
         return null;
     }
 
@@ -185,17 +212,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.interface) { config.interface = 'swd'; }
 
         this.setOsSpecficConfigSetting(config, 'serverpath', 'JLinkGDBServerPath');
-        if (config.rtos) {
-            if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
-                if (!fs.existsSync(config.rtos)) {
-                    // tslint:disable-next-line:max-line-length
-                    return `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.`;
-                }
-            }
-            else {
-                config.rtos = `GDBServer/RTOSPlugin_${config.rtos}`;
-            }
-        }
 
         if (!config.device) {
             // tslint:disable-next-line:max-line-length
@@ -209,6 +225,40 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.rttConfig && config.rttConfig.enabled && config.rttConfig.decoders && (config.rttConfig.decoders.length !== 0)) {
             if ((config.rttConfig.decoders.length > 1) || (config.rttConfig.decoders[0].port !== 0)) {
                 return 'Currently, JLink RTT can have a maximum of one decoder and it has to be port/channel 0';
+            }
+        }
+
+        return null;
+    }
+
+    private verifyJLinkConfigurationAfterSubstitution(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+
+        if (config.rtos) {
+            if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
+
+                let rtos_file_ext = '';
+                /* When we do not have a file extension use the default OS one for file check, as J-Link allows the parameter to be used without one. */
+                if ('' === path.extname(config.rtos)) {
+                    switch (os.platform()) {
+                        case 'darwin':
+                        case 'linux':
+                            rtos_file_ext = '.so';
+                            break;
+                        case 'win32':
+                            rtos_file_ext = '.dll';
+                            break;
+                        default:
+                            console.log(`Unknown platform ${os.platform()}`);
+                    }
+                }
+
+                if (!fs.existsSync((config.rtos + rtos_file_ext))) {
+                    // tslint:disable-next-line:max-line-length
+                    return `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.`;
+                }
+            }
+            else {
+                config.rtos = `GDBServer/RTOSPlugin_${config.rtos}`;
             }
         }
 
@@ -230,7 +280,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.searchDir || config.searchDir.length === 0) {
             config.searchDir = [];
         }
-        
+
         return null;
     }
 
@@ -288,7 +338,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.powerOverBMP) { config.powerOverBMP = 'lastState'; }
         if (!config.interface) { config.interface = 'swd'; }
         if (!config.targetId) { config.targetId = 1; }
-        
+
         if (config.rtos) {
             return 'The Black Magic Probe GDB Server does not have support for the rtos option.';
         }
