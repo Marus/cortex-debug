@@ -1,6 +1,6 @@
 | Attribute | Applies To | Description |
 | --------- | ---------- | ----------- |
-| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` if `runToEntryPoint` is used
+| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` if `runToEntryPoint` is used.
 | cmsisPack | Common | Path to a CMSIS-Pack file. Use to add extra device support.
 | cwd | Common | Directory to run commands from
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
@@ -46,9 +46,9 @@
 | ipAddress | J-Link Specific | IP Address for networked J-Link Adapter
 | jlinkscript | J-Link Specific | J-Link script file - optional input file for customizing J-Link actions.
 | serialNumber | J-Link Specific | J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer
-| configFiles | OpenOCD Specific | OpenOCD configuration file(s) to use when debugging (-f option)
-| openOCDLaunchCommands | OpenOCD Specific | OpenOCD commands after config. files are loaded (-c options)
-| openOCDPreConfigLaunchCommands | OpenOCD Specific | OpenOCD commands before config. files are loaded (-c options)
+| configFiles | OpenOCD Specific | OpenOCD/PE GDB Server configuration file(s) to use when debugging (OpenOCD -f option)
+| openOCDLaunchCommands | OpenOCD Specific | OpenOCD command(s) after configuration files are loaded (-c options)
+| openOCDPreConfigLaunchCommands | OpenOCD Specific | OpenOCD command(s) before configuration files are loaded (-c options)
 | searchDir | OpenOCD Specific | OpenOCD directories to search for config files and scripts (-s option). If no search directories are specified, it defaults to the configured cwd.
 | boardId | PyOCD Specific | PyOCD Board Identifier. Needed if multiple compatible boards are connected.
 | cpu | QEMU Specific | CPU Type Selection - used for QEMU server type
