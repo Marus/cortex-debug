@@ -6,6 +6,10 @@ import re
 
 pp = pprint.PrettyPrinter()
 
+expected_diff_properties = ['overrideAttachCommands', 'overrideLaunchCommands',
+                            'postAttachCommands', 'postLaunchCommands',
+                            'preAttachCommands', 'preLaunchCommands',
+                            'runToEntryPoint', 'runToMain']
 
 def get_properties(pkg, type):
     attributes = pkg['contributes']['debuggers'][0]['configurationAttributes'][type]
@@ -18,10 +22,10 @@ with open('package.json') as f:
 
 attach_properties = get_properties(package, 'attach')
 launch_properties = get_properties(package, 'launch')
-extra_properties = list(attach_properties.keys() -
-                        launch_properties.keys()) + list(launch_properties.keys() - attach_properties.keys())
+extra_properties = list(set(list(attach_properties.keys() -
+                        launch_properties.keys()) + list(launch_properties.keys() - attach_properties.keys())) - set(expected_diff_properties))
 extra_properties.sort()
-if extra_properties != ['overrideAttachCommands', 'postAttachCommands', 'preAttachCommands']:
+if len(extra_properties) > 0:
     print("WARNING: launch_properties and attach_properties DIFFER UNEXPECTEDLY:")
     print(extra_properties)
 
@@ -68,6 +72,9 @@ with open('debug_attributes.md', 'w') as f:
             if attribute in MISSING_ATTRIBUTES:
                 continue
             if attribute in all_properties.keys():
+                if attribute in attach_properties.keys() and attribute in launch_properties.keys():
+                    if attach_properties[attribute] != launch_properties[attribute]:
+                        print("WARNING: configuration property {} DIFFER UNEXPECTEDLY between attach and launch".format(attribute))
                 f.write('| {} | {} | {}\n'.format(
                     attribute, category_name, all_properties[attribute]))
             else:
