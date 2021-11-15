@@ -10,6 +10,7 @@ ChangeLog
 * Pathnames for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
 * SWO output can now be logged (saved) to a file just like RTT output
 * Issues #524 and #525
+* Allow value substitution for J-Link RTOS option
 
 #V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed. Issue #494
