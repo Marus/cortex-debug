@@ -2219,6 +2219,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "jlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + JLink",
@@ -2231,6 +2232,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "openocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
@@ -2243,6 +2245,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "stutil"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB Server (https://github.com/texane/stlink)",
@@ -2255,6 +2258,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "stlink"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + STMicroelectronic's ST-LINK_gdbserver part of STM32CubeIDE",
@@ -2267,6 +2271,7 @@
                             "name": "${6:Debug Microcontroller}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "showDevDebugOutput": false,
                             "servertype": "pyocd"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD",
