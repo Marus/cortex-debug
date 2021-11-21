@@ -232,35 +232,37 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private verifyJLinkConfigurationAfterSubstitution(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): string {
+        function defaultExt() {
+            switch (os.platform()) {
+                case 'darwin':
+                    return '.dylib';
+                case 'linux':
+                    return '.so';
+                case 'win32':
+                    return '.dll';
+                default:
+                    console.log(`Unknown platform ${os.platform()}`);
+                    return '';
+            }
+        }
 
         if (config.rtos) {
             if (JLINK_VALID_RTOS.indexOf(config.rtos) === -1) {
-
-                let rtos_file_ext = '';
-                /* When we do not have a file extension use the default OS one for file check, as J-Link allows the parameter to be used without one. */
+                /* When we do not have a file extension use the default OS one for file check, as J-Link allows the
+                 * parameter to be used without one.
+                 */
                 if ('' === path.extname(config.rtos)) {
-                    switch (os.platform()) {
-                        case 'darwin':
-                            rtos_file_ext = '.dylib';
-                            break;
-                        case 'linux':
-                            rtos_file_ext = '.so';
-                            break;
-                        case 'win32':
-                            rtos_file_ext = '.dll';
-                            break;
-                        default:
-                            console.log(`Unknown platform ${os.platform()}`);
-                    }
+                    config.rtos = config.rtos + defaultExt();
                 }
 
-                if (!fs.existsSync((config.rtos + rtos_file_ext))) {
-                    // tslint:disable-next-line:max-line-length
-                    return `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}. A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.`;
+                if (!fs.existsSync(config.rtos)) {
+                    return `JLink RTOS plugin file "${config.rtos}" not found.\n` +
+                        `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}.` +
+                        ' A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
                 }
             }
             else {
-                config.rtos = `GDBServer/RTOSPlugin_${config.rtos}`;
+                config.rtos = `GDBServer/RTOSPlugin_${config.rtos}` + defaultExt();
             }
         }
 
