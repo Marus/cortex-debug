@@ -1,5 +1,5 @@
 {
-    "version": "0.4.8-pre5",
+    "version": "0.4.8",
     "activationEvents": [
         "onDebugResolve:cortex-debug",
         "onStartupFinished"

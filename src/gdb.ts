@@ -474,6 +474,10 @@ export class GDBDebugSession extends DebugSession {
                         return '"' + s.replace(/"/g, '\\"') + '"';
                     }).join(' ') + '\n';
                     this.handleMsg('log', dbgMsg + ` "${this.args.executable}"`);
+                    if (!this.args.showDevDebugOutput) {
+                        this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
+                            'here. Helpful to debug issues or report problems');
+                    }
                 }
 
                 this.disableSendStoppedEvents = (!attach && (this.args.runToEntryPoint || this.args.noDebug)) ? true : false;
@@ -1187,9 +1191,9 @@ export class GDBDebugSession extends DebugSession {
             this.stoppedEventPending = true;
         }
 
-        console.log(info);
+        // console.log(info);
         if (type !== 'hit') {
-            console.log('Local variable watchpoing going out of scope');
+            // console.log('Local variable watchpoing going out of scope');
             if (info.outOfBandRecord && info.outOfBandRecord[0] && info.outOfBandRecord[0].output) {
                 for (const item of info.outOfBandRecord[0].output) {
                     if (item[0].endsWith('wpnum')) {
@@ -1210,7 +1214,7 @@ export class GDBDebugSession extends DebugSession {
                             event: 'removed',
                             seq: 0
                         };
-                        console.log(`Watchpoint ${id} deleted`);
+                        // console.log(`Watchpoint ${id} deleted`);
                         this.dataBreakpointMap.delete(id);
                         this.sendEvent(ev);
                         break;

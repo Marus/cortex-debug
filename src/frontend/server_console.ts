@@ -142,7 +142,7 @@ export class GDBServerConsole {
         this.createAndShowTerminal();
         this.ptyTerm.resume();
         this.clearTerminal();
-        this.debugMsg('onBackendConnect: gdb-server session connected');
+        this.debugMsg('onBackendConnect: gdb-server session connected. You can switch to "DEBUG CONSOLE" to see GDB interactions.');
         socket.setKeepAlive(true);
         socket.on('close', () => {
             this.debugMsg('onBackendConnect: gdb-server session closed');
