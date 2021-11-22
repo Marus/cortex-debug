@@ -181,7 +181,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config[dstName]) {
             const configuration = vscode.workspace.getConfiguration('cortex-debug');
             const osName = os.platform();
-            const osOverride = (propName || dstName) + '-' + ((osName === 'win32') ? 'windows' : (osName === 'darwin') ? 'osx' : 'linux');
+            const osOverride = (propName || dstName) + '.' + ((osName === 'win32') ? 'windows' : (osName === 'darwin') ? 'osx' : 'linux');
             config[dstName] = configuration.get(osOverride, configuration.get(propName, ''));
         }
     }

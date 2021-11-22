@@ -1,5 +1,8 @@
 ChangeLog
 
+#V0.4.9
+* Issue #536. Typo in code for os-specific paths
+
 #V0.4.8
 * Store register/peripheral settings in the appropriate folder instead of the first folder
 * Kill gdb-server if the user kills/exits gdb without using the proper disconnect/Stop buttons/process/commands
