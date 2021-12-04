@@ -1,4 +1,6 @@
 ChangeLog
+#V0.4.11
+* Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
 
 #V0.4.9
 * Issue #536. Typo in code for os-specific paths
