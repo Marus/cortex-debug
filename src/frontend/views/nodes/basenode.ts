@@ -44,7 +44,6 @@ export abstract class PeripheralBaseNode extends BaseNode {
     public abstract getChildren(): PeripheralBaseNode[] | Promise<PeripheralBaseNode[]>;
     public abstract getPeripheral(): PeripheralBaseNode;
 
-    public abstract markAddresses(a: AddressRangesInUse): void;
     public abstract collectRanges(ary: AddrRange[]): void;      // Append addr range(s) to array
 
     public abstract saveState(path?: string): NodeSetting[];

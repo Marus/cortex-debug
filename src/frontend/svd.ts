@@ -88,7 +88,6 @@ export class SVDParser {
                     peripherials.sort(PeripheralNode.compare);
 
                     for (const p of peripherials) {
-                        // p.markAddresses();
                         p.collectRanges([]);
                     }
                     

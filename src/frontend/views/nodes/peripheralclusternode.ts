@@ -112,10 +112,6 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
         }
     }
 
-    public markAddresses(addrs: AddressRangesInUse): void {
-        this.children.map((r) => { r.markAddresses(addrs); });
-    }
-
     public collectRanges(ary: AddrRange[]): void {
         this.children.map((r) => { r.collectRanges(ary); });
     }

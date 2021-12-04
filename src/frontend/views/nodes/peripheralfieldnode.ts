@@ -286,10 +286,6 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public markAddresses(a: AddressRangesInUse): void {
-        throw new Error('Method not implemented.');
-    }
-
     public collectRanges(a: AddrRange[]): void {
         throw new Error('Method not implemented.');
     }

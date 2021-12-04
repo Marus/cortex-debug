@@ -35,9 +35,6 @@ export class MessageNode extends PeripheralBaseNode {
         return null;
     }
 
-    public markAddresses(a: AddressRangesInUse): void {
-    }
-
     public collectRanges(ary: AddrRange[]): void {
     }
 

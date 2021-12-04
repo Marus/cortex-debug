@@ -301,10 +301,6 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         return this.parent.getPeripheral();
     }
 
-    public markAddresses(addrs: AddressRangesInUse): void {
-        const finalOffset = this.parent.getOffset(this.offset);
-        addrs.setAddrRange(finalOffset, this.size / 8);
-    }
     public collectRanges(addrs: AddrRange[]): void {
         const finalOffset = this.parent.getOffset(this.offset);
         addrs.push(new AddrRange(finalOffset, this.size / 8));
