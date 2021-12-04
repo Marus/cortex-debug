@@ -2,7 +2,7 @@ import { TreeItem, TreeItemCollapsibleState, window, debug, MarkdownString, Tree
 import { PeripheralBaseNode } from './basenode';
 import { AccessType } from '../../svd';
 import { PeripheralRegisterNode } from './peripheralregisternode';
-import { AddressRangesInUse, AddrRange } from '../../addrranges';
+import { AddrRange } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../../common';
 import { parseInteger, binaryFormat, hexFormat } from '../../utils';
 

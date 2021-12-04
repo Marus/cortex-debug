@@ -1,6 +1,6 @@
 import { rawListeners } from 'process';
 import * as vscode from 'vscode';
-import { AddrRange, AddressRangesInUse } from './addrranges';
+import { AddrRange, AddressRangesUtils } from './addrranges';
 
 /** Has utility functions to read memory in chunks into a storage space */
 export class MemReadUtils {
@@ -51,7 +51,7 @@ export class MemReadUtils {
 
     public static readMemory(startAddr: number, length: number, storeTo: number[]): Promise<boolean> {
         const maxChunk = (4 * 1024);
-        const ranges = AddressRangesInUse.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
+        const ranges = AddressRangesUtils.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
         return MemReadUtils.readMemoryChunks(startAddr, ranges, storeTo);
     }
 }

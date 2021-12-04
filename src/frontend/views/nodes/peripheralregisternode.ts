@@ -6,7 +6,7 @@ import { PeripheralFieldNode } from './peripheralfieldnode';
 import { AccessType } from '../../svd';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
 import { NumberFormat, NodeSetting } from '../../../common';
-import { AddressRangesInUse, AddrRange } from '../../addrranges';
+import { AddrRange } from '../../addrranges';
 
 export interface PeripheralRegisterOptions {
     name: string;

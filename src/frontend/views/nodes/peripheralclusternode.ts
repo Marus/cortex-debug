@@ -4,7 +4,7 @@ import { AccessType } from '../../svd';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralNode } from './peripheralnode';
 import { NodeSetting, NumberFormat } from '../../../common';
-import { AddressRangesInUse, AddrRange } from '../../addrranges';
+import { AddrRange } from '../../addrranges';
 import { hexFormat } from '../../utils';
 
 export interface ClusterOptions {

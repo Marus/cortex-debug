@@ -1,6 +1,6 @@
 import { Command, TreeItem } from 'vscode';
 import { NumberFormat, NodeSetting } from '../../../common';
-import { AddressRangesInUse, AddrRange } from '../../addrranges';
+import { AddrRange } from '../../addrranges';
 
 export abstract class BaseNode {
     public expanded: boolean;

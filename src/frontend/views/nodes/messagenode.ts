@@ -1,6 +1,6 @@
 import { PeripheralBaseNode, BaseNode } from './basenode';
 import { TreeItem, TreeItemCollapsibleState } from 'vscode';
-import { AddressRangesInUse, AddrRange } from '../../addrranges';
+import { AddrRange } from '../../addrranges';
 import { NodeSetting } from '../../../common';
 
 export class MessageNode extends PeripheralBaseNode {

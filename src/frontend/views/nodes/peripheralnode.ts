@@ -1,7 +1,7 @@
 import { TreeItem, TreeItemCollapsibleState, ThemeIcon } from 'vscode';
 import { AccessType } from '../../svd';
 import { PeripheralBaseNode } from './basenode';
-import { AddrRange, AddressRangesInUse } from '../../addrranges';
+import { AddrRange, AddressRangesUtils } from '../../addrranges';
 import { NumberFormat, NodeSetting } from '../../../common';
 import { MemReadUtils } from '../../memreadutils';
 import { hexFormat } from '../../utils';
@@ -177,7 +177,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         // but in general, it is good to split the reads up. see http://openocd.zylin.com/#/c/5109/
         // Another benefit, we can minimize gdb timeouts
         const maxBytes = (4 * 1024); // Should be a multiple of 4 to be safe for MMIO reads
-        this.addrRanges = AddressRangesInUse.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
+        this.addrRanges = AddressRangesUtils.splitIntoChunks(ranges, maxBytes, this.name, this.totalLength);
     }
 
     public getPeripheralNode(): PeripheralNode {
