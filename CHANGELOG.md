@@ -1,6 +1,7 @@
 ChangeLog
 #V0.4.11
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
+* `launch.json` option `demangle` is removed. We always demangle. Its default value was true for quite some time. There is quite a bit of C++ now coming in and Rust as well. I appears there is no harm in always enabling it.
 
 #V0.4.9
 * Issue #536. Typo in code for os-specific paths

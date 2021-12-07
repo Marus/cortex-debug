@@ -6,6 +6,8 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 
 import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
+import { MI2 } from './mi2/mi2';
+import { MINode } from './mi_parse';
 
 const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]+)/mg;
 // DW_AT_name && DW_AT_comp_dir may have optional stuff that looks like '(indirect string, offset: 0xf94): '
@@ -45,15 +47,61 @@ export class SymbolTable {
     private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
     private fileMap: {[key: string]: string[]} = {};                    // basename of a file to a potential list of aliases we found
 
-    constructor(private toolchainPath: string, private toolchainPrefix: string, private executable: string, private demangle: boolean) {
+    constructor(private gdb: MI2, private toolchainPath: string, private toolchainPrefix: string, private executable: string) {
+    }
+
+    private async loadSymbolsFromGdb(): Promise<boolean> {
+        if (!this.gdb || this.gdb.gdbMajorVersion < 9) {
+            return false;
+        }
+
+        function getProp(ary: any, name: string): any {
+            if (ary) {
+                for (const item of ary) {
+                    if (item[0] === name) {
+                        return item[1];
+                    }
+                }
+            }
+            return undefined;
+        }
+        const miNode: MINode = await this.gdb.sendCommand('symbol-info-variables').then();
+        const results = getProp(miNode?.resultRecords?.results, 'symbols');
+        const dbgInfo = getProp(results, 'debug');
+        if (dbgInfo) {
+            for (const file of dbgInfo) {
+                const fullname = getProp(file, 'fullname');
+                const filename = getProp(file, 'filename');
+                const symbols = getProp(file, 'symbols');
+                if (symbols && (symbols.length > 0) && (filename || fullname)) {
+                    for (const sym of symbols) {
+                        const name = getProp(sym, 'name');
+                        const description = getProp(sym, 'description') as string;
+                        const isStatic = description && description.startsWith('static');
+                        if (fullname) {
+                            this.addToFileMap(fullname, name);
+                        }
+                        if (filename && (filename !== fullname)) {
+                            this.addToFileMap(filename, name);
+                        }
+                    }
+                }
+            }
+        }
+
+        // TODO: We should also get statuc function names but that is very slow. In the future, we will probably
+        // be doing full disassembly so ignore it until it is a real issue.
+        return true;
     }
 
     /**
      * Most symbol tables are manageable in size. Problem is by default, `objdump --syms` does not give
      * give you actual file names, just base file name. Well, that only works if all files are compiled
-     * in the current directory of source and you can have duplicates. We use the '-Wi' to dump debug section
-     * to determine all the compilation units and the directory they were from (relative path and a dir)
-     * Gdb uses the relative path (and the full path). This is needed when looking up static vars/funcs.
+     * in the current directory of source and you can have duplicates. We ask gdb for variable info which
+     * is not that fast either but better than the -Wi option. But this is only possible with gdb version
+     * 9+ and then we resort to using the '-Wi' to dump debug section to determine all the compilation units
+     * and the directory they were from (relative path and a dir) Gdb uses the relative path (and the full path).
+     * This is needed when looking up static vars/funcs.
      *
      * Problem is `-Wi` produces extremely huge output, that default `spawnSync` buffer overflows and we
      * get truncated results. So we have to output to a file and read that file. Hope we all have SSDs...
@@ -67,9 +115,13 @@ export class SymbolTable {
      * Even using the '-Wi', it is not bullet proof in matching sym-table to file names. A lot more work
      * would be needed to do that. Wish gdb could give us that info rather than using objdump, but testing
      * showed that it is both complex and very slow.
+     * *
+     * We still have to use objdump because gdb does not give important info like (function end addresses,
+     * no clear scope of objects). We have switched to using gdb for variable info because of Issue #539
+     * where the output of objdump was in Gigabytes when using the -Wi option
      */
 
-    public loadSymbols(noCache: boolean = false, useObjdump: string = '') {
+    public async loadSymbols(noCache: boolean = false, useObjdumpFname: string = '') {
         try {
             let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
             if (this.toolchainPath) {
@@ -77,23 +129,24 @@ export class SymbolTable {
             }
 
             const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
-            const options = ['--syms'];
+            const options = ['--syms', '-C'];
+            let didGetInfoFromGdb = false;
             if (!restored) {
-                options.push('-Wi');    // WARNING! Creates super large output
-            }
-            if (this.demangle) {
-                options.push('-C');
+                didGetInfoFromGdb = await this.loadSymbolsFromGdb();    // Even this is not super fast but faster
+                if (!didGetInfoFromGdb) {
+                    options.push('-Wi');    // WARNING! Creates super large output
+                }
             }
 
-            if (!useObjdump || !fs.existsSync(useObjdump)) {
-                useObjdump = tmp.tmpNameSync();
-                const outFd = fs.openSync(useObjdump, 'w');
+            if (!useObjdumpFname || !fs.existsSync(useObjdumpFname)) {
+                useObjdumpFname = tmp.tmpNameSync();
+                const outFd = fs.openSync(useObjdumpFname, 'w');
                 const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
                     stdio: ['ignore', outFd, 'ignore']
                 });
                 fs.closeSync(outFd);
             }
-            const str = this.readLinesAndFileMaps(useObjdump, !restored);
+            const str = this.readLinesAndFileMaps(useObjdumpFname, !restored && !didGetInfoFromGdb);
 
             const regex = RegExp(SYMBOL_REGEX);
             let currentFile: string = null;
@@ -292,12 +345,13 @@ export class SymbolTable {
         }
     }
 
-    protected static schemaVer = 0;   // Please increment if schema changes
-    protected static createFileHash(fileName: string): string {
+    protected getFileNameHashed(fileName: string): string {
         try {
             fileName = SymbolTable.NormalizePath(fileName);
+            const schemaVer = 1;   // Please increment if schema changes
+            const ver = `v${schemaVer}-gdb.${this.gdb.gdbMajorVersion}.${this.gdb.gdbMinorVersion}}`;
             const stats = fs.statSync(fileName);            // Can fail
-            const str = `${fileName}-${stats.mtimeMs}-${os.userInfo().username}-v${SymbolTable.schemaVer}`;
+            const str = `${fileName}-${stats.mtimeMs}-${os.userInfo().username}-${ver}`;
             const hasher = crypto.createHash('sha256');
             hasher.update(str);
             const ret = hasher.digest('hex');
@@ -308,15 +362,15 @@ export class SymbolTable {
         }
     }
 
-    private static createFileMapCacheFileName(fileName: string) {
-        const hash = SymbolTable.createFileHash(fileName) + '.json';
+    private createFileMapCacheFileName(fileName: string) {
+        const hash = this.getFileNameHashed(fileName) + '.json';
         const fName = path.join(os.tmpdir(), 'Cortex-Debug-' + hash);
         return fName;
     }
 
     protected serializeFileMaps(fileName: string): void {
         try {
-            const fName = SymbolTable.createFileMapCacheFileName(fileName);
+            const fName = this.createFileMapCacheFileName(fileName);
             const data = JSON.stringify(this.fileMap, null, ' ');
             fs.writeFileSync(fName, data, {encoding: 'utf8'});
             if (debugConsoleLogging) {
@@ -330,7 +384,7 @@ export class SymbolTable {
 
     protected deSerializeFileMaps(fileName: string): boolean {
         try {
-            const fName = SymbolTable.createFileMapCacheFileName(fileName);
+            const fName = this.createFileMapCacheFileName(fileName);
             if (!fs.existsSync(fName)) { return false; }
             const data = fs.readFileSync(fName, {encoding: 'utf8'});
             this.fileMap = JSON.parse(data);

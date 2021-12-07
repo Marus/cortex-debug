@@ -5,6 +5,19 @@ export interface MIInfo {
 }
 
 const octalMatch = /^[0-7]{3}/;
+const escapeMap = {
+    '\\': '\\',
+    '"': '"',
+    '\'': '\'',
+    'n': '\n',
+    'r': '\r',
+    't': '\t',
+    'b': '\b',
+    'f': '\f',
+    'v': '\v',
+    '0': '\0'
+};
+
 function parseString(str: string): string {
     const ret = Buffer.alloc(str.length * 4);
     let bufIndex = 0;
@@ -13,61 +26,32 @@ function parseString(str: string): string {
         throw new Error('Not a valid string');
     }
     str = str.slice(1, -1);
-    let escaped = false;
     for (let i = 0; i < str.length; i++) {
-        if (escaped) {
-            let m;
-            if (str[i] === '\\') {
-                bufIndex += ret.write('\\', bufIndex);
+        if (str[i] === '\\') {
+            if (++i >= str.length) {
+                throw new Error('Not a valid escape sequence');
             }
-            else if (str[i] === '"') {
-                bufIndex += ret.write('"', bufIndex);
+            const sub = escapeMap[str[i]];
+            if (sub) {
+                bufIndex += ret.write(sub, bufIndex);
+            } else {
+                const m = octalMatch.exec(str.substr(i));
+                if (m) {
+                    ret.writeUInt8(parseInt(m[0], 8), bufIndex++);
+                    i += 2;
+                }
+                else {
+                    bufIndex += ret.write(str[i], bufIndex);
+                }
             }
-            else if (str[i] === '\'') {
-                bufIndex += ret.write('\'', bufIndex);
-            }
-            else if (str[i] === 'n') {
-                bufIndex += ret.write('\n', bufIndex);
-            }
-            else if (str[i] === 'r') {
-                bufIndex += ret.write('\r', bufIndex);
-            }
-            else if (str[i] === 't') {
-                bufIndex += ret.write('\t', bufIndex);
-            }
-            else if (str[i] === 'b') {
-                bufIndex += ret.write('\b', bufIndex);
-            }
-            else if (str[i] === 'f') {
-                bufIndex += ret.write('\f', bufIndex);
-            }
-            else if (str[i] === 'v') {
-                bufIndex += ret.write('\v', bufIndex);
-            }
-            else if (str[i] === '0') {
-                bufIndex += ret.write('\0', bufIndex);
-            }
-            else if (m = octalMatch.exec(str.substr(i))) {
-                ret.writeUInt8(parseInt(m[0], 8), bufIndex++);
-                i += 2;
-            }
-            else {
-                bufIndex += ret.write(str[i], bufIndex);
-            }
-            escaped = false;
-        } else {
-            if (str[i] === '\\') {
-                escaped = true;
-            }
-            else if (str[i] === '"') {
-                throw new Error('Not a valid string');
-            }
-            else {
-                bufIndex += ret.write(str[i], bufIndex);
-            }
+        } else if (str[i] === '"') {
+            throw new Error('Not a valid string');
+        }
+        else {
+            bufIndex += ret.write(str[i], bufIndex);
         }
     }
-    return ret.slice(0, bufIndex).toString('utf8');
+    return ret.toString('utf8', 0, bufIndex);
 }
 
 export class MINode implements MIInfo {

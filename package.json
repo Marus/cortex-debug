@@ -634,11 +634,6 @@
                                 "description": "For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
-                            "demangle": {
-                                "description": "Experimental: If enabled the debugger will demangle C++ names.",
-                                "type": "boolean",
-                                "default": true
-                            },
                             "numberOfProcessors": {
                                 "description": "Number of processors/cores in the target device.",
                                 "type": "number",
@@ -1492,11 +1487,6 @@
                                 "description": "If enabled the debugger will run until the start of the given function.",
                                 "type": "string",
                                 "default": "main"
-                            },
-                            "demangle": {
-                                "description": "Experimental: If enabled the debugger will demangle C++ names.",
-                                "type": "boolean",
-                                "default": true
                             },
                             "numberOfProcessors": {
                                 "description": "Number of processors/cores in the target device.",

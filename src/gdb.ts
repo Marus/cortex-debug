@@ -198,13 +198,24 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
+        this.breakpointMap = new Map();
+        this.dataBreakpointMap = new Map();
+        this.fileExistsCache = new Map();
+    }
+
+    private dbgSymbolTable: SymbolTable = null;
+    private loadSymbols() {
         // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
         // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
         // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
         if (this.args.showDevDebugOutput) {
-            this.handleMsg('log', `Reading symbols from '${args.executable}'\n`);
+            this.handleMsg('log', `Reading symbols from '${this.args.executable}'\n`);
         }
-        this.symbolTable = new SymbolTable(args.toolchainPath, args.toolchainPrefix, args.executable, args.demangle);
+        this.symbolTable = new SymbolTable(
+            this.miDebugger,
+            this.args.toolchainPath,
+            this.args.toolchainPrefix,
+            this.args.executable);
         this.symbolTable.loadSymbols();
 
         if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
@@ -227,17 +238,13 @@ export class GDBDebugSession extends DebugSession {
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Finished reading symbols\n');
         }
-        this.breakpointMap = new Map();
-        this.dataBreakpointMap = new Map();
-        this.fileExistsCache = new Map();
     }
 
-    private dbgSymbolTable: SymbolTable = null;
     private dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
             const toolchainPath = true ? '/Applications/ARM/bin' : args.toolchainPath;
-            const tmpSymbols = new SymbolTable(toolchainPath, args.toolchainPrefix, elfFile, true);
+            const tmpSymbols = new SymbolTable(this.miDebugger, toolchainPath, args.toolchainPrefix, elfFile);
             this.dbgSymbolTable = tmpSymbols;
             tmpSymbols.loadSymbols(true, '/Users/hdm/Downloads/objdump.txt');
             tmpSymbols.printToFile(elfFile + '.cd-dump');
@@ -318,6 +325,10 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
         // dbgResumeStopCounter = 0;
 
+        if (!this.startGdb(response)) {
+            return;
+        }
+
         const totalPortsNeeded = this.calculatePortsNeeded();
         const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
         TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
@@ -326,38 +337,6 @@ export class GDBDebugSession extends DebugSession {
 
             const executable = this.serverController.serverExecutable();
             const args = this.serverController.serverArguments();
-
-            let gdbExePath = os.platform() !== 'win32' ? `${this.args.toolchainPrefix}-gdb` : `${this.args.toolchainPrefix}-gdb.exe`;
-            if (this.args.toolchainPath) {
-                gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
-            }
-            if (this.args.gdbPath) {
-                gdbExePath = this.args.gdbPath;
-            }
-
-            // Check to see if gdb exists.
-            if (path.isAbsolute(gdbExePath)) {
-                if (fs.existsSync(gdbExePath) === false) {
-                    this.sendErrorResponse(
-                        response,
-                        103,
-                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
-                        'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
-                    );
-                    return;
-                }
-            }
-            else {
-                if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
-                    this.sendErrorResponse(
-                        response,
-                        103,
-                        `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
-                        'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
-                    );
-                    return;
-                }
-            }
 
             if (executable) {
                 this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
@@ -418,19 +397,10 @@ export class GDBDebugSession extends DebugSession {
                 }
 
                 await this.serverController.serverLaunchCompleted();
-                let gdbargs = ['-q', '--interpreter=mi2'];
-                gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
 
-                this.miDebugger = new MI2(gdbExePath, gdbargs);
-                this.initDebugger();
-
-                this.miDebugger.debugOutput = this.args.showDevDebugOutput;
-
-                const commands = [`interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`];
-                if (this.args.demangle) {
-                    commands.push('interpreter-exec console "set print demangle on"');
-                    commands.push('interpreter-exec console "set print asm-demangle on"');
-                }
+                const commands = [
+                    `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`
+                ];
 
                 if (!this.args.variableUseNaturalFormat) {
                     commands.push(...this.formatRadixGdbCommand());
@@ -469,19 +439,8 @@ export class GDBDebugSession extends DebugSession {
                     this.attached = attach;
                 });
 
-                if (true) {
-                    const dbgMsg = `Launching GDB: "${gdbExePath}" ` + gdbargs.map((s) => {
-                        return '"' + s.replace(/"/g, '\\"') + '"';
-                    }).join(' ') + '\n';
-                    this.handleMsg('log', dbgMsg + ` "${this.args.executable}"`);
-                    if (!this.args.showDevDebugOutput) {
-                        this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
-                            'here. Helpful to debug issues or report problems');
-                    }
-                }
-
                 this.disableSendStoppedEvents = (!attach && (this.args.runToEntryPoint || this.args.noDebug)) ? true : false;
-                this.miDebugger.connect(this.args.cwd, this.args.executable, commands).then(() => {
+                this.miDebugger.connect(commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
 
@@ -570,6 +529,62 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
             this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    private startGdb(response: DebugProtocol.LaunchResponse): boolean {
+        let gdbExePath = os.platform() !== 'win32' ? `${this.args.toolchainPrefix}-gdb` : `${this.args.toolchainPrefix}-gdb.exe`;
+        if (this.args.toolchainPath) {
+            gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
+        }
+        if (this.args.gdbPath) {
+            gdbExePath = this.args.gdbPath;
+        }
+
+        // Check to see if gdb exists.
+        if (path.isAbsolute(gdbExePath)) {
+            if (fs.existsSync(gdbExePath) === false) {
+                this.sendErrorResponse(
+                    response,
+                    103,
+                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
+                    'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
+                );
+                return false;
+            }
+        }
+        else {
+            if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
+                this.sendErrorResponse(
+                    response,
+                    103,
+                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
+                    'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
+                );
+                return false;
+            }
+        }
+
+        let gdbargs = ['-q', '--interpreter=mi2'];
+        gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
+        const dbgMsg = `Launching GDB: "${gdbExePath}" ` + gdbargs.map((s) => {
+            return '"' + s.replace(/"/g, '\\"') + '"';
+        }).join(' ');
+
+        this.handleMsg('log', dbgMsg + ` "${this.args.executable}"` + '\n');
+        if (!this.args.showDevDebugOutput) {
+            this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
+                'here. Helpful to debug issues or report problems');
+        }
+
+        this.miDebugger = new MI2(gdbExePath, gdbargs);
+        this.miDebugger.debugOutput = this.args.showDevDebugOutput;
+        this.initDebugger();
+        this.miDebugger.start(this.args.cwd, this.args.executable, [
+            'interpreter-exec console "set print demangle on"',
+            'interpreter-exec console "set print asm-demangle on"'
+        ]);
+        this.loadSymbols();
+        return true;
     }
 
     private async sendContinue(wait: boolean = false) {

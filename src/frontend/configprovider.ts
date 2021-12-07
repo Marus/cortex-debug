@@ -39,10 +39,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         let validationResponse: string = null;
 
-        if (config.demangle === undefined) {
-            config.demangle = true;
-        }
-
         if (!config.swoConfig) {
             config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: 'probe' };
         }

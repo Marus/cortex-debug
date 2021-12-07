@@ -2,9 +2,6 @@ import { Breakpoint, DataBreakpoint, IBackend, Stack, Variable, VariableObject, 
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
-import * as linuxTerm from '../linux/console';
-import * as net from 'net';
-import * as fs from 'fs';
 import { posix } from 'path';
 import * as nativePath from 'path';
 import { ServerConsoleLog } from '../server';
@@ -38,12 +35,16 @@ export class MI2 extends EventEmitter implements IBackend {
     protected stream;
     protected firstStop: boolean = true;
     protected exited: boolean = false;
+    protected captureConsole: boolean = false;
+    protected capturedConsole: string = '';
+    public gdbMajorVersion: number | undefined;
+    public gdbMinorVersion: number | undefined;
     
     constructor(public application: string, public args: string[]) {
         super();
     }
 
-    public connect(cwd: string, executable: string, commands: string[]): Thenable<any> {
+    public start(cwd: string, executable: string, init: string[]): Thenable<any> {
         if (!nativePath.isAbsolute(executable)) {
             executable = nativePath.join(cwd, executable);
         }
@@ -56,17 +57,64 @@ export class MI2 extends EventEmitter implements IBackend {
             this.process.on('exit', this.onExit.bind(this));
             this.process.on('error', ((err) => { this.emit('launcherror', err); }).bind(this));
 
-            const asyncPromise = this.sendCommand('gdb-set target-async on', true);
+            this.sendCommand('gdb-set target-async on', true).then(() => {
+                this.startCaptureConsole();
+                this.sendCommand('gdb-version').then((v: MINode) => {
+                    const str = this.endCaptureConsole();
+                    this.parseVersionInfo(str);
+                    // const asyncPromise = this.sendCommand('gdb-set target-async on', true);
+                    const promises = init.map((c) => this.sendCommand(c));
+                    Promise.all(promises).then(() => {
+                        this.emit('debug-ready');
+                        resolve();
+                    }, reject);
+                }, () => {
+                    reject();
+                });
+            }, () => {
+                reject();
+            });
+        });
+    }
+
+    private startCaptureConsole(): void {
+        this.captureConsole = true;
+        this.capturedConsole = '';
+    }
+
+    private endCaptureConsole(): string {
+        const ret = this.capturedConsole;
+        this.captureConsole = false;
+        this.capturedConsole = '';
+        return ret;
+    }
+
+    private parseVersionInfo(str: string) {
+        const regex = RegExp(/^GNU gdb\s\(.*\)\s?(\d+)\.(\d+)\.[^\r\n]*/gm);
+        const match = regex.exec(str);
+        if (match !== null) {
+            str = str.substr(0, match.index);
+            this.gdbMajorVersion = parseInt(match[1]);
+            this.gdbMinorVersion = parseInt(match[2]);
+            if (this.gdbMajorVersion < 9) {
+                this.log('stderr', 'WARNING: Cortex-Debug will deprecate use of GDB version 8. Please upgrade to version 9+\n');
+            }
+        }
+        if (str) {
+            this.log('console', str);
+        }
+    }
+
+    public connect(commands: string[]): Thenable<any> {
+        return new Promise<void>((resolve, reject) => {
             const promises = commands.map((c) => this.sendCommand(c));
-            promises.push(asyncPromise);
-            
             Promise.all(promises).then(() => {
                 this.emit('debug-ready');
                 resolve();
             }, reject);
         });
     }
-
+    
     private onExit() {
         console.log('GDB: exited');
         this.exited = true;
@@ -162,7 +210,11 @@ export class MI2 extends EventEmitter implements IBackend {
                 if (parsed.outOfBandRecord) {
                     parsed.outOfBandRecord.forEach((record) => {
                         if (record.isStream) {
-                            this.log(record.type, record.content);
+                            if (this.captureConsole && (record.type === 'console')) {
+                                this.capturedConsole += record.content;
+                            } else {
+                                this.log(record.type, record.content);
+                            }
                         }
                         else {
                             if (record.type === 'exec') {

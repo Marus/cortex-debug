@@ -41,7 +41,6 @@
 | toolchainPrefix | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration.
 | BMPGDBSerialPort | BMP Specific | The serial port for the Black Magic Probe GDB Server. On Windows this will be "COM<num>", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)
 | powerOverBMP | BMP Specific | Power up the board over Black Magic Probe. "powerOverBMP" : "enable" or "powerOverBMP" : "disable". If not set it will use the last power state.
-| demangle | C++ specific | Experimental: If enabled the debugger will demangle C++ names.
 | gdbTarget | External | For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port
 | ipAddress | J-Link Specific | IP Address for networked J-Link Adapter
 | jlinkscript | J-Link Specific | J-Link script file - optional input file for customizing J-Link actions.

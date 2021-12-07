@@ -209,9 +209,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     numberOfProcessors: number;
     targetProcessor: number;
 
-    // C++ specific
-    demangle: boolean;
-
     // J-Link Specific
     ipAddress: string;
     serialNumber: string;
