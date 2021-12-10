@@ -62,14 +62,14 @@ export class GDBServer extends EventEmitter {
                         }, 500);
                     }
                     if (this.initMatch == null) {
-                        // If there is no init match string (e.g. QEMU) assume launch in 1/2 second and resolve
+                        // If there is no init match string (e.g. QEMU) assume launch in 100 ms and resolve
                         setTimeout(() => {
                             if (this.initResolve) {
                                 this.initResolve(true);
                                 this.initReject = null;
                                 this.initResolve = null;
                             }
-                        }, 1000);
+                        }, 100);
                     }
                 });
             }
@@ -125,7 +125,7 @@ export class GDBServer extends EventEmitter {
         if (typeof data === 'string') { this.outBuffer += data; }
         else { this.outBuffer += data.toString('utf8'); }
 
-        if (this.initResolve && this.initMatch.test(this.outBuffer)) {
+        if (this.initResolve && this.initMatch && this.initMatch.test(this.outBuffer)) {
             // console.log(`********* Got initmatch on stdout ${Date.now() - this.startTime}ms`);
             this.initResolve(true);
             this.initResolve = null;
@@ -144,7 +144,7 @@ export class GDBServer extends EventEmitter {
         if (typeof data === 'string') { this.errBuffer += data; }
         else { this.errBuffer += data.toString('utf8'); }
 
-        if (this.initResolve && this.initMatch.test(this.errBuffer)) {
+        if (this.initResolve && this.initMatch && this.initMatch.test(this.errBuffer)) {
             // console.log(`********* Got initmatch on stderr ${Date.now() - this.startTime}ms`);
             this.initResolve(true);
             this.initResolve = null;
