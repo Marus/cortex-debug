@@ -1,5 +1,5 @@
 {
-    "version": "0.4.11-pre1",
+    "version": "1.1.0",
     "activationEvents": [
         "onDebugResolve:cortex-debug",
         "onStartupFinished"
@@ -2498,7 +2498,7 @@
     },
     "displayName": "Cortex-Debug",
     "engines": {
-        "vscode": "^1.52.0"
+        "vscode": ">=1.63.0"
     },
     "icon": "images/icon.png",
     "keywords": [

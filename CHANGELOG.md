@@ -1,8 +1,11 @@
 ChangeLog
-#V0.4.11
+#V1.1.0
+* Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering schem. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions
+  This will be the first pre-release coming to you direct from the marketplace.
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
 * `launch.json` option `demangle` is removed. We always demangle. Its default value was true for quite some time. There is quite a bit of C++ now coming in and Rust as well. It appears there is no harm in always enabling it.
 * Issue #539: Using GDB to get some symbol information for locals and globals. Hopefully, gives better performance for large executables. Most information still comes from `objdump` though.
+* Issue #522: Qemu launch failed because it does not have a matching regular expression that indicated a start. It never does and code to handle that did not work. Fixed.
 
 #V0.4.9
 * Issue #536. Typo in code for os-specific paths
