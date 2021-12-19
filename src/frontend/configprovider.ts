@@ -6,8 +6,8 @@ import { GDBServerConsole } from './server_console';
 import { CortexDebugKeys } from '../common';
 import * as path from 'path';
 
-const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'nuttx', 'auto'];
-const JLINK_VALID_RTOS: string[] = ['FreeRTOS', 'embOS', 'ChibiOS', 'Zephyr', 'NuttX'];
+const OPENOCD_VALID_RTOS: string[] = ['ChibiOS', 'eCos', 'embKernel', 'FreeRTOS', 'mqx', 'nuttx', 'ThreadX', 'uCOS-III', 'auto'];
+const JLINK_VALID_RTOS: string[] = ['Azure', 'ChibiOS', 'embOS', 'FreeRTOS', 'NuttX', 'Zephyr'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private context: vscode.ExtensionContext) {}

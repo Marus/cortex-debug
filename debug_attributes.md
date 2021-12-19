@@ -24,7 +24,7 @@
 | preRestartCommands | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution).
 | pvtRestartOrReset | Common | ????
 | request | Common | ????
-| rtos | Common | RTOS being used. For JLink this can be ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be eCos, ThreadX, FreeRTOS, ChibiOS, embKernel, mqx, uCOS-III, nuttx or auto.
+| rtos | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be ChibiOS, eCos, embKernel, FreeRTOS, mqx, nuttx, ThreadX, uCOS-III, or auto.
 | rttConfig | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future
 | runToEntryPoint | Common | If enabled the debugger will run until the start of the given function.
 | runToMain | Common | Deprecated: please use 'runToEntryPoint' instead.
