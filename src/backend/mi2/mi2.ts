@@ -40,8 +40,16 @@ export class MI2 extends EventEmitter implements IBackend {
     public gdbMajorVersion: number | undefined;
     public gdbMinorVersion: number | undefined;
     
-    constructor(public application: string, public args: string[]) {
+    constructor(public application: string, public args: string[], LD_LIBRARY_PATH: string="") {
         super();
+        if (LD_LIBRARY_PATH != "") {
+            try {
+                this.procEnv.LD_LIBRARY_PATH = this.procEnv.LD_LIBRARY_PATH + ":" + LD_LIBRARY_PATH;
+            } catch (error) {
+                this.procEnv = process.env
+                this.procEnv.LD_LIBRARY_PATH = LD_LIBRARY_PATH
+            }
+        }
     }
 
     public start(cwd: string, executable: string, init: string[]): Thenable<any> {

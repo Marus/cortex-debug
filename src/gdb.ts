@@ -575,8 +575,11 @@ export class GDBDebugSession extends DebugSession {
             this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
                 'here. Helpful to debug issues or report problems');
         }
-
-        this.miDebugger = new MI2(gdbExePath, gdbargs);
+        let LD_LIBRARY_PATH = "";
+        if (os.platform() === 'linux' && this.args.servertype === "stlink") {
+            LD_LIBRARY_PATH = this.args.stm32cubeprogrammer.replace(/bin\/?/, "lib");
+        }
+        this.miDebugger = new MI2(gdbExePath, gdbargs, LD_LIBRARY_PATH);
         this.miDebugger.debugOutput = this.args.showDevDebugOutput;
         this.initDebugger();
         this.miDebugger.start(this.args.cwd, this.args.executable, [
