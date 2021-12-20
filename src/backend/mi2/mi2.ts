@@ -328,8 +328,13 @@ export class MI2 extends EventEmitter implements IBackend {
             this.process.on('exit', (code) => { clearTimeout(to); });
             // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
             // program is in paused state
-            await this.sendCommand('target-disconnect');
-            this.sendRaw('-gdb-exit');
+            try {
+                await this.sendCommand('target-disconnect');
+                this.sendRaw('-gdb-exit');
+            }
+            catch (e) {
+                ServerConsoleLog('target-stop failed with exception:' + e);
+            }
         }
     }
 

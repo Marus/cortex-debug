@@ -9,7 +9,7 @@ import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
-    AdapterOutputEvent, DisassemblyInstruction, createPortName
+    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -397,6 +397,7 @@ export class GDBDebugSession extends DebugSession {
                 }
 
                 await this.serverController.serverLaunchCompleted();
+                this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
 
                 const commands = [
                     `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`
@@ -443,6 +444,7 @@ export class GDBDebugSession extends DebugSession {
                 this.miDebugger.connect(commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
+                    this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
 
                     this.sendResponse(response);
 
@@ -573,7 +575,7 @@ export class GDBDebugSession extends DebugSession {
         this.handleMsg('log', dbgMsg + ` "${this.args.executable}"` + '\n');
         if (!this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
-                'here. Helpful to debug issues or report problems');
+                'here. Helpful to debug issues or report problems\n');
         }
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
@@ -628,6 +630,7 @@ export class GDBDebugSession extends DebugSession {
                 this.ports[nm] = ports[idx++];
             }
         }
+        this.args.pvtPorts = this.ports;
     }
 
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening

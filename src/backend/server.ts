@@ -39,39 +39,44 @@ export class GDBServer extends EventEmitter {
     }
 
     public init(): Thenable<any> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             if (this.application !== null) {
                 this.initResolve = resolve;
                 this.initReject = reject;
-                this.connectToConsole().then(() => {
-                    this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd });
-                    this.process.stdout.on('data', this.onStdout.bind(this));
-                    this.process.stderr.on('data', this.onStderr.bind(this));
-                    this.process.on('exit', this.onExit.bind(this));
-                    this.process.on('error', this.onError.bind(this));
-                    
-                    if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
-                        // For some reason we are not able to capture the st-util output on Windows
-                        // For now assume that it will launch properly within 1/2 second and resolve the init
-                        setTimeout(() => {
-                            if (this.initResolve) {
-                                this.initResolve(true);
-                                this.initReject = null;
-                                this.initResolve = null;
-                            }
-                        }, 500);
-                    }
-                    if (this.initMatch == null) {
-                        // If there is no init match string (e.g. QEMU) assume launch in 100 ms and resolve
-                        setTimeout(() => {
-                            if (this.initResolve) {
-                                this.initResolve(true);
-                                this.initReject = null;
-                                this.initResolve = null;
-                            }
-                        }, 100);
-                    }
-                });
+                try {
+                    await this.connectToConsole();
+                }
+                catch (e) {
+                    ServerConsoleLog('GDBServer: Could not connect to console: ' + e);
+                    reject(e);
+                }
+                this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd });
+                this.process.stdout.on('data', this.onStdout.bind(this));
+                this.process.stderr.on('data', this.onStderr.bind(this));
+                this.process.on('exit', this.onExit.bind(this));
+                this.process.on('error', this.onError.bind(this));
+                
+                if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
+                    // For some reason we are not able to capture the st-util output on Windows
+                    // For now assume that it will launch properly within 1/2 second and resolve the init
+                    setTimeout(() => {
+                        if (this.initResolve) {
+                            this.initResolve(true);
+                            this.initReject = null;
+                            this.initResolve = null;
+                        }
+                    }, 500);
+                }
+                if (this.initMatch == null) {
+                    // If there is no init match string (e.g. QEMU) assume launch in 100 ms and resolve
+                    setTimeout(() => {
+                        if (this.initResolve) {
+                            this.initResolve(true);
+                            this.initReject = null;
+                            this.initResolve = null;
+                        }
+                    }, 100);
+                }
             }
             else { // For servers like BMP that are always running directly on the probe
                 this.connectToConsole();

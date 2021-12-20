@@ -8,7 +8,9 @@ import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
 import { RTTCore, SWOCore } from './swo/core';
 import { SWORTTSource } from './swo/sources/common';
-import { NumberFormat, ConfigurationArguments, RTTCommonDecoderOpts, RTTConsoleDecoderOpts, CortexDebugKeys } from '../common';
+import { NumberFormat, ConfigurationArguments,
+    RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
+    CortexDebugKeys, ChainedEvents } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -582,8 +584,35 @@ export class CortexDebugExtension {
             case 'record-event':
                 this.receivedEvent(e);
                 break;
+            case 'custom-event-post-start-server':
+                this.startChainedLaunches(e, ChainedEvents.POSTSTART);
+                break;
+            case 'custom-event-post-start-gdb':
+                this.startChainedLaunches(e, ChainedEvents.POSTINIT);
+                break;
             default:
                 break;
+        }
+    }
+
+    private startChainedLaunches(e: vscode.DebugSessionCustomEvent, evType: ChainedEvents) {
+        const adapterArtgs = e?.body as ConfigurationArguments;
+        if (!adapterArtgs || !adapterArtgs.chainedLaunches?.enabled) { return; }
+        let delay = 0;
+        for (const launch of adapterArtgs.chainedLaunches.launches) {
+            if (launch.enabled && (launch.waitOnEvent === evType) && launch.name) {
+                const childOptions: vscode.DebugSessionOptions = {
+                    parentSession            : vscode.debug.activeDebugSession,
+                    lifecycleManagedByParent : launch.detached ? false : true,
+                    consoleMode              : launch.detached ? vscode.DebugConsoleMode.Separate : vscode.DebugConsoleMode.MergeWithParent,
+                    noDebug                  : adapterArtgs.noDebug,
+                    compact                  : false
+                };
+                delay += Math.max(launch.delayMs || 1, 1);
+                setTimeout(() => {
+                    vscode.debug.startDebugging(undefined, launch.name, childOptions);
+                }, delay);
+            }
         }
     }
 

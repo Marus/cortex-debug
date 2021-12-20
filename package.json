@@ -1,5 +1,5 @@
 {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "activationEvents": [
         "onDebugResolve:cortex-debug",
         "onStartupFinished"
@@ -1503,6 +1503,90 @@
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
+                            },
+                            "chainedLaunches": {
+                                "properties": {
+                                    "enabled": {
+                                        "default": true,
+                                        "description": "Enable/Disable entire set of chained configurations",
+                                        "type": "boolean"
+                                    },
+                                    "detached": {
+                                        "default": false,
+                                        "description": "Default: Related or independent sessions. Set to true for servers like 'JLink'",
+                                        "type": "boolean"
+                                    },
+                                    "lifeCycleShared": {
+                                        "default": true,
+                                        "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent",
+                                        "type": "boolean"
+                                    },
+                                    "waitOnEvent": {
+                                        "enum": [
+                                            "postStart",
+                                            "postInit"
+                                        ],
+                                        "default": "postInit",
+                                        "description": "Default event to wait for. 'postStart' (default) means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                        "type": "string"
+                                    },
+                                    "delayMs": {
+                                        "type": "number",
+                                        "description": "default delay in milliseconds for a certain amount of milliseconds to begin launch",
+                                        "multipleOf": 1,
+                                        "minimum": 0,
+                                        "default": 0
+                                    },
+                                    "launches": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "name": {
+                                                    "default": true,
+                                                    "description": "Name of launch configuration",
+                                                    "type": "string"
+                                                },
+                                                "enabled": {
+                                                    "default": true,
+                                                    "description": "Enable/Disable entire set of chained configurations",
+                                                    "type": "boolean"
+                                                },
+                                                "detached": {
+                                                    "default": false,
+                                                    "description": "Default: Related or independent sessions. Set to true for servers like 'JLink'",
+                                                    "type": "boolean"
+                                                },
+                                                "waitOnEvent": {
+                                                    "enum": [
+                                                        "postStart",
+                                                        "postInit"
+                                                    ],
+                                                    "default": "postInit",
+                                                    "description": "Wait for an event. 'postStart' means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                                    "type": "string"
+                                                },
+                                                "delayMs": {
+                                                    "type": "number",
+                                                    "description": "delay in milliseconds for a certain amount of milliseconds to begin launch",
+                                                    "multipleOf": 1,
+                                                    "minimum": 0,
+                                                    "default": 0
+                                                }                                                
+                                            }
+                                        }
+                                    }
+                                },
+                                "default": {
+                                    "enabled": true,
+                                    "waitOnEvent": "postInit",
+                                    "detached": false,
+                                    "lifeCycleShared": true,
+                                    "launches": [
+                                        {
+                                            "name": "use exact name of chained configuration to launch"
+                                        }
+                                    ]
+                                }
                             },
                             "graphConfig": {
                                 "items": {

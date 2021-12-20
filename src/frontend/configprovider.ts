@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { CortexDebugKeys } from '../common';
+import { ChainedLaunches, ChainedEvents, CortexDebugKeys } from '../common';
 import * as path from 'path';
 
 const OPENOCD_VALID_RTOS: string[] = ['eCos', 'ThreadX', 'FreeRTOS', 'ChibiOS', 'embKernel', 'mqx', 'uCOS-III', 'nuttx', 'auto'];
@@ -152,7 +152,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
-
+        this.sanitizeChainedConfigs(config);
         let validationResponse: string = null;
 
         switch (config.servertype) {
@@ -164,13 +164,35 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 validationResponse = null;
                 break;
         }
-
         if (validationResponse) {
             vscode.window.showErrorMessage(validationResponse);
             return undefined;
         }
 
         return config;
+    }
+
+    private sanitizeChainedConfigs(config: vscode.DebugConfiguration) {
+        const chained = config.chainedLaunches as ChainedLaunches;
+        if (!chained || !chained.enabled || !chained.launches || (chained.launches.length === 0)) {
+            config.chainedLaunches = { enabled: false };
+            return;
+        }
+        if (!chained.delayMs) { chained.delayMs = 0; }
+        if (!chained.waitOnEvent || !Object.values(ChainedEvents).includes(chained.waitOnEvent)) {
+            chained.waitOnEvent = ChainedEvents.POSTSTART;
+        }
+        for (const launch of chained.launches) {
+            if (launch.enabled === undefined) {
+                launch.enabled = true;
+            }
+            if (launch.delayMs === undefined) {
+                launch.delayMs = chained.delayMs;
+            }
+            if ((launch.waitOnEvent === undefined) || !Object.values(ChainedEvents).includes(launch.waitOnEvent)) {
+                launch.waitOnEvent = chained.waitOnEvent;
+            }
+        }
     }
 
     private setOsSpecficConfigSetting(config: vscode.DebugConfiguration, dstName: string, propName: string = '') {

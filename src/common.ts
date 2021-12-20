@@ -24,6 +24,12 @@ export interface NodeSetting {
     pinned?: boolean;
 }
 
+export class GenericCustomEvent extends Event implements DebugProtocol.Event {
+    constructor(suffix: string, info: any) {
+        super('custom-event-' + suffix, { info: info });
+    }
+}
+
 export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
     public body: {
         type: string,
@@ -140,6 +146,26 @@ export class TelemetryEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+export enum ChainedEvents {
+    POSTSTART = 'postStart', // Default - a connection was established with the gdb-server, before initialization is done
+    POSTINIT = 'postInit'    // all init functionality has been done. Generally past programming and stopped at or
+                             // past reset-vector but depends on customizations
+}
+export interface ChainedConfig {
+    enabled: boolean;
+    name: string;           // Debug configuration to launch (could be attach or launch)
+    delayMs: number;
+    waitOnEvent: ChainedEvents;
+    detached: boolean;
+}
+
+export interface ChainedLaunches {
+    enabled: boolean;
+    launches: ChainedConfig[];
+    waitOnEvent: ChainedEvents;
+    delayMs: number;
+}
+
 export interface SWOConfiguration {
     enabled: boolean;
     cpuFrequency: number;
@@ -203,8 +229,10 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
     variableUseNaturalFormat: boolean;
+    chainedLaunches: ChainedLaunches;
 
     pvtRestartOrReset: boolean;
+    pvtPorts: { [name: string]: number; };
 
     numberOfProcessors: number;
     targetProcessor: number;
