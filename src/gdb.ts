@@ -591,10 +591,20 @@ export class GDBDebugSession extends DebugSession {
 
     private async sendContinue(wait: boolean = false) {
         this.continuing = true;
-        if (wait) {
-            await this.miDebugger.sendCommand('exec-continue');
-        } else {
-            this.miDebugger.sendCommand('exec-continue');
+        try {
+            if (wait) {
+                await this.miDebugger.sendCommand('exec-continue');
+            } else {
+                this.miDebugger.sendCommand('exec-continue').then((done) => {
+                    // Nothing to do
+                }, (e) => {
+                    throw e;
+                });
+            }
+        }
+        catch (e) {
+            this.continuing = false;
+            console.error('Not expecting continue to fail.' + e);
         }
     }
 
@@ -633,9 +643,15 @@ export class GDBDebugSession extends DebugSession {
         this.args.pvtPorts = this.ports;
     }
 
+    protected isMIStatusStopped(): boolean {
+        // We get the status from the MI because we may not have recieved the event yet
+        return (this.miDebugger.status !== 'running');
+    }
+
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening
     protected runPostStartSessionCommands(mode: SessionMode, interval: number = 10): void {
         let commands: string[] = null;
+        let shouldContinue = false;
         switch (mode) {
             case SessionMode.RESTART:
                 commands = this.args.postRestartSessionCommands;
@@ -649,11 +665,10 @@ export class GDBDebugSession extends DebugSession {
         }
 
         if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
-            if (!commands) { commands = []; }
-            commands.push('-exec-continue');
+            shouldContinue = true;
         } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (!commands || (commands.length === 0))) {
             // Note: This function is not called if 'runToEntryPoint' was used
-            commands = ['-exec-continue'];
+            shouldContinue = true;
         }
 
         if (commands && (commands.length > 0)) {
@@ -666,11 +681,19 @@ export class GDBDebugSession extends DebugSession {
                 const nxtToken = this.miDebugger.getCurrentToken();
                 if (curToken === nxtToken) {
                     clearInterval(to);
-                    this.miDebugger.postStart(commands);
+                    this.miDebugger.postStart(commands).then((done) => {
+                        if (shouldContinue && this.stopped) {
+                            this.sendContinue();
+                        }
+                    }, (e) => {
+                        this.handleMsg('log', `Error running postStart commands '${e}'\n`);
+                    });
                 } else {
                     curToken = nxtToken;
                 }
             }, interval);
+        } else if (shouldContinue && this.stopped) {
+            this.sendContinue(false);
         }
     }
 
@@ -1416,6 +1439,10 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.SetFunctionBreakpointsResponse,
         args: DebugProtocol.SetFunctionBreakpointsArguments
     ): void {
+        if ((args.breakpoints.length === 0) && (this.functionBreakpoints.length === 0)) {
+            this.sendResponse(response);
+            return;
+        }
         const createBreakpoints = async (shouldContinue) => {
             this.disableSendStoppedEvents = false;
             await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
@@ -1489,8 +1516,11 @@ export class GDBDebugSession extends DebugSession {
 
     protected pendingBkptResponse = false;
     protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments) {
+        if ((args.breakpoints.length === 0) && (this.breakpointMap.size === 0)) {
+            this.sendResponse(response);
+            return;
+        }
         const createBreakpoints = async (shouldContinue) => {
-            this.debugReady = true;
             const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
 
             try {
@@ -1664,6 +1694,10 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected setDataBreakpointsRequest(response: DebugProtocol.SetDataBreakpointsResponse, args: DebugProtocol.SetDataBreakpointsArguments): void {
+        if ((args.breakpoints.length === 0) && (this.dataBreakpointMap.size === 0)) {
+            this.sendResponse(response);
+            return;
+        }
         const createBreakpoints = async (shouldContinue) => {
             const currentBreakpoints = [ ...this.dataBreakpointMap.keys() ];
 
@@ -1735,7 +1769,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        if (!this.stopped || this.disableSendStoppedEvents || this.continuing) {
+        if (!this.isMIStatusStopped() || this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { threads: [] };
             this.sendResponse(response);
             return Promise.resolve();
@@ -1824,7 +1858,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (e) {
-            if (this.stopped) {     // Between the time we asked for a info, a continue occured
+            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occured
                 this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
             }
         }
@@ -1895,7 +1929,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            if (this.stopped) {     // Between the time we asked for a info, a continue occured
+            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occured
                 this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
             }
         }
@@ -2105,7 +2139,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
-        if (!this.stopped || this.disableSendStoppedEvents || this.continuing) {
+        if (!this.isMIStatusStopped() || this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { variables: [] };
             this.sendResponse(response);
             return Promise.resolve();
@@ -2159,7 +2193,9 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            this.sendErrorResponse(response, 1, `Could not get stack variables: ${err}`);
+            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occured
+                this.sendErrorResponse(response, 1, `Could not get stack variables: ${err}`);
+            }
         }
     }
 

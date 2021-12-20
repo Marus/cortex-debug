@@ -39,6 +39,7 @@ export class MI2 extends EventEmitter implements IBackend {
     protected capturedConsole: string = '';
     public gdbMajorVersion: number | undefined;
     public gdbMinorVersion: number | undefined;
+    public status: 'running' | 'stopped' | 'none' = 'none';
     
     constructor(public application: string, public args: string[]) {
         super();
@@ -220,9 +221,11 @@ export class MI2 extends EventEmitter implements IBackend {
                             if (record.type === 'exec') {
                                 this.emit('exec-async-output', parsed);
                                 if (record.asyncClass === 'running') {
+                                    this.status = 'running';
                                     this.emit('running', parsed);
                                 }
                                 else if (record.asyncClass === 'stopped') {
+                                    this.status = 'stopped';
                                     const reason = parsed.record('reason');
                                     if (trace) {
                                         this.log('stderr', 'stop: ' + reason);

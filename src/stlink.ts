@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
+import { exec } from 'child_process';
 
 function get_ST_DIR() {
     switch (os.platform()) {
@@ -22,7 +23,7 @@ const ST_DIR = get_ST_DIR();
 const SERVER_EXECUTABLE_NAME = os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver';
 const LD_PATH_NAME = os.platform() === 'darwin' ? 'DYLD_FALLBACK_LIBRARY_PATH' : 'LD_LIBRARY_PATH';
 
-const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/;
+const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/i;
 // Example: c:\ST\STM32CubeIDE_1.5.0\
 const GDB_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.stlink-gdb-server\.(.+)/;
 // Example: c:\ST\STM32CubeIDE_1.5.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.win32_1.5.0.202011040924\
@@ -35,7 +36,7 @@ const GCC_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.gnu-tools-for-st
  * Resolves the path location of a STM32CubeIDE plugin irrespective of version number.
  * Works for most recent version STM32CubeIDE_1.4.0 and STM32CubeIDE_1.5.0.
  */
-function resolveCubePath(dirSegments, regex, suffix, executable = '')
+function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, executable = '')
 {
     const dir = path.join(...dirSegments);
     let resolvedDir;
@@ -71,9 +72,12 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     private ports: { [name: string]: number };
     
     public static getSTMCubeIdeDir(): string {
-        if (os.platform() === 'darwin') {
+        switch (os.platform()) {
+        case 'darwin':
             return ST_DIR;
-        } else {
+        case 'linux':
+            return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, '');
+        default:
             return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
         }
     }
