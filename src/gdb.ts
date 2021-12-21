@@ -498,7 +498,7 @@ export class GDBDebugSession extends DebugSession {
                         }, (err) => {
                             // If failed to set the temporary breakpoint (e.g. function does not exist)
                             // complete the launch as if the breakpoint had not being defined
-                            this.handleMsg('log', `launch.json: "runToEntryPoint" enabled but function "${this.args.runToEntryPoint}" does not exist? '${err.toString()}\n`);
+                            this.handleMsg('log', `launch.json: "runToEntryPoint" enabled but function "${this.args.runToEntryPoint}" may not exist? '${err.toString()}\n`);
                             launchComplete();
                             runPostStartSession();
                         });
@@ -604,7 +604,7 @@ export class GDBDebugSession extends DebugSession {
         }
         catch (e) {
             this.continuing = false;
-            console.error('Not expecting continue to fail.' + e);
+            console.error('Not expecting continue to fail. ' + e);
         }
     }
 
@@ -645,7 +645,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected isMIStatusStopped(): boolean {
         // We get the status from the MI because we may not have recieved the event yet
-        return (this.miDebugger.status !== 'running');
+        return (this.miDebugger.status === 'stopped');
     }
 
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening
@@ -654,24 +654,28 @@ export class GDBDebugSession extends DebugSession {
         let shouldContinue = false;
         switch (mode) {
             case SessionMode.RESTART:
-                commands = this.args.postRestartSessionCommands;
+                commands = this.args.postRestartSessionCommands || [];
                 break;
             case SessionMode.RESET:
-                commands = this.args.postRestartSessionCommands;
+                commands = this.args.postRestartSessionCommands || [];
                 break;
             default:
-                commands = this.args.postStartSessionCommands;
+                commands = this.args.postStartSessionCommands || [];
                 break;
         }
 
         if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
             shouldContinue = true;
-        } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (!commands || (commands.length === 0))) {
+        } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (commands.length === 0)) {
             // Note: This function is not called if 'runToEntryPoint' was used
             shouldContinue = true;
         }
 
-        if (commands && (commands.length > 0)) {
+        if (shouldContinue) {
+            commands.push('-exec-continue');
+        }
+
+        if (commands.length > 0) {
             let curToken = this.miDebugger.getCurrentToken();
             commands = commands.map(COMMAND_MAP);
             // We want to let things quiet down before we run the next set of commands. Note that while
@@ -682,9 +686,6 @@ export class GDBDebugSession extends DebugSession {
                 if (curToken === nxtToken) {
                     clearInterval(to);
                     this.miDebugger.postStart(commands).then((done) => {
-                        if (shouldContinue && this.stopped) {
-                            this.sendContinue();
-                        }
                     }, (e) => {
                         this.handleMsg('log', `Error running postStart commands '${e}'\n`);
                     });
@@ -692,8 +693,6 @@ export class GDBDebugSession extends DebugSession {
                     curToken = nxtToken;
                 }
             }, interval);
-        } else if (shouldContinue && this.stopped) {
-            this.sendContinue(false);
         }
     }
 
@@ -1864,6 +1863,14 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
+        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
+            response.body = {
+                stackFrames: [],
+                totalFrames: 0
+            };
+            this.sendResponse(response);
+            return Promise.resolve();
+        }
         try {
             const maxDepth = await this.miDebugger.getStackDepth(args.threadId);
             const highFrame = Math.min(maxDepth, args.startFrame + args.levels) - 1;
@@ -1939,8 +1946,8 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.ConfigurationDoneArguments
     ): void {
         this.sendResponse(response);
-        this.onConfigDone.emit('done');
         this.configDone = true;
+        this.onConfigDone.emit('done');
     }
 
     protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
