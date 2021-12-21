@@ -703,6 +703,7 @@ export class GDBDebugSession extends DebugSession {
             return;
         }
 
+        const isBusy = !this.stopped || this.continuing || (this.miDebugger.status === 'running');
         switch (command) {
             case 'set-force-disassembly':
                 response.body = { success: true };
@@ -733,25 +734,23 @@ export class GDBDebugSession extends DebugSession {
                 this.sendResponse(response);
                 break;
             case 'read-memory':
-                if (!this.stopped || this.continuing) { return; }
+                if (isBusy) { return; }
                 this.readMemoryRequestCustom(response, args['address'], args['length']);
                 break;
             case 'write-memory':
-                if (!this.stopped || this.continuing) { return; }
+                if (isBusy) { return; }
                 this.writeMemoryRequestCustom(response, args['address'], args['data']);
                 break;
             case 'set-var-format':
-                // if (this.stopped === false) { return ; }
                 this.args.variableUseNaturalFormat = (args && args.hex) ? false : true;
                 this.setGdbOutputRadix();
                 break;
             case 'read-registers':
-                if (!this.stopped || this.continuing) { return; }
+                if (isBusy) { return; }
                 this.args.registerUseNaturalFormat = (args && args.hex) ? false : true;
                 this.readRegistersRequest(response);
                 break;
             case 'read-register-list':
-                if (!this.stopped || this.continuing) { return; }
                 this.readRegisterListRequest(response);
                 break;
             case 'disassemble':
@@ -1769,7 +1768,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        if (!this.isMIStatusStopped() || this.stopped || this.disableSendStoppedEvents || this.continuing) {
+        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { threads: [] };
             this.sendResponse(response);
             return Promise.resolve();
@@ -2139,7 +2138,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
-        if (!this.isMIStatusStopped() || this.stopped || this.disableSendStoppedEvents || this.continuing) {
+        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { variables: [] };
             this.sendResponse(response);
             return Promise.resolve();
