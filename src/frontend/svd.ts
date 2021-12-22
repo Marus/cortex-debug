@@ -175,13 +175,17 @@ export class SVDParser {
                 }
             }
 
-            const baseOptions = {
+            const baseOptions: any = {
                 name: f.name[0],
                 description: description,
                 offset: offset,
                 width: width,
                 enumeration: valueMap
             };
+
+            if (f.access) {
+                baseOptions.accessType = ACCESS_TYPE_MAP[f.access[0]];
+            }
 
             if (f.dim) {
                 if (!f.dimIncrement) { throw new Error(`Unable to parse SVD file: field ${f.name[0]} has dim element, with no dimIncrement element.`); }
