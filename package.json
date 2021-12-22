@@ -1,5 +1,6 @@
 {
     "version": "1.1.1",
+    "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
         "onStartupFinished"
@@ -2593,8 +2594,8 @@
     ],
     "main": "./dist/extension",
     "name": "cortex-debug",
-    "preview": true,
     "publisher": "marus25",
+    "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/Marus/cortex-debug.git"
