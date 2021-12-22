@@ -65,6 +65,14 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands: string[] = [
             'interpreter-exec console "monitor reset halt"'
         ];
+
+        if (!this.args.runToEntryPoint && this.args.breakAfterReset) {
+            // The following will force an sync between gdb and openocd. Maybe we should do this for launch as well
+            commands.push(
+                'interpreter-exec console "monitor gdb_sync"',
+                'interpreter-exec console "stepi"'
+            );
+        }
         return commands;
     }
 

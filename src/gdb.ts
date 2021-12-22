@@ -486,7 +486,7 @@ export class GDBDebugSession extends DebugSession {
         this.disableSendStoppedEvents = false;
         this.pendingBkptResponse = false;
         this.continuing = false;
-        this.stopped = this.miDebugger.status === 'stopped';        // Set to real status
+        this.stopped = this.miDebugger.status !== 'running';        // Set to real status
         if (!this.args.noDebug && this.stopped) {
             this.stoppedReason = mode;
             this.stoppedThreadId = this.currentThreadId;
@@ -665,7 +665,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected isMIStatusStopped(): boolean {
         // We get the status from the MI because we may not have recieved the event yet
-        return (this.miDebugger.status === 'stopped');
+        return (this.miDebugger.status !== 'running');
     }
 
     // We wait until a threads request is made by VSCode. Or else, 'continue' will not update VSCode
@@ -1509,7 +1509,9 @@ export class GDBDebugSession extends DebugSession {
         };
 
         const process = async () => {
-            if (this.stopped) { await createBreakpoints(false); }
+            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
+                await createBreakpoints(false);
+            }
             else {
                 this.disableSendStoppedEvents = true;
                 this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
@@ -1630,7 +1632,7 @@ export class GDBDebugSession extends DebugSession {
         };
 
         const process = async () => {
-            if (this.stopped) {
+            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
                 await createBreakpoints(false);
             }
             else {
@@ -1761,7 +1763,7 @@ export class GDBDebugSession extends DebugSession {
         };
 
         const process = async () => {
-            if (this.stopped) {
+            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
                 await createBreakpoints(false);
             }
             else {
