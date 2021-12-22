@@ -184,7 +184,9 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (this.args.serverArgs) {
             serverargs = serverargs.concat(this.args.serverArgs);
         } else {
-            serverargs.push('--halt');      // User may want to not use this. controlled via serverArgs
+            // User may want to not use our default behavior but no other way to control it
+            // If they continue to want the halting behaviour, it has to be speicifed by 'serverArgs'
+            serverargs.push('--halt');
         }
 
         return serverargs;

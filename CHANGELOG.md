@@ -1,6 +1,9 @@
 ChangeLog
 #V1.1.1
 * For STLink Gdb-server and Cube-Programmer, set `LD_LIBRARY_PATH` on Linux and equivalent `DYLD_FALLBACK_LIBRARY_PATH` on MacOS
+* STLink: We now use the `--halt` command-line option when launching the server unless `serverArgs` is used. If `serverArgs` is used, you can enable the `--halt` if that is the behavior you desire. Things may not work in the future without the `--halt` option.
+* STLink: We no longer use `monitor reset halt` as that is not a supported reset option. We use the `--halt` command-line option instead.
+* Experimental: `runToEntryPoint` is now supported for `Reset` and `Restart`. This was not possible/recommended before because of how VSCode handled breakpoints. Since `runToEntryPoint` works by setting a temporary breakpoint in the specified function, this may fail if your CPU has run out of breakpoints.
 * Experimental (Unstable): Chained configurations for multi-core/multi-processor/multi-session debugging
 
 #V1.1.0

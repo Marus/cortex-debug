@@ -49,11 +49,12 @@ const SERVER_TYPE_MAP = {
     external: ExternalServerController
 };
 
+// Type of session start. Also used in display of call-stack window
 enum SessionMode {
-    LAUNCH,
-    ATTACH,
-    RESTART,
-    RESET
+    LAUNCH = 'entry',
+    ATTACH = 'attach',
+    RESTART = 'restart',
+    RESET = 'reset'
 }
 
 class ExtendedVariable {
@@ -70,7 +71,7 @@ const VAR_HANDLES_START = 0x020000;
 
 const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c.replace(/"/g, '\\"')}"`;
 
-// let dbgResumeStopCounter = 0;
+let dbgResumeStopCounter = 0;
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
         reason: string,
@@ -80,8 +81,8 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 
     constructor(reason: string, threadID: number) {
         super('custom-stop', { reason: reason, threadID: threadID });
-        // console.log(`${dbgResumeStopCounter} **** Stopped reason:${reason} thread:${threadID}`);
-        // dbgResumeStopCounter++;
+        console.log(`${dbgResumeStopCounter} **** Stopped reason:${reason} thread:${threadID}`);
+        dbgResumeStopCounter++;
     }
 }
 
@@ -94,8 +95,8 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
 
     constructor(threadID: number, allThreads: boolean = true) {
         super('custom-continued', { threadID: threadID, allThreads: allThreads });
-        // console.log(`${dbgResumeStopCounter} **** Running thread:${threadID}`);
-        // dbgResumeStopCounter++;
+        console.log(`${dbgResumeStopCounter} **** Running thread:${threadID}`);
+        dbgResumeStopCounter++;
     }
 }
 
@@ -440,73 +441,14 @@ export class GDBDebugSession extends DebugSession {
                     this.attached = attach;
                 });
 
-                this.disableSendStoppedEvents = (!attach && (this.args.runToEntryPoint || this.args.noDebug)) ? true : false;
+                this.disableSendStoppedEvents = (!attach && (this.args.runToEntryPoint || this.args.noDebug || !this.args.breakAfterReset)) ? true : false;
                 this.miDebugger.connect(commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
                     this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
 
                     this.sendResponse(response);
-
-                    const launchComplete = () => {
-                        this.disableSendStoppedEvents = false;
-                        if (!this.args.noDebug) {
-                            setTimeout(() => {
-                                this.continuing = false;
-                                this.stopped = true;
-                                this.stoppedReason = 'start';
-                                this.stoppedThreadId = this.currentThreadId;
-                                this.sendEvent(new StoppedEvent('start', this.currentThreadId, true));
-                                this.sendEvent(new CustomStoppedEvent('start', this.currentThreadId));
-                            }, 40); // Less delay than 'runPostStartSessionCommands'
-                        }
-                    };
-
-                    const runPostStartSession = () => {
-                        if (this.configDone) {
-                            this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH, 50);
-                        } else {
-                            this.onConfigDone.once('done', () => {
-                                this.runPostStartSessionCommands(attach ? SessionMode.ATTACH : SessionMode.LAUNCH, 50);
-                            });
-                        }
-                    };
-
-                    if (!this.args.noDebug && this.args.runToEntryPoint) {
-                        this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
-                            const timeout = setTimeout(() => {
-                                this.handleMsg('stderr', `Run to '${this.args.runToEntryPoint}' timed out. Trying to pause program`);
-                                this.miDebugger.interrupt();
-                            }, 3000);
-
-                            this.miDebugger.once('generic-stopped', () => {
-                                clearTimeout(timeout);
-                                launchComplete();
-                            });
-
-                            // To avoid race conditions between finishing configuration, we should stay
-                            // in stopped mode. Or, we end up clobbering the stopped event that might come
-                            // during setting of any additional breakpoints. Note that configDone may already
-                            // have happened if there were no user breakpoints.
-                            if (this.configDone) {
-                                this.sendContinue();
-                            } else {
-                                this.onConfigDone.once('done', () => {
-                                    this.sendContinue();
-                                });
-                            }
-                        }, (err) => {
-                            // If failed to set the temporary breakpoint (e.g. function does not exist)
-                            // complete the launch as if the breakpoint had not being defined
-                            this.handleMsg('log', `launch.json: "runToEntryPoint" enabled but function "${this.args.runToEntryPoint}" may not exist? '${err.toString()}\n`);
-                            launchComplete();
-                            runPostStartSession();
-                        });
-                    }
-                    else {
-                        launchComplete();
-                        runPostStartSession();
-                    }
+                    this.finishStartSequence(attach ? SessionMode.ATTACH : SessionMode.LAUNCH);
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
@@ -531,6 +473,84 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
             this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    private notifyStopped(doCustom = true) {
+        this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+        if (doCustom) {
+            this.sendEvent(new CustomStoppedEvent(this.stoppedReason, this.currentThreadId));
+        }
+    }
+
+    private startComplete(mode: SessionMode) {
+        this.disableSendStoppedEvents = false;
+        this.pendingBkptResponse = false;
+        this.continuing = false;
+        this.stopped = this.miDebugger.status === 'stopped';        // Set to real status
+        if (!this.args.noDebug && this.stopped) {
+            this.stoppedReason = mode;
+            this.stoppedThreadId = this.currentThreadId;
+            // We have to fake a continue and then stop, since we may already be in stopped mode in VSCode's view
+            this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
+            this.threadsRequestMade = false;
+            this.notifyStopped();
+        }
+    }
+
+    private runPostCommands(mode: SessionMode) {
+        if (this.configDone) {
+            this.runPostStartSessionCommands(mode);
+        } else {
+            this.onConfigDone.once('done', () => {      // Only applies to 'LAUNCH'/'ATTACH'
+                this.runPostStartSessionCommands(mode);
+            });
+        }
+    }
+
+    private finishStartSequence(mode: SessionMode) {
+        if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
+            this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
+                let timeout = setTimeout(() => {
+                    this.handleMsg('stderr', `Run to '${this.args.runToEntryPoint}' timed out. Trying to pause program`);
+                    this.miDebugger.interrupt();
+                    timeout = null;
+                }, 5000);
+
+                this.miDebugger.once('generic-stopped', () => {
+                    if (timeout) {
+                        clearTimeout(timeout);
+                    }
+                    this.startComplete(mode);
+                    // We don't run post-commands. If user wants, they can add the temp. bpt to their post commands
+                    // This is intentional
+                });
+
+                // To avoid race conditions between finishing configuration, we should stay
+                // in stopped mode. Or, we end up clobbering the stopped event that might come
+                // during setting of any additional breakpoints. Note that configDone may already
+                // have happened if there were no user breakpoints.
+                if (this.configDone) {
+                    this.sendContinue();
+                } else {
+                    this.onConfigDone.once('done', () => {      // Only applies to 'LAUNCH'
+                        this.sendContinue();
+                    });
+                }
+            }, (err) => {
+                // If failed to set the temporary breakpoint (e.g. function does not exist)
+                // complete the launch as if the breakpoint had not being defined
+                this.handleMsg('log', `launch.json: Unable to set temporary breakpoint "runToEntryPoint":"${this.args.runToEntryPoint}".` +
+                    'Function may not exist or out of breakpoints? ' + err.toString() + '\n');
+                if (mode === SessionMode.LAUNCH) {
+                    this.args.runToEntryPoint = '';     // Don't try again. It will likely to fail
+                }
+                this.startComplete(mode);
+                this.runPostCommands(mode);
+            });
+        } else {
+            this.startComplete(mode);
+            this.runPostCommands(mode);
+        }
     }
 
     private startGdb(response: DebugProtocol.LaunchResponse): boolean {
@@ -648,9 +668,13 @@ export class GDBDebugSession extends DebugSession {
         return (this.miDebugger.status === 'stopped');
     }
 
+    // We wait until a threads request is made by VSCode. Or else, 'continue' will not update VSCode
+    // state and the pause button will not work. As of Dec 2021
+    // Set the following to false before sending a stopped event to VSCode.
+    protected threadsRequestMade = true;
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening
     protected runPostStartSessionCommands(mode: SessionMode, interval: number = 10): void {
-        let commands: string[] = null;
+        let commands: string[] = [];
         let shouldContinue = false;
         switch (mode) {
             case SessionMode.RESTART:
@@ -667,28 +691,35 @@ export class GDBDebugSession extends DebugSession {
         if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
             shouldContinue = true;
         } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (commands.length === 0)) {
-            // Note: This function is not called if 'runToEntryPoint' was used
             shouldContinue = true;
         }
 
-        if (shouldContinue) {
-            commands.push('-exec-continue');
-        }
-
-        if (commands.length > 0) {
-            let curToken = this.miDebugger.getCurrentToken();
+        if ((commands.length > 0) || shouldContinue) {
             commands = commands.map(COMMAND_MAP);
             // We want to let things quiet down before we run the next set of commands. Note that while
             // we are running this command sequence, some results can cause other gdb commands to be generated if
             // running state changes. Can't help it for now
-            const to = setInterval(() => {
+            let curToken = this.miDebugger.getCurrentToken();
+            const to = setInterval(async () => {
                 const nxtToken = this.miDebugger.getCurrentToken();
                 if (curToken === nxtToken) {
-                    clearInterval(to);
-                    this.miDebugger.postStart(commands).then((done) => {
-                    }, (e) => {
-                        this.handleMsg('log', `Error running postStart commands '${e}'\n`);
-                    });
+                    if (!shouldContinue) {
+                        clearInterval(to);
+                    }
+                    if (commands.length > 0) {
+                        try {
+                            await this.miDebugger.postStart(commands);
+                        }
+                        catch (e) {
+                            this.handleMsg('log', `Error running postStart commands '${e}'\n`);
+                        }
+                        commands = [];
+                    }
+                    if (shouldContinue && this.threadsRequestMade) {
+                        shouldContinue = false;
+                        clearInterval(to);
+                        this.sendContinue();
+                    }
                 } else {
                     curToken = nxtToken;
                 }
@@ -1098,10 +1129,12 @@ export class GDBDebugSession extends DebugSession {
     // https://github.com/microsoft/debug-adapter-protocol/issues/73
     //
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): void {
-        const restartProcessing = async () => {
-            this.disableSendStoppedEvents = false;
+        const mode: SessionMode = (args as any).isReset ? SessionMode.RESET : SessionMode.RESTART;
+        const restartProcessing = () => {
             const commands = [];
             this.args.pvtRestartOrReset = true;
+            this.disableSendStoppedEvents = false;
+            this.continuing = false;
 
             commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
             const restartCommands = this.args.overrideRestartCommands != null ?
@@ -1112,20 +1145,9 @@ export class GDBDebugSession extends DebugSession {
 
             this.miDebugger.restart(commands).then((done) => {
                 this.sendResponse(response);
-                setTimeout(() => {
-                    const isReset = (args as any).isReset;
-                    if (!this.args.noDebug) {
-                        this.continuing = false;
-                        this.stopped = true;        // This should aleady be true??
-                        this.stoppedReason = isReset ? 'reset' : 'restart';
-                        this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
-                        this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
-                        this.sendEvent(new CustomStoppedEvent(this.stoppedReason, this.currentThreadId));
-                    }
-                    this.runPostStartSessionCommands(isReset ? SessionMode.RESET : SessionMode.RESTART);
-                }, 5);
+                this.finishStartSequence(mode);
             }, (msg) => {
-                this.sendErrorResponse(response, 6, `Could not restart: ${msg}`);
+                this.sendErrorResponse(response, 6, `Could not restart/reset: ${msg}`);
             });
         };
 
@@ -1210,9 +1232,12 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'breakpoint';
         this.findPausedThread(info);
+        this.notifyStoppedConditional();
+    }
+
+    private notifyStoppedConditional() {
         if (!this.disableSendStoppedEvents) {
-            this.sendEvent(new StoppedEvent('breakpoint', this.currentThreadId, true));
-            this.sendEvent(new CustomStoppedEvent('breakpoint', this.currentThreadId));
+            this.notifyStopped();
         } else {
             this.stoppedEventPending = true;
         }
@@ -1221,14 +1246,9 @@ export class GDBDebugSession extends DebugSession {
     protected handleWatchpoint(type: string, info: MINode) {
         this.continuing = false;
         this.stopped = true;
-        this.stoppedReason = (type === 'hit') ? 'watchpoint' : 'watchpoint-scope-end';
+        this.stoppedReason = (type === 'hit') ? 'data breakpoint' : 'watchpoint-scope-end';
         this.findPausedThread(info);
-        if (!this.disableSendStoppedEvents) {
-            this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
-            this.sendEvent(new CustomStoppedEvent(this.stoppedReason, this.currentThreadId));
-        } else {
-            this.stoppedEventPending = true;
-        }
+        this.notifyStoppedConditional();
 
         // console.log(info);
         if (type !== 'hit') {
@@ -1268,12 +1288,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = true;
         this.stoppedReason = 'step';
         this.findPausedThread(info);
-        if (!this.disableSendStoppedEvents) {
-            this.sendEvent(new StoppedEvent('step', this.currentThreadId, true));
-            this.sendEvent(new CustomStoppedEvent('step', this.currentThreadId));
-        } else {
-            this.stoppedEventPending = true;
-        }
+        this.notifyStoppedConditional();
     }
 
     public sendEvent(event: DebugProtocol.Event): void {
@@ -1286,14 +1301,9 @@ export class GDBDebugSession extends DebugSession {
     protected handlePause(info: MINode) {
         this.continuing = false;
         this.stopped = true;
-        this.stoppedReason = 'user request';
+        this.stoppedReason = 'pause';
         this.findPausedThread(info);
-        if (!this.disableSendStoppedEvents) {
-            this.sendEvent(new StoppedEvent('user request', this.currentThreadId, true));
-            this.sendEvent(new CustomStoppedEvent('user request', this.currentThreadId));
-        } else {
-            this.stoppedEventPending = true;
-        }
+        this.notifyStoppedConditional();
     }
 
     protected handleThreadCreated(info: { threadId: number, threadGroupId: string }) {
@@ -1361,8 +1371,7 @@ export class GDBDebugSession extends DebugSession {
             if ((reason === 'entry') && this.args.noDebug) {
                 // Do not notify the front-end if no-debug is active and it is the entry point. Or else, pass it on
             } else {
-                this.sendEvent(new StoppedEvent(reason, this.currentThreadId, true));
-                this.sendEvent(new CustomStoppedEvent(reason, this.currentThreadId));
+                this.notifyStoppedConditional();
             }
         }
     }
@@ -1767,6 +1776,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
+        this.threadsRequestMade = true;
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { threads: [] };
             this.sendResponse(response);
@@ -1821,8 +1831,7 @@ export class GDBDebugSession extends DebugSession {
             if (this.stoppedEventPending || (this.currentThreadId !== this.stoppedThreadId)) {
                 this.stoppedEventPending = false;
                 this.stoppedThreadId = this.currentThreadId;
-                this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
-                this.sendEvent(new CustomStoppedEvent(this.stoppedReason, this.currentThreadId));
+                this.notifyStopped();
             }
 
             const nodes = await Promise.all(threadIds.map((id) => this.miDebugger.sendCommand(`thread-info ${id}`)));
