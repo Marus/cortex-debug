@@ -452,6 +452,7 @@ export class GDBDebugSession extends DebugSession {
                 }, (err) => {
                     this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
+                    this.miDebugger.stop();     // This should also kill the server if there is one
                     this.server.exit();
                 });
 
