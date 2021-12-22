@@ -1301,7 +1301,7 @@ export class GDBDebugSession extends DebugSession {
     protected handlePause(info: MINode) {
         this.continuing = false;
         this.stopped = true;
-        this.stoppedReason = 'pause';
+        this.stoppedReason = 'user request';
         this.findPausedThread(info);
         this.notifyStoppedConditional();
     }
