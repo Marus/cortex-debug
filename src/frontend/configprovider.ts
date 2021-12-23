@@ -3,7 +3,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ChainedLaunches, ChainedEvents, CortexDebugKeys } from '../common';
+import { ChainedConfigurations, ChainedEvents, CortexDebugKeys } from '../common';
+import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import * as path from 'path';
 
 const OPENOCD_VALID_RTOS: string[] = ['ChibiOS', 'eCos', 'embKernel', 'FreeRTOS', 'mqx', 'nuttx', 'ThreadX', 'uCOS-III', 'auto'];
@@ -77,7 +78,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.postRestartCommands) { config.postRestartCommands = []; }
         if (config.request !== 'launch') { config.runToEntryPoint = null; }
         else if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); }
-        else if (config.runToMain) { config.runToEntryPoint = 'main'; }
+        else if (config.runToMain) {
+            config.runToEntryPoint = 'main';
+            vscode.window.showWarningMessage('launch.json: "runToMain" has been deprecated. Please use "runToEntryPoint" instead');
+        }
 
         switch (type) {
             case 'jlink':
@@ -173,14 +177,26 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private sanitizeChainedConfigs(config: vscode.DebugConfiguration) {
-        const chained = config.chainedLaunches as ChainedLaunches;
+        // First are we chained ... as in do we have a parent?
+        const isChained = CDebugChainedSessionItem.FindByName(config.name);
+        if (isChained) {
+            if (!isChained.config.detached) {
+                config.pvtParent = isChained.parent.config;
+            }
+        }
+
+        // See if we gave children and sanitize them
+        const chained = config.chainedConfigurations as ChainedConfigurations;
         if (!chained || !chained.enabled || !chained.launches || (chained.launches.length === 0)) {
-            config.chainedLaunches = { enabled: false };
+            config.chainedConfigurations = { enabled: false };
             return;
         }
         if (!chained.delayMs) { chained.delayMs = 0; }
         if (!chained.waitOnEvent || !Object.values(ChainedEvents).includes(chained.waitOnEvent)) {
             chained.waitOnEvent = ChainedEvents.POSTSTART;
+        }
+        if (chained.detached === undefined) {
+            chained.detached = (config.servertype === 'jlink') ? true : false;
         }
         for (const launch of chained.launches) {
             if (launch.enabled === undefined) {
@@ -188,6 +204,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             }
             if (launch.delayMs === undefined) {
                 launch.delayMs = chained.delayMs;
+            }
+            if (launch.detached === undefined) {
+                launch.detached = chained.detached;
             }
             if ((launch.waitOnEvent === undefined) || !Object.values(ChainedEvents).includes(launch.waitOnEvent)) {
                 launch.waitOnEvent = chained.waitOnEvent;

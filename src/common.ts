@@ -157,12 +157,14 @@ export interface ChainedConfig {
     delayMs: number;
     waitOnEvent: ChainedEvents;
     detached: boolean;
+    folder: string;
 }
 
-export interface ChainedLaunches {
+export interface ChainedConfigurations {
     enabled: boolean;
     launches: ChainedConfig[];
     waitOnEvent: ChainedEvents;
+    detached: boolean;
     delayMs: number;
 }
 
@@ -229,10 +231,11 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
     variableUseNaturalFormat: boolean;
-    chainedLaunches: ChainedLaunches;
+    chainedConfigurations: ChainedConfigurations;
 
     pvtRestartOrReset: boolean;
     pvtPorts: { [name: string]: number; };
+    pvtParent: ConfigurationArguments;
 
     numberOfProcessors: number;
     targetProcessor: number;

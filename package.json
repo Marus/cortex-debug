@@ -1505,7 +1505,7 @@
                                 "maximum": 9,
                                 "default": 0
                             },
-                            "chainedLaunches": {
+                            "chainedConfigurations": {
                                 "properties": {
                                     "enabled": {
                                         "default": true,
@@ -1528,7 +1528,7 @@
                                             "postInit"
                                         ],
                                         "default": "postInit",
-                                        "description": "Default event to wait for. 'postStart' (default) means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                        "description": "Default event to wait for. 'postStart' means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
                                         "type": "string"
                                     },
                                     "delayMs": {
@@ -1536,15 +1536,20 @@
                                         "description": "default delay in milliseconds for a certain amount of milliseconds to begin launch",
                                         "multipleOf": 1,
                                         "minimum": 0,
-                                        "default": 0
+                                        "default": 5
                                     },
                                     "launches": {
                                         "type": "array",
                                         "items": {
                                             "properties": {
                                                 "name": {
-                                                    "default": true,
+                                                    "default": "",
                                                     "description": "Name of launch configuration",
+                                                    "type": "string"
+                                                },
+                                                "folder": {
+                                                    "default": "",
+                                                    "description": "Folder to use for this configuration. Where .vscode/launch.json exists. Default is same folder as parent. Use either the full path name or the base-name of the folder",
                                                     "type": "string"
                                                 },
                                                 "enabled": {
@@ -1571,7 +1576,7 @@
                                                     "description": "delay in milliseconds for a certain amount of milliseconds to begin launch",
                                                     "multipleOf": 1,
                                                     "minimum": 0,
-                                                    "default": 0
+                                                    "default": 5
                                                 }                                                
                                             }
                                         }
@@ -1580,11 +1585,11 @@
                                 "default": {
                                     "enabled": true,
                                     "waitOnEvent": "postInit",
-                                    "detached": false,
                                     "lifeCycleShared": true,
                                     "launches": [
                                         {
-                                            "name": "use exact name of chained configuration to launch"
+                                            "name": "use EXACT name of chained configuration to launch",
+                                            "folder": "use full path or folder basename"
                                         }
                                     ]
                                 }
