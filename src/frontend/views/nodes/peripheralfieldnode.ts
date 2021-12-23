@@ -146,7 +146,7 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
             }
 
             mds.appendMarkdown(`| ${ ev } &nbsp;&nbsp; | ${ hex } &nbsp;&nbsp; | ${ decimal } &nbsp;&nbsp; | ${ binary } &nbsp;&nbsp; |\n\n`);
-            if (this.enumeration[value].description) {
+            if (this.enumeration[value] && this.enumeration[value].description) {
                 mds.appendMarkdown(this.enumeration[value].description);
             }
         } else {
