@@ -302,6 +302,25 @@ export class GDBDebugSession extends DebugSession {
         return args;
     }
 
+    private getTcpPorts(): Thenable<void> {
+        return new Promise((resolve, reject) => {
+            if (this.args.pvtParent) {
+                this.ports = this.args.pvtPorts = this.args.pvtParent.pvtPorts;
+                this.serverController.setPorts(this.ports);
+                return resolve();
+            }
+            const totalPortsNeeded = this.calculatePortsNeeded();
+            const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
+            TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
+                this.createPortsMap(ports);
+                this.serverController.setPorts(this.ports);
+                resolve();
+            }, (e) => {
+                reject(e);
+            });
+        });
+    }
+
     private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, attach: boolean) {
         if (!fs.existsSync(this.args.executable)) {
             this.sendErrorResponse(
@@ -330,14 +349,9 @@ export class GDBDebugSession extends DebugSession {
             return;
         }
 
-        const totalPortsNeeded = this.calculatePortsNeeded();
-        const portFinderOpts = { min: 50000, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
-        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
-            this.createPortsMap(ports);
-            this.serverController.setPorts(this.ports);
-
-            const executable = this.serverController.serverExecutable();
-            const args = this.serverController.serverArguments();
+        this.getTcpPorts().then(() => {
+            const executable = this.args.pvtParent ? null : this.serverController.serverExecutable();
+            const args = this.args.pvtParent ? [] : this.serverController.serverArguments();
 
             if (executable) {
                 this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
@@ -347,20 +361,23 @@ export class GDBDebugSession extends DebugSession {
                 this.handleMsg('log', dbgMsg);
             }
 
-            let initMatch = this.serverController.initMatch();
-            if (this.args.overrideGDBServerStartedRegex) {
-                initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
-            }
-
-            const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
             const consolePort = (this.args as any).gdbServerConsolePort;
-            if (consolePort === undefined) {
-                this.sendErrorResponse(
-                    response,
-                    107,
-                    'GDB Server Console tcp port is undefined.'
-                );
-                return;
+            const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
+            let initMatch = null;
+            if (!this.args.pvtParent) {
+                this.serverController.initMatch();
+                if (this.args.overrideGDBServerStartedRegex) {
+                    initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
+                }
+
+                if (consolePort === undefined) {
+                    this.sendErrorResponse(
+                        response,
+                        107,
+                        'GDB Server Console tcp port is undefined.'
+                    );
+                    return;
+                }
             }
             this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort, consolePort);
             this.server.on('output', this.handleAdapterOutput.bind(this));

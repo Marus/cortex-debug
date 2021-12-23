@@ -79,7 +79,7 @@ export class GDBServer extends EventEmitter {
                 }
             }
             else { // For servers like BMP that are always running directly on the probe
-                this.connectToConsole();
+                // this.connectToConsole();
                 resolve(true);
             }
         });

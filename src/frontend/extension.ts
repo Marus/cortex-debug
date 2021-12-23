@@ -10,7 +10,7 @@ import { RTTCore, SWOCore } from './swo/core';
 import { SWORTTSource } from './swo/sources/common';
 import { NumberFormat, ConfigurationArguments,
     RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
-    CortexDebugKeys, ChainedEvents, ChainedConfig } from '../common';
+    CortexDebugKeys, ChainedEvents } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -23,36 +23,7 @@ import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
 import { RTTTerminal } from './rtt_terminal';
 import { GDBServerConsole } from './server_console';
-
-export class CDebugSession {
-    public static CurrentSessions: CDebugSession[] = [];
-
-    constructor(public session: vscode.DebugSession, public config: ConfigurationArguments | vscode.DebugConfiguration) {
-        CDebugSession.CurrentSessions.push(this);
-    }
-
-    public static RemoveSession(session: vscode.DebugSession) {
-        CDebugSession.CurrentSessions = CDebugSession.CurrentSessions.filter((s) => s.session === session);
-    }
-    public static FindSession(session: vscode.DebugSession) {
-        const ret = CDebugSession.CurrentSessions.find((x) => x.session === session);
-        return ret;
-    }
-    public static FindSessionById(id: string) {
-        const ret = CDebugSession.CurrentSessions.find((x) => x.session.id === id);
-        return ret;
-    }
-}
-
-export class CDebugChainedSessionItem {
-    public static SessionsStack: CDebugChainedSessionItem[] = [];
-    constructor(public parent: CDebugSession, public config: ChainedConfig, public options: vscode.DebugSessionOptions) {
-        CDebugChainedSessionItem.SessionsStack.push(this);
-    }
-    public static Pop(): CDebugChainedSessionItem {
-        return CDebugChainedSessionItem.SessionsStack.pop();
-    }
-}
+import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -517,7 +488,7 @@ export class CortexDebugExtension {
     private debugSessionStarted(session: vscode.DebugSession) {
         if (session.type !== 'cortex-debug') { return; }
 
-        // const item = new CDebugSession(session, session.configuration);
+        const newSession = CDebugSession.GetSession(session);
 
         // Clean-up Old output channels
         if (this.swo) {
@@ -533,7 +504,7 @@ export class CortexDebugExtension {
         this.debuggerStatus = 'started';
 
         session.customRequest('get-arguments').then((args) => {
-            // item.config = args;
+            newSession.config = args;
             this.currentArgs = args;
             let svdfile = args.svdFile;
             if (!svdfile) {
@@ -558,7 +529,7 @@ export class CortexDebugExtension {
     private debugSessionTerminated(session: vscode.DebugSession) {
         if (session.type !== 'cortex-debug') { return; }
         try {
-            // CDebugSession.RemoveSession(session);
+            CDebugSession.RemoveSession(session);
             Reporting.endSession();
 
             this.debuggerStatus = 'none';
@@ -618,26 +589,22 @@ export class CortexDebugExtension {
                 this.receivedEvent(e);
                 break;
             case 'custom-event-post-start-server':
-                this.startChainedLaunches(e, ChainedEvents.POSTSTART);
+                this.startChainedConfigs(e, ChainedEvents.POSTSTART);
                 break;
             case 'custom-event-post-start-gdb':
-                this.startChainedLaunches(e, ChainedEvents.POSTINIT);
+                this.startChainedConfigs(e, ChainedEvents.POSTINIT);
                 break;
             default:
                 break;
         }
     }
 
-    private startChainedLaunches(e: vscode.DebugSessionCustomEvent, evType: ChainedEvents) {
-        const adapterArtgs = e?.body as ConfigurationArguments;
-        if (!adapterArtgs || !adapterArtgs.chainedLaunches?.enabled) { return; }
-        const cDbgParent = CDebugSession.FindSession(e.session);
-        if (!cDbgParent) {
-            vscode.window.showErrorMessage('Internal error: Could not find debug session ' + e.session.name);
-            return;
-        }
-        const unique = adapterArtgs.chainedLaunches.launches.filter((x, ix) => {
-            return ix === adapterArtgs.chainedLaunches.launches.findIndex((v, ix) => v.name === x.name);
+    private startChainedConfigs(e: vscode.DebugSessionCustomEvent, evType: ChainedEvents) {
+        const adapterArgs = e?.body?.info as ConfigurationArguments;
+        if (!adapterArgs || !adapterArgs.chainedConfigurations?.enabled) { return; }
+        const cDbgParent = CDebugSession.GetSession(e.session, adapterArgs);
+        const unique = adapterArgs.chainedConfigurations.launches.filter((x, ix) => {
+            return ix === adapterArgs.chainedConfigurations.launches.findIndex((v, ix) => v.name === x.name);
         });
         let delay = 0;
         for (const launch of unique) {
@@ -645,18 +612,36 @@ export class CortexDebugExtension {
                 const childOptions: vscode.DebugSessionOptions = {
                     parentSession            : e.session,
                     lifecycleManagedByParent : launch.detached ? false : true,
-                    consoleMode              : launch.detached ? vscode.DebugConsoleMode.Separate : vscode.DebugConsoleMode.MergeWithParent,
-                    noDebug                  : adapterArtgs.noDebug,
+                    consoleMode              : vscode.DebugConsoleMode.Separate,
+                    noDebug                  : adapterArgs.noDebug,
                     compact                  : false
                 };
                 delay += Math.max(launch.delayMs || 0, 0);
                 const child = new CDebugChainedSessionItem(cDbgParent, launch, childOptions);
+                const folder = this.getWsFolder(launch.folder, e.session.workspaceFolder);
                 setTimeout(() => {
-                    vscode.debug.startDebugging(undefined, launch.name, childOptions);
+                    vscode.debug.startDebugging(folder, launch.name, childOptions).then((success) => {
+                        if (!success) {
+                            vscode.window.showErrorMessage('Failed to launch chained configuration ' + launch.name);
+                        }
+                        CDebugChainedSessionItem.RemoveItem(child);
+                    });
                 }, delay);
                 delay += 5;
             }
         }
+    }
+
+    private getWsFolder(folder: string, def: vscode.WorkspaceFolder): vscode.WorkspaceFolder {
+        if (folder) {
+            folder = path.normalize(folder);
+            for (const f of vscode.workspace.workspaceFolders) {
+                if ((f.uri.path === folder) || (f.uri.fsPath === folder) || (f.name === folder)) {
+                    return f;
+                }
+            }
+        }
+        return def;
     }
 
     private receivedStopEvent(e) {
