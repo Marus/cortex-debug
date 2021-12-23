@@ -50,48 +50,57 @@ export class SymbolTable {
     constructor(private gdb: MI2, private toolchainPath: string, private toolchainPrefix: string, private executable: string) {
     }
 
-    private async loadSymbolsFromGdb(): Promise<boolean> {
-        if (!this.gdb || this.gdb.gdbMajorVersion < 9) {
-            return false;
-        }
-
-        function getProp(ary: any, name: string): any {
-            if (ary) {
-                for (const item of ary) {
-                    if (item[0] === name) {
-                        return item[1];
-                    }
-                }
+    private loadSymbolsFromGdb(): Promise<boolean> {
+        return new Promise(async (resolve, reject) => {
+            if (!this.gdb || this.gdb.gdbMajorVersion < 9) {
+                return resolve(false);
             }
-            return undefined;
-        }
-        const miNode: MINode = await this.gdb.sendCommand('symbol-info-variables').then();
-        const results = getProp(miNode?.resultRecords?.results, 'symbols');
-        const dbgInfo = getProp(results, 'debug');
-        if (dbgInfo) {
-            for (const file of dbgInfo) {
-                const fullname = getProp(file, 'fullname');
-                const filename = getProp(file, 'filename');
-                const symbols = getProp(file, 'symbols');
-                if (symbols && (symbols.length > 0) && (filename || fullname)) {
-                    for (const sym of symbols) {
-                        const name = getProp(sym, 'name');
-                        const description = getProp(sym, 'description') as string;
-                        const isStatic = description && description.startsWith('static');
-                        if (fullname) {
-                            this.addToFileMap(fullname, name);
-                        }
-                        if (filename && (filename !== fullname)) {
-                            this.addToFileMap(filename, name);
+
+            function getProp(ary: any, name: string): any {
+                if (ary) {
+                    for (const item of ary) {
+                        if (item[0] === name) {
+                            return item[1];
                         }
                     }
                 }
+                return undefined;
             }
-        }
 
-        // TODO: We should also get statuc function names but that is very slow. In the future, we will probably
-        // be doing full disassembly so ignore it until it is a real issue.
-        return true;
+            try {
+                const miNode: MINode = await this.gdb.sendCommand('symbol-info-variables');
+                const results = getProp(miNode?.resultRecords?.results, 'symbols');
+                const dbgInfo = getProp(results, 'debug');
+                if (dbgInfo) {
+                    for (const file of dbgInfo) {
+                        const fullname = getProp(file, 'fullname');
+                        const filename = getProp(file, 'filename');
+                        const symbols = getProp(file, 'symbols');
+                        if (symbols && (symbols.length > 0) && (filename || fullname)) {
+                            for (const sym of symbols) {
+                                const name = getProp(sym, 'name');
+                                const description = getProp(sym, 'description') as string;
+                                const isStatic = description && description.startsWith('static');
+                                if (fullname) {
+                                    this.addToFileMap(fullname, name);
+                                }
+                                if (filename && (filename !== fullname)) {
+                                    this.addToFileMap(filename, name);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                console.error('symbol-info-variables failed');
+                return resolve(false);
+            }
+
+            // TODO: We should also get statuc function names but that is very slow. In the future, we will probably
+            // be doing full disassembly so ignore it until it is a real issue.
+            return resolve(true);
+        });
     }
 
     /**
@@ -121,78 +130,81 @@ export class SymbolTable {
      * where the output of objdump was in Gigabytes when using the -Wi option
      */
 
-    public async loadSymbols(noCache: boolean = false, useObjdumpFname: string = '') {
-        try {
-            let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
-            if (this.toolchainPath) {
-                objdumpExePath = path.normalize(path.join(this.toolchainPath, objdumpExePath));
-            }
-
-            const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
-            const options = ['--syms', '-C'];
-            let didGetInfoFromGdb = false;
-            if (!restored) {
-                didGetInfoFromGdb = await this.loadSymbolsFromGdb();    // Even this is not super fast but faster
-                if (!didGetInfoFromGdb) {
-                    options.push('-Wi');    // WARNING! Creates super large output
+    public loadSymbols(noCache: boolean = false, useObjdumpFname: string = ''): Promise<void> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
+                if (this.toolchainPath) {
+                    objdumpExePath = path.normalize(path.join(this.toolchainPath, objdumpExePath));
                 }
-            }
 
-            if (!useObjdumpFname || !fs.existsSync(useObjdumpFname)) {
-                useObjdumpFname = tmp.tmpNameSync();
-                const outFd = fs.openSync(useObjdumpFname, 'w');
-                const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
-                    stdio: ['ignore', outFd, 'ignore']
-                });
-                fs.closeSync(outFd);
-            }
-            const str = this.readLinesAndFileMaps(useObjdumpFname, !restored && !didGetInfoFromGdb);
-
-            const regex = RegExp(SYMBOL_REGEX);
-            let currentFile: string = null;
-            let match: RegExpExecArray;
-            while ((match = regex.exec(str)) !== null) {
-                if (match[7] === 'd' && match[8] === 'f') {
-                    if (match[11]) {
-                        currentFile = SymbolTable.NormalizePath(match[11].trim());
-                    } else {
-                        // This can happen with C++. Inline and template methods/variables/functions/etc. are listed with
-                        // an empty file association. So, symbols after this line can come from multiple compilation
-                        // units with no clear owner. These can be locals, globals or other.
-                        currentFile = null;
+                const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
+                const options = ['--syms', '-C'];
+                let didGetInfoFromGdb = false;
+                if (!restored) {
+                    didGetInfoFromGdb = await this.loadSymbolsFromGdb();    // Even this is not super fast but faster
+                    if (!didGetInfoFromGdb) {
+                        options.push('-Wi');    // WARNING! Creates super large output
                     }
                 }
-                const type = TYPE_MAP[match[8]];
-                const scope = SCOPE_MAP[match[2]];
-                let name = match[11].trim();
-                let hidden = false;
 
-                if (name.startsWith('.hidden')) {
-                    name = name.substring(7).trim();
-                    hidden = true;
+                if (!useObjdumpFname || !fs.existsSync(useObjdumpFname)) {
+                    useObjdumpFname = tmp.tmpNameSync();
+                    const outFd = fs.openSync(useObjdumpFname, 'w');
+                    const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
+                        stdio: ['ignore', outFd, 'ignore']
+                    });
+                    fs.closeSync(outFd);
                 }
+                const str = this.readLinesAndFileMaps(useObjdumpFname, !restored && !didGetInfoFromGdb);
 
-                const sym: SymbolInformation = {
-                    address: parseInt(match[1], 16),
-                    type: type,
-                    scope: scope,
-                    section: match[9].trim(),
-                    length: parseInt(match[10], 16),
-                    name: name,
-                    file: scope === SymbolScope.Local ? currentFile : null,
-                    instructions: null,
-                    hidden: hidden
-                };
-                this.allSymbols.push(sym);
-            }
-            this.categorizeSymbols();
-            this.sortGlobalVars();
+                const regex = RegExp(SYMBOL_REGEX);
+                let currentFile: string = null;
+                let match: RegExpExecArray;
+                while ((match = regex.exec(str)) !== null) {
+                    if (match[7] === 'd' && match[8] === 'f') {
+                        if (match[11]) {
+                            currentFile = SymbolTable.NormalizePath(match[11].trim());
+                        } else {
+                            // This can happen with C++. Inline and template methods/variables/functions/etc. are listed with
+                            // an empty file association. So, symbols after this line can come from multiple compilation
+                            // units with no clear owner. These can be locals, globals or other.
+                            currentFile = null;
+                        }
+                    }
+                    const type = TYPE_MAP[match[8]];
+                    const scope = SCOPE_MAP[match[2]];
+                    let name = match[11].trim();
+                    let hidden = false;
 
-            if (!restored && !noCache) {
-                this.serializeFileMaps(this.executable);
+                    if (name.startsWith('.hidden')) {
+                        name = name.substring(7).trim();
+                        hidden = true;
+                    }
+
+                    const sym: SymbolInformation = {
+                        address: parseInt(match[1], 16),
+                        type: type,
+                        scope: scope,
+                        section: match[9].trim(),
+                        length: parseInt(match[10], 16),
+                        name: name,
+                        file: scope === SymbolScope.Local ? currentFile : null,
+                        instructions: null,
+                        hidden: hidden
+                    };
+                    this.allSymbols.push(sym);
+                }
+                this.categorizeSymbols();
+                this.sortGlobalVars();
+
+                if (!restored && !noCache) {
+                    this.serializeFileMaps(this.executable);
+                }
+                resolve();
             }
-        }
-        catch (e) { }
+            catch (e) { resolve(); }
+        });
     }
 
     private sortGlobalVars() {

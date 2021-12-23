@@ -5,6 +5,7 @@ ChangeLog
 * STLink: We no longer use `monitor reset halt` as that is not a supported reset option. We use the `--halt` command-line option instead.
 * Experimental: `runToEntryPoint` is now supported for `Reset` and `Restart`. This was not possible/recommended before because of how VSCode handled breakpoints. Since `runToEntryPoint` works by setting a temporary breakpoint in the specified function, this may fail if your CPU has run out of breakpoints.
 * Experimental (Unstable): Chained configurations for multi-core/multi-processor/multi-session debugging
+* Bug fix: When using arm tools version 9+, some global variables were not being displayed
 
 #V1.1.0
 * Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering schem. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions

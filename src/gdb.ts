@@ -205,7 +205,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     private dbgSymbolTable: SymbolTable = null;
-    private loadSymbols() {
+    private async loadSymbols() {
         // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
         // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
         // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
@@ -217,7 +217,7 @@ export class GDBDebugSession extends DebugSession {
             this.args.toolchainPath,
             this.args.toolchainPrefix,
             this.args.executable);
-        this.symbolTable.loadSymbols();
+        await this.symbolTable.loadSymbols();
 
         if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
             const symName = '_SEGGER_RTT';
