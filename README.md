@@ -52,7 +52,7 @@ Requirements:
 
 ## Usage
 
-See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help from the community
+See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help from the community. See https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md for a summary of all properties that are available in your `launch.json`
 
 ## How to Build from sources
 * `git clone https://github.com/Marus/cortex-debug.git`
