@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { parseHexOrDecInt } from '../common';
+import { CortexDebugExtension } from './extension';
 import { hexFormat } from './utils';
 
 export class MemoryContentProvider implements vscode.TextDocumentContentProvider {
@@ -15,53 +16,58 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
             const addressExpr = query['address'];
             const length: number = parseHexOrDecInt(query['length']);
 
-            vscode.debug.activeDebugSession.customRequest('read-memory', { address: addressExpr, length: length || 32 }).then((data) => {
-                const bytes = data.bytes;
-                const address = parseHexOrDecInt(data.startAddress);
-                let lineAddress = address - (address % 16);
-                const lineLength = 16;
-                const offset = address - lineAddress;
+            const session = CortexDebugExtension.getActiveCDSession();
+            if (session) {
+                session.customRequest('read-memory', { address: addressExpr, length: length || 32 }).then((data) => {
+                    const bytes = data.bytes;
+                    const address = parseHexOrDecInt(data.startAddress);
+                    let lineAddress = address - (address % 16);
+                    const lineLength = 16;
+                    const offset = address - lineAddress;
 
-                let output = '';
-                output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 	\n';
-                output += hexFormat(lineAddress, 8, false) + ': ';
+                    let output = '';
+                    output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 	\n';
+                    output += hexFormat(lineAddress, 8, false) + ': ';
 
-                let lineend = '';
+                    let lineend = '';
 
-                for (let i = 0; i < offset; i++) { output += '   '; lineend += ' '; }
+                    for (let i = 0; i < offset; i++) { output += '   '; lineend += ' '; }
 
-                for (let i = 0; i < length; i++) {
-                    const byte = bytes[i];
-                    output += hexFormat(byte, 2, false).toUpperCase() + ' ';
-                    if (byte <= 32 || (byte >= 127 && byte <= 159)) {
-                        lineend += '.';
+                    for (let i = 0; i < length; i++) {
+                        const byte = bytes[i];
+                        output += hexFormat(byte, 2, false).toUpperCase() + ' ';
+                        if (byte <= 32 || (byte >= 127 && byte <= 159)) {
+                            lineend += '.';
+                        }
+                        else {
+                            lineend	+= String.fromCharCode(bytes[i]);
+                        }
+
+                        if ((address + i) % 16 === 15 && i < length - 1) {
+                            output += '  ' + lineend;
+                            lineend = '';
+                            output += '\n';
+                            lineAddress += 16;
+                            output += hexFormat(lineAddress, 8, false) + ': ';
+                        }
                     }
-                    else {
-                        lineend	+= String.fromCharCode(bytes[i]);
-                    }
 
-                    if ((address + i) % 16 === 15 && i < length - 1) {
-                        output += '  ' + lineend;
-                        lineend = '';
-                        output += '\n';
-                        lineAddress += 16;
-                        output += hexFormat(lineAddress, 8, false) + ': ';
-                    }
-                }
+                    const endaddress = address + length;
+                    const extra = (16 - (endaddress % 16)) % 16;
 
-                const endaddress = address + length;
-                const extra = (16 - (endaddress % 16)) % 16;
+                    for (let i = 0; i < extra; i++) { output += '   '; }
+                    output += '  ' + lineend;
+                    output += '\n';
 
-                for (let i = 0; i < extra; i++) { output += '   '; }
-                output += '  ' + lineend;
-                output += '\n';
-
-                resolve(output);
-            }, (error) => {
-                const msg = error.message || '';
-                vscode.window.showErrorMessage(`Unable to read memory from ${addressExpr} of length ${hexFormat(length, 8)}: ${msg}`);
-                reject(error.toString());
-            });
+                    resolve(output);
+                }, (error) => {
+                    const msg = error.message || '';
+                    vscode.window.showErrorMessage(`Unable to read memory from ${addressExpr} of length ${hexFormat(length, 8)}: ${msg}`);
+                    reject(error.toString());
+                });
+            } else {
+                reject(new Error('MemoryContentProvider: unknown debug session type'));
+            }
         });
     }
 

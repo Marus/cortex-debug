@@ -7,7 +7,7 @@ import { CortexDebugKeys, NodeSetting } from '../../common';
 import { RegisterNode, RegisterValue } from './nodes/registernode';
 import { MessageNode } from './nodes/messagenode';
 import { BaseNode } from './nodes/basenode';
-import { getVSCodeDownloadUrl } from 'vscode-test/out/util';
+import { CortexDebugExtension } from '../extension';
 
 export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     // tslint:disable-next-line:variable-name
@@ -24,25 +24,26 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
         this.registerMap = {};
     }
 
-    public refresh(): void {
-        if (debug.activeDebugSession) {
+    public refresh(session: vscode.DebugSession): void {
+        session = session || CortexDebugExtension.getActiveCDSession();
+        if (session) {
             if (!this.loaded) {
-                debug.activeDebugSession.customRequest('read-register-list').then((data) => {
+                session.customRequest('read-register-list').then((data) => {
                     this.createRegisters(data);
-                    this._refreshRegisterValues();
+                    this._refreshRegisterValues(session);
                 });
             }
             else {
-                this._refreshRegisterValues();
+                this._refreshRegisterValues(session);
             }
         }
     }
 
-    public _refreshRegisterValues() {
+    public _refreshRegisterValues(session: vscode.DebugSession) {
         const config = vscode.workspace.getConfiguration('cortex-debug');
         const val = config.get(CortexDebugKeys.REGISTER_DISPLAY_MODE);
         const args = { hex: !val };
-        debug.activeDebugSession.customRequest('read-registers', args).then((data) => {
+        session.customRequest('read-registers', args).then((data) => {
             data.forEach((reg) => {
                 const index = parseInt(reg.number, 10);
                 const regNode = this.registerMap[index];
@@ -137,8 +138,9 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     }
 
     public debugSessionTerminated(session: vscode.DebugSession) {
-        if (this.session && (this.session.id === session.id)) {
+        if (session) {
             // We don't have multi-session capability, yet, and this file should really be in workspace storage
+            // FIXME: We should store it in the proper workspace folder
             if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
                 const fspath = path.join(session.workspaceFolder.uri.fsPath,
                     /* workspace.workspaceFolders[0].uri.fsPath,*/
@@ -155,21 +157,18 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     }
 
     public debugSessionStarted(session: vscode.DebugSession) {
-        if (!this.session) {
-            // This is to decide where to store settings
-            this.session = session;
-        }
+        this.session = session;
         this.loaded = false;
         this.registers = [];
         this.registerMap = {};
         this._onDidChangeTreeData.fire(undefined);
     }
 
-    public debugStopped() {
-        this.refresh();
+    public debugStopped(session: vscode.DebugSession) {
+        this.session = session;
+        this.refresh(session);
     }
 
     public debugContinued() {
-        
     }
 }

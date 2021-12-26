@@ -24,7 +24,7 @@ const NODE_VERSION_DIMENSION = 'cd8';
 let analytics: any;
 
 let uuid: string = null;
-let sessionStart: Date = null;
+const sessionStarts: {[id: string]: Date} = {};
 
 interface UserSettings {
     uuid: string;
@@ -76,7 +76,7 @@ function sendEvent(category: string, action: string, label?: string, value?: num
     analytics.event(category, action, label, Math.round(value), options).send();
 }
 
-function beginSession(opts: ConfigurationArguments) {
+function beginSession(id: string, opts: ConfigurationArguments) {
     if (!telemetryEnabled()) { return; }
 
     if (opts.rtos) { analytics.set(RTOS_TYPE_DIMENSION, opts.rtos); }
@@ -96,19 +96,22 @@ function beginSession(opts: ConfigurationArguments) {
         analytics.event('Graphing', 'Used');
     }
     
-    sessionStart = new Date();
+    sessionStarts[id] = new Date();
     
     analytics.send();
 }
 
-function endSession() {
+function endSession(id: string) {
     if (!telemetryEnabled()) { return; }
 
-    const endTime = new Date();
-    const time = (endTime.getTime() - sessionStart.getTime()) / 1000;
-    sessionStart = null;
+    const startTime = sessionStarts[id];
+    if (startTime) {
+        const endTime = new Date();
+        const time = (endTime.getTime() - startTime.getTime()) / 1000;
+        delete sessionStarts[id];
 
-    setTimeout(() => { analytics.event('Session', 'Completed', '', Math.round(time), { sessionControl: 'end' }).send(); }, 500);
+        setTimeout(() => { analytics.event('Session', 'Completed', '', Math.round(time), { sessionControl: 'end' }).send(); }, 500);
+    }
 }
 
 export default {

@@ -5,11 +5,15 @@ import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
 
-export function ServerConsoleLog(str: string) {
+export let GdbPid = -1;
+export function ServerConsoleLog(str: string, usePid?: number) {
     try {
         const tmpDirName = os.tmpdir();
         const date = new Date();
-        str = `[${date.toISOString()}] ` + str;
+        if (usePid) {
+            GdbPid = usePid;
+        }
+        str = `[${date.toISOString()}] ppid=${process.pid} pid=${GdbPid} ` + str;
         console.log(str);
         if (true) {
             if (!str.endsWith('\n')) {
@@ -87,6 +91,10 @@ export class GDBServer extends EventEmitter {
 
     public isExternal(): boolean {
         return !this.application;
+    }
+
+    public isProcessRunning(): boolean {
+        return !!this.process;
     }
 
     private exitTimeout: NodeJS.Timeout = null;

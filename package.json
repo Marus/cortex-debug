@@ -1,5 +1,5 @@
 {
-    "version": "1.1.1",
+    "version": "1.1.2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -1517,9 +1517,9 @@
                                         "description": "Default: Related or independent sessions. Set to true for servers like 'JLink'",
                                         "type": "boolean"
                                     },
-                                    "lifeCycleShared": {
+                                    "lifecycleManagedByParent": {
                                         "default": true,
-                                        "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent",
+                                        "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root",
                                         "type": "boolean"
                                     },
                                     "waitOnEvent": {
@@ -1577,7 +1577,12 @@
                                                     "multipleOf": 1,
                                                     "minimum": 0,
                                                     "default": 5
-                                                }                                                
+                                                },
+                                                "lifecycleManagedByParent": {
+                                                    "default": true,
+                                                    "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root",
+                                                    "type": "boolean"
+                                                }
                                             }
                                         }
                                     }

@@ -180,9 +180,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         // First are we chained ... as in do we have a parent?
         const isChained = CDebugChainedSessionItem.FindByName(config.name);
         if (isChained) {
-            if (!isChained.config.detached) {
-                config.pvtParent = isChained.parent.config;
-            }
+            config.pvtParent = isChained.parent.config;
+            config.pvtMyConfigFromParent = isChained.config;
         }
 
         // See if we gave children and sanitize them
@@ -193,23 +192,29 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
         if (!chained.delayMs) { chained.delayMs = 0; }
         if (!chained.waitOnEvent || !Object.values(ChainedEvents).includes(chained.waitOnEvent)) {
-            chained.waitOnEvent = ChainedEvents.POSTSTART;
+            chained.waitOnEvent = ChainedEvents.POSTINIT;
         }
-        if (chained.detached === undefined) {
+        if ((chained.detached === undefined) || (chained.detached === null)) {
             chained.detached = (config.servertype === 'jlink') ? true : false;
         }
+        if ((chained.lifecycleManagedByParent === undefined) || (chained.lifecycleManagedByParent === null)) {
+            chained.lifecycleManagedByParent = true;
+        }
         for (const launch of chained.launches) {
-            if (launch.enabled === undefined) {
+            if ((launch.enabled === undefined) || (launch.enabled === null)) {
                 launch.enabled = true;
             }
             if (launch.delayMs === undefined) {
                 launch.delayMs = chained.delayMs;
             }
-            if (launch.detached === undefined) {
+            if ((launch.detached === undefined) || (launch.detached === null)) {
                 launch.detached = chained.detached;
             }
             if ((launch.waitOnEvent === undefined) || !Object.values(ChainedEvents).includes(launch.waitOnEvent)) {
                 launch.waitOnEvent = chained.waitOnEvent;
+            }
+            if ((launch.lifecycleManagedByParent === undefined) || (launch.lifecycleManagedByParent === null)) {
+                launch.lifecycleManagedByParent = chained.lifecycleManagedByParent;
             }
         }
     }

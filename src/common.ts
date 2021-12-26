@@ -157,6 +157,7 @@ export interface ChainedConfig {
     delayMs: number;
     waitOnEvent: ChainedEvents;
     detached: boolean;
+    lifecycleManagedByParent: boolean;
     folder: string;
 }
 
@@ -165,6 +166,7 @@ export interface ChainedConfigurations {
     launches: ChainedConfig[];
     waitOnEvent: ChainedEvents;
     detached: boolean;
+    lifecycleManagedByParent: boolean;
     delayMs: number;
 }
 
@@ -236,6 +238,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     pvtRestartOrReset: boolean;
     pvtPorts: { [name: string]: number; };
     pvtParent: ConfigurationArguments;
+    pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
 
     numberOfProcessors: number;
     targetProcessor: number;

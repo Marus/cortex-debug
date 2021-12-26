@@ -40,7 +40,8 @@ export class MI2 extends EventEmitter implements IBackend {
     public gdbMajorVersion: number | undefined;
     public gdbMinorVersion: number | undefined;
     public status: 'running' | 'stopped' | 'none' = 'none';
-    
+    public pid: number = -1;
+
     constructor(public application: string, public args: string[]) {
         super();
     }
@@ -53,10 +54,14 @@ export class MI2 extends EventEmitter implements IBackend {
         return new Promise<void>((resolve, reject) => {
             const args = [...this.args, executable];
             this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
+            this.pid = this.process.pid;
             this.process.stdout.on('data', this.stdout.bind(this));
             this.process.stderr.on('data', this.stderr.bind(this));
             this.process.on('exit', this.onExit.bind(this));
             this.process.on('error', ((err) => { this.emit('launcherror', err); }).bind(this));
+            this.process.on('spawn', () => {
+                ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
+            });
 
             this.sendCommand('gdb-set target-async on', true).then(() => {
                 this.startCaptureConsole();
@@ -313,7 +318,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (!this.exited && this.process) {
             const proc = this.process;
             try {
-                ServerConsoleLog('GDB kill()');
+                ServerConsoleLog('GDB kill()', this.pid);
                 process.kill(-proc.pid);
             }
             catch (e) {
@@ -336,7 +341,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 this.sendRaw('-gdb-exit');
             }
             catch (e) {
-                ServerConsoleLog('target-stop failed with exception:' + e);
+                ServerConsoleLog('target-stop failed with exception:' + e, this.pid);
             }
         }
     }
@@ -347,7 +352,7 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         let to = setTimeout(() => {
             if (to) {
-                ServerConsoleLog('target-detach hung: target probably running, thats okay, continue to stop()');
+                ServerConsoleLog('target-detach hung: target probably running, thats okay, continue to stop()', this.pid);
                 to = null;
                 this.stop();
             }
@@ -367,7 +372,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 clearTimeout(to);
                 to = null;
             }
-            ServerConsoleLog('target-detach failed: target probably running, thats okay, continue to stop()');
+            ServerConsoleLog('target-detach failed: target probably running, thats okay, continue to stop()', this.pid);
             this.stop();
         });
     }

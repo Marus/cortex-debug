@@ -36,6 +36,8 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { stringify } from 'querystring';
+import { time } from 'console';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -241,13 +243,13 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
+    private async dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
             const toolchainPath = true ? '/Applications/ARM/bin' : args.toolchainPath;
             const tmpSymbols = new SymbolTable(this.miDebugger, toolchainPath, args.toolchainPrefix, elfFile);
             this.dbgSymbolTable = tmpSymbols;
-            tmpSymbols.loadSymbols(true, '/Users/hdm/Downloads/objdump.txt');
+            await tmpSymbols.loadSymbols(true, '/Users/hdm/Downloads/objdump.txt');
             tmpSymbols.printToFile(elfFile + '.cd-dump');
             let sym = tmpSymbols.getFunctionByName(func, file);
             console.log(sym);
@@ -302,11 +304,14 @@ export class GDBDebugSession extends DebugSession {
         return args;
     }
 
-    private getTcpPorts(): Thenable<void> {
+    private getTCPPorts(useParent): Thenable<void> {
         return new Promise((resolve, reject) => {
-            if (this.args.pvtParent) {
+            if (useParent) {
                 this.ports = this.args.pvtPorts = this.args.pvtParent.pvtPorts;
                 this.serverController.setPorts(this.ports);
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('log', JSON.stringify({configFromParent: this.args.pvtMyConfigFromParent}, undefined, 4) + '\n');
+                }
                 return resolve();
             }
             const totalPortsNeeded = this.calculatePortsNeeded();
@@ -349,9 +354,10 @@ export class GDBDebugSession extends DebugSession {
             return;
         }
 
-        this.getTcpPorts().then(() => {
-            const executable = this.args.pvtParent ? null : this.serverController.serverExecutable();
-            const args = this.args.pvtParent ? [] : this.serverController.serverArguments();
+        const usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
+        this.getTCPPorts(usingParentServer).then(() => {
+            const executable = usingParentServer ? null : this.serverController.serverExecutable();
+            const args = usingParentServer ? [] : this.serverController.serverArguments();
 
             if (executable) {
                 this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
@@ -364,7 +370,7 @@ export class GDBDebugSession extends DebugSession {
             const consolePort = (this.args as any).gdbServerConsolePort;
             const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
             let initMatch = null;
-            if (!this.args.pvtParent) {
+            if (!usingParentServer) {
                 this.serverController.initMatch();
                 if (this.args.overrideGDBServerStartedRegex) {
                     initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
@@ -614,6 +620,10 @@ export class GDBDebugSession extends DebugSession {
         if (!this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
                 'here. Helpful to debug issues or report problems\n');
+            if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
+                const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
+                this.handleMsg('log', str + '\n');
+            }
         }
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
@@ -818,6 +828,13 @@ export class GDBDebugSession extends DebugSession {
                 break;
             case 'reset-device':
                 this.resetDevice(response, args);
+                break;
+            case 'set-stop-debugging-type':
+                this.disconnectRequest2(response, args);
+                break;
+            case 'notified-children-to-terminate':
+                this.emit('children-terminating');
+                this.sendResponse(response);
                 break;
             default:
                 response.body = { error: 'Invalid command.' };
@@ -1073,7 +1090,7 @@ export class GDBDebugSession extends DebugSession {
                     clearInterval(to);
                     to = null;
                     this.server.exit();
-                    ServerConsoleLog('disconnectRequest sendResponse 3');
+                    ServerConsoleLog('disconnectRequest sendResponse 3', this.miDebugger?.pid);
                     this.sendResponse(response);
                 } else {
                     nTimes--;
@@ -1083,21 +1100,54 @@ export class GDBDebugSession extends DebugSession {
                 if (to) {
                     clearInterval(to);
                     to = null;
-                    ServerConsoleLog('disconnectRequest sendResponse 2');
+                    ServerConsoleLog('disconnectRequest sendResponse 2', this.miDebugger?.pid);
                     this.sendResponse(response);
                 }
             });
             // Note: If gdb exits first, then we kill the server anyways
         } else {
             this.miDebugger.once('quit', () => {
-                ServerConsoleLog('disconnectRequest sendResponse 1');
+                ServerConsoleLog('disconnectRequest sendResponse 1', this.miDebugger?.pid);
                 this.sendResponse(response);
             });
         }
     }
 
+    protected isDisconnecting = false;
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-        ServerConsoleLog('Begin disconnectRequest');
+        if (this.isDisconnecting) {
+            // One of the ways Tthis happens when we have the following
+            // * we are a child session of someone else
+            // * the parent has already asked us to quit and in the process, we sent a TerminatedEvent to VSCode
+            // * VSCode in turn asks to disconnect. all is good
+            this.sendResponse(response);
+            return;
+        }
+        if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
+            ServerConsoleLog('Begin disconnectRequest children', this.miDebugger?.pid);
+            this.sendEvent(new GenericCustomEvent('session-terminating', args));
+            let timeout = setTimeout(() => {
+                if (timeout) {
+                    ServerConsoleLog('Timed out waiting for children to exit', this.miDebugger?.pid);
+                    timeout = null;
+                    this.disconnectRequest2(response, args);
+                }
+            }, 1000);
+            this.on('children-terminating', () => {
+                if (timeout) {
+                    timeout = null;
+                    clearTimeout(timeout);
+                    this.disconnectRequest2(response, args);
+                }
+            });
+        } else {
+            this.disconnectRequest2(response, args);
+        }
+    }
+
+    protected disconnectRequest2(response: DebugProtocol.DisconnectResponse | DebugProtocol.Response, args: DebugProtocol.DisconnectArguments): void {
+        this.isDisconnecting = true;
+        ServerConsoleLog('Begin disconnectRequest', this.miDebugger?.pid);
         let bkptsDeleted = false;
         const doDisconnectProcessing = () => {
             if (!bkptsDeleted) {
@@ -1378,6 +1428,7 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new ThreadEvent('exited', thId));
         }
         this.activeThreadIds.clear();
+        // this.sendEvent(new TerminatedEvent());
     }
 
     protected stopEvent(info: MINode, reason: string = 'exception') {
@@ -1398,9 +1449,9 @@ export class GDBDebugSession extends DebugSession {
         if (traceThreads) {
             this.handleMsg('log', '**** quit event\n');
         }
-        if (this.server) {
+        if (this.server && this.server.isProcessRunning()) {
             // A gdb quit may be happening with VSCode asking us to finish or a crash or user doing something
-            ServerConsoleLog('quitEvent: Killing server');
+            ServerConsoleLog('quitEvent: Killing server', this.miDebugger?.pid);
             this.server.exit();
         }
         this.quit = true;
@@ -1408,7 +1459,7 @@ export class GDBDebugSession extends DebugSession {
             // In case GDB quit because of normal processing, let that process finish. Wait for,\
             // a disconnect reponse to be sent before we send a TerminatedEvent();. Note that we could
             // also be here because the server crashed/quit on us before gdb-did
-            ServerConsoleLog('quitEvent: sending VSCode TerminatedEvent');
+            ServerConsoleLog('quitEvent: sending VSCode TerminatedEvent', this.miDebugger?.pid);
             this.sendEvent(new TerminatedEvent());
         }, 10);
     }

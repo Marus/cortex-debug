@@ -269,10 +269,10 @@ export class SWOCore extends SWORTTCoreBase {
     private itmDecoder: ITMDecoder;
     private functionSymbols: SymbolInformation[];
 
-    constructor(private source: SWORTTSource, args: ConfigurationArguments, extensionPath: string) {
+    constructor(private session: vscode.DebugSession, private source: SWORTTSource, args: ConfigurationArguments, extensionPath: string) {
         super();
         this.itmDecoder = new ITMDecoder();
-        vscode.debug.activeDebugSession.customRequest('load-function-symbols').then((result) => {
+        session.customRequest('load-function-symbols').then((result) => {
             this.functionSymbols = result.functionSymbols;
         }, (error) => {
             this.functionSymbols = [];

@@ -25,6 +25,7 @@ export class MemReadUtils {
                     resolve(true);
                 }, (e) => {
                     let dst = r.base - startAddr;
+                    // tslint:disable-next-line: prefer-for-of
                     for (let ix = 0; ix < r.length; ix++) {
                         storeTo[dst++] = 0xff;
                     }
@@ -34,7 +35,7 @@ export class MemReadUtils {
         });
 
         return new Promise(async (resolve, reject) => {
-            const results = await Promise.all(promises.map(p => p.catch(e => e)));
+            const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
             const errs: string[] = [];
             results.map((e) => {
                 if (e instanceof Error) {

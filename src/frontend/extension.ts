@@ -40,7 +40,6 @@ export class CortexDebugExtension {
     private rttTerminals: RTTTerminal[] = [];
     private rttPortMap: { [channel: number]: SocketRTTSource} = {};
     private gdbServerConsole: GDBServerConsole = null;
-    private finishedTerminalSetup = false;
 
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
@@ -51,8 +50,7 @@ export class CortexDebugExtension {
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
-    private debuggerStatus: 'started' | 'stopped' | 'running' | 'none';
-    private currentArgs: any = null;
+    private debuggerStatusMap: {[id: string]: 'started' | 'stopped' | 'running'} = {};
 
     constructor(private context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('cortex-debug');
@@ -61,7 +59,6 @@ export class CortexDebugExtension {
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
 
-        this.debuggerStatus = 'none';
         let tmp = [];
         try {
             const dirPath = path.join(context.extensionPath, 'data', 'SVDMap.json');
@@ -139,9 +136,18 @@ export class CortexDebugExtension {
         );
     }
 
+    public static getActiveCDSession() {
+        const session = vscode.debug.activeDebugSession;
+        if (session?.type === 'cortex-debug') {
+            return session;
+        }
+        return null;
+    }
+
     private resetDevice() {
-        if (vscode.debug.activeDebugSession) {
-            vscode.debug.activeDebugSession.customRequest('reset-device');
+        const session = CortexDebugExtension.getActiveCDSession();
+        if (session) {
+            session.customRequest('reset-device');
         }
     }
 
@@ -151,7 +157,6 @@ export class CortexDebugExtension {
             this.gdbServerConsole = new GDBServerConsole(context, logFName);
             this.gdbServerConsole.startServer().then(() => {
                 console.log('GDB server console created');
-                this.finishedTerminalSetup = true;
                 resolve(); // All worked out
             }).catch((e) => {
                 this.gdbServerConsole.dispose();
@@ -164,22 +169,24 @@ export class CortexDebugExtension {
     private settingsChanged(e: vscode.ConfigurationChangeEvent) {
         const msg = 'New format will take effect next time the program pauses';
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.REGISTER_DISPLAY_MODE}`)) {
-            if (vscode.debug.activeDebugSession) {
-                if (this.debuggerStatus === 'running') {
+            const session = CortexDebugExtension.getActiveCDSession();
+            if (session) {
+                if (this.debuggerStatusMap[session.id] === 'running') {
                     vscode.window.showInformationMessage(msg);
                 } else {
-                    if (this.currentArgs && !this.currentArgs.noDebug) {
-                        this.registerProvider.refresh();
+                    if (this.isDebugging(session)) {
+                        this.registerProvider.refresh(session);
                     }
                 }
             }
         }
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`)) {
-            if (vscode.debug.activeDebugSession) {
+            const session = CortexDebugExtension.getActiveCDSession();
+            if (session) {
                 const config = vscode.workspace.getConfiguration('cortex-debug');
                 const isHex = config.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true) ? false : true;
-                vscode.debug.activeDebugSession.customRequest('set-var-format', { hex: isHex });
-                if (this.debuggerStatus === 'running') {
+                session.customRequest('set-var-format', { hex: isHex });
+                if (this.debuggerStatusMap[session.id] === 'running') {
                     vscode.window.showInformationMessage(msg);
                 }
             }
@@ -205,26 +212,28 @@ export class CortexDebugExtension {
     }
 
     private activeEditorChanged(editor: vscode.TextEditor) {
-        if (editor !== undefined && vscode.debug.activeDebugSession && vscode.debug.activeDebugSession.type === 'cortex-debug') {
+        const session = CortexDebugExtension.getActiveCDSession();
+        if (editor !== undefined && session) {
             const uri = editor.document.uri;
             if (uri.scheme === 'file') {
                 // vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: uri.path });
             }
             else if (uri.scheme === 'disassembly') {
-                vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: `${uri.scheme}://${uri.authority}${uri.path}` });
+                session.customRequest('set-active-editor', { path: `${uri.scheme}://${uri.authority}${uri.path}` });
             }
         }
     }
 
     private async showDisassembly() {
-        if (!vscode.debug.activeDebugSession) {
-            vscode.window.showErrorMessage('No debugging session available');
+        const session = CortexDebugExtension.getActiveCDSession();
+        if (!session) {
+            vscode.window.showErrorMessage('No cortex-debug debugging session available');
             return;
         }
 
         if (!this.functionSymbols) {
             try {
-                const resp = await vscode.debug.activeDebugSession.customRequest('load-function-symbols');
+                const resp = await session.customRequest('load-function-symbols');
                 this.functionSymbols = resp.functionSymbols;
             }
             catch (e) {
@@ -301,6 +310,11 @@ export class CortexDebugExtension {
     }
 
     private setForceDisassembly() {
+        const session = CortexDebugExtension.getActiveCDSession();
+        if (!session) {
+            vscode.window.showErrorMessage('Command not valid when cortex-debug session not active');
+            return;
+        }
         vscode.window.showQuickPick(
             [
                 { label: 'Auto', description: 'Show disassembly for functions when source cannot be located.' },
@@ -309,7 +323,7 @@ export class CortexDebugExtension {
             { matchOnDescription: true, ignoreFocusOut: true }
         ).then((result) => {
             const force = result.label === 'Forced';
-            vscode.debug.activeDebugSession.customRequest('set-force-disassembly', { force: force });
+            session.customRequest('set-force-disassembly', { force: force });
             Reporting.sendEvent('Force Disassembly', 'Set', force ? 'Forced' : 'Auto');
         }, (error) => {});
     }
@@ -334,8 +348,9 @@ export class CortexDebugExtension {
             return address;
         }
 
-        if (!vscode.debug.activeDebugSession) {
-            vscode.window.showErrorMessage('No debugging session available');
+        const session = CortexDebugExtension.getActiveCDSession();
+        if (!session) {
+            vscode.window.showErrorMessage('No cortex-debug session available');
             return;
         }
 
@@ -452,8 +467,9 @@ export class CortexDebugExtension {
     }
 
     private registersRefresh(): void {
-        if (this.currentArgs && !this.currentArgs.noDebug) {
-            this.registerProvider.refresh();
+        const session = CortexDebugExtension.getActiveCDSession();
+        if (session && this.isDebugging(session)) {
+            this.registerProvider.refresh(session);
         }
     }
 
@@ -488,7 +504,7 @@ export class CortexDebugExtension {
     private debugSessionStarted(session: vscode.DebugSession) {
         if (session.type !== 'cortex-debug') { return; }
 
-        const newSession = CDebugSession.GetSession(session);
+        const newSession = CDebugSession.NewSessionStarted(session);
 
         // Clean-up Old output channels
         if (this.swo) {
@@ -501,22 +517,21 @@ export class CortexDebugExtension {
         }
 
         this.functionSymbols = null;
-        this.debuggerStatus = 'started';
+        this.debuggerStatusMap[session.id] = 'started';
 
         session.customRequest('get-arguments').then((args) => {
             newSession.config = args;
-            this.currentArgs = args;
             let svdfile = args.svdFile;
             if (!svdfile) {
                 svdfile = this.getSVDFile(args.device);
             }
 
-            Reporting.beginSession(args as ConfigurationArguments);
+            Reporting.beginSession(session.id, args as ConfigurationArguments);
 
-            if (this.swoSource) { this.initializeSWO(args); }
+            if (this.swoSource) { this.initializeSWO(session, args); }
             if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
 
-            if (!this.currentArgs.noDebug) {
+            if (this.isDebugging(session)) {
                 this.registerProvider.debugSessionStarted(session);
             }
             this.peripheralProvider.debugSessionStarted(session, (svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
@@ -530,10 +545,10 @@ export class CortexDebugExtension {
         if (session.type !== 'cortex-debug') { return; }
         try {
             CDebugSession.RemoveSession(session);
-            Reporting.endSession();
+            Reporting.endSession(session.id);
 
-            this.debuggerStatus = 'none';
-            if (!this.currentArgs.noDebug) {
+            delete this.debuggerStatusMap[session.id];
+            if (this.isDebugging(session)) {
                 this.registerProvider.debugSessionTerminated(session);
             }
             this.peripheralProvider.debugSessionTerminated(session);
@@ -559,7 +574,6 @@ export class CortexDebugExtension {
             this.rttPortMap = {};
 
             this.clearAdapterOutputChannel = true;
-            this.currentArgs = null;
         }
         catch (e) {
             vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
@@ -568,7 +582,8 @@ export class CortexDebugExtension {
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
-        if (vscode.debug.activeDebugSession && vscode.debug.activeDebugSession.type !== 'cortex-debug') { return; }
+        const session = e.session;
+        if (session.type !== 'cortex-debug') { return; }
         switch (e.event) {
             case 'custom-stop':
                 this.receivedStopEvent(e);
@@ -594,6 +609,9 @@ export class CortexDebugExtension {
             case 'custom-event-post-start-gdb':
                 this.startChainedConfigs(e, ChainedEvents.POSTINIT);
                 break;
+            case 'custom-event-session-terminating':
+                this.endChainedConfigs(e);
+                break;
             default:
                 break;
         }
@@ -611,7 +629,7 @@ export class CortexDebugExtension {
             if (launch.enabled && (launch.waitOnEvent === evType) && launch.name) {
                 const childOptions: vscode.DebugSessionOptions = {
                     parentSession            : e.session,
-                    lifecycleManagedByParent : launch.detached ? false : true,
+                    lifecycleManagedByParent : launch.lifecycleManagedByParent,
                     consoleMode              : vscode.DebugConsoleMode.Separate,
                     noDebug                  : adapterArgs.noDebug,
                     compact                  : false
@@ -632,6 +650,44 @@ export class CortexDebugExtension {
         }
     }
 
+    private endChainedConfigs(e: vscode.DebugSessionCustomEvent) {
+        const mySession = CDebugSession.FindSession(e.session);
+        if (mySession && mySession.hasChildren) {
+            // Note that we may not be the root, but we have children. Also we do not modify the tree while iterating it
+            const deathList: CDebugSession[] = [];
+            const orphanList: CDebugSession[] = [];
+            mySession.broadcastDFS((s) => {
+                if (s === mySession) { return; }
+                if (s.config.pvtMyConfigFromParent.lifecycleManagedByParent) {
+                    deathList.push(s);      // Qualifies to be terminated
+                } else {
+                    orphanList.push(s);     // This child is about to get orphaned
+                }
+            }, false);
+
+            while (orphanList.length > 0) {
+                const s = orphanList.pop();
+                s.moveToRoot();
+            }
+
+            while (deathList.length > 0) {
+                const s = deathList.pop();
+                s.session.customRequest('set-stop-debugging-type', e.body.info).then(() => {
+                    /*
+                    vscode.debug.stopDebugging(s.session).then(() => {
+                        console.log('stopDebugging worked\n');
+                    }, (reason) => {
+                        console.log(`stopDebugging failed ${reason}\n`);
+                    });
+                    */
+                }, (reason) => {
+                    console.log(`session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
+                });
+            }
+            mySession.session.customRequest('notified-children-to-terminate');
+        }
+    }
+
     private getWsFolder(folder: string, def: vscode.WorkspaceFolder): vscode.WorkspaceFolder {
         if (folder) {
             folder = path.normalize(folder);
@@ -644,11 +700,36 @@ export class CortexDebugExtension {
         return def;
     }
 
-    private receivedStopEvent(e) {
-        this.debuggerStatus = 'stopped';
-        this.peripheralProvider.debugStopped(vscode.debug.activeDebugSession);
-        if (this.currentArgs && !this.currentArgs.noDebug) {
-            this.registerProvider.debugStopped();
+    private getCurrentArgs(session: vscode.DebugSession): ConfigurationArguments | vscode.DebugConfiguration {
+        if (!session) {
+            session = vscode.debug.activeDebugSession;
+            if (!session || (session.type !== 'cortex-debug') ) {
+                return undefined;
+            }
+        }
+        const ourSession = CDebugSession.FindSession(session);
+        if (ourSession) {
+            return ourSession.config;
+        }
+        return session.configuration;
+    }
+
+    private getCurrentProp(session: vscode.DebugSession, prop: string) {
+        const args = this.getCurrentArgs(session);
+        return args ? args[prop] : undefined;
+    }
+
+    // Assuming 'session' valid and it a cortex-debug session
+    private isDebugging(session: vscode.DebugSession) {
+        const noDebug = this.getCurrentProp(session, 'noDebug');
+        return (noDebug !== true);       // If it is exactly equal to 'true' we are doing a 'run without debugging'
+    }
+
+    private receivedStopEvent(e: vscode.DebugSessionCustomEvent) {
+        this.debuggerStatusMap[e.session.id] = 'stopped';
+        this.peripheralProvider.debugStopped(e.session);
+        if (this.isDebugging(e.session)) {
+            this.registerProvider.debugStopped(e.session);
         }
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
@@ -656,10 +737,10 @@ export class CortexDebugExtension {
         if (this.rtt) { this.rtt.debugStopped(); }
     }
 
-    private receivedContinuedEvent(e) {
-        this.debuggerStatus = 'running';
+    private receivedContinuedEvent(e: vscode.DebugSessionCustomEvent) {
+        this.debuggerStatusMap[e.session.id] = 'running';
         this.peripheralProvider.debugContinued();
-        if (this.currentArgs && !this.currentArgs.noDebug) {
+        if (this.isDebugging(e.session)) {
             this.registerProvider.debugContinued();
         }
         if (this.swo) { this.swo.debugContinued(); }
@@ -670,7 +751,7 @@ export class CortexDebugExtension {
         Reporting.sendEvent(e.body.category, e.body.action, e.body.label, e.body.parameters);
     }
 
-    private receivedSWOConfigureEvent(e) {
+    private receivedSWOConfigureEvent(e: vscode.DebugSessionCustomEvent) {
         if (e.body.type === 'socket') {
             const src = new SocketSWOSource(e.body.port);
             src.start().then(() => {
@@ -694,11 +775,9 @@ export class CortexDebugExtension {
         }
 
         // I don't think the following is needed as we already initialize SWO when the session finally starts
-        if (vscode.debug.activeDebugSession) {
-            vscode.debug.activeDebugSession.customRequest('get-arguments').then((args) => {
-                this.initializeSWO(args);
-            });
-        }
+        e.session.customRequest('get-arguments').then((args) => {
+            this.initializeSWO(e.session, args);
+        });
     }
 
     private receivedRTTConfigureEvent(e: any) {
@@ -791,14 +870,14 @@ export class CortexDebugExtension {
         this.adapterOutputChannel.append(output);
     }
 
-    private initializeSWO(args) {
+    private initializeSWO(session: vscode.DebugSession, args) {
         if (!this.swoSource) {
             vscode.window.showErrorMessage('Tried to initialize SWO Decoding without a SWO data source');
             return;
         }
 
         if (!this.swo) {
-            this.swo = new SWOCore(this.swoSource, args, this.context.extensionPath);
+            this.swo = new SWOCore(session, this.swoSource, args, this.context.extensionPath);
         }
     }
 
