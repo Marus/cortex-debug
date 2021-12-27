@@ -1,6 +1,6 @@
 ChangeLog
 #V1.1.2
-* Multi-core debug: Syncronized start/stop working. Yet to handle Restart/Reset, Registgers and Peripherals
+* Multi-core debug: Syncronized start/stop working, Registers working. Yet to handle Restart/Reset, and Peripherals
 
 #V1.1.1
 * For STLink Gdb-server and Cube-Programmer, set `LD_LIBRARY_PATH` on Linux and equivalent `DYLD_FALLBACK_LIBRARY_PATH` on MacOS

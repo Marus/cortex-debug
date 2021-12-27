@@ -7,54 +7,62 @@ import { CortexDebugKeys, NodeSetting } from '../../common';
 import { RegisterNode, RegisterValue } from './nodes/registernode';
 import { MessageNode } from './nodes/messagenode';
 import { BaseNode } from './nodes/basenode';
-import { CortexDebugExtension } from '../extension';
 
-export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
-    // tslint:disable-next-line:variable-name
-    public _onDidChangeTreeData: EventEmitter<BaseNode | undefined> = new EventEmitter<BaseNode | undefined>();
-    public readonly onDidChangeTreeData: Event<BaseNode | undefined> = this._onDidChangeTreeData.event;
-    public session: vscode.DebugSession = null;
-
-    private registers: RegisterNode[];
-    private registerMap: { [index: number]: RegisterNode };
+export class RegisterTreeForSession extends BaseNode {
+    private registers: RegisterNode[] = [];
+    private registerMap: { [index: number]: RegisterNode } = {};
     private loaded: boolean = false;
+    public myTreeItem: TreeItem;
 
-    constructor() {
-        this.registers = [];
-        this.registerMap = {};
+    constructor(
+        public session: vscode.DebugSession,
+        public state: vscode.TreeItemCollapsibleState,
+        private fireCb: () => void) {
+        super();
+        this.myTreeItem = new TreeItem(this.session.name, this.state);
     }
 
-    public refresh(session: vscode.DebugSession): void {
-        session = session || CortexDebugExtension.getActiveCDSession();
-        if (session) {
-            if (!this.loaded) {
-                session.customRequest('read-register-list').then((data) => {
-                    this.createRegisters(data);
-                    this._refreshRegisterValues(session);
-                });
-            }
-            else {
-                this._refreshRegisterValues(session);
-            }
+    public getChildren(element?: BaseNode): BaseNode[] | Promise<BaseNode[]>{
+        if (this.loaded && this.registers.length > 0) {
+            return element ? element.getChildren() : this.registers;
+        } else if (!this.loaded) {
+            return [new MessageNode('Session not in active/available.')];
+        } else {
+            return this.registers;
         }
     }
 
-    public _refreshRegisterValues(session: vscode.DebugSession) {
+    public getTreeItem(element?: BaseNode): TreeItem | Promise<TreeItem> {
+        return element ? element.getTreeItem() : this.myTreeItem;
+    }
+
+    public getCopyValue(): string | undefined {
+        return undefined;
+    }
+
+    public refresh(): void {
+        if (!this.loaded) {
+            this.session.customRequest('read-register-list').then((data) => {
+                this.createRegisters(data);
+                this._refreshRegisterValues();
+            });
+        } else {
+            this._refreshRegisterValues();
+        }
+    }
+
+    private _refreshRegisterValues() {
         const config = vscode.workspace.getConfiguration('cortex-debug');
         const val = config.get(CortexDebugKeys.REGISTER_DISPLAY_MODE);
         const args = { hex: !val };
-        session.customRequest('read-registers', args).then((data) => {
+        this.session.customRequest('read-registers', args).then((data) => {
             data.forEach((reg) => {
                 const index = parseInt(reg.number, 10);
                 const regNode = this.registerMap[index];
                 if (regNode) { regNode.setValue(reg.value); }
             });
-            this._onDidChangeTreeData.fire(undefined);
+            this.fireCb();
         });
-    }
-
-    public getTreeItem(element: BaseNode): TreeItem | Promise<TreeItem> {
-        return element.getTreeItem();
     }
 
     public createRegisters(regInfo: string[]) {
@@ -68,12 +76,11 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
                 this.registerMap[idx] = rn;
             }
         });
-
         this.loaded = true;
 
-        workspace.findFiles('.vscode/.cortex-debug.registers.state.json', null, 1).then((value) => {
-            if (value.length > 0) {
-                const fspath = value[0].fsPath;
+        try {
+            const fspath = path.join(this.session.workspaceFolder.uri.fsPath, '.vscode/.cortex-debug.registers.state.json');
+            if (fs.existsSync(fspath)) {
                 const data = fs.readFileSync(fspath, 'utf8');
                 const settings = JSON.parse(data);
                 
@@ -92,13 +99,33 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
                         }
                     }
                 });
-                this._onDidChangeTreeData.fire(undefined);
             }
-        }, (error) => {
+        }
+        catch (e) {
+        }
+        this.fireCb();
+    }
 
-        });
+    public sessionTerminated() {
+        try {
+            const fspath = path.join(this.session.workspaceFolder.uri.fsPath, '.vscode/.cortex-debug.registers.state.json');
+            const state: NodeSetting[] = [];
+            this.registers.forEach((r) => {
+                state.push(...r._saveState());
+            });
+    
+            fs.mkdirSync(path.dirname(fspath), { recursive: true });
+            fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+        }
+        catch (e) {
+            vscode.window.showWarningMessage(`Unable to save register preferences ${e}`);
+        }
 
-        this._onDidChangeTreeData.fire(undefined);
+        this.loaded = false;
+        this.registers = [];
+        this.registerMap = {};
+        this.session = null;
+        this.fireCb();
     }
 
     public updateRegisterValues(values: RegisterValue[]) {
@@ -107,66 +134,71 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
             node.setValue(reg.value);
         });
 
-        this._onDidChangeTreeData.fire(undefined);
+        this.fireCb();
+    }
+}
+
+export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
+    // tslint:disable-next-line:variable-name
+    public _onDidChangeTreeData: EventEmitter<BaseNode | undefined> = new EventEmitter<BaseNode | undefined>();
+    public readonly onDidChangeTreeData: Event<BaseNode | undefined> = this._onDidChangeTreeData.event;
+
+    public sessionRegistersMap = new Map <string, RegisterTreeForSession>();
+    public oldState = new Map <string, vscode.TreeItemCollapsibleState>();
+    constructor() {
+    }
+
+    public refresh(session: vscode.DebugSession): void {
+        const regs = this.sessionRegistersMap.get(session.id);
+        if (regs) {
+            regs.refresh();
+        }
+    }
+
+    public getTreeItem(element: BaseNode): TreeItem | Promise<TreeItem> {
+        return element?.getTreeItem();
     }
 
     public getChildren(element?: BaseNode): ProviderResult<BaseNode[]> {
-        if (this.loaded && this.registers.length > 0) {
-            return element ? element.getChildren() : this.registers;
-        }
-        else if (!this.loaded) {
-            return [new MessageNode('Not in active debug session.')];
-        }
-        else {
-            return [];
-        }
-    }
-
-    public _saveState(fspath: string) {
-        const state: NodeSetting[] = [];
-        this.registers.forEach((r) => {
-            state.push(...r._saveState());
-        });
-
-        try {
-            fs.mkdirSync(path.dirname(fspath), { recursive: true });
-            fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
-        }
-        catch (e) {
-            vscode.window.showWarningMessage(`Unable to save register preferences ${e}`);
+        if (element) {
+            return element.getChildren();
+        } else {
+            const values = Array.from(this.sessionRegistersMap.values());
+            return values.length ? values : [new MessageNode('No active debug sessions')];
         }
     }
 
     public debugSessionTerminated(session: vscode.DebugSession) {
-        if (session) {
-            // We don't have multi-session capability, yet, and this file should really be in workspace storage
-            // FIXME: We should store it in the proper workspace folder
-            if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
-                const fspath = path.join(session.workspaceFolder.uri.fsPath,
-                    /* workspace.workspaceFolders[0].uri.fsPath,*/
-                    '.vscode', '.cortex-debug.registers.state.json');
-                this._saveState(fspath);
-            }
-            this.session = null;
+        const regs = this.sessionRegistersMap.get(session.id);
+        if (regs) {
+            this.oldState.set(session.name, regs.myTreeItem.collapsibleState);
+            this.sessionRegistersMap.delete(session.id);
+            regs.sessionTerminated();
         }
-
-        this.loaded = false;
-        this.registers = [];
-        this.registerMap = {};
-        this._onDidChangeTreeData.fire(undefined);
     }
 
     public debugSessionStarted(session: vscode.DebugSession) {
-        this.session = session;
-        this.loaded = false;
-        this.registers = [];
-        this.registerMap = {};
-        this._onDidChangeTreeData.fire(undefined);
+        if (!this.sessionRegistersMap.get(session.id)) {
+            let state =  this.oldState.get(session.name);
+            if (state === undefined) {
+                state = this.sessionRegistersMap.size === 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed;
+            }
+            const regs = new RegisterTreeForSession(session, state, () => {
+                this._onDidChangeTreeData.fire(undefined);
+            });
+            this.sessionRegistersMap.set(session.id, regs);
+            this._onDidChangeTreeData.fire(undefined);
+        }
     }
 
     public debugStopped(session: vscode.DebugSession) {
-        this.session = session;
-        this.refresh(session);
+        const regs = this.sessionRegistersMap.get(session.id);
+        if (regs) {
+            regs.refresh();
+        } else {
+            // We get a stop event before we even get the session starting event.
+            this.debugSessionStarted(session);
+        }
     }
 
     public debugContinued() {

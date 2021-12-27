@@ -1197,7 +1197,12 @@ export class GDBDebugSession extends DebugSession {
     // https://github.com/microsoft/debug-adapter-protocol/issues/73
     //
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): void {
-        const mode: SessionMode = (args as any).isReset ? SessionMode.RESET : SessionMode.RESTART;
+        if (args === 'reset') {
+            this.sendEvent(new TerminatedEvent());
+            this.sendResponse(response);
+            return;
+        }
+        const mode: SessionMode = (args === 'reset') ? SessionMode.RESET : SessionMode.RESTART;
         const restartProcessing = () => {
             const commands = [];
             this.args.pvtRestartOrReset = true;
@@ -1212,6 +1217,11 @@ export class GDBDebugSession extends DebugSession {
             commands.push(...this.serverController.swoAndRTTCommands());
 
             this.miDebugger.restart(commands).then((done) => {
+                if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
+                    ServerConsoleLog(`Begin ${mode} children`, this.miDebugger?.pid);
+                    this.sendEvent(new GenericCustomEvent(`session-${mode}`, args));
+                }
+    
                 this.sendResponse(response);
                 this.finishStartSequence(mode);
             }, (msg) => {
@@ -1237,7 +1247,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected resetDevice(response: DebugProtocol.Response, args: any): void {
-        this.restartRequest(response, { isReset: true });
+        this.restartRequest(response, args);
     }
 
     protected timeStart = Date.now();

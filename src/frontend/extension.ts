@@ -147,7 +147,7 @@ export class CortexDebugExtension {
     private resetDevice() {
         const session = CortexDebugExtension.getActiveCDSession();
         if (session) {
-            session.customRequest('reset-device');
+            session.customRequest('reset-device', 'reset');
         }
     }
 
@@ -612,6 +612,12 @@ export class CortexDebugExtension {
             case 'custom-event-session-terminating':
                 this.endChainedConfigs(e);
                 break;
+            case 'custom-event-session-restart':
+                this.resetOrResartChained(e, 'restart');
+                break;
+            case 'custom-event-session-reset':
+                this.resetOrResartChained(e, 'reset');
+                break;
             default:
                 break;
         }
@@ -673,18 +679,27 @@ export class CortexDebugExtension {
             while (deathList.length > 0) {
                 const s = deathList.pop();
                 s.session.customRequest('set-stop-debugging-type', e.body.info).then(() => {
-                    /*
-                    vscode.debug.stopDebugging(s.session).then(() => {
-                        console.log('stopDebugging worked\n');
-                    }, (reason) => {
-                        console.log(`stopDebugging failed ${reason}\n`);
-                    });
-                    */
                 }, (reason) => {
                     console.log(`session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
                 });
             }
+            // Following does not work. Apparently, a customRequest cannot be sent probaboy because this is being called
+            // while parent is terminating
             mySession.session.customRequest('notified-children-to-terminate');
+        }
+    }
+
+    private resetOrResartChained(e: vscode.DebugSessionCustomEvent, type: 'reset' | 'restart') {
+        const mySession = CDebugSession.FindSession(e.session);
+        if (mySession && mySession.hasChildren) {
+            mySession.broadcastDFS((s) => {
+                if (s === mySession) { return; }
+                if (s.config.pvtMyConfigFromParent.lifecycleManagedByParent) {
+                    s.session.customRequest('reset-device', type).then(() => {
+                    }, (reason) => {
+                    });
+                }
+            }, false);
         }
     }
 

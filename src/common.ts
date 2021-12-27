@@ -227,7 +227,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     rtos: string;
     interface: string;
     targetId: string | number;
-    cmsisPack: string;
     runToMain: boolean;         // Deprecated: kept here for backwards compatibility
     runToEntryPoint: string;
     flattenAnonymous: boolean;
@@ -256,6 +255,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 
     // PyOCD Specific
     boardId: string;
+    cmsisPack: string;
     
     // StUtil Specific
     v1: boolean;

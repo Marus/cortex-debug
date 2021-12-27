@@ -60,7 +60,7 @@ export class RegisterNode extends BaseNode {
         
         const label: TreeItemLabel = {
             label: this.name + ' ' + this.currentNaturalValue
-        }
+        };
         if (this.prevNaturalValue && (this.prevNaturalValue !== this.currentNaturalValue)) {
             label.highlights = [[this.name.length + 1, label.label.length]];
         }
