@@ -1,4 +1,4 @@
-import { Command, TreeItem } from 'vscode';
+import { Command, TreeItem, DebugSession } from 'vscode';
 import { NumberFormat, NodeSetting } from '../../../common';
 import { AddrRange } from '../../addrranges';
 
@@ -27,6 +27,7 @@ export abstract class PeripheralBaseNode extends BaseNode {
     public format: NumberFormat;
     public pinned: boolean;
     public readonly name: string;
+    public session: DebugSession;
     
     constructor(protected readonly parent?: PeripheralBaseNode) {
         super(parent);

@@ -65,6 +65,12 @@ export class RegisterTreeForSession extends BaseNode {
         });
     }
 
+    public getStateFilename() {
+        const fspath = path.join(this.session.workspaceFolder.uri.fsPath,
+            '.vscode', '.cortex-debug.registers.state.json');
+        return fspath;
+    }
+
     public createRegisters(regInfo: string[]) {
         this.registerMap = {};
         this.registers = [];
@@ -79,7 +85,7 @@ export class RegisterTreeForSession extends BaseNode {
         this.loaded = true;
 
         try {
-            const fspath = path.join(this.session.workspaceFolder.uri.fsPath, '.vscode/.cortex-debug.registers.state.json');
+            const fspath = this.getStateFilename();
             if (fs.existsSync(fspath)) {
                 const data = fs.readFileSync(fspath, 'utf8');
                 const settings = JSON.parse(data);
@@ -108,7 +114,7 @@ export class RegisterTreeForSession extends BaseNode {
 
     public sessionTerminated() {
         try {
-            const fspath = path.join(this.session.workspaceFolder.uri.fsPath, '.vscode/.cortex-debug.registers.state.json');
+            const fspath = this.getStateFilename();
             const state: NodeSetting[] = [];
             this.registers.forEach((r) => {
                 state.push(...r._saveState());
@@ -116,16 +122,9 @@ export class RegisterTreeForSession extends BaseNode {
     
             fs.mkdirSync(path.dirname(fspath), { recursive: true });
             fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
-        }
-        catch (e) {
+        } catch (e) {
             vscode.window.showWarningMessage(`Unable to save register preferences ${e}`);
         }
-
-        this.loaded = false;
-        this.registers = [];
-        this.registerMap = {};
-        this.session = null;
-        this.fireCb();
     }
 
     public updateRegisterValues(values: RegisterValue[]) {
@@ -143,8 +142,8 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     public _onDidChangeTreeData: EventEmitter<BaseNode | undefined> = new EventEmitter<BaseNode | undefined>();
     public readonly onDidChangeTreeData: Event<BaseNode | undefined> = this._onDidChangeTreeData.event;
 
-    public sessionRegistersMap = new Map <string, RegisterTreeForSession>();
-    public oldState = new Map <string, vscode.TreeItemCollapsibleState>();
+    protected sessionRegistersMap = new Map <string, RegisterTreeForSession>();
+    protected oldState = new Map <string, vscode.TreeItemCollapsibleState>();
     constructor() {
     }
 
@@ -160,11 +159,15 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
     }
 
     public getChildren(element?: BaseNode): ProviderResult<BaseNode[]> {
+        const values = Array.from(this.sessionRegistersMap.values());
         if (element) {
             return element.getChildren();
+        } else if (values.length === 0) {
+            return [new MessageNode('No active debug sessions')];
+        } else if (values.length === 1) {
+            return values[0].getChildren();     // Don't do root nodes at top-level if there is only one root
         } else {
-            const values = Array.from(this.sessionRegistersMap.values());
-            return values.length ? values : [new MessageNode('No active debug sessions')];
+            return values;
         }
     }
 
@@ -174,6 +177,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
             this.oldState.set(session.name, regs.myTreeItem.collapsibleState);
             this.sessionRegistersMap.delete(session.id);
             regs.sessionTerminated();
+            this._onDidChangeTreeData.fire(undefined);
         }
     }
 

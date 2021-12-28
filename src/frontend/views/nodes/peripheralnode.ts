@@ -8,7 +8,6 @@ import { hexFormat } from '../../utils';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralClusterNode } from './peripheralclusternode';
 import * as vscode from 'vscode';
-import { rejects } from 'assert';
 
 export interface PeripheralOptions {
     name: string;
@@ -36,7 +35,7 @@ export class PeripheralNode extends PeripheralBaseNode {
     
     private currentValue: number[];
 
-    constructor(public gapThreshold, options: PeripheralOptions) {
+    constructor(public session: vscode.DebugSession, public gapThreshold, options: PeripheralOptions) {
         super(null);
 
         this.name = options.name;
@@ -146,7 +145,7 @@ export class PeripheralNode extends PeripheralBaseNode {
             this.currentValue = new Array<number>(this.totalLength);
         }
 
-        return MemReadUtils.readMemoryChunks(this.baseAddress, this.addrRanges, this.currentValue);
+        return MemReadUtils.readMemoryChunks(this.session, this.baseAddress, this.addrRanges, this.currentValue);
     }
     
     public collectRanges(): void {

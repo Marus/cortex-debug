@@ -12,11 +12,12 @@ export class MemReadUtils {
      * @param specs The chunks of memory to read and and update. Addresses should be >= `startAddr`, Can have gaps, overlaps, etc.
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`
      */
-    public static readMemoryChunks(startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<boolean> {
+    public static readMemoryChunks(
+        session: vscode.DebugSession, startAddr: number, specs: AddrRange[], storeTo: number[]): Promise<boolean> {
         const promises = specs.map((r) => {
             return new Promise((resolve, reject) => {
                 const addr = '0x' + r.base.toString(16);
-                vscode.debug.activeDebugSession.customRequest('read-memory', { address: addr, length: r.length }).then((data) => {
+                session.customRequest('read-memory', { address: addr, length: r.length }).then((data) => {
                     let dst = r.base - startAddr;
                     const bytes: number[] = data.bytes;
                     for (const byte of bytes) {
@@ -50,9 +51,10 @@ export class MemReadUtils {
         });
     }
 
-    public static readMemory(startAddr: number, length: number, storeTo: number[]): Promise<boolean> {
+    public static readMemory(
+        session: vscode.DebugSession, startAddr: number, length: number, storeTo: number[]): Promise<boolean> {
         const maxChunk = (4 * 1024);
         const ranges = AddressRangesUtils.splitIntoChunks([new AddrRange(startAddr, length)], maxChunk);
-        return MemReadUtils.readMemoryChunks(startAddr, ranges, storeTo);
+        return MemReadUtils.readMemoryChunks(session, startAddr, ranges, storeTo);
     }
 }

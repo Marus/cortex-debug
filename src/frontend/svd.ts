@@ -3,6 +3,7 @@ import { PeripheralClusterNode } from './views/nodes/peripheralclusternode';
 import { PeripheralNode } from './views/nodes/peripheralnode';
 import { parseInteger, parseDimIndex } from './utils';
 import { PeripheralFieldNode, EnumerationMap, EnumeratedValue } from './views/nodes/peripheralfieldnode';
+import * as vscode from 'vscode';
 
 import * as xml2js from 'xml2js';
 import * as fs from 'fs';
@@ -26,7 +27,8 @@ export class SVDParser {
     private static peripheralRegisterMap = {};
     private static gapThreshold: number = 16;
 
-    public static parseSVD(path: string, gapThreshold: number): Promise<PeripheralNode[]> {
+    public static parseSVD(
+        session: vscode.DebugSession, path: string, gapThreshold: number): Promise<PeripheralNode[]> {
         SVDParser.gapThreshold = gapThreshold;
         SVDParser.enumTypeValuesMap = {};
         SVDParser.peripheralRegisterMap = {};
@@ -78,7 +80,7 @@ export class SVDParser {
                     // tslint:disable-next-line:forin
                     for (const key in peripheralMap) {
                         try {
-                            peripherials.push(SVDParser.parsePeripheral(peripheralMap[key], defaultOptions));
+                            peripherials.push(SVDParser.parsePeripheral(session, peripheralMap[key], defaultOptions));
                         }
                         catch (msg) {
                             reject(msg);
@@ -389,7 +391,9 @@ export class SVDParser {
         return clusters;
     }
 
-    private static parsePeripheral(p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
+    private static parsePeripheral(
+        session: vscode.DebugSession,
+        p: any, defaults: { accessType: AccessType, size: number, resetValue: number }): PeripheralNode {
         let totalLength = 0;
         if (p.addressBlock) {
             for (const ab of p.addressBlock) {
@@ -411,7 +415,7 @@ export class SVDParser {
         if (p.resetValue) { options.resetValue = parseInteger(p.resetValue[0]); }
         if (p.groupName) { options.groupName = p.groupName[0]; }
         
-        const peripheral = new PeripheralNode(SVDParser.gapThreshold, options);
+        const peripheral = new PeripheralNode(session, SVDParser.gapThreshold, options);
 
         if (p.registers) {
             if (p.registers[0].register) {
