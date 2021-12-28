@@ -1,6 +1,8 @@
 ChangeLog
 #V1.1.2
-* Multi-core debug: Syncronized start/stop working, Registers & Peripherals working. Yet to handle Restart/Reset, session with multiple servers
+* Multi-core debug: Syncronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**
+* Included with multi-core is multi-session where you can have multiple gdb-servers running at the same time. This is required for JLink where you may have one JLinkGDBServerCLExe connected to one core where as with OpenOCD and others, you will see the same GDB server shared for all the cores.
+* With the above changes, you may see multiple `Debug Consoles`, `gdb-server` Terminals, multiple programs in the `Call Stack` window, multiple `Registers` and multiple `Peripherals`.
 
 #V1.1.1
 * For STLink Gdb-server and Cube-Programmer, set `LD_LIBRARY_PATH` on Linux and equivalent `DYLD_FALLBACK_LIBRARY_PATH` on MacOS

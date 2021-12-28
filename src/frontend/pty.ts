@@ -2,25 +2,24 @@ import EventEmitter = require('events');
 import * as os from 'os';
 import * as vscode from 'vscode';
 import { ResettableTimeout, TerminalInputMode } from '../common';
-
-export interface IPtyTerminalOptions {
-    name: string;       // Name of the terminal
-    prompt: string;     // Prompt to be used
-    inputMode: TerminalInputMode;
-}
-
-export const ESC            = '\x1b';         // ASCII escape character
-export const CSI            = ESC + '[';      // control sequence introducer
-export const BOLD           = CSI + '1m';
-export const RESET          = CSI + '0m';
-export const BR_MAGENTA_FG  = CSI + '95m';    // Bright magenta foreground
+import { BR_MAGENTA_FG, CSI, RESET } from './ansi-helpers';
 
 const KEYS = {
     enter       : '\r',
     del         : '\x7f',
     bs          : '\x08'
 };
+export interface IPtyTerminalOptions {
+    name: string;       // Name of the terminal
+    prompt: string;     // Prompt to be used
+    inputMode: TerminalInputMode;
+}
 
+export function magentaWrite(msg: string, pty: PtyTerminal) {
+    if (pty) {
+        pty.write(BR_MAGENTA_FG + msg + RESET);
+    }
+}
 const controlChars = {};
 const zero = '@'.charCodeAt(0);
 for (let ix = zero; ix <= 'Z'.charCodeAt(0); ix++) {
@@ -40,12 +39,6 @@ class ACTIONS {
     public static killLineForward()     { return CSI + 'K'; }
     public static killLine(n = 0)       { return ACTIONS.cursorBack(n) + ACTIONS.killLineForward(); }
     public static killEntireLine()      { return CSI + '2K'; }
-}
-
-export function magentaWrite(msg: string, pty: PtyTerminal) {
-    if (pty) {
-        pty.write(BR_MAGENTA_FG + msg + RESET);
-    }
 }
 
 /*

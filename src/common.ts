@@ -576,3 +576,16 @@ export class HrTimer {
         return ret;
     }
 }
+
+// This is not very precise. It is for seeing if the string has any special characters
+// where will need to put the string in quotes as a precaution. This is more a printing
+// aid rather an using for an API
+export function quoteShellAndCmdChars(s): string {
+    const quote = /[\s\"\*\[\]!@#$%^&*\(\)\\:]/g.test(s) ? '"' : '';
+    s = s.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
+    return quote + s.replace(/"/g, '\\"') + quote;
+}
+
+export function quoteShellCmdLine(list: string[]): string {
+    return list.map((s) => quoteShellAndCmdChars(s)).join(' ');
+}

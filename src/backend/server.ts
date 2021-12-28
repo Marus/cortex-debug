@@ -4,6 +4,8 @@ import * as net from 'net';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
+import { quoteShellCmdLine } from '../common';
+import { greenFormat } from '../frontend/ansi-helpers';
 
 export let GdbPid = -1;
 export function ServerConsoleLog(str: string, usePid?: number) {
@@ -194,6 +196,7 @@ export class GDBServer extends EventEmitter {
 
             // It is possible that the server is not ready
             socket.connect(this.consolePort, '127.0.0.1', () => {
+                socket.write(greenFormat(quoteShellCmdLine([this.application, ...this.args]) + '\n'));
                 this.consoleSocket = socket;
                 resolve();
             });
@@ -204,6 +207,7 @@ export class GDBServer extends EventEmitter {
         if (this.consoleSocket) {
             this.consoleSocket.write(data);
         } else {
+            // This can happen if the socket is already closed (extension quit while in a debug session)
             console.error('sendToConsole: console not open. How did this happen?');
         }
     }

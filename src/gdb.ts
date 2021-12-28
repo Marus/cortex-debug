@@ -9,7 +9,7 @@ import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
-    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent
+    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -360,11 +360,9 @@ export class GDBDebugSession extends DebugSession {
             const args = usingParentServer ? [] : this.serverController.serverArguments();
 
             if (executable) {
-                this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
-                const dbgMsg = `Launching server: "${executable}" ` + args.map((s) => {
-                    return '"' + s.replace(/"/g, '\\"') + '"';
-                }).join(' ') + '\n';
+                const dbgMsg = 'Launching gdb-server: ' + quoteShellCmdLine([executable, ...args]) + '\n';
                 this.handleMsg('log', dbgMsg);
+                this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
             }
 
             const consolePort = (this.args as any).gdbServerConsolePort;
@@ -612,11 +610,8 @@ export class GDBDebugSession extends DebugSession {
 
         let gdbargs = ['-q', '--interpreter=mi2'];
         gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
-        const dbgMsg = `Launching GDB: "${gdbExePath}" ` + gdbargs.map((s) => {
-            return '"' + s.replace(/"/g, '\\"') + '"';
-        }).join(' ');
-
-        this.handleMsg('log', dbgMsg + ` "${this.args.executable}"` + '\n');
+        const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs, this.args.executable]) + '\n';
+        this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
             this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
                 'here. Helpful to debug issues or report problems\n');
