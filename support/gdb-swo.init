@@ -1,0 +1,79 @@
+# To get SWO working, can do it in you C files or let the debugger do it for you by calling the function
+# defined below. For a C implementation see swo-init.c file in this directory or see
+#     https://github.com/Marus/cortex-debug/tree/master/support
+#
+# What is defined below still has limitations that are very device specific and we have no way of
+# knowing those details
+#
+# a) The Trace hardware may not be using the cpu clock. It may be divided by 2 already. Or it is not even
+#    enabled. If it is simply a matter of division, then you can adjust the pre-scalar below
+# b) The SWO IO may not be properly configured or hooked up to the
+# c) Your HW uses custome base addresses that are not even documented in your CMSIS headers (they might contain
+#    defaults from ARM). Make sure all the bases addresses below are correct and adjust if necessary
+#
+# If you need to make a custom version of this, copy this file to your project and use the preLaunch/preAttach
+# commands to override the default implementation. For example
+# 
+# "preLaunchCommands": [
+#     "source \"${workspaceFolder}/myswo.init\""
+# ]
+#
+
+#
+# Following variables are auto-defined by Cortex-Debug
+#
+# $swoFreq  -- Baud rate (freq in Hz) from launch.json (swoConfig.swoFrequency)
+# $cpuFreq  -- CPU Freq. in Hz from launch.json (swoConfig.cpuFrequency)
+# $swoPortMask -- The ITM ports to enable, calculated based on ports used in swoConfig (launch.json)
+#
+
+# The following are ARM CoreSight blocks but the Silicon Vendors are free to chose
+# alternate base addresses. Check with your vendor documentation
+set language c
+set $ITM_BASE = 0xE0000000
+set $DWT_BASE = 0xE0001000
+set $DCB_BASE = 0xE000EDF0
+set $TPI_BASE = 0xE0040000
+set language auto
+
+# We wish we could do this whole thing in python some sane language but python is not enabled
+# in many distributions of gdb
+
+define SWO_Init
+    set language c
+
+# Enable trace
+	set *($DCB_BASE + 0x0000C) = (1 << 24)
+
+# TPI->SPPR Pin protocolo register to NRZ
+	set *($TPI_BASE + 0x000F0) = 0x00000002
+
+# TPI->ACPR = Prescalar. Change the following if your Prescalar calculation is different if your input clock is different##
+	set *($TPI_BASE + 0x00010) = ($cpuFreq / $swoFreq) - 1
+
+# To be able to access rest of the ITM
+	set *($ITM_BASE + 0x00FB0) = 0xC5ACCE55
+
+# ITM->TCR = ITM_TCR_TraceBusID_Msk | ITM_TCR_SWOENA_Msk | ITM_TCR_SYNCENA_Msk | ITM_TCR_ITMENA_Msk
+	set *($ITM_BASE + 0x00E80) = 0x1000D
+
+# ITM->TPR = ITM_TPR_PRIVMASK_Msk
+	set *($ITM_BASE + 0x00E40) = 0xF
+
+# ITM->TER = bit-mask calculated by Cortex-Debug. You can set it to 0xFFFFFFFF if you like
+	set *($ITM_BASE + 0x00E40) = $swoPortMask
+
+# DWT_CTRL
+    set *($DWT_BASE) = 0x400003FE
+
+# TPI->FFCR (Formatter and Flush Control Register)
+    set *($TPI_BASE + 0x00304) = 0x00000100
+
+    set language auto
+end
+
+document SWO_Init
+Usage: SWO_Init
+Initializes relevant CoreSight component registers to enable SWO. It relies
+on a few global variables $swoFreq, $cpuFreq and $swoPortMask
+end

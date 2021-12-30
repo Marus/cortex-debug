@@ -89,30 +89,41 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
     public serverLaunchStarted(): void {
         if (this.args.swoConfig.enabled && this.args.swoConfig.source === 'probe' && os.platform() !== 'win32') {
             const mkfifoReturn = ChildProcess.spawnSync('mkfifo', [this.swoPath]);
-            this.emit('event', new SWOConfigureEvent({ type: 'fifo', path: this.swoPath }));
-        }        
+            this.emit('event', new SWOConfigureEvent({
+                type: 'fifo',
+                args: this.args,
+                path: this.swoPath
+            }));
+        }
     }
 
     public serverLaunchCompleted(): void {
         if (this.args.swoConfig.enabled) {
             if (this.args.swoConfig.source === 'probe' && os.platform() === 'win32') {
-                this.emit('event', new SWOConfigureEvent({ type: 'file', path: this.swoPath }));
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'file',
+                    args: this.args,
+                    path: this.swoPath
+                }));
             }
             else if (this.args.swoConfig.source === 'socket') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'socket',
+                    args: this.args,
                     port: this.args.swoConfig.swoPort
                 }));
             }
             else if (this.args.swoConfig.source === 'file') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'file',
+                    args: this.args,
                     path: this.args.swoConfig.swoPath
                 }));
             }
             else if (this.args.swoConfig.source === 'serial') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
+                    args: this.args,
                     device: this.args.swoConfig.source,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));

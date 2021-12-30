@@ -528,7 +528,9 @@ export class CortexDebugExtension {
 
             Reporting.beginSession(session.id, args as ConfigurationArguments);
 
-            if (this.swoSource) { this.initializeSWO(session, args); }
+            if (this.swoSource) {
+                this.initializeSWO(session, args);
+            }
             if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
 
             if (this.isDebugging(session)) {
@@ -769,12 +771,32 @@ export class CortexDebugExtension {
     private receivedSWOConfigureEvent(e: vscode.DebugSessionCustomEvent) {
         if (e.body.type === 'socket') {
             const src = new SocketSWOSource(e.body.port);
-            src.start().then(() => {
-                this.swoSource = src;
-            }).catch((e) => {
-                vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e}`);
-            });
+            let nTries = 1;
+            const to = setInterval(() => {
+                src.start().then(() => {
+                    if (nTries > 1) {
+                        vscode.window.showInformationMessage(`SWO TCP port ${e.body.port} open after ${nTries}`);
+                    }
+                    clearInterval(to);
+                    this.swoSource = src;
+                    this.initializeSWO(e.session, e.body.args);
+                }).catch((e) => {
+                    if (e === false) {      // Connection refused so, we try again
+                        if (nTries > 10) {
+                            clearInterval(to);
+                            vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} after ${nTries} tries. No port open?`);
+                        } else {
+                            // Port not ready? Maybe we should retry later?
+                            nTries++;
+                        }
+                    } else {
+                        clearInterval(to);
+                        vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e}`);
+                    }
+                });
+            }, 250);
             Reporting.sendEvent('SWO', 'Source', 'Socket');
+            return;
         }
         else if (e.body.type === 'fifo') {
             this.swoSource = new FifoSWOSource(e.body.path);
@@ -789,10 +811,7 @@ export class CortexDebugExtension {
             Reporting.sendEvent('SWO', 'Source', 'Serial');
         }
 
-        // I don't think the following is needed as we already initialize SWO when the session finally starts
-        e.session.customRequest('get-arguments').then((args) => {
-            this.initializeSWO(e.session, args);
-        });
+        this.initializeSWO(e.session, e.body.args);
     }
 
     private receivedRTTConfigureEvent(e: any) {

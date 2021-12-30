@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { RTTConsoleDecoderOpts, TerminalInputMode, TextEncoding, BinaryEncoding, HrTimer } from '../common';
-import { IPtyTerminalOptions, magentaWrite, PtyTerminal, RESET } from './pty';
+import { IPtyTerminalOptions, magentaWrite, PtyTerminal } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 import { SocketRTTSource } from './swo/sources/socket';
+import { RESET } from './ansi-helpers';
 
 export class RTTTerminal {
     protected ptyTerm: PtyTerminal;

@@ -157,10 +157,15 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             const source = this.args.swoConfig.source;
             if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
                 const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
-                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm].toString(10) }));
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'socket',
+                    args: this.args,
+                    port: this.ports[swoPortNm].toString(10)
+                }));
             } else if (source === 'serial') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
+                    args: this.args,
                     device: this.args.swoConfig.source,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));

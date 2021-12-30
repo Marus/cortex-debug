@@ -7,6 +7,7 @@ import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
+import { Socket } from 'dgram';
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
     public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort'];
@@ -125,16 +126,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
         
+        const source = this.args.swoConfig.source;
+        const swoOutput = (source === 'serial') ? 'external' : ':' +
+            this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
         const commands: string[] = [
-            'EnableITMAccess',
-            `BaseSWOSetup ${ratio}`,
-            'SetITMId 1',
-            'ITMDWTTransferEnable',
-            'DisableITMPorts 0xFFFFFFFF',
-            `EnableITMPorts ${portMask}`,
-            'EnableDWTSync',
-            'ITMSyncEnable',
-            'ITMGlobalEnable'
+            `monitor CDSWOConfigure ${cpuFrequency} ${swoFrequency} ${swoOutput}`,
+            `set $cpuFreq = ${cpuFrequency}`,
+            `set $swoFreq = ${swoFrequency}`,
+            `set $swoPortMask = ${portMask}`,
+            'SWO_Init'
         ];
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
@@ -170,14 +170,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             serverargs.push('-c', cmd);
         }
 
+        serverargs.push('-f', `${this.args.extensionPath}/support/openocd-helpers.tcl`);
         this.args.configFiles.forEach((cf, idx) => {
             serverargs.push('-f', cf);
         });
 
         if (this.args.rtos) {
-            const tmpCfgPath = tmp.tmpNameSync();
-            fs.writeFileSync(tmpCfgPath, `$_TARGETNAME configure -rtos ${this.args.rtos}\n`, 'utf8');
-            serverargs.push('-f', tmpCfgPath);
+            serverargs.push('-c', `CDRTOSConfigure ${this.args.rtos}`);
         }
 
         if (this.args.serverArgs) {
@@ -187,19 +186,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
 
         if (this.args.swoConfig.enabled) {
-            let tpiuIntExt;
-            const source = this.args.swoConfig.source;
-            if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
-                const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
-                tpiuIntExt = `internal :${this.ports[swoPortNm]}`;
-            } else if (source === 'serial') {
-                tpiuIntExt = 'external';
-            }
-
-            if (tpiuIntExt) {
-                // tslint:disable-next-line:max-line-length
-                commands.push(`tpiu config ${tpiuIntExt} uart off ${this.args.swoConfig.cpuFrequency} ${this.args.swoConfig.swoFrequency}`);
-            } else {
+            if (!(['probe', 'socket', 'file', 'serial'].find((s) => s === this.args.swoConfig.source))) {
                 this.args.swoConfig.enabled = false;
             }
         }
@@ -233,10 +220,15 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             const source = this.args.swoConfig.source;
             if ((source === 'probe') || (source === 'socket') || (source === 'file')) {
                 const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
-                this.emit('event', new SWOConfigureEvent({ type: 'socket', port: this.ports[swoPortNm].toString(10) }));
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'socket',
+                    args: this.args,
+                    port: this.ports[swoPortNm].toString(10)
+                }));
             } else if (source === 'serial') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
+                    args: this.args,
                     device: this.args.swoConfig.source,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));

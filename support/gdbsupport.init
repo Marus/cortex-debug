@@ -1,4 +1,8 @@
-
+#
+# Help needed: There are many useful functions here but most of them use hardcoded addresses
+# that may not be the same for all devices. Wish we can port all these functions to something
+# more usable (modifiable). In the meantime we are going to use the function defined in gdb-swo.Initializes
+#
 define EnableITMAccess
 	set language c
 	set *0xE000EDFC |= 0x1000000

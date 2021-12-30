@@ -422,7 +422,8 @@ export class GDBDebugSession extends DebugSession {
                 this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
 
                 const commands = [
-                    `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`
+                    `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
+                    `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
                 ];
 
                 if (!this.args.variableUseNaturalFormat) {
