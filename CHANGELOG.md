@@ -1,4 +1,5 @@
 ChangeLog
+
 #V1.1.2
 * Multi-core debug: Syncronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**. The top level configuration has to be a `Launch` session but others can be `Launch` or `Attach`. Same will be available with `Attach` at the root of the chain -- `Attach` requires all the configuration to be duplicated, so we wanted to wait for a bit more maturity.
 * Included with multi-core is multi-session where you can have multiple gdb-servers running at the same time. This is required for JLink where you may have one JLinkGDBServerCLExe connected to one core where as with OpenOCD and others, you will see the same GDB server shared for all the cores.
