@@ -9,7 +9,7 @@ import { hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
-    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine
+    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -64,12 +64,14 @@ class ExtendedVariable {
     }
 }
 
-const GLOBAL_HANDLE_ID = 0xFE;
-const STACK_HANDLES_START = 0x100;
-const STACK_HANDLES_FINISH = 0xFFFF;
-const STATIC_HANDLES_START = 0x010000;
+const GLOBAL_HANDLE_ID      = 0x0000FE;
+const STACK_HANDLES_START   = 0x000100;
+const STACK_HANDLES_FINISH  = 0x00FFFF;
+const STATIC_HANDLES_START  = 0x010000;
 const STATIC_HANDLES_FINISH = 0x01FFFF;
-const VAR_HANDLES_START = 0x020000;
+const REG_HANDLE_START      = 0x020000;
+const REG_HANDLE_FINISH     = 0x02FFFF;
+const VAR_HANDLES_START     = 0x030000;
 
 const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c.replace(/"/g, '\\"')}"`;
 
@@ -1491,8 +1493,13 @@ export class GDBDebugSession extends DebugSession {
             let threadId = -1;
             let frameId = -1;
             const varRef = args.variablesReference;
-            const globOrStatic = this.getFloatingVariable(varRef, name);
-            if (globOrStatic) {
+            const isReg = (varRef >= REG_HANDLE_START && varRef < REG_HANDLE_FINISH);
+            const globOrStatic = !isReg && this.getFloatingVariable(varRef, name);
+            if (isReg) {
+                const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*');
+                name = varObj.name;
+                [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
+            } else if (globOrStatic) {
                 name = globOrStatic.name;
             } else if (varRef >= VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
@@ -1505,8 +1512,8 @@ export class GDBDebugSession extends DebugSession {
                 }
                 [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
             }
-
             const res = await this.miDebugger.varAssign(name, args.value, threadId, frameId);
+            // TODO: Need to check for errors
             response.body = {
                 value: res.result('value')
             };
@@ -1764,7 +1771,8 @@ export class GDBDebugSession extends DebugSession {
             canPersist: false
         };
 
-        if ((args.variablesReference !== undefined) && args.name) {
+        const ref = args.variablesReference;
+        if ((ref !== undefined) && args.name && !((ref >= REG_HANDLE_START) && (ref <= REG_HANDLE_FINISH))) {
             const id = this.variableHandles.get(args.variablesReference);
             response.body.canPersist = this.isVarRefGlobalOrStatic(args.variablesReference, id);
             const parentObj = (id as VariableObject);
@@ -2045,9 +2053,81 @@ export class GDBDebugSession extends DebugSession {
         scopes.push(new Scope('Static', staticId, false));
         this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
 
+        scopes.push(new Scope('Registers', REG_HANDLE_START + parseInt(args.frameId as any)));
+
         response.body = {
             scopes: scopes
         };
+        this.sendResponse(response);
+    }
+
+    private registerMap = new Map<string, number>();
+    private registerMapReverse = new Map<number, string>();
+    private async registersRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        const registers: DebugProtocol.Variable[] = [];
+        try {
+            if (this.registerMap.size === 0) {
+                const node = await this.miDebugger.sendCommand('data-list-register-names');
+                if (node.resultRecords.resultClass === 'done') {
+                    node.resultRecords.results.forEach((rr) => {
+                        if (rr[0] === 'register-names') {
+                            const registerNames = rr[1];
+                            let idx = 0;
+                            for (const reg of registerNames) {
+                                if (reg !== '') {
+                                    this.registerMap.set(reg, idx);
+                                    this.registerMapReverse.set(idx, reg);
+                                }
+                                idx++;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+        catch (error) {
+            this.sendErrorResponse(response, 116, `Unable to read register list: ${error.toString()}`);
+            this.sendEvent(new TelemetryEvent('Error', 'Reading Register List', ''));
+            return;
+        }
+
+        try {
+            const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+            const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
+            // --thread --frame does not work properly
+            this.miDebugger.sendCommand(`thread-select ${threadId}`);
+            this.miDebugger.sendCommand(`stack-select-frame ${frameId}`);
+            const node = await this.miDebugger.sendCommand(`data-list-register-values ${fmt}`);
+            if (node.resultRecords.resultClass === 'done') {
+                const rv = node.resultRecords.results[0][1];
+                for (const n of rv) {
+                    const id = parseInt(n[0][1]);
+                    const reg = this.registerMapReverse.get(id);
+                    if (reg) {
+                        const val = n[1][1];
+                        const res: DebugProtocol.Variable = {
+                            name: reg,
+                            evaluateName: '$' + reg,
+                            value: val,
+                            variablesReference: 0
+                        };
+                        if ((/^0x[0-9a-f]+/i.test(val)) || /^[-]?[0-9]+/.test(val)) {
+                            const intval = parseInt(val.toLowerCase());
+                            res.type = `Register: ${reg} Thread#${threadId}, Frame#${frameId}\n` + toStringDecHexOctBin(intval);
+                        }
+                        registers.push(res);
+                    }
+                }
+            } else {
+                throw new Error('Unable to parse response for reg. values');
+            }
+        }
+        catch (error) {
+            this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
+            this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
+            return;
+        }
+        response.body = { variables: registers };
         this.sendResponse(response);
     }
 
@@ -2348,18 +2428,16 @@ export class GDBDebugSession extends DebugSession {
         // but it will re-evaluate everything in the Watch window. Basically, it has no concept of a union and there is no
         // way I know of to force a refresh
         */
-
         if (args.variablesReference === GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
-        }
-        else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference <= STATIC_HANDLES_FINISH) {
+        } else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference <= STATIC_HANDLES_FINISH) {
             const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
             return this.staticVariablesRequest(threadId, frameId, response, args);
-        }
-        else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STACK_HANDLES_FINISH) {
+        } else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STACK_HANDLES_FINISH) {
             return this.stackVariablesRequest(response, args);
-        }
-        else {
+        } else if (args.variablesReference >= REG_HANDLE_START && args.variablesReference < REG_HANDLE_FINISH) {
+            return this.registersRequest(response, args);
+        } else {
             id = this.variableHandles.get(args.variablesReference);
 
             if (typeof id === 'string') {

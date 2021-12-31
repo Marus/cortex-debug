@@ -8,6 +8,9 @@ import { RegisterNode, RegisterValue } from './nodes/registernode';
 import { MessageNode } from './nodes/messagenode';
 import { BaseNode } from './nodes/basenode';
 
+const DeprecationToolTip = 'Due to a VSCode limitation, this Panel cannot track current thread/frame so it can be inaccurate. ' +
+    'You can find proper Registers in the VARIABLES panel where it is also possible to also SET registers. ' +
+    'We may bring this Panel back when VSCode provides an API to track the "CALL STACK" Panel';
 export class RegisterTreeForSession extends BaseNode {
     private registers: RegisterNode[] = [];
     private registerMap: { [index: number]: RegisterNode } = {};
@@ -20,6 +23,7 @@ export class RegisterTreeForSession extends BaseNode {
         private fireCb: () => void) {
         super();
         this.myTreeItem = new TreeItem(this.session.name, this.state);
+        this.myTreeItem.tooltip = DeprecationToolTip;
     }
 
     public getChildren(element?: BaseNode): BaseNode[] | Promise<BaseNode[]>{
@@ -163,7 +167,7 @@ export class RegisterTreeProvider implements TreeDataProvider<BaseNode> {
         if (element) {
             return element.getChildren();
         } else if (values.length === 0) {
-            return [new MessageNode('No active debug sessions')];
+            return [new MessageNode('DEPRECATION NOTICE: Hover for more info.', DeprecationToolTip)];
         } else if (values.length === 1) {
             return values[0].getChildren();     // Don't do root nodes at top-level if there is only one root
         } else {

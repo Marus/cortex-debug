@@ -8,11 +8,11 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
   * Source with assembly
   * More than one function or a virtual diplay for the entire executable
 * Low: New memory window using MS Hex Editor
-* Low: Add registers to `Variables` Window
+* Done: Low: Add registers to `Variables` Window
   * Chance to deprecate `Registers` window
   * Ability to setValue
   * IMPORTANT: View Registers for each thread/frame in the Stack Window. Currently only shows for one context whereas it should be tracking the current frame in the stack window
-  * Con: Will lose the ability to highlight changed values
+  * Con: False: We thought we will Will lose the ability to highlight changed values. Not true, there is some indication as to what changed but it evaporates after a while. Maybe a good thing.
 
 # Other
 
