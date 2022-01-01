@@ -5,7 +5,7 @@ import {
 } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
-import { hexFormat } from './frontend/utils';
+import { extractBits, hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
@@ -2111,9 +2111,31 @@ export class GDBDebugSession extends DebugSession {
                             value: val,
                             variablesReference: 0
                         };
-                        if ((/^0x[0-9a-f]+/i.test(val)) || /^[-]?[0-9]+/.test(val)) {
+                        if (!/^[sd][0-9]/i.test(reg) && ((/^0x[0-9a-f]+/i.test(val)) || /^[-]?[0-9]+/.test(val))) {
+                            // No hints for floating point stuff
                             const intval = parseInt(val.toLowerCase());
-                            res.type = `Register: ${reg} Thread#${threadId}, Frame#${frameId}\n` + toStringDecHexOctBin(intval);
+                            res.type = `Register: $${reg} Thread#${threadId}, Frame#${frameId}\n` + toStringDecHexOctBin(intval);
+                            const field = (nm: string, offset: number, width: number): string => {
+                                const v = extractBits(intval, offset, width);
+                                return `\n    ${nm}: ${v.toString()}`;
+                            };
+                            // TODO: someday, fake these registers as a struct to VSCode
+                            if (reg.toLowerCase() === 'xpsr') {
+                                res.type += field('Negative Flag (N)', 31, 1);
+                                res.type += field('Zero Flag (Z)', 30, 1);
+                                res.type += field('Carry or borrow flag (C)', 29, 1);
+                                res.type += field('Overflow Flag (V)', 28, 1);
+                                res.type += field('Saturation Flag (Q)', 27, 1);
+                                res.type += field('GE', 16, 4);
+                                res.type += field('Interrupt Number', 0, 8);
+                                res.type += field('ICI/IT', 25, 2);
+                                res.type += field('ICI/IT', 10, 6);
+                                res.type += field('Thumb State (T)', 24, 1);
+                            } else if (reg.toLowerCase() === 'control') {
+                                res.type += field('FPCA', 2, 1);
+                                res.type += field('SPSEL', 1, 1);
+                                res.type += field('nPRIV', 0, 1);
+                            }
                         }
                         registers.push(res);
                     }

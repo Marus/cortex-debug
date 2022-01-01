@@ -1,6 +1,10 @@
 ChangeLog
 
-#V1.1.2
+# V1.1.3
+* Registers xPSR and CONTROL now have fields shown in the tooltip. This is in the VARIABLES Window
+* Bugfix: There was a bug dealing with large integers (bigger than 32 bits) in tooltip generation. May have caused Register values to be not displayed at all.
+
+# V1.1.2
 * Multi-core debug: Syncronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**. The top level configuration has to be a `Launch` session but others can be `Launch` or `Attach`. Same will be available with `Attach` at the root of the chain -- `Attach` requires all the configuration to be duplicated, so we wanted to wait for a bit more maturity.
 * Included with multi-core is multi-session where you can have multiple gdb-servers running at the same time. This is required for JLink where you may have one JLinkGDBServerCLExe connected to one core where as with OpenOCD and others, you will see the same GDB server shared for all the cores.
 * With the above changes, you may see multiple `Debug Consoles`, `gdb-server` Terminals, multiple programs in the `Call Stack` window, multiple `Registers` and multiple `Peripherals`.
@@ -8,7 +12,7 @@ ChangeLog
 * SWO: The method of configuring SWO has changed. There is a new GDB-script that we encourage users to customize. Frequently, vendors are using non-standard addresses for ARM debug components (CoreSight) and hence it is not possibe for to detect or keep track. You can now customize the script yourself. See https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init. Currently, only OpenOCD uses this script while the others are still using the old scripts that were not easily modifiable. Feedback, improvements welcome.
 * OpenOCD requires additional configuration that is now done in a TCL script (config file in OpenOCD lingo). This is also user customizable as vendors are using non recommended ways of defining SWO/TPIU configuration. This is user configuratble. See https://github.com/Marus/cortex-debug/blob/master/support/openocd-helpers.tcl. This file also has what is required to configure for an RTOS as the previous hard-coded method does not work well for multi-core systems and for those who do not follow OpenOCD recommended naming conventions.
 
-#V1.1.1
+# V1.1.1
 * For STLink Gdb-server and Cube-Programmer, set `LD_LIBRARY_PATH` on Linux and equivalent `DYLD_FALLBACK_LIBRARY_PATH` on MacOS
 * STLink: We now use the `--halt` command-line option when launching the server unless `serverArgs` is used. If `serverArgs` is used, you can enable the `--halt` if that is the behavior you desire. Things may not work in the future without the `--halt` option.
 * STLink: We no longer use `monitor reset halt` as that is not a supported reset option. We use the `--halt` command-line option instead.
@@ -16,7 +20,7 @@ ChangeLog
 * Experimental (Unstable): Chained configurations for multi-core/multi-processor/multi-session debugging
 * Bug fix: When using arm tools version 9+, some global variables were not being displayed
 
-#V1.1.0
+# V1.1.0
 * Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering schem. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions
   This will be the first pre-release coming to you direct from the marketplace.
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
@@ -24,10 +28,10 @@ ChangeLog
 * Issue #539: Using GDB to get some symbol information for locals and globals. Hopefully, gives better performance for large executables. Most information still comes from `objdump` though.
 * Issue #522: Qemu launch failed because it does not have a matching regular expression that indicated a start. It never does and code to handle that did not work. Fixed.
 
-#V0.4.9
+# V0.4.9
 * Issue #536. Typo in code for os-specific paths
 
-#V0.4.8
+# V0.4.8
 * Store register/peripheral settings in the appropriate folder instead of the first folder
 * Kill gdb-server if the user kills/exits gdb without using the proper disconnect/Stop buttons/process/commands
 * VSCode was terminating Cortex-Debug before it was done. st-util exit behavior was also not clean as it did not exit on a disconnect.
@@ -39,16 +43,16 @@ ChangeLog
 * Issues #524 and #525
 * Improved handling of J-Link RTOS option (file extension), added NuttX
 
-#V0.4.7
+# V0.4.7
 * Fixed a regression for STLink gdbserver. It was in fact accidentally working in prior releases. The real bug is now fixed. Issue #494
 * We may have **finally** found a way to exit OpenOCD without having to kill it and OpenOCD not hanging around after the session ends. This is of course dependent on OpenOCD behaving as documented. Thanks to #482 and @bohdan-tymkiv for a solution
 * Timestamps for RTT and SWO have been standardized to be of the form `[ISO-Date-Time, +NNNNNNms]` where the first part is the date/time of day and the NNNNNNms is the number of milliseconds elapsed since the debug session began.
 * `timestamp` is now an option for SWO console decoders. Default is `false`. A timestamp is output only when a newline is received or a timeout of 5 seconds
 
-#V0.4.6
+# V0.4.6
 * Bugfix: Issue #493 In the previous release, we were trying to end OpenOCD using a SIGINT first and then SIGTERM. The way VSCode works, this did not work in production releases. Reverting back to the previous method of just using SIGTERM. Unfortunately. Still looking for a better method to end OpenOCD.
 
-#V0.4.5
+# V0.4.5
 * Support for resume/suspend after Launch/Attach. With new UI features added to VSCode, the Stop button (after `Launch`) can now also be used for a Disconnect using keyboard shortcuts. The reverse is true when using an `Attach` type session. But this requires co-operation from the gdb-server to comply. Certain versions of OpenOCD do comply, JLink always seems to resume (see issue $481). Provided the gdb-server cooperates, the expected behavior now when you end a debug session is:
   * `Stop` will leave the program in a halted state
   * `Disconnect` will let the program continue
