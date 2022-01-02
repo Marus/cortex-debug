@@ -37,24 +37,21 @@ export class RTTTerminal {
             const code: string = (e as any).code;
             if (code === 'ECONNRESET') {
                 // Server closed the connection. We are done with this session
-                this.source = null;
             } else if (code === 'ECONNREFUSED') {
-                // We expect 'ECONNREFUSED' if the server has not yet started.
-                magentaWrite(`${e.message}\nPlease report this problem.`, this.ptyTerm);
-                this.source = null;
+                // We expect 'ECONNREFUSED' if the server has not yet started afer all the retries
+                magentaWrite(`${e}\n.`, this.ptyTerm);
             } else {
-                magentaWrite(`${e.message}\nPlease report this problem.`, this.ptyTerm);
+                magentaWrite(`${e}\n`, this.ptyTerm);
             }
         });
         src.on('data', (data) => { this.onData(data); });
 
         if (src.connError) {
             this.source = src;
-            magentaWrite(`${src.connError.message}\nPlease report this problem.`, this.ptyTerm);
+            magentaWrite(`${src.connError.message}\n`, this.ptyTerm);
         } else if (src.connected) {
             this.source = src;
-        }
-        else {
+        } else {
             src.once('connected', () => {
                 this.source = src;
             });

@@ -1,12 +1,14 @@
 ChangeLog
 
 # V1.1.4
+* Fixed issue with with SWO (or RTT) not working the first time. It was a race condition where we were trying to connect too fast. Now we re-try
+# V1.1.4
 * BugFix: Reset was broken in previous release
 * Reset and Restart should be working now for chained configurations
 * Workaround: ST released there latest update to their IDE and along with it came a new OpenOCD and perhaps FW startup sequence. With that, SWO is broken for all releases. We no longer have permission to set the registers required to make SWO work with OpenOCD. We think we found the issue and a workaround (ugly) that is temporarily in this pre-release.
 * Known problems:
-  * If there is NO `breakOnReset` and NO `runToEntryPoint` -- meaning the program starts and continues excuting with NO breakpoints, you may not be able to pause the program. However, if you reset/restart or do a fresh start, then things seem to be fine. This occurs only the first time you run a session after launching VSCode. Does not happen with non-ST devices and even this is new. The cause is unknown.
-  * SWO may not work on the first time after VSCode launch. This may be un-related to the problem above.
+  * If there is NO `breakOnReset` and NO `runToEntryPoint` -- meaning the program starts and continues executing with NO breakpoints, you may not be able to pause the program. However, if you reset/restart or do a fresh start, then things seem to be fine. This occurs only the first time you run a session after launching VSCode. Does not happen with non-ST devices and even this is new. The cause is unknown.
+  * SWO may not work on the first time after VSCode launch. This may be un-related to the problem above. Fixed
 
 # V1.1.3
 * Registers xPSR and CONTROL now have fields shown in the tooltip. This is in the VARIABLES Window

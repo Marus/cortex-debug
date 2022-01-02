@@ -329,6 +329,7 @@ export class SWOCore extends SWORTTCoreBase {
         for (const p of this.processors) {
             p.close();
         }
+        this.processors = [];
         this.connected = false;
     }
 

@@ -1,8 +1,17 @@
 import { assert } from 'console';
 import * as vscode from 'vscode';
 import { ConfigurationArguments, ChainedConfig } from '../common';
+import { RTTCore, SWOCore } from './swo/core';
+import { SWORTTSource } from './swo/sources/common';
+import { SocketRTTSource } from './swo/sources/socket';
 
 export class CDebugSession {
+    public swo: SWOCore = null;
+    public rtt: RTTCore = null;
+    public swoSource: SWORTTSource = null;
+    public rttPortMap: { [channel: number]: SocketRTTSource} = {};
+    public status: 'started' | 'stopped' | 'running' | 'none' = 'none';
+
     protected parent: CDebugSession = null;
     protected children: CDebugSession[] = [];
     private static ROOT = new CDebugSession(null, null);     // Dummy node for all sessions trees

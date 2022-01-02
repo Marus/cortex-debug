@@ -34,11 +34,8 @@ interface SVDInfo {
 export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private clearAdapterOutputChannel = false;
-    private swo: SWOCore = null;
-    private rtt: RTTCore = null;
-    private swoSource: SWORTTSource = null;
-    private rttTerminals: RTTTerminal[] = [];
-    private rttPortMap: { [channel: number]: SocketRTTSource} = {};
+    public rttTerminals: RTTTerminal[] = [];
+
     private gdbServerConsole: GDBServerConsole = null;
 
     private peripheralProvider: PeripheralTreeProvider;
@@ -50,7 +47,6 @@ export class CortexDebugExtension {
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
-    private debuggerStatusMap: {[id: string]: 'started' | 'stopped' | 'running'} = {};
 
     constructor(private context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('cortex-debug');
@@ -171,7 +167,8 @@ export class CortexDebugExtension {
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.REGISTER_DISPLAY_MODE}`)) {
             const session = CortexDebugExtension.getActiveCDSession();
             if (session) {
-                if (this.debuggerStatusMap[session.id] === 'running') {
+                const mySession = CDebugSession.FindSession(session);
+                if (mySession.status === 'running') {
                     vscode.window.showInformationMessage(msg);
                 } else {
                     if (this.isDebugging(session)) {
@@ -183,10 +180,11 @@ export class CortexDebugExtension {
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`)) {
             const session = CortexDebugExtension.getActiveCDSession();
             if (session) {
+                const mySession = CDebugSession.FindSession(session);
                 const config = vscode.workspace.getConfiguration('cortex-debug');
                 const isHex = config.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true) ? false : true;
                 session.customRequest('set-var-format', { hex: isHex });
-                if (this.debuggerStatusMap[session.id] === 'running') {
+                if (mySession.status === 'running') {
                     vscode.window.showInformationMessage(msg);
                 }
             }
@@ -506,18 +504,8 @@ export class CortexDebugExtension {
 
         const newSession = CDebugSession.NewSessionStarted(session);
 
-        // Clean-up Old output channels
-        if (this.swo) {
-            this.swo.dispose();
-            this.swo = null;
-        }
-        if (this.rtt) {
-            this.rtt.dispose();
-            this.rtt = null;
-        }
-
         this.functionSymbols = null;
-        this.debuggerStatusMap[session.id] = 'started';
+        newSession.status = 'started';
 
         session.customRequest('get-arguments').then((args) => {
             newSession.config = args;
@@ -528,10 +516,12 @@ export class CortexDebugExtension {
 
             Reporting.beginSession(session.id, args as ConfigurationArguments);
 
-            if (this.swoSource) {
+            if (newSession.swoSource) {
                 this.initializeSWO(session, args);
             }
-            if (Object.keys(this.rttPortMap).length > 0) { this.initializeRTT(args); }
+            if (Object.keys(newSession.rttPortMap).length > 0) {
+                this.initializeRTT(session, args);
+            }
 
             if (this.isDebugging(session)) {
                 this.registerProvider.debugSessionStarted(session);
@@ -545,24 +535,22 @@ export class CortexDebugExtension {
 
     private debugSessionTerminated(session: vscode.DebugSession) {
         if (session.type !== 'cortex-debug') { return; }
+        const mySession = CDebugSession.FindSession(session);
         try {
-            CDebugSession.RemoveSession(session);
             Reporting.endSession(session.id);
 
-            delete this.debuggerStatusMap[session.id];
             if (this.isDebugging(session)) {
                 this.registerProvider.debugSessionTerminated(session);
             }
             this.peripheralProvider.debugSessionTerminated(session);
-            if (this.swo) {
-                this.swo.debugSessionTerminated();
+            if (mySession.swo) {
+                mySession.swo.debugSessionTerminated();
             }
-            if (this.swoSource) {
-                this.swoSource.dispose();
-                this.swoSource = null;
+            if (mySession.swoSource) {
+                mySession.swoSource.dispose();
             }
-            if (this.rtt) {
-                this.rtt.debugSessionTerminated();
+            if (mySession.rtt) {
+                mySession.rtt.debugSessionTerminated();
             }
             for (const term of this.rttTerminals) {
                 // All though they mark themselves as unused when socket closes, that won't happen
@@ -570,17 +558,18 @@ export class CortexDebugExtension {
                 term.inUse = false;
             }
             // tslint:disable-next-line: forin
-            for (const ch in this.rttPortMap) {
-                this.rttPortMap[ch].dispose();
+            for (const ch in mySession.rttPortMap) {
+                mySession.rttPortMap[ch].dispose();
             }
-            this.rttPortMap = {};
 
             this.clearAdapterOutputChannel = true;
         }
         catch (e) {
             vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
         }
-        
+        finally {
+            CDebugSession.RemoveSession(session);
+        }
     }
 
     private receivedCustomEvent(e: vscode.DebugSessionCustomEvent) {
@@ -757,25 +746,27 @@ export class CortexDebugExtension {
     }
 
     private receivedStopEvent(e: vscode.DebugSessionCustomEvent) {
-        this.debuggerStatusMap[e.session.id] = 'stopped';
+        const mySession = CDebugSession.FindSession(e.session);
+        mySession.status = 'stopped';
         this.peripheralProvider.debugStopped(e.session);
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugStopped(e.session);
         }
         vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
             .forEach((doc) => { this.memoryProvider.update(doc); });
-        if (this.swo) { this.swo.debugStopped(); }
-        if (this.rtt) { this.rtt.debugStopped(); }
+        if (mySession.swo) { mySession.swo.debugStopped(); }
+        if (mySession.rtt) { mySession.rtt.debugStopped(); }
     }
 
     private receivedContinuedEvent(e: vscode.DebugSessionCustomEvent) {
-        this.debuggerStatusMap[e.session.id] = 'running';
+        const mySession = CDebugSession.FindSession(e.session);
+        mySession.status = 'running';
         this.peripheralProvider.debugContinued();
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugContinued();
         }
-        if (this.swo) { this.swo.debugContinued(); }
-        if (this.rtt) { this.rtt.debugContinued(); }
+        if (mySession.swo) { mySession.swo.debugContinued(); }
+        if (mySession.rtt) { mySession.rtt.debugContinued(); }
     }
 
     private receivedEvent(e) {
@@ -783,65 +774,50 @@ export class CortexDebugExtension {
     }
 
     private receivedSWOConfigureEvent(e: vscode.DebugSessionCustomEvent) {
+        const mySession = CDebugSession.GetSession(e.session);
         if (e.body.type === 'socket') {
             const src = new SocketSWOSource(e.body.port);
-            let nTries = 1;
-            const to = setInterval(() => {
-                src.start().then(() => {
-                    if (nTries > 1) {
-                        vscode.window.showInformationMessage(`SWO TCP port ${e.body.port} open after ${nTries}`);
-                    }
-                    clearInterval(to);
-                    this.swoSource = src;
-                    this.initializeSWO(e.session, e.body.args);
-                }).catch((e) => {
-                    if (e === false) {      // Connection refused so, we try again
-                        if (nTries > 100) {
-                            clearInterval(to);
-                            vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} after ${nTries} tries. No port open?`);
-                        } else {
-                            // Port not ready? Maybe we should retry later?
-                            nTries++;
-                        }
-                    } else {
-                        clearInterval(to);
-                        vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e}`);
-                    }
-                });
-            }, 250);
+            mySession.swoSource = src;
+            this.initializeSWO(e.session, e.body.args);
+            src.start().then(() => {
+                console.log(`Connected after ${src.nTries} tries`);
+                // Do nothing...
+            }, (e) => {
+                vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e} after ${src.nTries} tries`);
+            });
             Reporting.sendEvent('SWO', 'Source', 'Socket');
             return;
         }
         else if (e.body.type === 'fifo') {
-            this.swoSource = new FifoSWOSource(e.body.path);
+            mySession.swoSource = new FifoSWOSource(e.body.path);
             Reporting.sendEvent('SWO', 'Source', 'FIFO');
         }
         else if (e.body.type === 'file') {
-            this.swoSource = new FileSWOSource(e.body.path);
+            mySession.swoSource = new FileSWOSource(e.body.path);
             Reporting.sendEvent('SWO', 'Source', 'File');
         }
         else if (e.body.type === 'serial') {
-            this.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
+            mySession.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
             Reporting.sendEvent('SWO', 'Source', 'Serial');
         }
 
         this.initializeSWO(e.session, e.body.args);
     }
 
-    private receivedRTTConfigureEvent(e: any) {
+    private receivedRTTConfigureEvent(e: vscode.DebugSessionCustomEvent) {
         if (e.body.type === 'socket') {
             const decoder: RTTCommonDecoderOpts = e.body.decoder;
             if ((decoder.type === 'console') || (decoder.type === 'binary')) {
                 Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
-                this.rttCreateTerninal(decoder as RTTConsoleDecoderOpts);
+                this.rttCreateTerninal(e, decoder as RTTConsoleDecoderOpts);
             } else {
                 Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
                 if (!decoder.ports) {
-                    this.createRTTSource(decoder.tcpPort, decoder.port);
+                    this.createRTTSource(e, decoder.tcpPort, decoder.port);
                 } else {
                     for (let ix = 0; ix < decoder.ports.length; ix = ix + 1) {
                         // Hopefully ports and tcpPorts are a matched set
-                        this.createRTTSource(decoder.tcpPorts[ix], decoder.ports[ix]);
+                        this.createRTTSource(e, decoder.tcpPorts[ix], decoder.ports[ix]);
                     }
                 }
             }
@@ -852,21 +828,28 @@ export class CortexDebugExtension {
 
     // The retured value is a connection source. It may still be in disconnected
     // state.
-    private createRTTSource(tcpPort: string, channel: number): SocketRTTSource {
-        let src = this.rttPortMap[channel];
-        if (!src) {
+    private createRTTSource(e: vscode.DebugSessionCustomEvent, tcpPort: string, channel: number): Promise<SocketRTTSource> {
+        const mySession = CDebugSession.GetSession(e.session);
+        return new Promise((resolve, reject) => {
+            let src = mySession.rttPortMap[channel];
+            if (src) {
+                resolve(src);
+                return;
+            }
             src = new SocketRTTSource(tcpPort, channel);
-            this.rttPortMap[channel] = src;     // Yes, we put this in the list even if start() can fail
+            mySession.rttPortMap[channel] = src;     // Yes, we put this in the list even if start() can fail
+            resolve(src);                       // Yes, it is okay to resolve it even though the connection isn't made yet
             src.start().then(() => {
-                // Nothing to do
-            }).catch ((e) => {
-                vscode.window.showErrorMessage(`Could not open to RTT channel ${channel}, TCP Port ${tcpPort}. ${e}`);
+                // Do nothing
+            }).catch((e) => {
+                vscode.window.showErrorMessage(`Could not connect to RTT TCP port ${tcpPort} ${e}`);
+                reject(e);
             });
-        }
-        return src;
+        });
     }
 
     private cleanupRTTTerminals() {
+        return;     // Maybe no need to remove them. User can do so and they will harmlessly hangaround and get recycled
         this.rttTerminals = this.rttTerminals.filter((t) => {
             if (!t.inUse) {
                 t.dispose();
@@ -876,26 +859,27 @@ export class CortexDebugExtension {
         });
     }
 
-    private async rttCreateTerninal(decoder: RTTConsoleDecoderOpts) {
-        const src = this.createRTTSource(decoder.tcpPort, decoder.port);
-        for (const terminal of this.rttTerminals) {
-            const success = !terminal.inUse && terminal.tryReuse(decoder, src);
-            if (success) {
-                if (vscode.debug.activeDebugConsole) {
-                    vscode.debug.activeDebugConsole.appendLine(
-                        `Reusing RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
-                    );
+    private rttCreateTerninal(e: vscode.DebugSessionCustomEvent, decoder: RTTConsoleDecoderOpts) {
+        this.createRTTSource(e, decoder.tcpPort, decoder.port).then((src: SocketRTTSource) => {
+            for (const terminal of this.rttTerminals) {
+                const success = !terminal.inUse && terminal.tryReuse(decoder, src);
+                if (success) {
+                    if (vscode.debug.activeDebugConsole) {
+                        vscode.debug.activeDebugConsole.appendLine(
+                            `Reusing RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+                        );
+                    }
+                    return;
                 }
-                return;
             }
-        }
-        const newTerminal = new RTTTerminal(this.context, decoder, src);
-        this.rttTerminals.push(newTerminal);
-        if (vscode.debug.activeDebugConsole) {
-            vscode.debug.activeDebugConsole.appendLine(
-                `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
-            );
-        }
+            const newTerminal = new RTTTerminal(this.context, decoder, src);
+            this.rttTerminals.push(newTerminal);
+            if (vscode.debug.activeDebugConsole) {
+                vscode.debug.activeDebugConsole.appendLine(
+                    `Created RTT terminal for channel ${decoder.port} on tcp port ${decoder.tcpPort}`
+                );
+            }
+        });
     }
 
     private terminalClosed(terminal: vscode.Terminal) {
@@ -919,19 +903,21 @@ export class CortexDebugExtension {
     }
 
     private initializeSWO(session: vscode.DebugSession, args) {
-        if (!this.swoSource) {
+        const mySession = CDebugSession.FindSession(session);
+        if (!mySession.swoSource) {
             vscode.window.showErrorMessage('Tried to initialize SWO Decoding without a SWO data source');
             return;
         }
 
-        if (!this.swo) {
-            this.swo = new SWOCore(session, this.swoSource, args, this.context.extensionPath);
+        if (!mySession.swo) {
+            mySession.swo = new SWOCore(session, mySession.swoSource, args, this.context.extensionPath);
         }
     }
 
-    private initializeRTT(args) {
-        if (!this.rtt) {
-            this.rtt = new RTTCore(this.rttPortMap, args, this.context.extensionPath);
+    private initializeRTT(session: vscode.DebugSession, args) {
+        const mySession = CDebugSession.FindSession(session);
+        if (!mySession.rtt) {
+            mySession.rtt = new RTTCore(mySession.rttPortMap, args, this.context.extensionPath);
         }
     }
 }
