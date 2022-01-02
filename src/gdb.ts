@@ -328,7 +328,7 @@ export class GDBDebugSession extends DebugSession {
         });
     }
 
-    private processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, attach: boolean) {
+    private async processLaunchAttachRequest(response: DebugProtocol.LaunchResponse, attach: boolean) {
         if (!fs.existsSync(this.args.executable)) {
             this.sendErrorResponse(
                 response,
@@ -352,7 +352,7 @@ export class GDBDebugSession extends DebugSession {
         this.activeThreadIds.clear();
         // dbgResumeStopCounter = 0;
 
-        if (!this.startGdb(response)) {
+        if (!await this.startGdb(response)) {
             return;
         }
 
@@ -441,7 +441,6 @@ export class GDBDebugSession extends DebugSession {
                             this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
                         commands.push(...attachCommands);
                         commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
-                        commands.push(...this.serverController.swoAndRTTCommands());
                     }
                     else {
                         commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
@@ -449,7 +448,6 @@ export class GDBDebugSession extends DebugSession {
                             this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
                         commands.push(...launchCommands);
                         commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
-                        commands.push(...this.serverController.swoAndRTTCommands());
                     }
                 }
                 catch (err) {
@@ -465,7 +463,9 @@ export class GDBDebugSession extends DebugSession {
                     this.attached = attach;
                 });
 
-                this.disableSendStoppedEvents = (!attach && (this.args.runToEntryPoint || this.args.noDebug || !this.args.breakAfterReset)) ? true : false;
+                this.disableSendStoppedEvents = (!attach && (this.args.runToEntryPoint || this.args.noDebug)) ? true : false;
+                // For now, we unconditionally suppress events because we will recover after we run the post start commands
+                this.disableSendStoppedEvents = true;
                 this.miDebugger.connect(commands).then(() => {
                     this.started = true;
                     this.serverController.debuggerLaunchCompleted();
@@ -507,17 +507,16 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private startComplete(mode: SessionMode) {
+    private startComplete(mode: SessionMode, fakeStop = true) {
         this.disableSendStoppedEvents = false;
         this.pendingBkptResponse = false;
         this.continuing = false;
         this.stopped = this.miDebugger.status !== 'running';        // Set to real status
-        if (!this.args.noDebug && this.stopped) {
+        if (fakeStop && !this.args.noDebug && this.stopped) {
             this.stoppedReason = mode;
             this.stoppedThreadId = this.currentThreadId;
             // We have to fake a continue and then stop, since we may already be in stopped mode in VSCode's view
             this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
-            this.threadsRequestMade = false;
             this.notifyStopped();
         }
     }
@@ -532,7 +531,20 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private finishStartSequence(mode: SessionMode) {
+    private async finishStartSequence(mode: SessionMode) {
+        try {
+            if ((mode === SessionMode.ATTACH) || (mode === SessionMode.LAUNCH)) {
+                const commands = this.serverController.swoAndRTTCommands();
+                for (const cmd of commands) {
+                    await this.miDebugger.sendCommand(cmd);
+                }
+            }
+        }
+        catch (e) {
+            const msg = `SWO/RTT Initializaiton failed: ${e}`;
+            this.handleMsg('stderr', msg);
+            this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
+        }
         if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
             this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
                 let timeout = setTimeout(() => {
@@ -570,15 +582,14 @@ export class GDBDebugSession extends DebugSession {
                     this.args.runToEntryPoint = '';     // Don't try again. It will likely to fail
                 }
                 this.startComplete(mode);
-                this.runPostCommands(mode);
             });
         } else {
-            this.startComplete(mode);
             this.runPostCommands(mode);
+            this.startComplete(mode, (mode === SessionMode.ATTACH) || this.args.breakAfterReset);
         }
     }
 
-    private startGdb(response: DebugProtocol.LaunchResponse): boolean {
+    private async startGdb(response: DebugProtocol.LaunchResponse): Promise<boolean> {
         let gdbExePath = os.platform() !== 'win32' ? `${this.args.toolchainPrefix}-gdb` : `${this.args.toolchainPrefix}-gdb.exe`;
         if (this.args.toolchainPath) {
             gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
@@ -627,7 +638,7 @@ export class GDBDebugSession extends DebugSession {
         this.miDebugger = new MI2(gdbExePath, gdbargs);
         this.miDebugger.debugOutput = this.args.showDevDebugOutput;
         this.initDebugger();
-        this.miDebugger.start(this.args.cwd, this.args.executable, [
+        await this.miDebugger.start(this.args.cwd, this.args.executable, [
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"'
         ]);
@@ -694,12 +705,8 @@ export class GDBDebugSession extends DebugSession {
         return (this.miDebugger.status !== 'running');
     }
 
-    // We wait until a threads request is made by VSCode. Or else, 'continue' will not update VSCode
-    // state and the pause button will not work. As of Dec 2021
-    // Set the following to false before sending a stopped event to VSCode.
-    protected threadsRequestMade = true;
     // Runs a set of commands after a quiet time and is no other gdb transactions are happening
-    protected runPostStartSessionCommands(mode: SessionMode, interval: number = 10): void {
+    protected runPostStartSessionCommands(mode: SessionMode, interval: number = 100): void {
         let commands: string[] = [];
         let shouldContinue = false;
         switch (mode) {
@@ -726,28 +733,25 @@ export class GDBDebugSession extends DebugSession {
             // we are running this command sequence, some results can cause other gdb commands to be generated if
             // running state changes. Can't help it for now
             let curToken = this.miDebugger.getCurrentToken();
+            let nTries = 1;
             const to = setInterval(async () => {
                 const nxtToken = this.miDebugger.getCurrentToken();
-                if (curToken === nxtToken) {
-                    if (!shouldContinue) {
-                        clearInterval(to);
-                    }
-                    if (commands.length > 0) {
-                        try {
-                            await this.miDebugger.postStart(commands);
+                if ((nTries > 20) || (curToken === nxtToken)) {
+                    clearInterval(to);
+                    this.miDebugger.postStart(commands).then(() => {
+                        if (shouldContinue && this.isMIStatusStopped()) {
+                            this.sendContinue();
                         }
-                        catch (e) {
-                            this.handleMsg('log', `Error running postStart commands '${e}'\n`);
+                    }, (e) => {
+                        const msg = `Error running post start/restart/reset commands ${e}`;
+                        this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
+                        if (shouldContinue && this.isMIStatusStopped()) {
+                            this.sendContinue();
                         }
-                        commands = [];
-                    }
-                    if (shouldContinue && this.threadsRequestMade) {
-                        shouldContinue = false;
-                        clearInterval(to);
-                        this.sendContinue();
-                    }
+                    });
                 } else {
                     curToken = nxtToken;
+                    nTries++;
                 }
             }, interval);
         }
@@ -1195,11 +1199,6 @@ export class GDBDebugSession extends DebugSession {
     // https://github.com/microsoft/debug-adapter-protocol/issues/73
     //
     protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): void {
-        if (args === 'reset') {
-            this.sendEvent(new TerminatedEvent());
-            this.sendResponse(response);
-            return;
-        }
         const mode: SessionMode = (args === 'reset') ? SessionMode.RESET : SessionMode.RESTART;
         const restartProcessing = () => {
             const commands = [];
@@ -1212,7 +1211,6 @@ export class GDBDebugSession extends DebugSession {
                 this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
             commands.push(...restartCommands);
             commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
-            commands.push(...this.serverController.swoAndRTTCommands());
 
             this.miDebugger.restart(commands).then((done) => {
                 if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
@@ -1861,7 +1859,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
-        this.threadsRequestMade = true;
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
             response.body = { threads: [] };
             this.sendResponse(response);
@@ -2429,6 +2426,11 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
+            response.body = { variables: [] };
+            this.sendResponse(response);
+            return Promise.resolve();
+        }
         let id: number | string | VariableObject | ExtendedVariable;
 
         /*

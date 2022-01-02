@@ -620,6 +620,20 @@ export class CortexDebugExtension {
             case 'custom-event-session-reset':
                 this.resetOrResartChained(e, 'reset');
                 break;
+            case 'custom-event-popup':
+                const msg = e.body.info?.message;
+                switch (e.body.info?.type) {
+                    case 'warning':
+                        vscode.window.showWarningMessage(msg);
+                        break;
+                    case 'error':
+                        vscode.window.showErrorMessage(msg);
+                        break;
+                    default:
+                        vscode.window.showInformationMessage(msg);
+                        break;
+                }
+                break;
             default:
                 break;
         }
@@ -782,7 +796,7 @@ export class CortexDebugExtension {
                     this.initializeSWO(e.session, e.body.args);
                 }).catch((e) => {
                     if (e === false) {      // Connection refused so, we try again
-                        if (nTries > 10) {
+                        if (nTries > 100) {
                             clearInterval(to);
                             vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} after ${nTries} tries. No port open?`);
                         } else {

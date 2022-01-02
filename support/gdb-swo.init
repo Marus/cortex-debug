@@ -43,7 +43,7 @@ define SWO_Init
     set language c
 
 # Enable trace
-	set *($DCB_BASE + 0x0000C) = (1 << 24)
+#	set *($DCB_BASE + 0x0000C) = (1 << 24)
 
 # TPI->SPPR Pin protocolo register to NRZ
 	set *($TPI_BASE + 0x000F0) = 0x00000002
@@ -51,7 +51,7 @@ define SWO_Init
 # TPI->ACPR = Prescalar. Change the following if your Prescalar calculation is different if your input clock is different##
 	set *($TPI_BASE + 0x00010) = ($cpuFreq / $swoFreq) - 1
 
-# To be able to access rest of the ITM
+# ITM->LAR To be able to access rest of the ITM
 	set *($ITM_BASE + 0x00FB0) = 0xC5ACCE55
 
 # ITM->TCR = ITM_TCR_TraceBusID_Msk | ITM_TCR_SWOENA_Msk | ITM_TCR_SYNCENA_Msk | ITM_TCR_ITMENA_Msk
@@ -61,7 +61,7 @@ define SWO_Init
 	set *($ITM_BASE + 0x00E40) = 0xF
 
 # ITM->TER = bit-mask calculated by Cortex-Debug. You can set it to 0xFFFFFFFF if you like
-	set *($ITM_BASE + 0x00E40) = $swoPortMask
+	set *($ITM_BASE + 0x00E00) = $swoPortMask
 
 # DWT_CTRL
     set *($DWT_BASE) = 0x400003FE

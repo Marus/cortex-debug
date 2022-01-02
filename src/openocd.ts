@@ -44,6 +44,19 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         ];
     }
 
+    // ST/OpenOCD HACK: There are two problems.
+    // ST with their release on Dec 31 2021, released their FW/SW where it no longer works
+    // when any configuring is done after reset. It is more than likely something that
+    // was done with OpenOCD. As such, SWO config. fails. Basically, you cannot write to
+    // memory/registers before at least a fake stepi is done.
+    //
+    // OpenOCD itself has issues that it does not report a proper stack until you do a fake
+    // step. So, in some cases, your PC an the stack don't match resulting in wrong source
+    // being shown.
+    //
+    // OpenOCD provides a hack to synchronze gdb and itself by issuing 'monitor gdb_sync' followed
+    // by a 'stepi' which doesn't really do a stepi but can emulate a break due to a step that
+    // gdb expects
     public launchCommands(): string[] {
         const commands = [
             'interpreter-exec console "monitor reset halt"',
@@ -70,6 +83,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         if (!this.args.runToEntryPoint && this.args.breakAfterReset) {
             // The following will force an sync between gdb and openocd. Maybe we should do this for launch as well
             commands.push(
+                // ST/OpenOCD HACK: See HACK NOTES above
                 'interpreter-exec console "monitor gdb_sync"',
                 'interpreter-exec console "stepi"'
             );
@@ -120,24 +134,29 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     private SWOConfigurationCommands(): string[] {
-        const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
-        const swoFrequency = this.args.swoConfig.swoFrequency;
-        const cpuFrequency = this.args.swoConfig.cpuFrequency;
+        const commands: string[] = [];
 
-        const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-        
-        const source = this.args.swoConfig.source;
-        const swoOutput = (source === 'serial') ? 'external' : ':' +
-            this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
-        const commands: string[] = [
-            `monitor CDSWOConfigure ${cpuFrequency} ${swoFrequency} ${swoOutput}`,
-            `set $cpuFreq = ${cpuFrequency}`,
-            `set $swoFreq = ${swoFrequency}`,
-            `set $swoPortMask = ${portMask}`,
+        if (!this.args.pvtRestartOrReset) {
+            const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
+            const swoFrequency = this.args.swoConfig.swoFrequency;
+            const cpuFrequency = this.args.swoConfig.cpuFrequency;
+            const source = this.args.swoConfig.source;
+            const swoOutput = (source === 'serial') ? 'external' : ':' +
+                this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
+            commands.push(
+                `monitor CDSWOConfigure ${cpuFrequency} ${swoFrequency} ${swoOutput}`,
+                `set $cpuFreq = ${cpuFrequency}`,
+                `set $swoFreq = ${swoFrequency}`,
+                `set $swoPortMask = ${portMask}`
+            );
+        }
+
+        commands.push(
+            // ST/OpenOCD HACK: See HACK NOTES above.
+            'monitor gdb_sync', 'stepi',
             'SWO_Init'
-        ];
-
-        commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+        );
+        // commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
         
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }

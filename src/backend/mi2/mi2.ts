@@ -58,7 +58,7 @@ export class MI2 extends EventEmitter implements IBackend {
             this.process.stdout.on('data', this.stdout.bind(this));
             this.process.stderr.on('data', this.stderr.bind(this));
             this.process.on('exit', this.onExit.bind(this));
-            this.process.on('error', ((err) => { this.emit('launcherror', err); }).bind(this));
+            this.process.on('error', this.onError.bind(this));
             this.process.on('spawn', () => {
                 ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
             });
@@ -68,7 +68,6 @@ export class MI2 extends EventEmitter implements IBackend {
                 this.sendCommand('gdb-version').then((v: MINode) => {
                     const str = this.endCaptureConsole();
                     this.parseVersionInfo(str);
-                    // const asyncPromise = this.sendCommand('gdb-set target-async on', true);
                     const promises = init.map((c) => this.sendCommand(c));
                     Promise.all(promises).then(() => {
                         this.emit('debug-ready');
@@ -81,6 +80,10 @@ export class MI2 extends EventEmitter implements IBackend {
                 reject();
             });
         });
+    }
+
+    private onError(err) {
+        this.emit('launcherror', err);
     }
 
     private startCaptureConsole(): void {
@@ -120,7 +123,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }, reject);
         });
     }
-    
+
     private onExit() {
         console.log('GDB: exited');
         this.exited = true;
@@ -338,7 +341,7 @@ export class MI2 extends EventEmitter implements IBackend {
             // program is in paused state
             try {
                 await this.sendCommand('target-disconnect');
-                this.sendRaw('-gdb-exit');
+                await this.sendRaw('-gdb-exit');
             }
             catch (e) {
                 ServerConsoleLog('target-stop failed with exception:' + e, this.pid);
