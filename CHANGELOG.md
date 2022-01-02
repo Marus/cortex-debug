@@ -2,7 +2,7 @@ ChangeLog
 
 # V1.1.4
 * BugFix: Reset was broken in previous release
-* Reset and Restart should be working now for both chained configurations
+* Reset and Restart should be working now for chained configurations
 * Workaround: ST released there latest update to their IDE and along with it came a new OpenOCD and perhaps FW startup sequence. With that, SWO is broken for all releases. We no longer have permission to set the registers required to make SWO work with OpenOCD. We think we found the issue and a workaround (ugly) that is temporarily in this pre-release.
 * Known problems:
   * If there is NO `breakOnReset` and NO `runToEntryPoint` -- meaning the program starts and continues excuting with NO breakpoints, you may not be able to pause the program. However, if you reset/restart or do a fresh start, then things seem to be fine. This occurs only the first time you run a session after launching VSCode. Does not happen with non-ST devices and even this is new. The cause is unknown.
