@@ -7,6 +7,7 @@ ChangeLog
 * Known problems:
   * If there is NO `breakOnReset` and NO `runToEntryPoint` -- meaning the program starts and continues excuting with NO breakpoints, you may not be able to pause the program. However, if you reset/restart or do a fresh start, then things seem to be fine. This occurs only the first time you run a session after launching VSCode. Does not happen with non-ST devices and even this is new. The cause is unknown.
   * SWO may not work on the first time after VSCode launch. This may be un-related to the problem above.
+  * RTT and SWO are not session specific. Will be fixed in the next rev
 
 # V1.1.3
 * Registers xPSR and CONTROL now have fields shown in the tooltip. This is in the VARIABLES Window
