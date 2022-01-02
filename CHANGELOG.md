@@ -1,7 +1,8 @@
 ChangeLog
 
-# V1.1.4
+# V1.1.5
 * Fixed issue with with SWO (or RTT) not working the first time. It was a race condition where we were trying to connect too fast. Now we re-try
+* Fixed SWO and RTT are now session aware. As in, you can have multiple RTT/SWO windows from different debug sessions.
 # V1.1.4
 * BugFix: Reset was broken in previous release
 * Reset and Restart should be working now for chained configurations
