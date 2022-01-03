@@ -92,8 +92,9 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.registers.refresh', this.registersRefresh.bind(this)),
             vscode.commands.registerCommand('cortex-debug.registers.regHexModeTurnOn', this.registersNaturalMode.bind(this, false)),
             vscode.commands.registerCommand('cortex-debug.registers.regHexModeTurnOff', this.registersNaturalMode.bind(this, true)),
-            vscode.commands.registerCommand('cortex-debug.registers.varHexModeTurnOn', this.variablesNaturalMode.bind(this, false)),
-            vscode.commands.registerCommand('cortex-debug.registers.varHexModeTurnOff', this.variablesNaturalMode.bind(this, true)),
+            vscode.commands.registerCommand('cortex-debug.varHexModeTurnOn', this.variablesNaturalMode.bind(this, false)),
+            vscode.commands.registerCommand('cortex-debug.varHexModeTurnOff', this.variablesNaturalMode.bind(this, true)),
+            vscode.commands.registerCommand('cortex-debug.toggleVariableHexFormat', this.toggleVariablesHexMode.bind(this)),
 
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
@@ -163,8 +164,8 @@ export class CortexDebugExtension {
     }
 
     private settingsChanged(e: vscode.ConfigurationChangeEvent) {
-        const msg = 'New format will take effect next time the program pauses';
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.REGISTER_DISPLAY_MODE}`)) {
+            const msg = 'Cortex-Debug: New format will take effect next time the program pauses';
             const session = CortexDebugExtension.getActiveCDSession();
             if (session) {
                 const mySession = CDebugSession.FindSession(session);
@@ -178,15 +179,24 @@ export class CortexDebugExtension {
             }
         }
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`)) {
-            const session = CortexDebugExtension.getActiveCDSession();
-            if (session) {
-                const mySession = CDebugSession.FindSession(session);
-                const config = vscode.workspace.getConfiguration('cortex-debug');
-                const isHex = config.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true) ? false : true;
-                session.customRequest('set-var-format', { hex: isHex });
-                if (mySession.status === 'running') {
-                    vscode.window.showInformationMessage(msg);
+            const config = vscode.workspace.getConfiguration('cortex-debug');
+            const isHex = config.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true) ? false : true;
+            let foundStopped = false;
+            for (const s of CDebugSession.CurrentSessions) {
+                try {
+                    // Session may not have actually started according to VSCode but we know of it
+                    s.session.customRequest('set-var-format', { hex: isHex });
+                    if (s.status === 'stopped') {
+                        foundStopped = true;
+                    }
                 }
+                catch (e) {
+                }
+            }
+            if (!foundStopped) {
+                const fmt = isHex ? 'hex' : 'dec';
+                const msg = `Cortex-Debug: Variables window format "${fmt}" will take effect next time the program pauses`;
+                vscode.window.showInformationMessage(msg);
             }
         }
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.SERVER_LOG_FILE_NAME}`)) {
@@ -489,6 +499,21 @@ export class CortexDebugExtension {
         // with it later
         const config = vscode.workspace.getConfiguration('cortex-debug');
 
+        vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`, newVal);
+        try {
+            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal);
+        }
+        catch (e) {
+            console.error(e);
+        }
+    }
+
+    private toggleVariablesHexMode() {
+        // 'cxt' contains the treeItem on which this menu was invoked. Maybe we can do something
+        // with it later
+        const config = vscode.workspace.getConfiguration('cortex-debug');
+        const curVal = config.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true);
+        const newVal = !curVal;
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`, newVal);
         try {
             config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal);

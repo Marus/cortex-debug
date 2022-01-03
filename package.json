@@ -382,7 +382,7 @@
                 }
             },
             {
-                "command": "cortex-debug.registers.varHexModeTurnOff",
+                "command": "cortex-debug.varHexModeTurnOff",
                 "title": "Enable Natural mode",
                 "icon": {
                     "light": "images/hex-on-light.svg",
@@ -390,7 +390,7 @@
                 }
             },
             {
-                "command": "cortex-debug.registers.varHexModeTurnOn",
+                "command": "cortex-debug.varHexModeTurnOn",
                 "title": "Enable Hex mode",
                 "icon": {
                     "light": "images/hex-off-light.svg",
@@ -430,7 +430,19 @@
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.setForceDisassembly",
                 "title": "Set Force Disassembly"
+            },
+            {
+                "category": "Cortex-Debug",
+                "command": "cortex-debug.toggleVariableHexFormat",
+                "title": "Toggle hex display in Variables window"
             }
+        ],
+        "keybindings": [
+            {
+                "command": "cortex-debug.toggleVariableHexFormat",
+                "key": "ctrl+shift+x",
+                "when": "debugType == cortex-debug"
+            }            
         ],
         "languages": [
             {
@@ -2421,6 +2433,10 @@
                 {
                     "command": "cortex-debug.resetDevice",
                     "when": "debugType == cortex-debug"
+                },
+                {
+                    "command": "cortex-debug.toggleVariableHexFormat",
+                    "when": "debugType == cortex-debug"
                 }
             ],
             "debug/toolBar": [
@@ -2531,12 +2547,12 @@
             ],
             "debug/variables/context": [
                 {
-                    "command": "cortex-debug.registers.varHexModeTurnOn",
+                    "command": "cortex-debug.varHexModeTurnOn",
                     "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
                     "group": "navigation"
                 },
                 {
-                    "command": "cortex-debug.registers.varHexModeTurnOff",
+                    "command": "cortex-debug.varHexModeTurnOff",
                     "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped && !cortex-debug:variableUseNaturalFormat",
                     "group": "navigation"
                 }

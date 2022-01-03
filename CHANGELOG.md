@@ -1,7 +1,8 @@
 ChangeLog
 
 # V1.1.5
-* Fixed issue with with SWO (or RTT) not working the first time. It was a race condition where we were trying to connect too fast. Now we re-try
+* Feature: There now a command (default key-binding Ctrl+Shift+X) to toggle Hex display in the Variables window. Does not affect the Registers window (which may be going away) as it has its own command and button. You can find this command in the "Command Palette" as "Cortex-Debug: Toggle hex display in Variables window"
+* Fixed issue with with SWO (or RTT) not working the first time. It was a race condition where we were trying to connect too fast. Now we re-try. The max timeout is 5 mins.
 * Fixed SWO and RTT are now session aware. As in, you can have multiple RTT/SWO windows from different debug sessions.
 # V1.1.4
 * BugFix: Reset was broken in previous release

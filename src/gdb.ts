@@ -850,7 +850,7 @@ export class GDBDebugSession extends DebugSession {
             this.miDebugger.sendCommand(cmd);
         }
         if (this.stopped) {
-            // We area already stopped but this fakes a stop again which referhes all debugger windows
+            // We area already stopped but this fakes a stop again which refreshes all debugger windows
             // We don't have a way to only referesh portions. It is all or nothing, there is a bit
             // of screen flashing and causes changes in GUI contexts (stack for instance)
             this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
@@ -2090,7 +2090,7 @@ export class GDBDebugSession extends DebugSession {
 
         try {
             const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
-            const fmt = this.args.registerUseNaturalFormat ? 'N' : 'x';
+            const fmt = this.args.variableUseNaturalFormat ? 'N' : 'x';
             // --thread --frame does not work properly
             this.miDebugger.sendCommand(`thread-select ${threadId}`);
             this.miDebugger.sendCommand(`stack-select-frame ${frameId}`);
