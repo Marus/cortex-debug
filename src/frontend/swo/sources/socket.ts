@@ -4,6 +4,7 @@ import * as net from 'net';
 import { parseHostPort } from '../../../common';
 import * as vscode from 'vscode';
 
+const TimerInterval = 250;
 export class SocketSWOSource extends EventEmitter implements SWORTTSource {
     protected client: net.Socket = null;
     public connected: boolean = false;
@@ -15,7 +16,8 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
         super();
     }
 
-    public start(maxTries = 200): Promise<void> {
+    // Default wait time is about 5 minutes
+    public start(maxTries = (1000 * 60 * 5) / TimerInterval): Promise<void> {
         const obj = parseHostPort(this.tcpPort);
         return new Promise((resolve, reject) => {
             this.timer = setInterval(() => {
@@ -24,7 +26,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                     this.timer = undefined;
                     this.connected = true;
                     this.emit('connected');
-                    console.log(`Connected SWO/RTT port ${this.tcpPort}, count = ${this.nTries}\n`);
+                    console.log(`Connected SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}\n`);
                     resolve();
                 });
                 this.client.on('data', (buffer) => {
@@ -44,13 +46,15 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                         // We expect 'ECONNREFUSED' if the server has not yet started.
                         if (this.nTries > maxTries) {
                             (e as any).message = `Error: Failed to connect to port ${this.tcpPort} ${code}`;
-                            console.log(`Failed ECONNREFUSED SWO/RTT port ${this.tcpPort}, count = ${this.nTries}`);
+                            console.log(`Failed ECONNREFUSED SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
                             this.connError = e;
                             this.emit('error', e);
                             reject(e);
                             this.dispose();
                         } else {
-                            console.log(`Trying SWO/RTT port ${this.tcpPort}, count = ${this.nTries}`);
+                            if ((this.nTries % 10) === 0) {
+                                console.log(`Trying SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
+                            }
                             this.nTries++;
                             this.disposeClient();
                         }
@@ -64,7 +68,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                         this.dispose();
                     }
                 });
-            }, 100);
+            }, TimerInterval);
         });
     }
 
