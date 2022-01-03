@@ -165,17 +165,18 @@ export class CortexDebugExtension {
 
     private settingsChanged(e: vscode.ConfigurationChangeEvent) {
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.REGISTER_DISPLAY_MODE}`)) {
-            const msg = 'Cortex-Debug: New format will take effect next time the program pauses';
-            const session = CortexDebugExtension.getActiveCDSession();
-            if (session) {
-                const mySession = CDebugSession.FindSession(session);
-                if (mySession.status === 'running') {
-                    vscode.window.showInformationMessage(msg);
-                } else {
-                    if (this.isDebugging(session)) {
-                        this.registerProvider.refresh(session);
-                    }
+            let count = 0;
+            for (const s of CDebugSession.CurrentSessions) {
+                // Session may not have actually started according to VSCode but we know of it
+                if ((s.status === 'stopped') && this.isDebugging(s.session)) {
+                    this.registerProvider.refresh(s.session);
+                    count++;
                 }
+            }
+            if (count !== CDebugSession.CurrentSessions.length) {
+                const partial = count > 0 ? 'Some sessions updated. ' : '';
+                const msg = `Cortex-Debug: ${partial}New format will take effect next time the session pauses`;
+                vscode.window.showInformationMessage(msg);
             }
         }
         if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`)) {
@@ -185,9 +186,11 @@ export class CortexDebugExtension {
             for (const s of CDebugSession.CurrentSessions) {
                 try {
                     // Session may not have actually started according to VSCode but we know of it
-                    s.session.customRequest('set-var-format', { hex: isHex });
-                    if (s.status === 'stopped') {
-                        foundStopped = true;
+                    if (this.isDebugging(s.session)) {
+                        s.session.customRequest('set-var-format', { hex: isHex });
+                        if (s.status === 'stopped') {
+                            foundStopped = true;
+                        }
                     }
                 }
                 catch (e) {
@@ -195,7 +198,7 @@ export class CortexDebugExtension {
             }
             if (!foundStopped) {
                 const fmt = isHex ? 'hex' : 'dec';
-                const msg = `Cortex-Debug: Variables window format "${fmt}" will take effect next time the program pauses`;
+                const msg = `Cortex-Debug: Variables window format "${fmt}" will take effect next time the session pauses`;
                 vscode.window.showInformationMessage(msg);
             }
         }
