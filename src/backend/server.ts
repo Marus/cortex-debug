@@ -188,10 +188,13 @@ export class GDBServer extends EventEmitter {
                 this.consoleSocket = null;
             });
             socket.on  ('error', (e) => {
+                // Can happen if extension exited while we are still running. Rare, generally a bug in VSCode or frontend
                 const msg = `Error: unexpected socket error ${e}. Please report this problem`;
                 this.emit('output', msg + '\n');
                 console.error(msg);
-                resolve();
+                if (!this.consoleSocket) {  // We were already connected
+                    reject(e);
+                }
             });
 
             // It is possible that the server is not ready
@@ -213,9 +216,12 @@ export class GDBServer extends EventEmitter {
     }
 
     private disconnectConsole() {
-        if (this.consoleSocket) {
-            this.consoleSocket.destroy();
-            this.consoleSocket = null;
+        try {
+            if (this.consoleSocket) {
+                this.consoleSocket.destroy();
+                this.consoleSocket = null;
+            }
         }
+        catch (e) {}
     }
 }

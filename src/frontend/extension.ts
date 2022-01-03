@@ -568,23 +568,20 @@ export class CortexDebugExtension {
                 this.registerProvider.debugSessionTerminated(session);
             }
             this.peripheralProvider.debugSessionTerminated(session);
-            if (mySession.swo) {
+            if (mySession?.swo) {
                 mySession.swo.debugSessionTerminated();
             }
-            if (mySession.swoSource) {
+            if (mySession?.swoSource) {
                 mySession.swoSource.dispose();
             }
-            if (mySession.rtt) {
+            if (mySession?.rtt) {
                 mySession.rtt.debugSessionTerminated();
             }
-            for (const term of this.rttTerminals) {
-                // All though they mark themselves as unused when socket closes, that won't happen
-                // if a connection never happened.
-                term.inUse = false;
-            }
-            // tslint:disable-next-line: forin
-            for (const ch in mySession.rttPortMap) {
-                mySession.rttPortMap[ch].dispose();
+            if (mySession?.rttPortMap) {
+                for (const ch of Object.keys(mySession.rttPortMap)) {
+                    mySession.rttPortMap[ch].dispose();
+                }
+                mySession.rttPortMap = {};
             }
 
             this.clearAdapterOutputChannel = true;
@@ -664,12 +661,16 @@ export class CortexDebugExtension {
         for (const launch of unique) {
             if (launch.enabled && (launch.waitOnEvent === evType) && launch.name) {
                 const childOptions: vscode.DebugSessionOptions = {
-                    parentSession            : e.session,
-                    lifecycleManagedByParent : launch.lifecycleManagedByParent,
                     consoleMode              : vscode.DebugConsoleMode.Separate,
                     noDebug                  : adapterArgs.noDebug,
                     compact                  : false
                 };
+                if (launch.lifecycleManagedByParent) {
+                    // VSCode 'lifecycleManagedByParent' does not work as documented. The fact that there
+                    // is a parent means it is managed and 'lifecycleManagedByParent' if ignored.
+                    childOptions.lifecycleManagedByParent = true;
+                    childOptions.parentSession = e.session;
+                }
                 delay += Math.max(launch.delayMs || 0, 0);
                 const child = new CDebugChainedSessionItem(cDbgParent, launch, childOptions);
                 const folder = this.getWsFolder(launch.folder, e.session.workspaceFolder);
@@ -701,16 +702,17 @@ export class CortexDebugExtension {
                 }
             }, false);
 
+            // According to current scheme, there should not be any orphaned children.
             while (orphanList.length > 0) {
                 const s = orphanList.pop();
-                s.moveToRoot();
+                s.moveToRoot();     // Or should we move to our parent. TODO: fix for when we are going to have grand children
             }
 
             while (deathList.length > 0) {
                 const s = deathList.pop();
                 s.session.customRequest('set-stop-debugging-type', e.body.info).then(() => {
                 }, (reason) => {
-                    console.log(`session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
+                    vscode.window.showErrorMessage(`Cortex-Debug: Bug? session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
                 });
             }
             // Following does not work. Apparently, a customRequest cannot be sent probaboy because this is being called
