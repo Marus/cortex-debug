@@ -1,7 +1,7 @@
 | Attribute | Applies To | Description |
 | --------- | ---------- | ----------- |
 | breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` if `runToEntryPoint` is used.
-| cmsisPack | Common | Path to a CMSIS-Pack file. Use to add extra device support.
+| chainedConfigurations | Common | (unknown)
 | cwd | Common | Directory to run commands from
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
 | device | Common | Target Device Identifier
@@ -9,6 +9,7 @@
 | gdbPath | Common | This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.
 | graphConfig | Common | (unknown)
 | interface | Common | Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes.
+| loadFiles | Common | (unknown)
 | numberOfProcessors | Common | Number of processors/cores in the target device.
 | overrideAttachCommands | Common | You can use this to property to override the commands that are normally executed as part of attaching to a running target. In most cases it is preferable to use preAttachCommands and postAttachCommands to customize the GDB attach sequence.
 | overrideGDBServerStartedRegex | Common | You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.
@@ -22,6 +23,9 @@
 | preAttachCommands | Common | Additional GDB Commands to be executed at the start of the main attach sequence (immediately after attaching to target).
 | preLaunchCommands | Common | Additional GDB Commands to be executed at the start of the main launch sequence (immediately after attaching to target).
 | preRestartCommands | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution).
+| pvtMyConfigFromParent | Common | ????
+| pvtParent | Common | ????
+| pvtPorts | Common | ????
 | pvtRestartOrReset | Common | ????
 | request | Common | ????
 | rtos | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be ChibiOS, eCos, embKernel, FreeRTOS, mqx, nuttx, ThreadX, uCOS-III, or auto.
@@ -50,6 +54,7 @@
 | openOCDPreConfigLaunchCommands | OpenOCD Specific | OpenOCD command(s) before configuration files are loaded (-c options)
 | searchDir | OpenOCD Specific | OpenOCD directories to search for config files and scripts (-s option). If no search directories are specified, it defaults to the configured cwd.
 | boardId | PyOCD Specific | PyOCD Board Identifier. Needed if multiple compatible boards are connected.
+| cmsisPack | PyOCD Specific | Path to a CMSIS-Pack file. Use to add extra device support.
 | cpu | QEMU Specific | CPU Type Selection - used for QEMU server type
 | machine | QEMU Specific | Machine Type Selection - used for QEMU server type
 | stm32cubeprogrammer | ST-LINK GDB server specific | This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here.
