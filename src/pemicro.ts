@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, createPortName, SWOConfigureEvent } from './common';
+import { GDBServerController, ConfigurationArguments, createPortName, SWOConfigureEvent, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -38,8 +38,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor _reset"',
-            'target-download',
+            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor _reset"']),
             'interpreter-exec console "monitor _reset"',
             'enable-pretty-printing'
         ];
@@ -101,7 +100,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         }
 
         if (this.args.interface === 'jtag') {
-            serverargs.push(`-usejtag`);
+            serverargs.push('-usejtag');
         }
 
         if (this.args.configFiles) {

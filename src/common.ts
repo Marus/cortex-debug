@@ -211,6 +211,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     gdbPath: string;
     serverArgs: string[];
     device: string;
+    loadFiles: string[];
     debuggerArgs: string[];
     preLaunchCommands: string[];
     postLaunchCommands: string[];
@@ -313,6 +314,22 @@ export interface GDBServerController extends EventEmitter {
     serverLaunchCompleted(): Promise<void> | void;
     debuggerLaunchStarted(): void;
     debuggerLaunchCompleted(): void;
+}
+
+export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds: string[]) {
+    if (Array.isArray(config?.loadFiles)) {
+        if (config.loadFiles.length === 0) {
+            return [];
+        } else {
+            const ret = [...preLoadCmds];
+            for (const f of config.loadFiles) {
+                const tmp = f.replace('\\', '/');
+                ret.push(`file-exec-file "${tmp}"`, 'target-download');
+            }
+            return ret;
+        }
+    }
+    return [...preLoadCmds, 'target-download'];
 }
 
 export class RTTServerHelper {

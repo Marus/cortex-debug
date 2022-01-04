@@ -1,7 +1,7 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
 import {
     GDBServerController, ConfigurationArguments, SWOConfigureEvent,
-    calculatePortMask, createPortName, RTTServerHelper
+    calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands
 } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
@@ -59,8 +59,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     // gdb expects
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor reset halt"',
-            'target-download',
+            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset halt"']),
             'interpreter-exec console "monitor reset halt"',
             'enable-pretty-printing'
         ];

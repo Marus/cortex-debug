@@ -1,6 +1,6 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { GDBServerController, ConfigurationArguments, calculatePortMask,
-    createPortName, SWOConfigureEvent, parseHexOrDecInt, RTTServerHelper } from './common';
+    createPortName, SWOConfigureEvent, parseHexOrDecInt, RTTServerHelper, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -56,8 +56,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public launchCommands(): string[] {
         const commands = [
             'interpreter-exec console "monitor halt"',
-            'interpreter-exec console "monitor reset"',
-            'target-download',
+            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
             'enable-pretty-printing'
         ];

@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask } from './common';
+import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -60,7 +60,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
     public launchCommands(): string[] {
         const commands = [
-            'target-download',
+            ...genDownloadCommands(this.args, []),
             'interpreter-exec console "SoftwareReset"',
             'enable-pretty-printing'
         ];

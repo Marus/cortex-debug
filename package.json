@@ -663,6 +663,100 @@
                                 "maximum": 9,
                                 "default": 0
                             },
+                            "chainedConfigurations": {
+                                "properties": {
+                                    "enabled": {
+                                        "default": true,
+                                        "description": "Enable/Disable entire set of chained configurations",
+                                        "type": "boolean"
+                                    },
+                                    "detached": {
+                                        "default": false,
+                                        "description": "Related or independent server sessions. Set to true for servers like 'JLink'. Inherited by children",
+                                        "type": "boolean"
+                                    },
+                                    "lifecycleManagedByParent": {
+                                        "default": true,
+                                        "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root. Inherited by children",
+                                        "type": "boolean"
+                                    },
+                                    "waitOnEvent": {
+                                        "enum": [
+                                            "postStart",
+                                            "postInit"
+                                        ],
+                                        "default": "postInit",
+                                        "description": "Event to wait for. 'postStart' means wait for gdb-server connecting, 'postInit' is after init commands are completed by gdb. Inherited by children",
+                                        "type": "string"
+                                    },
+                                    "delayMs": {
+                                        "type": "number",
+                                        "description": "Default delay in milliseconds for a certain amount of milliseconds to begin launch. Inherited by children",
+                                        "multipleOf": 1,
+                                        "minimum": 0,
+                                        "default": 5
+                                    },
+                                    "launches": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "name": {
+                                                    "default": "",
+                                                    "description": "Name of launch configuration",
+                                                    "type": "string"
+                                                },
+                                                "folder": {
+                                                    "default": "",
+                                                    "description": "Folder to use for this configuration. Where .vscode/launch.json exists. Default is same folder as parent. Use either the full path name or the base-name of the folder",
+                                                    "type": "string"
+                                                },
+                                                "enabled": {
+                                                    "default": true,
+                                                    "description": "Enable/Disable this configuration",
+                                                    "type": "boolean"
+                                                },
+                                                "detached": {
+                                                    "default": false,
+                                                    "description": "Related or independent server sessions. Set to true for servers like 'JLink'",
+                                                    "type": "boolean"
+                                                },
+                                                "waitOnEvent": {
+                                                    "enum": [
+                                                        "postStart",
+                                                        "postInit"
+                                                    ],
+                                                    "default": "postInit",
+                                                    "description": "Wait for an event. 'postStart' means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                                    "type": "string"
+                                                },
+                                                "delayMs": {
+                                                    "type": "number",
+                                                    "description": "Delay in milliseconds for a certain amount of milliseconds to begin launch",
+                                                    "multipleOf": 1,
+                                                    "minimum": 0,
+                                                    "default": 5
+                                                },
+                                                "lifecycleManagedByParent": {
+                                                    "default": true,
+                                                    "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root",
+                                                    "type": "boolean"
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "default": {
+                                    "enabled": true,
+                                    "waitOnEvent": "postInit",
+                                    "lifeCycleShared": true,
+                                    "launches": [
+                                        {
+                                            "name": "use EXACT name of chained configuration to launch",
+                                            "folder": "use full path or folder basename or leave empty"
+                                        }
+                                    ]
+                                }
+                            },
                             "graphConfig": {
                                 "items": {
                                     "oneOf": [
@@ -1486,6 +1580,12 @@
                                 "description": "Path of executable",
                                 "type": "string"
                             },
+                            "loadFiles": {
+                                "desctiption": "List of files (hex/bin/elf files) to load/program instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "type": "array",
+                                "items": "string",
+                                "default": null
+                            },
                             "gdbTarget": {
                                 "default": null,
                                 "description": "For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
@@ -1526,12 +1626,12 @@
                                     },
                                     "detached": {
                                         "default": false,
-                                        "description": "Default: Related or independent sessions. Set to true for servers like 'JLink'",
+                                        "description": "Related or independent server sessions. Set to true for servers like 'JLink'. Inherited by children",
                                         "type": "boolean"
                                     },
                                     "lifecycleManagedByParent": {
                                         "default": true,
-                                        "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root",
+                                        "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root. Inherited by children",
                                         "type": "boolean"
                                     },
                                     "waitOnEvent": {
@@ -1540,12 +1640,12 @@
                                             "postInit"
                                         ],
                                         "default": "postInit",
-                                        "description": "Default event to wait for. 'postStart' means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                        "description": "Event to wait for. 'postStart' means wait for gdb-server connecting, 'postInit' is after init commands are completed by gdb. Inherited by children",
                                         "type": "string"
                                     },
                                     "delayMs": {
                                         "type": "number",
-                                        "description": "default delay in milliseconds for a certain amount of milliseconds to begin launch",
+                                        "description": "Default delay in milliseconds for a certain amount of milliseconds to begin launch. Inherited by children",
                                         "multipleOf": 1,
                                         "minimum": 0,
                                         "default": 5
@@ -1566,12 +1666,12 @@
                                                 },
                                                 "enabled": {
                                                     "default": true,
-                                                    "description": "Enable/Disable entire set of chained configurations",
+                                                    "description": "Enable/Disable this configuration",
                                                     "type": "boolean"
                                                 },
                                                 "detached": {
                                                     "default": false,
-                                                    "description": "Default: Related or independent sessions. Set to true for servers like 'JLink'",
+                                                    "description": "Related or independent server sessions. Set to true for servers like 'JLink'",
                                                     "type": "boolean"
                                                 },
                                                 "waitOnEvent": {
@@ -1585,7 +1685,7 @@
                                                 },
                                                 "delayMs": {
                                                     "type": "number",
-                                                    "description": "delay in milliseconds for a certain amount of milliseconds to begin launch",
+                                                    "description": "Delay in milliseconds for a certain amount of milliseconds to begin launch",
                                                     "multipleOf": 1,
                                                     "minimum": 0,
                                                     "default": 5
@@ -1606,7 +1706,7 @@
                                     "launches": [
                                         {
                                             "name": "use EXACT name of chained configuration to launch",
-                                            "folder": "use full path or folder basename"
+                                            "folder": "use full path or folder basename or leave empty"
                                         }
                                     ]
                                 }

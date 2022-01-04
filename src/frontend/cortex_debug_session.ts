@@ -10,7 +10,10 @@ export class CDebugSession {
     public rtt: RTTCore = null;
     public swoSource: SWORTTSource = null;
     public rttPortMap: { [channel: number]: SocketRTTSource} = {};
-    public status: 'started' | 'stopped' | 'running' | 'none' = 'none';
+    // Status can be 'none' before the session actually starts but this object
+    // may have been created before that actually happens due to SWO, RTT, chained
+    // launches, etc
+    public status: 'started' | 'stopped' | 'running' | 'exited' | 'none' = 'none';
 
     protected parent: CDebugSession = null;
     protected children: CDebugSession[] = [];
@@ -78,6 +81,7 @@ export class CDebugSession {
     public static RemoveSession(session: vscode.DebugSession) {
         const s = CDebugSession.FindSession(session);
         if (s) {
+            s.status = 'exited';
             s.remove();
             CDebugSession.CurrentSessions = CDebugSession.CurrentSessions.filter((s) => s.session.id !== session.id);
         } else {
@@ -101,6 +105,7 @@ export class CDebugSession {
     // Call this method after session actually started. It inserts new session into the session tree
     public static NewSessionStarted(session: vscode.DebugSession): CDebugSession {
         const newSession = CDebugSession.GetSession(session);       // May have already in the global list
+        newSession.status = 'started';
         if (session.parentSession && (session.parentSession.type === 'cortex-debug')) {
             const parent = CDebugSession.FindSession(session.parentSession);
             if (!parent) {

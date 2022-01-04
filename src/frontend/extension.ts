@@ -533,8 +533,6 @@ export class CortexDebugExtension {
         const newSession = CDebugSession.NewSessionStarted(session);
 
         this.functionSymbols = null;
-        newSession.status = 'started';
-
         session.customRequest('get-arguments').then((args) => {
             newSession.config = args;
             let svdfile = args.svdFile;

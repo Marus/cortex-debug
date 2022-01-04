@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, createPortName } from './common';
+import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, createPortName, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -39,8 +39,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
 
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor reset halt"',
-            'target-download',
+            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset halt"']),
             'interpreter-exec console "monitor reset halt"',
             'enable-pretty-printing'
         ];
