@@ -1332,7 +1332,6 @@ export class GDBDebugSession extends DebugSession {
 
         // console.log(info);
         if (type !== 'hit') {
-            // console.log('Local variable watchpoing going out of scope');
             if (info.outOfBandRecord && info.outOfBandRecord[0] && info.outOfBandRecord[0].output) {
                 for (const item of info.outOfBandRecord[0].output) {
                     if (item[0].endsWith('wpnum')) {
@@ -1349,11 +1348,9 @@ export class GDBDebugSession extends DebugSession {
                                 }
                             },
                             type: 'event',
-                            // Don't think next items matter, Keep linters happy
-                            event: 'removed',
+                            event: 'breakpoint',
                             seq: 0
                         };
-                        // console.log(`Watchpoint ${id} deleted`);
                         this.dataBreakpointMap.delete(id);
                         this.sendEvent(ev);
                         break;

@@ -592,8 +592,7 @@ export class MI2 extends EventEmitter implements IBackend {
             const aType = breakpoint.accessType === 'read' ? '-r' : (breakpoint.accessType === 'readWrite' ? '-a' : '');
             this.sendCommand(`break-watch ${aType} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
-                    const bkptNum = parseInt(result.result('bkpt.number'));
-                    const line = result.result('bkpt.line');
+                    const bkptNum = parseInt(result.result('hw-awpt.number') || result.result('wpt.number'));
                     breakpoint.number = bkptNum;
 
                     if (breakpoint.condition) {
