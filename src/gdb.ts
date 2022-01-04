@@ -179,6 +179,7 @@ export class GDBDebugSession extends DebugSession {
         this.miDebugger.on('step-out-end', this.handleBreak.bind(this));
         this.miDebugger.on('signal-stop', this.handlePause.bind(this));
         this.miDebugger.on('running', this.handleRunning.bind(this));
+        this.miDebugger.on('continue-failed', this.handleContinueFailed.bind(this));
         this.miDebugger.on('thread-created', this.handleThreadCreated.bind(this));
         this.miDebugger.on('thread-exited', this.handleThreadExited.bind(this));
         this.miDebugger.on('thread-selected', this.handleThreadSelected.bind(this));
@@ -1322,6 +1323,19 @@ export class GDBDebugSession extends DebugSession {
         this.continuing = false;
         this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
         this.sendEvent(new CustomContinuedEvent(this.currentThreadId, true));
+    }
+
+    protected handleContinueFailed(info: MINode) {
+        // Should we call exec-interrupt here? See #561
+        // Once we get this, from here on, nothing really works with gdb.
+        const msg = 'Error: A serious error occured with gdb, unable to continue or interrupt We may not be able to recover ' +
+           'from this point. You can try continuing or ending sesson. Must address root cause though';
+        this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
+        this.handleMsg('stderr', msg + '\n');
+        this.continuing = false;
+        this.stopped = true;
+        this.stoppedReason = 'continue failed';
+        this.notifyStoppedConditional();
     }
 
     protected findPausedThread(info: MINode) {

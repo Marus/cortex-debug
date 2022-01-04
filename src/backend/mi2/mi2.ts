@@ -5,6 +5,7 @@ import { parseMI, MINode } from '../mi_parse';
 import { posix } from 'path';
 import * as nativePath from 'path';
 import { ServerConsoleLog } from '../server';
+import { commands } from 'vscode';
 const path = posix;
 
 export function escape(str: string) {
@@ -41,6 +42,7 @@ export class MI2 extends EventEmitter implements IBackend {
     public gdbMinorVersion: number | undefined;
     public status: 'running' | 'stopped' | 'none' = 'none';
     public pid: number = -1;
+    protected lastContinueSeqId = -1;
 
     constructor(public application: string, public args: string[]) {
         super();
@@ -208,8 +210,14 @@ export class MI2 extends EventEmitter implements IBackend {
                         this.handlers[parsed.token](parsed);
                         delete this.handlers[parsed.token];
                         handled = true;
+                    } else if (parsed.token === this.lastContinueSeqId) {
+                        // This is the situation where the last continue actually fails but is initially reported
+                        // having worked. See if we can gracefully handle it. See #561
+                        this.status = 'stopped';
+                        this.log('stderr', `GDB Error? continue command is reported as error after initially succeeding. token '${parsed.token}'`);
+                        this.emit('continue-failed', parsed);
                     } else {
-                        this.log('stderr', `Internal Error? Multiple results or no handler for query token '${parsed.token}''`);
+                        this.log('stderr', `Internal Error? Multiple results or no handler for query token '${parsed.token}'`);
                     }
                 }
                 if (!handled && parsed.resultRecords && parsed.resultRecords.resultClass === 'error') {
@@ -346,7 +354,7 @@ export class MI2 extends EventEmitter implements IBackend {
             // program is in paused state
             try {
                 await this.sendCommand('target-disconnect');
-                await this.sendRaw('-gdb-exit');
+                this.sendRaw('-gdb-exit');
             }
             catch (e) {
                 ServerConsoleLog('target-stop failed with exception:' + e, this.pid);
@@ -873,6 +881,9 @@ export class MI2 extends EventEmitter implements IBackend {
                     resolve(node);
                 }
             };
+            if (command.startsWith('exec-continue')) {
+                this.lastContinueSeqId = sel;
+            }
             this.sendRaw(sel + '-' + command);
         });
     }
