@@ -1159,12 +1159,14 @@ export class GDBDebugSession extends DebugSession {
             return true;
         }
         catch (e) {
-            this.handleMsg('log', `Could not delete all breakpoints. ${e}\n`)
+            this.handleMsg('log', `Could not delete all breakpoints. ${e}\n`);
             return false;
         }
     }
 
-    protected async disconnectRequest2(response: DebugProtocol.DisconnectResponse | DebugProtocol.Response, args: DebugProtocol.DisconnectArguments): void {
+    protected async disconnectRequest2(
+        response: DebugProtocol.DisconnectResponse | DebugProtocol.Response,
+        args: DebugProtocol.DisconnectArguments): Promise<void> {
         this.isDisconnecting = true;
         ServerConsoleLog('Begin disconnectRequest', this.miDebugger?.pid);
         let bkptsDeleted = false;
