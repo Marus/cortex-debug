@@ -554,7 +554,7 @@ export class GDBDebugSession extends DebugSession {
         if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
             this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
                 let timeout = setTimeout(() => {
-                    this.handleMsg('stderr', `Run to '${this.args.runToEntryPoint}' timed out. Trying to pause program`);
+                    this.handleMsg('stderr', `Run to '${this.args.runToEntryPoint}' timed out. Trying to pause program\n`);
                     this.miDebugger.interrupt();
                     timeout = null;
                 }, 5000);
@@ -1153,13 +1153,24 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    protected disconnectRequest2(response: DebugProtocol.DisconnectResponse | DebugProtocol.Response, args: DebugProtocol.DisconnectArguments): void {
+    protected async tryDeleteBreakpoints(): Promise<boolean> {
+        try {
+            await this.miDebugger.sendCommand('break-delete');
+            return true;
+        }
+        catch (e) {
+            this.handleMsg('log', `Could not delete all breakpoints. ${e}\n`)
+            return false;
+        }
+    }
+
+    protected async disconnectRequest2(response: DebugProtocol.DisconnectResponse | DebugProtocol.Response, args: DebugProtocol.DisconnectArguments): void {
         this.isDisconnecting = true;
         ServerConsoleLog('Begin disconnectRequest', this.miDebugger?.pid);
         let bkptsDeleted = false;
         const doDisconnectProcessing = () => {
             if (!bkptsDeleted) {
-                this.miDebugger.sendCommand('break-delete');
+                this.tryDeleteBreakpoints();
             }
             this.disableSendStoppedEvents = false;
             this.attached = false;
@@ -1179,14 +1190,36 @@ export class GDBDebugSession extends DebugSession {
         if (this.miDebugger) {
             if (this.stopped) {
                 bkptsDeleted = true;
-                this.miDebugger.sendCommand('break-delete');
+                this.tryDeleteBreakpoints();
             }
             let deferred = false;
-            if (/*(this.attached && !this.stopped) || */ args.terminateDebuggee || args.suspendDebuggee) {
+            if (args.terminateDebuggee || args.suspendDebuggee) {
                 if (!this.stopped) {
                     deferred = true;
-                    this.miDebugger.once('generic-stopped', doDisconnectProcessing);
-                    this.miDebugger.sendCommand('exec-interrupt');
+                    // Many ways things can fail. See issue #561
+                    // exec-interrupt can fail because gdb is wedged and does not respond with proper status ever
+                    // use a timeout and try to end session anyways.
+                    let to = setTimeout(() => {
+                        if (to) {
+                            to = null;
+                            this.handleMsg('log', 'GDB never responded to an interrupt request. Trying to end session anyways\n');
+                            doDisconnectProcessing();
+                        }
+                    }, 250);
+                    this.miDebugger.once('generic-stopped', () => {
+                        if (to) {
+                            clearTimeout(to);
+                            to = null;
+                            doDisconnectProcessing();
+                        }
+                    });
+                    try {
+                        await this.miDebugger.sendCommand('exec-interrupt');
+                    }
+                    catch (e) {
+                        // The timeout will take care of it...
+                        this.handleMsg('log', `Could not interrupt program. Trying to end session anyways ${e}\n`);
+                    }
                 }
             } else if (this.stopped) {
                 this.sendContinue(true);

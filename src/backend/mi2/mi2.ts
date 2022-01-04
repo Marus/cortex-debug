@@ -70,7 +70,6 @@ export class MI2 extends EventEmitter implements IBackend {
                     this.parseVersionInfo(str);
                     const promises = init.map((c) => this.sendCommand(c));
                     Promise.all(promises).then(() => {
-                        this.emit('debug-ready');
                         resolve();
                     }, reject);
                 }, () => {
@@ -230,10 +229,16 @@ export class MI2 extends EventEmitter implements IBackend {
                                 this.emit('exec-async-output', parsed);
                                 if (record.asyncClass === 'running') {
                                     this.status = 'running';
+                                    if (this.debugOutput) {
+                                        this.log('log', `mi2.status = ${this.status}`);
+                                    }
                                     this.emit('running', parsed);
                                 }
                                 else if (record.asyncClass === 'stopped') {
                                     this.status = 'stopped';
+                                    if (this.debugOutput) {
+                                        this.log('log', `mi2.status = ${this.status}`);
+                                    }
                                     const reason = parsed.record('reason');
                                     if (trace) {
                                         this.log('stderr', 'stop: ' + reason);
