@@ -4,6 +4,7 @@ ChangeLog
 * Feature: New property `loadFiles` for `launch.json` which can provide a set of files that need to be programmed instead of the default `executable`. This list can even be empty in which case, nothing will be programmed. The files can be elf, bin or hex files.
 * Bug fix: More of an enhancement, avoid using TCP port numbers allocated by the first server for other servers launched during chained launching.
 * Chaned launch configurations are now possible where the primary launch type is an `attach`
+* Bugfix: Issue #561 more graceful handling when gdb is wedged
 
 # V1.1.5
 * Feature: There now a command (default key-binding Ctrl+Shift+X) to toggle Hex display in the Variables window. Does not affect the Registers window (which may be going away) as it has its own command and button. You can find this command in the "Command Palette" as "Cortex-Debug: Toggle hex display in Variables window"
