@@ -1,5 +1,5 @@
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName } from './common';
+import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName, genDownloadCommands } from './common';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -112,8 +112,8 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor reset"',
-            'target-download',
+            'interpreter-exec console "monitor halt"',
+            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
             'enable-pretty-printing'
         ];
@@ -122,7 +122,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public attachCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor"',
+            'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
         return commands;
