@@ -4,17 +4,22 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
 
 * High: In progreess, near completetion. Better support for multi-core and multi-session debugging in a single instance of the IDE
 * Low: `Set Value` in `Watch` Window
-* Medium: Support full disassembly using the new Debug Protocol perhaps.
-  * Source with assembly
-  * More than one function or a virtual display for the entire executable
+* **In Progress**: Medium: Support full disassembly using the new Debug Protocol perhaps.
+  * Source with assembly -- Not yet available from MS but on their roadmap
+  * Done: More than one function or a virtual display for the entire executable
+  * Instruction level step/next
+  * Seamless, full disassembly, but on demand
+  * Registers (in Variables Window), Call stack, source code, Disassembly can all be in sync -- takes a bit of window arrangement but not hard.
+  * We can say goodbye to our version of Disassembly soon
+  * Performance is a bit worrisome. May need an option to turn off the feature completely. Didn't see an issue unless you start Disassembly and even after that but not sure on slower computers.
 * Medium: Logpoints: See #542
 * Super Low: New memory window using MS Hex Editor
   * They messed up the UX where it inteferes with a debug session repeately. They do not appear willing to revert back to the way they had it which was much nicer. We could fork or include it but it is way too much work.
-* Done: Low: Add registers to `Variables` Window
+* **Done**: Low: Add registers to `Variables` Window
   * Chance to deprecate `Registers` window
   * Ability to setValue
   * IMPORTANT: View Registers for each thread/frame in the Stack Window. Currently only shows for one context whereas it should be tracking the current frame in the stack window
-  * Con: False: We thought we will Will lose the ability to highlight changed values. Not true, there is some indication as to what changed but it evaporates after a while. Maybe a good thing.
+  * We thought we will lose the ability to highlight changed values. Not true, there is some indication as to what changed but it evaporates after a while. Maybe a good thing, looks better than what we had
 
 # Other
 
