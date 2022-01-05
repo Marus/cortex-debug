@@ -1,4 +1,4 @@
-import { Breakpoint, DataBreakpoint, IBackend, Stack, Variable, VariableObject, MIError } from '../backend';
+import { Breakpoint, DataBreakpoint, IBackend, Stack, Variable, VariableObject, MIError, InstructionBreakpoint } from '../backend';
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
@@ -552,6 +552,31 @@ export class MI2 extends EventEmitter implements IBackend {
                         const file = result.result('bkpt.fullname') || result.record('bkpt.file');
                         breakpoint.file = file ? file : undefined;
                     }
+                    resolve(breakpoint);
+                }
+                else {
+                    reject(new MIError(result.result('msg') || 'Internal error', `Setting breakpoint at ${bkptArgs}`));
+                }
+            }, reject);
+        });
+    }
+
+    public addInstrBreakPoint(breakpoint: InstructionBreakpoint): Promise<InstructionBreakpoint> {
+        if (trace) {
+            this.log('stderr', 'addBreakPoint');
+        }
+        return new Promise((resolve, reject) => {
+            let bkptArgs = '';
+            if (breakpoint.condition) {
+                bkptArgs += `-c "${breakpoint.condition}" `;
+            }
+
+            bkptArgs += '*' + escape(breakpoint.instructionReference);
+            
+            this.sendCommand(`break-insert ${bkptArgs}`).then((result) => {
+                if (result.resultRecords.resultClass === 'done') {
+                    const bkptNum = parseInt(result.result('bkpt.number'));
+                    breakpoint.number = bkptNum;
                     resolve(breakpoint);
                 }
                 else {

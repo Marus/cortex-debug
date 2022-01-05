@@ -11,6 +11,11 @@ export interface Breakpoint {
     number?: number;
 }
 
+export interface InstructionBreakpoint extends DebugProtocol.InstructionBreakpoint {
+    address: number;
+    number: number;
+}
+
 export interface DataBreakpoint {
     exp: string;
     accessType: 'read' | 'write' | 'readWrite';

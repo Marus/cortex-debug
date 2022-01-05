@@ -6,7 +6,7 @@ import {
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
-import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint } from './backend/backend';
+import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint, InstructionBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
     AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin
@@ -153,6 +153,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected functionBreakpoints = [];
     protected breakpointMap: Map<string, Breakpoint[]> = new Map();
+    protected instrBreakpointMap: Map<number, InstructionBreakpoint[]> = new Map();
     protected dataBreakpointMap: Map<number, DataBreakpoint> = new Map();
     protected fileExistsCache: Map<string, boolean> = new Map();
 
@@ -199,6 +200,9 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportSuspendDebuggee = true;
         response.body.supportTerminateDebuggee = true;
         response.body.supportsDataBreakpoints = true;
+        response.body.supportsDisassembleRequest = true;
+        response.body.supportsSteppingGranularity = true;
+        response.body.supportsInstructionBreakpoints = true;
         this.sendResponse(response);
     }
 
@@ -821,7 +825,7 @@ export class GDBDebugSession extends DebugSession {
                 this.readRegisterListRequest(response);
                 break;
             case 'disassemble':
-                this.disassembleRequest(response, args);
+                this.customDisassembleRequest(response, args);
                 break;
             case 'execute-command':
                 let cmd = args['command'] as string;
@@ -875,8 +879,101 @@ export class GDBDebugSession extends DebugSession {
         ];
         return cmds;
     }
+    
+    private async getProtocolDisassembly(
+        startAddress: number, length: number): Promise<DebugProtocol.DisassembledInstruction[]> {
+        const endAddress = startAddress + length;
+        const instructions: DebugProtocol.DisassembledInstruction[] = [];
 
-    protected async disassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {
+        try {
+            // tslint:disable-next-line:max-line-length
+            const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress, 8)} -e ${hexFormat(endAddress, 8)} -- 4`);
+            const asmInsns = result.result('asm_insns');
+            for (const srcLineVal of asmInsns) {
+                const props = srcLineVal[1];
+                const file = MINode.valueOf(props, 'file');
+                const path = MINode.valueOf(props, 'fullname');
+                let line = MINode.valueOf(props, 'line');
+                const insns = MINode.valueOf(props, 'line_asm_insn');
+                let src = path ? new Source(file || path, path) : undefined;
+                for (const ri of insns) {
+                    const address = MINode.valueOf(ri, 'address');
+                    const functionName = MINode.valueOf(ri, 'func-name');
+                    const offset = parseInt(MINode.valueOf(ri, 'offset'));
+                    const ins = MINode.valueOf(ri, 'inst');
+                    const opcodes = MINode.valueOf(ri, 'opcodes');
+
+                    const instr: DebugProtocol.DisassembledInstruction = {
+                        address: address,
+                        instruction: ins,
+                        // VSCode doesn't do anything with 'symbol'
+                        symbol: undefined, // functionName ? `<${functionName} + ${offset === undefined ? '??' : offset}>` : undefined,
+                        instructionBytes: opcodes,
+                    };
+                    if (src && line) {
+                        // Only give it once
+                        instr.location = src;
+                        instr.line = line;
+                        line = undefined;
+                        src = undefined;
+                    }
+                    instructions.push(instr);
+                }
+            }
+        }
+        catch (e) {
+            throw e;
+        }
+        return instructions;
+    }
+
+    protected async disassembleRequest(
+        response: DebugProtocol.DisassembleResponse,
+        args: DebugProtocol.DisassembleArguments,
+        request?: DebugProtocol.Request): Promise<void> {
+        const baseAddress = parseInt(args.memoryReference);
+        const offset = args.instructionOffset || 0;
+        const count = args.instructionCount;
+
+        try {
+            const instrs = await this.getProtocolDisassembly(baseAddress + offset, count);
+            response.body = {
+                instructions: instrs
+            };
+            this.sendResponse(response);
+        }
+        catch (e) {
+            this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
+        }
+
+        /*
+
+        const isHex = args.memoryReference.startsWith('0x');
+        const pad = isHex ? args.memoryReference.length - 2 : args.memoryReference.length;       
+        const loc = this.createSource(this._runtime.sourceFile);
+        let lastLine = -1;
+        const instructions = this._runtime.disassemble(baseAddress + offset, count).map(instruction => {
+            const address = instruction.address.toString(isHex ? 16 : 10).padStart(pad, '0');
+            const instr: DebugProtocol.DisassembledInstruction = {
+                address: isHex ? `0x${address}` : `${address}`,
+                instruction: instruction.instruction
+            };
+            // if instruction's source starts on a new line add the source to instruction
+            if (instruction.line !== undefined && lastLine !== instruction.line) {
+                lastLine = instruction.line;
+                instr.location = loc;
+                instr.line = this.convertDebuggerLineToClient(instruction.line);
+            }
+            return instr;
+        });
+        response.body = {
+            instructions: instructions
+        };
+        this.sendResponse(response);
+        */
+    }
+
+    protected async customDisassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {
         if (args.function) {
             try {
                 const funcInfo: SymbolInformation = await this.getDisassemblyForFunction(args.function, args.file);
@@ -1792,6 +1889,72 @@ export class GDBDebugSession extends DebugSession {
         }, intervalTime);
     }
 
+    protected setInstructionBreakpointsRequest(response: DebugProtocol.SetInstructionBreakpointsResponse, args: DebugProtocol.SetInstructionBreakpointsArguments, request?: DebugProtocol.Request): void {
+        if ((args.breakpoints.length === 0) && (this.instrBreakpointMap.size === 0)) {
+            this.sendResponse(response);
+            return;
+        }
+        const createBreakpoints = async (shouldContinue) => {
+            const currentBreakpoints = Array.from(this.instrBreakpointMap.keys());
+
+            try {
+                this.disableSendStoppedEvents = false;
+                await this.miDebugger.removeBreakpoints(currentBreakpoints);
+
+                const all: Array<Promise<InstructionBreakpoint | MIError>> = [];
+                args.breakpoints.forEach((brk) => {
+                    const addr = parseInt(brk.instructionReference) + brk.offset || 0;
+                    const bpt: InstructionBreakpoint = { ...brk, number: -1, address: addr };
+                    all.push(this.miDebugger.addInstrBreakPoint(bpt).catch((err: MIError) => err));
+                });
+
+                const brkpoints = await Promise.all(all);
+
+                response.body = {
+                    breakpoints: brkpoints.map((bp) => {
+                        if (bp instanceof MIError) {
+                            return {
+                                verified: false,
+                                message: bp.message
+                            } as DebugProtocol.Breakpoint;
+                        }
+
+                        this.instrBreakpointMap[bp.number] = bp;
+                        return {
+                            id: bp.number,
+                            verified: true
+                        };
+                    })
+                };
+
+                this.sendResponse(response);
+                this.pendingBkptResponse = false;
+            }
+            catch (msg) {
+                this.sendErrorResponse(response, 9, msg.toString());
+                this.pendingBkptResponse = false;
+            }
+
+            if (shouldContinue) {
+                this.sendContinue(true);
+            }
+        };
+
+        const process = async () => {
+            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
+                await createBreakpoints(false);
+            }
+            else {
+                this.disableSendStoppedEvents = true;
+                this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
+                this.miDebugger.sendCommand('exec-interrupt');
+            }
+        };
+
+        if (this.debugReady) { process(); }
+        else { this.miDebugger.once('debug-ready', process); }
+    }
+
     protected isVarRefGlobalOrStatic(varRef: number, id: any) {
         if (varRef === GLOBAL_HANDLE_ID) {
             return true;
@@ -2063,7 +2226,9 @@ export class GDBDebugSession extends DebugSession {
                         }
                     }
                     else {
-                        ret.push(new StackFrame(stackId, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0));
+                        const sf = new MyStackFrame(stackId, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0);
+                        sf.instructionPointerReference = element.address;
+                        ret.push(sf);
                     }
                 }
                 catch (e) {
@@ -2660,22 +2825,26 @@ export class GDBDebugSession extends DebugSession {
 
     protected async stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): Promise<void> {
         try {
-            let assemblyMode = this.forceDisassembly;
+            let assemblyMode = args.granularity === 'instruction';
             if (!assemblyMode) {
-                const frame = await this.miDebugger.getFrame(args.threadId, 0);
-                assemblyMode = !(await this.checkFileExists(frame.file));
+                // Following will be depracated
+                assemblyMode = this.forceDisassembly;
+                if (!assemblyMode) {
+                    const frame = await this.miDebugger.getFrame(args.threadId, 0);
+                    assemblyMode = !(await this.checkFileExists(frame.file));
 
-                if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
-                    const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                    if (symbolInfo) {
-                        let url: string;
-                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                    if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
+                        const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
+                        if (symbolInfo) {
+                            let url: string;
+                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                            }
+                            else {
+                                url = `disassembly:///${symbolInfo.name}.cdasm`;
+                            }
+                            if (url === this.activeEditorPath) { assemblyMode = true; }
                         }
-                        else {
-                            url = `disassembly:///${symbolInfo.name}.cdasm`;
-                        }
-                        if (url === this.activeEditorPath) { assemblyMode = true; }
                     }
                 }
             }
@@ -2698,22 +2867,26 @@ export class GDBDebugSession extends DebugSession {
 
     protected async nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): Promise<void> {
         try {
-            let assemblyMode = this.forceDisassembly;
+            let assemblyMode = args.granularity === 'instruction';
             if (!assemblyMode) {
-                const frame = await this.miDebugger.getFrame(args.threadId, 0);
-                assemblyMode = !(await this.checkFileExists(frame.file));
+                // Following will be depracated
+                assemblyMode = this.forceDisassembly;
+                if (!assemblyMode) {
+                    const frame = await this.miDebugger.getFrame(args.threadId, 0);
+                    assemblyMode = !(await this.checkFileExists(frame.file));
 
-                if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
-                    const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                    if (symbolInfo) {
-                        let url: string;
-                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                    if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
+                        const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
+                        if (symbolInfo) {
+                            let url: string;
+                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                            }
+                            else {
+                                url = `disassembly:///${symbolInfo.name}.cdasm`;
+                            }
+                            if (url === this.activeEditorPath) { assemblyMode = true; }
                         }
-                        else {
-                            url = `disassembly:///${symbolInfo.name}.cdasm`;
-                        }
-                        if (url === this.activeEditorPath) { assemblyMode = true; }
                     }
                 }
             }
@@ -2908,3 +3081,10 @@ function prettyStringArray(strings) {
 }
 
 DebugSession.run(GDBDebugSession);
+
+export class MyStackFrame extends StackFrame {
+    public instructionPointerReference: string;
+    constructor(i: number, nm: string, src?: Source, ln?: number, col?: number) {
+        super(i, nm, src, ln, col)
+    }
+}
