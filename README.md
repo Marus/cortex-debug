@@ -8,7 +8,9 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Initial support for STMicroelectronic's ST-LINK GDB server (no SWO support yet)
 * Partial support textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
 * Initial support for the Black Magic Probe (This has not been as heavily tested; SWO can only be captured via a serial port)
-* Cortex Core Register Viewer
+* Experimental, coming in V1.2+: Multi-core and multi-session debugging. See https://github.com/Marus/cortex-debug/wiki/Multi-core-debugging
+* Experimental, coming in V1.2+: Disassembly of source code available along with instruction level breakpoints and stepping. See https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging
+* Cortex Core Register Viewer (Integrated into Variables Window in V1.2+)
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
 * Peripheral Register Viewer (Defined through standard SVD file)
 * SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single percision floating point values)
