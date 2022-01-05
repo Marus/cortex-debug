@@ -2,7 +2,7 @@
 
 Low, medium, high are importance/usefulness. But they sometimes represent *bang-for-the-buck* as well where the effort could be high vs. relative usefulness. Some of there are here because there is new functionality in VSCode APIs
 
-* High: In progreess, near completetion. Better support for multi-core and multi-session debugging in a single instance of the IDE
+* **In progreess**: High: near completetion. Better support for multi-core and multi-session debugging in a single instance of the IDE
 * Low: `Set Value` in `Watch` Window
 * **In Progress**: Medium: Support full disassembly using the new Debug Protocol perhaps.
   * Source with assembly -- Not yet available from MS but on their roadmap
