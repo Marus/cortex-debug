@@ -14,8 +14,8 @@ import {
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
+import { GdbDisassembler } from './backend/disasm';
 import * as os from 'os';
-import * as net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as hasbin from 'hasbin';
@@ -121,9 +121,10 @@ export class GDBDebugSession extends DebugSession {
     protected switchCWD: string;
     protected started: boolean;
     protected debugReady: boolean;
-    protected miDebugger: MI2;
+    public miDebugger: MI2;
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
+    protected disassember: GdbDisassembler = new GdbDisassembler(this);
     // currentThreadId is the currently selected thread or where execution has stopped. It not very
     // meaningful since the current thread id in gdb can change in many ways (when you use a --thread
     // option on certain commands) 
@@ -879,23 +880,22 @@ export class GDBDebugSession extends DebugSession {
         ];
         return cmds;
     }
-    
+
     private async getProtocolDisassembly(
-        startAddress: number, length: number): Promise<DebugProtocol.DisassembledInstruction[]> {
-        const endAddress = startAddress + length;
+        startAddress: number, endAddress: number): Promise<DebugProtocol.DisassembledInstruction[]> {
         const instructions: DebugProtocol.DisassembledInstruction[] = [];
 
         try {
             // tslint:disable-next-line:max-line-length
-            const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress, 8)} -e ${hexFormat(endAddress, 8)} -- 4`);
+            const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress, 8)} -e ${hexFormat(endAddress, 8)} -- 5`);
             const asmInsns = result.result('asm_insns');
             for (const srcLineVal of asmInsns) {
                 const props = srcLineVal[1];
                 const file = MINode.valueOf(props, 'file');
-                const path = MINode.valueOf(props, 'fullname');
-                let line = MINode.valueOf(props, 'line');
+                const fsPath = MINode.valueOf(props, 'fullname');
+                const line = MINode.valueOf(props, 'line');
                 const insns = MINode.valueOf(props, 'line_asm_insn');
-                let src = path ? new Source(file || path, path) : undefined;
+                const src = fsPath ? new Source(path.basename(fsPath || file), fsPath || file) : undefined;
                 for (const ri of insns) {
                     const address = MINode.valueOf(ri, 'address');
                     const functionName = MINode.valueOf(ri, 'func-name');
@@ -907,16 +907,11 @@ export class GDBDebugSession extends DebugSession {
                         address: address,
                         instruction: ins,
                         // VSCode doesn't do anything with 'symbol'
-                        symbol: undefined, // functionName ? `<${functionName} + ${offset === undefined ? '??' : offset}>` : undefined,
+                        symbol: functionName ? `<${functionName}+${offset === undefined ? '??' : offset}>` : undefined,
                         instructionBytes: opcodes,
+                        location: src,
+                        line: line
                     };
-                    if (src && line) {
-                        // Only give it once
-                        instr.location = src;
-                        instr.line = line;
-                        line = undefined;
-                        src = undefined;
-                    }
                     instructions.push(instr);
                 }
             }
@@ -931,15 +926,93 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): Promise<void> {
+        try {
+            this.disassember.disassembleRequest(response, args, request);
+        }
+        catch (e) {
+            this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
+        }
+        return;
         const baseAddress = parseInt(args.memoryReference);
-        const offset = args.instructionOffset || 0;
-        const count = args.instructionCount;
+        const offset = args.offset || 0;
+        const instrOffset = args.instructionOffset || 0;
+        console.log('disassembleRequest:');
+        console.log(args);
 
         try {
-            const instrs = await this.getProtocolDisassembly(baseAddress + offset, count);
-            response.body = {
-                instructions: instrs
-            };
+            // What VSCode gives us can be a very random address, offset is usually a negative number
+            // start address can be in the middle of an instruction. Glad we are not doing x86 instrs.
+            // Here, all instrs are 2 or 4 byte aligned. Assume 4 bytes per instr. even though quite
+            // a few uses 2 instructions
+            let startAddr = Math.max(0, baseAddress + offset + (instrOffset * 4));
+            while ((startAddr % 4) !== 0) {
+                startAddr--;
+            }
+            const endAddr = startAddr + args.instructionCount * 4;
+            const trueStart = Math.min(baseAddress, startAddr);
+            console.log(`disassembleRequest: request adjusted to disassemble start-addr=${hexFormat(trueStart, 8)}, end-addr=${hexFormat(endAddr, 8)}`);
+
+            const startAddrStr = '0x' + baseAddress.toString(16).padStart(8, '0');
+            let found = false;
+            let instrs: DebugProtocol.DisassembledInstruction[] = [];
+            let foundIx = -1;
+            for (let iter = 0; !found && (iter < 2); iter++) {
+                instrs = await this.getProtocolDisassembly(trueStart, endAddr);
+                response.body = {
+                    instructions: instrs
+                };
+                const len = instrs.length;
+                foundIx = 0;
+                for (; foundIx < len; foundIx++) {
+                    if (instrs[foundIx].address === startAddrStr) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    foundIx = -1;
+                    startAddr -= 2;
+                    if (startAddr < 0) {
+                        break;
+                    }
+                }
+            }
+            if (found) {
+                // Spec says must have exactly `count` instructions. Kinda harsh
+                if (instrs.length < args.instructionCount) {
+                    this.handleMsg('log', `Needed to read ${args.instructionCount} instructions @${hexFormat(startAddr, 8)} but only got ${instrs.length}. Padding rest\n`);
+                    this.handleMsg('log', 'Dissassembly Request from VSCode: ' + JSON.stringify(args) + '\n');
+                    let tmp = parseInt(instrs[instrs.length - 1].address);
+                    while (instrs.length < args.instructionCount) {
+                        tmp += 4;
+                        const dummy: DebugProtocol.DisassembledInstruction = {
+                            address: '0x' + hexFormat(tmp, 8),
+                            instruction: 'dummy'
+                        };
+                        instrs.push(dummy);
+                    }
+                }
+                while (instrs.length > args.instructionCount) {
+                    // Lop off whichever side has more instructions first. I know don't need a loop but, keeping it simple
+                    const numFront = foundIx;
+                    const numBack = instrs.length - foundIx - 1;
+                    const extra = instrs.length - args.instructionCount;
+                    const chop = Math.min(extra, Math.abs(numFront - numBack));
+                    if (chop === 0) {
+                        instrs = instrs.slice(Math.floor(extra / 2));
+                        instrs = instrs.slice(0, instrs.length - (extra - Math.floor(extra / 2)));
+                    } else if (numFront < numBack) {
+                        instrs = instrs.slice(0, instrs.length - chop);     // Remove from end
+                    } else {
+                        instrs = instrs.slice(chop);                        // Reove from front
+                    }
+                }
+                response.body.instructions = instrs;
+            }
+            if (!found) {
+                response.body.instructions = [];
+                throw new Error('Could not disassemble at this address ' + JSON.stringify(args));
+            }
             this.sendResponse(response);
         }
         catch (e) {
@@ -1405,7 +1478,7 @@ export class GDBDebugSession extends DebugSession {
         this.sendEvent(event);
     }
 
-    protected handleMsg(type: string, msg: string) {
+    public handleMsg(type: string, msg: string) {
         if (this.suppressRadixMsgs && (type === 'console') && /radix/.test(msg)) {
             // Filter out unneccessary radix change messages
             return;
@@ -1889,7 +1962,9 @@ export class GDBDebugSession extends DebugSession {
         }, intervalTime);
     }
 
-    protected setInstructionBreakpointsRequest(response: DebugProtocol.SetInstructionBreakpointsResponse, args: DebugProtocol.SetInstructionBreakpointsArguments, request?: DebugProtocol.Request): void {
+    protected setInstructionBreakpointsRequest(
+        response: DebugProtocol.SetInstructionBreakpointsResponse,
+        args: DebugProtocol.SetInstructionBreakpointsArguments, request?: DebugProtocol.Request): void {
         if ((args.breakpoints.length === 0) && (this.instrBreakpointMap.size === 0)) {
             this.sendResponse(response);
             return;
@@ -2226,13 +2301,15 @@ export class GDBDebugSession extends DebugSession {
                         }
                     }
                     else {
-                        const sf = new MyStackFrame(stackId, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0);
+                        const sf = new StackFrame(stackId, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0);
                         sf.instructionPointerReference = element.address;
                         ret.push(sf);
                     }
                 }
                 catch (e) {
-                    ret.push(new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0));
+                    const sf = new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0);
+                    sf.instructionPointerReference = element.address;
+                    ret.push(sf);
                 }
             }
 
@@ -3081,10 +3158,3 @@ function prettyStringArray(strings) {
 }
 
 DebugSession.run(GDBDebugSession);
-
-export class MyStackFrame extends StackFrame {
-    public instructionPointerReference: string;
-    constructor(i: number, nm: string, src?: Source, ln?: number, col?: number) {
-        super(i, nm, src, ln, col)
-    }
-}
