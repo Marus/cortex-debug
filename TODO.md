@@ -5,7 +5,7 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
 * **In progreess**: High: near completetion. Better support for multi-core and multi-session debugging in a single instance of the IDE
 * Low: `Set Value` in `Watch` Window
 * **In Progress**: Medium: Support full disassembly using the new Debug Protocol perhaps.
-  * Source with assembly -- Not yet available from MS but on their roadmap
+  * Source with assembly -- Available but UI could be better. You can toggle source embedding on/off.
   * Done: More than one function or a virtual display for the entire executable
   * Instruction level step/next
   * Seamless, full disassembly, but on demand
