@@ -85,7 +85,6 @@ export class GDBServer extends EventEmitter {
                 }
             }
             else { // For servers like BMP that are always running directly on the probe
-                // this.connectToConsole();
                 resolve(true);
             }
         });
@@ -115,6 +114,11 @@ export class GDBServer extends EventEmitter {
     }
 
     private onExit(code, signal) {
+        if (this.initReject) {
+            this.initReject(new Error('Server exited unexpectedly before establishing connection'));
+            this.initReject = null;
+            this.initResolve = null;
+        }
         ServerConsoleLog(`GDBServer: exited ${code} ${signal}`);
         this.process = null;
         if (this.exitTimeout) {
