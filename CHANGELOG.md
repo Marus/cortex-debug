@@ -3,10 +3,10 @@ ChangeLog
 # V1.1.7
 * Feature: New Disassembly mechanism. **While debugging** you can right click in the editor or the `CALL STACK` window on any thread/frame and you will see the Disassembly window show up. It is helpful to have the original source code and the Disassembly window side-by-side. THe Call-stack, Register in the Variable Window, C/C++ source code and Disassembly all track. Note that the Disassmebly window is managed by Microsoft/VSCode.
   * You can set breakpoints in the Disassembly window
-  * If the focus is in the Disassembly window, then you can single step at an instruction level
-  * No, source is not embedded in the Disassembly window but is visible side-by-side if you care to arrange your windows that say. Interleavig source and assembly is on their Roadmap though.
+  * If the focus is in the Disassembly window, then you can single step at an instruction level and follow long in both source and assembly. Some scrolling issues may be visible in the window that does not have focus.
   * See https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging
   * https://github.com/Marus/cortex-debug/wiki/images/disassemble.gif
+  * Looking for feedback
 
 # V1.1.6
 * Feature: New property `loadFiles` for `launch.json` which can provide a set of files that need to be programmed instead of the default `executable`. This list can even be empty in which case, nothing will be programmed. The files can be elf, bin or hex files. This touched every gdb-server and we tested with JLink, openocd, pyocd, stlink and stutil -- those are the ones available to us.
