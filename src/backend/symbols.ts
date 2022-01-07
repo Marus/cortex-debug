@@ -30,6 +30,33 @@ const SCOPE_MAP: { [id: string]: SymbolScope } = {
     '!': SymbolScope.Both
 };
 
+export class MemoryRegion {
+    public vmaEnd: number;
+    public lmaEnd: number;
+    constructor(
+        public name: string,
+        public size: number,
+        public vmaStart: number,   // Virtual memory address
+        public lmaStart: number,   // Load memory address
+        public attrs: string[]
+    ) {
+        this.vmaEnd = this.vmaStart + this.size;
+        this.lmaEnd = this.lmaStart + this.size;
+    }
+
+    public inVmaRegion(addr: number) {
+        return (addr >= this.vmaStart) && (addr <= this.vmaEnd);
+    }
+
+    public inLmaRegion(addr: number) {
+        return (addr >= this.lmaStart) && (addr <= this.lmaEnd);
+    }
+
+    public inRegion(addr: number) {
+        return this.inVmaRegion(addr) || this.inLmaRegion(addr);
+    }
+}
+
 export class SymbolTable {
     private allSymbols: SymbolInformation[] = [];
 
@@ -46,11 +73,35 @@ export class SymbolTable {
     private staticVars: SymbolInformation[] = [];
     private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
     private fileMap: {[key: string]: string[]} = {};                    // basename of a file to a potential list of aliases we found
+    public memoryRegions: MemoryRegion[] = [];
 
     constructor(private gdb: MI2, private toolchainPath: string, private toolchainPrefix: string, private executable: string) {
     }
 
-    private loadSymbolsFromGdb(): Promise<boolean> {
+    private async loadSymbolsFromGdb(): Promise<boolean> {
+        try {
+            this.gdb.startCaptureConsole();
+            await this.gdb.sendCommand('interpreter-exec console "info sources"');
+            const str = this.gdb.endCaptureConsole();
+            const lines = str.split(/[\r\n]+/g);
+            for (let line of lines) {
+                line = line.trim();
+                if ((line === '') || line.endsWith(':')) {
+                    continue;
+                }
+                const files = line.split(/\,\s/g);
+                for (const f of files) {
+                    this.addPathVariations(f);
+                }
+            }
+        }
+        catch {
+            console.error('info sources failed');
+            return false;
+        }
+    }
+
+    private loadSymbolsFromGdbUnused(): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             if (!this.gdb || this.gdb.gdbMajorVersion < 9) {
                 return resolve(false);
@@ -75,20 +126,35 @@ export class SymbolTable {
                     for (const file of dbgInfo) {
                         const fullname = getProp(file, 'fullname');
                         const filename = getProp(file, 'filename');
+                        if (fullname) {
+                            this.addPathVariations(fullname);
+                        }
+                        if (filename && (filename !== fullname)) {
+                            this.addPathVariations(filename);
+                        }
+                        // We just need to know what source files are intresting. Don't really care what
+                        // symbols are in there. Super expensive way to find out
+                        /*
                         const symbols = getProp(file, 'symbols');
                         if (symbols && (symbols.length > 0) && (filename || fullname)) {
                             for (const sym of symbols) {
                                 const name = getProp(sym, 'name');
                                 const description = getProp(sym, 'description') as string;
+                                // maybe a more sophisticated way is needed to determine a static
                                 const isStatic = description && description.startsWith('static');
-                                if (fullname) {
-                                    this.addToFileMap(fullname, name);
-                                }
-                                if (filename && (filename !== fullname)) {
-                                    this.addToFileMap(filename, name);
+                                if (isStatic) {
+                                    if (fullname) {
+                                        this.addPathVariations(fullname);
+                                        // this.addToFileMap(fullname, name);
+                                    }
+                                    if (filename && (filename !== fullname)) {
+                                        this.addPathVariations(filename);
+                                        // this.addToFileMap(filename, name);
+                                    }
                                 }
                             }
                         }
+                        */
                     }
                 }
             }
@@ -139,7 +205,7 @@ export class SymbolTable {
                 }
 
                 const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
-                const options = ['--syms', '-C'];
+                const options = ['--syms', '-C', '-h', '-w'];
                 let didGetInfoFromGdb = false;
                 if (!restored) {
                     didGetInfoFromGdb = await this.loadSymbolsFromGdb();    // Even this is not super fast but faster
@@ -308,6 +374,7 @@ export class SymbolTable {
     }
 
     private addToFileMap(key: string, newMap: string): string[] {
+        console.log(key, newMap);
         newMap = SymbolTable.NormalizePath(newMap);
         const value = this.fileMap[key] || [];
         if (value.indexOf(newMap) === -1) {
@@ -330,10 +397,7 @@ export class SymbolTable {
                     if (end > match.index) {
                         end = match.index;
                     }
-                    const curName = SymbolTable.NormalizePath(match[2]);
-                    const curSimpleName = path.basename(curName);
-                    this.addToFileMap(curSimpleName, curSimpleName);
-                    this.addToFileMap(curSimpleName, curName);
+                    const { curSimpleName, curName } = this.addPathVariations(match[2]);
                     const compDir = RegExp(COMP_DIR_REGEX);
                     match = compDir.exec(match[3]);
                     if (match) {
@@ -350,6 +414,36 @@ export class SymbolTable {
                     str = str.substring(0, end);
                 }
             }
+            const memRegionsEnd = RegExp(/^SYMBOL TABLE:\r?\n/m);
+            let match = memRegionsEnd.exec(str);
+            if (match) {
+                const head = str.substring(0, match.index);
+                str = str.substring(match.index);
+                // Header:
+                // Idx Name          Size      VMA       LMA       File off  Algn
+                // Sample entry:
+                //   0 .cy_m0p_image 000025d4  10000000  10000000  00010000  2**2
+                //                   CONTENTS, ALLOC, LOAD, READONLY, DATA
+                //                                    1          2          3          4          5          6         7
+                // const entry = RegExp(/^\s*[0-9]+\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)[^\n]+\n\s*([^\r\n]*)\r?\n/gm);
+                const entry = RegExp(/^\s*[0-9]+\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\r\n]*)\r?\n/gm);
+                while (match = entry.exec(head)) {
+                    const attrs = match[7].trim().toLowerCase().split(/[,\s]+/g);
+                    if (!attrs.find((s) => s === 'alloc')) {
+                        // Technically we only need regions marked for code but lets get all non-debug, non-comment stuff
+                        continue;
+                    }
+                    const region = new MemoryRegion(
+                        match[1],
+                        parseInt(match[2], 16),  // size
+                        parseInt(match[3], 16),  // vma
+                        parseInt(match[4], 16),  // lma
+                        attrs
+                    );
+                    this.memoryRegions.push(region);
+                }
+            }
+
             return str;
         }
         catch (e) {
@@ -357,10 +451,18 @@ export class SymbolTable {
         }
     }
 
+    private addPathVariations(fileString: string) {
+        const curName = SymbolTable.NormalizePath(fileString);
+        const curSimpleName = path.basename(curName);
+        this.addToFileMap(curSimpleName, curSimpleName);
+        this.addToFileMap(curSimpleName, curName);
+        return { curSimpleName, curName };
+    }
+
     protected getFileNameHashed(fileName: string): string {
         try {
             fileName = SymbolTable.NormalizePath(fileName);
-            const schemaVer = 1;   // Please increment if schema changes
+            const schemaVer = 2;   // Please increment if schema changes or how objdump is invoked changes
             const ver = `v${schemaVer}-gdb.${this.gdb.gdbMajorVersion}.${this.gdb.gdbMinorVersion}}`;
             const stats = fs.statSync(fileName);            // Can fail
             const str = `${fileName}-${stats.mtimeMs}-${os.userInfo().username}-${ver}`;
@@ -432,6 +534,9 @@ export class SymbolTable {
     }
 
     public getStaticVariables(file: string): SymbolInformation[] {
+        if (!file) {
+            return [];
+        }
         file = SymbolTable.NormalizePath(file);
         let ret = this.staticsByFile[file];
         if (!ret) {
