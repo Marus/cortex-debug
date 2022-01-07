@@ -96,6 +96,7 @@ export class SymbolTable {
             }
         }
         catch {
+            const str = this.gdb.endCaptureConsole();
             console.error('info sources failed');
             return false;
         }

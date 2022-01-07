@@ -75,6 +75,7 @@ export class MI2 extends EventEmitter implements IBackend {
                         resolve();
                     }, reject);
                 }, () => {
+                    const str = this.endCaptureConsole();
                     reject();
                 });
             }, () => {
@@ -87,12 +88,12 @@ export class MI2 extends EventEmitter implements IBackend {
         this.emit('launcherror', err);
     }
 
-    private startCaptureConsole(): void {
+    public startCaptureConsole(): void {
         this.captureConsole = true;
         this.capturedConsole = '';
     }
 
-    private endCaptureConsole(): string {
+    public endCaptureConsole(): string {
         const ret = this.capturedConsole;
         this.captureConsole = false;
         this.capturedConsole = '';
