@@ -34,10 +34,8 @@ import { PEServerController } from './pemicro';
 import { QEMUServerController } from './qemu';
 import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
-import { SymbolInformation, SymbolScope, SymbolType } from './symbols';
+import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
-import { stringify } from 'querystring';
-import { time } from 'console';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -111,7 +109,7 @@ export class GDBDebugSession extends DebugSession {
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
     private serverController: GDBServerController;
-    private symbolTable: SymbolTable;
+    public symbolTable: SymbolTable;
 
     protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
     protected variableHandlesReverse: { [id: string]: number } = {};
@@ -166,6 +164,11 @@ export class GDBDebugSession extends DebugSession {
 
     public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
         super(debuggerLinesStartAt1, isServer);
+    }
+
+    // tslint:disable-next-line: max-line-length
+    public sendErrorResponsePub(response: DebugProtocol.Response, codeOrMessage: number | DebugProtocol.Message, format?: string, variables?: any, dest?: any): void {
+        this.sendErrorResponse(response, codeOrMessage, format, variables, dest);
     }
 
     protected initDebugger() {
@@ -826,7 +829,7 @@ export class GDBDebugSession extends DebugSession {
                 this.readRegisterListRequest(response);
                 break;
             case 'disassemble':
-                this.customDisassembleRequest(response, args);
+                this.disassember.customDisassembleRequest(response, args);
                 break;
             case 'execute-command':
                 let cmd = args['command'] as string;
@@ -846,7 +849,7 @@ export class GDBDebugSession extends DebugSession {
             case 'set-stop-debugging-type':
                 this.disconnectRequest2(response, args);
                 break;
-            case 'notified-children-to-terminate':
+            case 'notified-children-to-terminate':  // We never get this request
                 this.emit('children-terminating');
                 this.sendResponse(response);
                 break;
@@ -891,112 +894,6 @@ export class GDBDebugSession extends DebugSession {
         catch (e) {
             this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
         }
-    }
-
-    protected async customDisassembleRequest(response: DebugProtocol.Response, args: any): Promise<void> {
-        if (args.function) {
-            try {
-                const funcInfo: SymbolInformation = await this.getDisassemblyForFunction(args.function, args.file);
-                response.body = {
-                    instructions: funcInfo.instructions,
-                    name: funcInfo.name,
-                    file: funcInfo.file,
-                    address: funcInfo.address,
-                    length: funcInfo.length
-                };
-                this.sendResponse(response);
-            }
-            catch (e) {
-                this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
-            }
-            return;
-        }
-        else if (args.startAddress) {
-            try {
-                let funcInfo = this.symbolTable.getFunctionAtAddress(args.startAddress);
-                if (funcInfo) {
-                    funcInfo = await this.getDisassemblyForFunction(funcInfo.name, funcInfo.file);
-                    response.body = {
-                        instructions: funcInfo.instructions,
-                        name: funcInfo.name,
-                        file: funcInfo.file,
-                        address: funcInfo.address,
-                        length: funcInfo.length
-                    };
-                    this.sendResponse(response);
-                }
-                else {
-                    // tslint:disable-next-line:max-line-length
-                    const instructions: DisassemblyInstruction[] = await this.getDisassemblyForAddresses(args.startAddress, args.length || 256);
-                    response.body = { instructions: instructions };
-                    this.sendResponse(response);
-                }
-            }
-            catch (e) {
-                this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
-            }
-            return;
-        }
-        else {
-            this.sendErrorResponse(response, 1, 'Unable to disassemble; invalid parameters.');
-        }
-    }
-
-    private async getDisassemblyForFunction(functionName: string, file?: string): Promise<SymbolInformation> {
-        const symbol: SymbolInformation = this.symbolTable.getFunctionByName(functionName, file);
-
-        if (!symbol) { throw new Error(`Unable to find function with name ${functionName}.`); }
-
-        if (symbol.instructions) { return symbol; }
-
-        const startAddress = symbol.address;
-        const endAddress = symbol.address + symbol.length;
-
-        // tslint:disable-next-line:max-line-length
-        const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress, 8)} -e ${hexFormat(endAddress, 8)} -- 2`);
-        const rawInstructions = result.result('asm_insns');
-        const instructions: DisassemblyInstruction[] = rawInstructions.map((ri) => {
-            const address = MINode.valueOf(ri, 'address');
-            const functionName = MINode.valueOf(ri, 'func-name');
-            const offset = parseInt(MINode.valueOf(ri, 'offset'));
-            const inst = MINode.valueOf(ri, 'inst');
-            const opcodes = MINode.valueOf(ri, 'opcodes');
-
-            return {
-                address: address,
-                functionName: functionName,
-                offset: offset,
-                instruction: inst,
-                opcodes: opcodes
-            };
-        });
-        symbol.instructions = instructions;
-        return symbol;
-    }
-
-    private async getDisassemblyForAddresses(startAddress: number, length: number): Promise<DisassemblyInstruction[]> {
-        const endAddress = startAddress + length;
-
-        // tslint:disable-next-line:max-line-length
-        const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress, 8)} -e ${hexFormat(endAddress, 8)} -- 2`);
-        const rawInstructions = result.result('asm_insns');
-        const instructions: DisassemblyInstruction[] = rawInstructions.map((ri) => {
-            const address = MINode.valueOf(ri, 'address');
-            const functionName = MINode.valueOf(ri, 'func-name');
-            const offset = parseInt(MINode.valueOf(ri, 'offset'));
-            const inst = MINode.valueOf(ri, 'inst');
-            const opcodes = MINode.valueOf(ri, 'opcodes');
-
-            return {
-                address: address,
-                functionName: functionName,
-                offset: offset,
-                instruction: inst,
-                opcodes: opcodes
-            };
-        });
-
-        return instructions;
     }
 
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
@@ -1705,7 +1602,7 @@ export class GDBDebugSession extends DebugSession {
                         func = parts[0];
                     }
 
-                    const symbol: SymbolInformation = await this.getDisassemblyForFunction(func, file);
+                    const symbol: SymbolInformation = await this.disassember.getDisassemblyForFunction(func, file);
 
                     if (symbol) {
                         args.breakpoints.forEach((brk) => {
@@ -2125,7 +2022,7 @@ export class GDBDebugSession extends DebugSession {
 
                 try {
                     if (disassemble) {
-                        const symbolInfo = await this.getDisassemblyForFunction(element.function, element.fileName);
+                        const symbolInfo = await this.disassember.getDisassemblyForFunction(element.function, element.fileName);
                         let line = -1;
                         symbolInfo.instructions.forEach((inst, idx) => {
                             if (inst.address === element.address) { line = idx + 1; }
@@ -2383,8 +2280,12 @@ export class GDBDebugSession extends DebugSession {
 
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
-            const file = frame.fileName;
-            const staticSymbols = this.symbolTable.getStaticVariables(file);
+            let file = frame.file; // Prefer full path name first
+            let staticSymbols = this.symbolTable.getStaticVariables(file);
+            if (!staticSymbols || (staticSymbols.length === 0)) {
+                file = frame.fileName;
+                staticSymbols = this.symbolTable.getStaticVariables(file);
+            }
 
             const hasher = crypto.createHash('sha256');
             hasher.update(file);
