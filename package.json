@@ -85,6 +85,38 @@
                     "default": null,
                     "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
                 },
+                "cortex-debug.objdumpPath.linux": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                },
+                "cortex-debug.objdumpPath.osx": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                },
+                "cortex-debug.objdumpPath.windows": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                },
+                "cortex-debug.objdumpPath": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null,
+                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                },
                 "cortex-debug.JLinkGDBServerPath": {
                     "type": [
                         "string",
@@ -630,6 +662,11 @@
                             "gdbPath": {
                                 "default": null,
                                 "description": "This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
+                                "type": "string"
+                            },
+                            "objdumpPath": {
+                                "default": null,
+                                "description": "This setting can be used to override the objdump (used to find globals/statics) path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
                                 "type": "string"
                             },
                             "serverArgs": {
@@ -1568,6 +1605,11 @@
                             "gdbPath": {
                                 "default": null,
                                 "description": "This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
+                                "type": "string"
+                            },
+                            "objdumpPath": {
+                                "default": null,
+                                "description": "This setting can be used to override the objdump (used to find globals/statics) path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.",
                                 "type": "string"
                             },
                             "serverArgs": {

@@ -1,5 +1,8 @@
 ChangeLog
 
+# V1.1.8
+* Feature: you can now customize the `objdumpPath` like you can the `gdbPath` you your settings or in launch.json
+* Some improvements in disassembly
 # V1.1.7
 * Feature: New Disassembly mechanism. **While debugging** you can right click in the editor or the `CALL STACK` window on any thread/frame and you will see the Disassembly window show up. It is helpful to have the original source code and the Disassembly window side-by-side. THe Call-stack, Register in the Variable Window, C/C++ source code and Disassembly all track. Note that the Disassmebly window is managed by Microsoft/VSCode.
   * You can set breakpoints in the Disassembly window

@@ -1,7 +1,6 @@
 export function hexFormat(value: number, padding: number = 8, includePrefix: boolean = true): string {
-    let base = value.toString(16);
+    let base = (value >>> 0).toString(16);
     base = base.padStart(padding, '0');
-    // while (base.length < padding) { base = '0' + base; }
     return includePrefix ? '0x' + base : base;
 }
 

@@ -229,6 +229,7 @@ export class GDBDebugSession extends DebugSession {
             this.miDebugger,
             this.args.toolchainPath,
             this.args.toolchainPrefix,
+            this.args.objdumpPath,
             this.args.executable);
         await this.symbolTable.loadSymbols();
 
@@ -258,7 +259,7 @@ export class GDBDebugSession extends DebugSession {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
             const toolchainPath = true ? '/Applications/ARM/bin' : args.toolchainPath;
-            const tmpSymbols = new SymbolTable(this.miDebugger, toolchainPath, args.toolchainPrefix, elfFile);
+            const tmpSymbols = new SymbolTable(this.miDebugger, toolchainPath, args.toolchainPrefix, args.objdumpPath, elfFile);
             this.dbgSymbolTable = tmpSymbols;
             await tmpSymbols.loadSymbols(true, '/Users/hdm/Downloads/objdump.txt');
             tmpSymbols.printToFile(elfFile + '.cd-dump');
@@ -889,7 +890,7 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): Promise<void> {
         try {
-            await this.disassember.disassembleProtocolRequest(response, args, request);
+            await this.disassember.disassembleProtocolRequest(this.args, response, args, request);
         }
         catch (e) {
             this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);

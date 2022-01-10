@@ -75,10 +75,19 @@ export class SymbolTable {
     private fileMap: {[key: string]: string[]} = {};                    // basename of a file to a potential list of aliases we found
     public memoryRegions: MemoryRegion[] = [];
 
-    constructor(private gdb: MI2, private toolchainPath: string, private toolchainPrefix: string, private executable: string) {
+    constructor(
+        private gdb: MI2, toolchainPath: string,
+        toolchainPrefix: string, private objdumpPath: string, private executable: string)
+    {
+        if (!this.objdumpPath) {
+            this.objdumpPath = os.platform() !== 'win32' ? `${toolchainPrefix}-objdump` : `${toolchainPrefix}-objdump.exe`;
+            if (toolchainPath) {
+                this.objdumpPath = path.normalize(path.join(toolchainPath, this.objdumpPath));
+            }
+        }
     }
 
-    private async loadSymbolsFromGdb(): Promise<boolean> {
+    private async loadSymbolFilesFromGdb(): Promise<boolean> {
         try {
             this.gdb.startCaptureConsole();
             await this.gdb.sendCommand('interpreter-exec console "info sources"');
@@ -97,12 +106,12 @@ export class SymbolTable {
         }
         catch {
             const str = this.gdb.endCaptureConsole();
-            console.error('info sources failed');
+            console.error('gdb info sources failed');
             return false;
         }
     }
 
-    private loadSymbolsFromGdbUnused(): Promise<boolean> {
+    private loadSymbolFilesFromGdbUnused(): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             if (!this.gdb || this.gdb.gdbMajorVersion < 9) {
                 return resolve(false);
@@ -200,16 +209,18 @@ export class SymbolTable {
     public loadSymbols(noCache: boolean = false, useObjdumpFname: string = ''): Promise<void> {
         return new Promise(async (resolve, reject) => {
             try {
-                let objdumpExePath = os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
+                /*
+                let objdumpExePath = 
+                os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
                 if (this.toolchainPath) {
                     objdumpExePath = path.normalize(path.join(this.toolchainPath, objdumpExePath));
                 }
-
+                */
                 const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
                 const options = ['--syms', '-C', '-h', '-w'];
                 let didGetInfoFromGdb = false;
                 if (!restored) {
-                    didGetInfoFromGdb = await this.loadSymbolsFromGdb();    // Even this is not super fast but faster
+                    didGetInfoFromGdb = await this.loadSymbolFilesFromGdb();    // Even this is not super fast but faster
                     if (!didGetInfoFromGdb) {
                         options.push('-Wi');    // WARNING! Creates super large output
                     }
@@ -218,7 +229,7 @@ export class SymbolTable {
                 if (!useObjdumpFname || !fs.existsSync(useObjdumpFname)) {
                     useObjdumpFname = tmp.tmpNameSync();
                     const outFd = fs.openSync(useObjdumpFname, 'w');
-                    const objdump = childProcess.spawnSync(objdumpExePath, [...options, this.executable], {
+                    const objdump = childProcess.spawnSync(this.objdumpPath, [...options, this.executable], {
                         stdio: ['ignore', outFd, 'ignore']
                     });
                     fs.closeSync(outFd);
