@@ -2,8 +2,8 @@ import {
     DebugSession, InitializedEvent, TerminatedEvent,
     ContinuedEvent, OutputEvent, Thread, ThreadEvent,
     StackFrame, Scope, Source, Handles, Event
-} from 'vscode-debugadapter';
-import { DebugProtocol } from 'vscode-debugprotocol';
+} from '@vscode/debugadapter';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
 import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint, InstructionBreakpoint } from './backend/backend';

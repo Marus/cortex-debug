@@ -1,4 +1,4 @@
-import { DebugProtocol } from 'vscode-debugprotocol';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import { GDBServerController, ConfigurationArguments, createPortName } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';

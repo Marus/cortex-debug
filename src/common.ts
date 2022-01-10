@@ -1,5 +1,5 @@
-import { Event } from 'vscode-debugadapter';
-import { DebugProtocol } from 'vscode-debugprotocol';
+import { Event } from '@vscode/debugadapter';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import { EventEmitter } from 'events';
 import { TcpPortScanner } from './tcpportscanner';
 import { GDBServer } from './backend/server';

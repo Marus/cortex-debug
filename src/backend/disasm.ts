@@ -1,5 +1,5 @@
-import { Source, Variable } from 'vscode-debugadapter';
-import { DebugProtocol } from 'vscode-debugprotocol';
+import { Source, Variable } from '@vscode/debugadapter';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import { hexFormat } from '../frontend/utils';
 import { MI2 } from './mi2/mi2';
 import { MINode } from './mi_parse';

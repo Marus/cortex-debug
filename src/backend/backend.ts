@@ -1,5 +1,5 @@
 import { MINode } from './mi_parse';
-import { DebugProtocol } from 'vscode-debugprotocol/lib/debugProtocol';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import { toStringDecHexOctBin } from '../common';
 
 export interface Breakpoint {
