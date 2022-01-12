@@ -885,16 +885,11 @@ export class GDBDebugSession extends DebugSession {
         return cmds;
     }
 
-    protected async disassembleRequest(
+    protected disassembleRequest(
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
-        request?: DebugProtocol.Request): Promise<void> {
-        try {
-            await this.disassember.disassembleProtocolRequest(this.args, response, args, request);
-        }
-        catch (e) {
-            this.sendErrorResponse(response, 1, `Unable to disassemble: ${e.toString()}`);
-        }
+        request?: DebugProtocol.Request): void {
+        this.disassember.disassembleProtocolRequest(this.args, response, args, request);
     }
 
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
