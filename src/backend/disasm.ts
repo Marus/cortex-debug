@@ -20,9 +20,6 @@ interface  ProtocolInstruction extends DebugProtocol.DisassembledInstruction {
     pvtInstructionBytes?: string;
 }
 class InstructionRange {
-    public get length(): number {
-        return this.endAddress - this.startAddress;
-    }
     // Definition of start and end to be consistent with gdb
     constructor(
         public startAddress: number,        // Inclusive
@@ -37,6 +34,10 @@ class InstructionRange {
         }
     }
 
+    public get span(): number {
+        return this.endAddress - this.startAddress;
+    }
+
     public isInsideRange(startAddr: number, endAddr: number) {
         if ((startAddr >= this.startAddress) && (endAddr <= this.endAddress)) {
             return true;
@@ -49,7 +50,7 @@ class InstructionRange {
         const s = Math.min(this.startAddress, startAddress);
         const e = Math.max(this.endAddress, endAddress);
         const l = e - s;
-        if (l > (this.length + length)) {
+        if (l > (this.span + length)) {
             // combined length is greather than the sum of two engths
             return false;
         }
@@ -72,34 +73,38 @@ class InstructionRange {
         }
 
         // See if totally overlapping or adjacent
-        if ((this.length === other.length) && (this.startAddress === other.startAddress)) {
+        if ((this.span === other.span) && (this.startAddress === other.startAddress)) {
             return true;                                        // They are idendical
         } else if (this.endAddress === other.startAddress) {    // adjacent at end of this
             this.instructions = this.instructions.concat(other.instructions);
             this.endAddress = other.endAddress;
-            assert(this.length === (other.length * 2));
+            assert(this.span === (other.span * 2));
             return true;
         } else if (other.endAddress === this.startAddress) {    // adjacent at end of other
             this.instructions = other.instructions.concat(this.instructions);
             this.startAddress = other.startAddress;
-            assert(this.length === (other.length * 2));
+            assert(this.span === (other.span * 2));
             return true;
         }
 
         // They partially overlap
         const left  = (this.startAddress <= other.startAddress) ? this : other;
         const right = (this.startAddress <= other.startAddress) ? other : this;
-        const leftEnd = left.instructions[left.instructions.length - 1].pvtAddress;
+        const lx = left.instructions.length - 1;
+        const leftEnd = left.instructions[lx].pvtAddress;
         const numRight = right.instructions.length;
         for (let ix = 0; ix < numRight; ix++) {
-            if (right.instructions[ix].pvtAddress > leftEnd) {
-                const rInstrs = right.instructions.slice(ix);
+            if (right.instructions[ix].pvtAddress === leftEnd) {
+                const rInstrs = right.instructions.slice(ix + 1);
                 left.instructions = left.instructions.concat(rInstrs);
 
                 // Almost like a new item but modify in place
                 this.instructions = left.instructions;
                 this.startAddress = Math.min(this.startAddress, other.startAddress);
                 this.endAddress = Math.max(this.endAddress, other.endAddress);
+                if (GdbDisassembler.debug) {
+                    console.log('Merge @', this.instructions[lx - 1], this.instructions[lx], this.instructions[lx + 1]);
+                }
                 return true;
             }
         }
@@ -115,7 +120,7 @@ class DisassemblyReturn {
 }
 
 export class GdbDisassembler {
-    public debug: boolean = true;
+    public static debug: boolean = true;
     private maxInstrSize = 4;       // We only support ARM devices and that too 32-bit. But we got users with RISC, so need to check
     private instrMultiple = 2;      // granularity of instruction sizes, used to increment/decrement startAddr looking for instr. alignment
     private cache: InstructionRange[] = [];
@@ -151,7 +156,7 @@ export class GdbDisassembler {
         validationAddr: number,
         args: DebugProtocol.DisassembleArguments): Promise<DisassemblyReturn>
     {
-        const parseIntruction = (miInstr: any, src: Source, line: any) => {
+        const parseIntruction = (miInstr: string, src: Source, line: number) => {
             const address = MINode.valueOf(miInstr, 'address');
             const functionName = MINode.valueOf(miInstr, 'func-name');
             const offset = parseInt(MINode.valueOf(miInstr, 'offset'));
@@ -199,7 +204,7 @@ export class GdbDisassembler {
                     }
             
                     const cmd = `data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(endAddress)} -- 5`;
-                    if (this.debug) {
+                    if (GdbDisassembler.debug) {
                         console.log('Adjusted request: ' + cmd);
                     }
                     const result = await this.miDebugger.sendCommand(cmd);
@@ -223,7 +228,7 @@ export class GdbDisassembler {
                             const props = srcLineVal[1];
                             const file = MINode.valueOf(props, 'file');
                             const fsPath = MINode.valueOf(props, 'fullname') || file;
-                            const line = MINode.valueOf(props, 'line');
+                            const line = parseInt(MINode.valueOf(props, 'line') || '1');
                             const insns = MINode.valueOf(props, 'line_asm_insn') || [];
                             const src = fsPath ? new Source(path.basename(fsPath), fsPath) : undefined;
                             for (const miInstr of insns) {
@@ -232,7 +237,7 @@ export class GdbDisassembler {
                         }
                     }
                     if (foundIx < 0) {
-                        if (this.debug) {
+                        if (GdbDisassembler.debug) {
                             const msg = `Could not disassemble at this address Looking for ${hexFormat(validationAddr)}: ${cmd} `;
                             console.log(msg, instructions);
                         }
@@ -261,9 +266,9 @@ export class GdbDisassembler {
     private findInCache(startAddr: number, endAddr: number): InstructionRange {
         for (const old of this.cache) {
             if (old.isInsideRange(startAddr, endAddr)) {
-                if (this.debug) {
+                if (GdbDisassembler.debug) {
                     console.log('Instruction cache hit: ',
-                    {startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}, old);
+                        {startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}, old);
                 }
                 return old;
             }
@@ -299,7 +304,7 @@ export class GdbDisassembler {
     // * Since this is all based on strings (I don't think they interpret the address string). Yet another
     //   reason why we have to be careful
     // * When you scroll just beyond the limits of what is being displayed, they make another request. They use
-    //   the address string for the last (or first depending on direction) instructions last returned by us
+    //   the address string for the last (or first depending on direction) instruction previously returned by us
     //   as a base address for this request. Then they ask for +/- 50 instructions from that base address NOT
     //   including the base address.  But we use the instruction at the baseAddress to validate what we are returning
     //   since we know that was valid.
@@ -316,15 +321,17 @@ export class GdbDisassembler {
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): Promise<void>
     {
+        if (launchArgs.showDevDebugOutput) {
+            GdbDisassembler.debug = true;       // Can't turn it off, once enabled. Intentional
+            this.gdbSession.handleMsg('log', JSON.stringify(request));
+        }
+        if (GdbDisassembler.debug) {
+            console.log('disassembleRequest: ', args);
+        }
+
         const baseAddress = parseInt(args.memoryReference);
         const offset = args.offset || 0;
         const instrOffset = args.instructionOffset || 0;
-        if (this.debug) {
-            console.log('disassembleRequest: ', args);
-        }
-        if (launchArgs.showDevDebugOutput) {
-            this.gdbSession.handleMsg('log', JSON.stringify(args));
-        }
 
         try {
             // What VSCode gives us can be a very random address, instrOffset can be a negative number
@@ -343,6 +350,11 @@ export class GdbDisassembler {
             const ret = await this.getProtocolDisassembly(trueStart, trueEnd, baseAddress, args);
             let instrs = ret.instructions;
             let foundIx = ret.foundAt;
+            if (GdbDisassembler.debug) {
+                console.log(`Found ${instrs.length}. baseInstrIndex = ${foundIx}.`);
+                console.log(instrs[foundIx]);
+                console.log(instrs.map((x) => x.address));
+            }
             // Spec says must have exactly `count` instructions. Kinda harsh but...gotta do it
             // These are corner cases that are hard to test. This would happen if we are falling
             // of an edge of a memory and VSCode is making requests we can't exactly honor. But,
@@ -351,37 +363,36 @@ export class GdbDisassembler {
             let nPad = (-instrOffset) - foundIx;
             const junk: ProtocolInstruction[] = [];
             for (; nPad > 0; nPad--) {      // Pad at the beginning
-                tmp -= 2;       // Yes, this can go negative
+                tmp -= this.instrMultiple;       // Yes, this can go negative
                 junk.push(dummyInstr(tmp));
             }
-            instrs = junk.length > 0 ? junk.reverse().concat(instrs) : instrs;
+            if (junk.length > 0) {
+                instrs = junk.reverse().concat(instrs);
+                foundIx += junk.length;
+            }
 
-            tmp = instrs.length > 0 ? instrs[instrs.length - 1].pvtAddress : baseAddress;
-            nPad = (args.instructionCount - instrOffset) - (instrs.length - foundIx);
-            for (; nPad > 0; nPad--) {      // Pad at the end
-                tmp += 2;
+            const extra = foundIx + instrOffset;
+            if (extra > 0) {            // Front heavy
+                instrs.splice(0, extra);
+                foundIx -= extra;       // Can go negative, thats okay
+            }
+
+            tmp = instrs[instrs.length - 1].pvtAddress;
+            while (instrs.length < args.instructionCount) {
+                tmp += this.instrMultiple;
                 instrs.push(dummyInstr(tmp));
             }
-            
-            if ((instrOffset < 0) && (foundIx > -instrOffset)) {
-                const extra = foundIx + instrOffset;
-                instrs.splice(0, extra);
-                foundIx -= extra;
-            } else if ((instrOffset > 0) && (foundIx > instrOffset)) {
-                const extra = foundIx + instrOffset;
-                instrs.splice(0, extra);
-                foundIx -= extra;       // Can go negative
-            }
-            if (instrs.length > args.instructionCount) {
+            if (instrs.length > args.instructionCount) {    // Tail heavy
                 instrs.splice(args.instructionCount);
             }
-            if (this.debug) {
+
+            if (GdbDisassembler.debug) {
                 console.log(`Returning ${instrs.length} instructions of ${ret.instructions.length} queried. baseInstrIndex = ${foundIx}.`);
+                console.log(instrs.map((x) => x.address));
                 if ((foundIx >= 0) && (foundIx < instrs.length)) {
                     console.log(instrs[foundIx]);
-                } else if ((foundIx < -1) || (foundIx > instrs.length)) {
-                    // Not a problem if we were in the memory edge cases
-                    console.error('This may be a problem. We should be exactly one off based on how VSCode makes requests');
+                } else if ((foundIx !== instrOffset) && (foundIx !== (instrs.length + instrOffset))) {
+                    console.error(`This may be a problem. Referencd index should be exactly ${instrOffset} off`);
                 }
             }
             this.cleaupInstructions(instrs);
