@@ -2,25 +2,20 @@ import { MINode } from './mi_parse';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { toStringDecHexOctBin } from '../common';
 
-export interface Breakpoint {
+export interface OurSourceBreakpoint extends DebugProtocol.SourceBreakpoint {
     file?: string;
-    line?: number;
-    raw?: string;
-    condition: string;
-    countCondition?: string;
+    raw?: string;       // Used for function name as well and old style address breakpoints
+    // What we get from gdb below
+    address?: string;
     number?: number;
 }
 
-export interface InstructionBreakpoint extends DebugProtocol.InstructionBreakpoint {
+export interface OurInstructionBreakpoint extends DebugProtocol.InstructionBreakpoint {
     address: number;
     number: number;
 }
 
-export interface DataBreakpoint {
-    exp: string;
-    accessType: 'read' | 'write' | 'readWrite';
-    condition?: string;
-    countCondition?: string;
+export interface OurDataBreakpoint extends DebugProtocol.DataBreakpoint {
     number?: number;
 }
 
@@ -50,7 +45,7 @@ export interface IBackend {
     next(threadId: number, instruction: boolean): Thenable<boolean>;
     step(threadId: number, instruction: boolean): Thenable<boolean>;
     stepOut(threadId: number): Thenable<boolean>;
-    addBreakPoint(breakpoint: Breakpoint): Promise<Breakpoint>;
+    addBreakPoint(breakpoint: OurSourceBreakpoint): Promise<OurSourceBreakpoint>;
     removeBreakpoints(breakpoints: number[]): Promise<boolean>;
     getStack(threadId: number, startLevel: number, maxLevels: number): Thenable<Stack[]>;
     getStackVariables(thread: number, frame: number): Thenable<Variable[]>;

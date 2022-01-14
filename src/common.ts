@@ -4,10 +4,18 @@ import { EventEmitter } from 'events';
 import { TcpPortScanner } from './tcpportscanner';
 import { GDBServer } from './backend/server';
 
+export enum ADAPTER_DEBUG_MODE {
+    NONE = 'none',
+    PARSED = 'parsed',
+    BOTH = 'both',
+    RAW = 'raw'
+}
+
 export enum CortexDebugKeys {
     REGISTER_DISPLAY_MODE = 'registerUseNaturalFormat',
     VARIABLE_DISPLAY_MODE = 'variableUseNaturalFormat',
-    SERVER_LOG_FILE_NAME = 'dbgServerLogfile'
+    SERVER_LOG_FILE_NAME = 'dbgServerLogfile',
+    DEV_DEBUG_MODE = 'showDevDebugOutput'
 }
 
 export enum NumberFormat {
@@ -232,7 +240,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
     graphConfig: any[];
-    showDevDebugOutput: boolean | 'raw' | 'raw-only';
+    // We dont expect the following to be in booleann form or have the valueof 'none' after
+    // The config provider has done the conversion. If it exists, it means output 'something'
+    showDevDebugOutput: ADAPTER_DEBUG_MODE;
     showDevDebugTimestamps: boolean;
     cwd: string;
     extensionPath: string;
@@ -599,9 +609,10 @@ export class HrTimer {
     }
 
     public createPaddedMs(padding: number): string {
-        const hrUs = this.deltaMs();
-        const hrUsPadded = (hrUs.length < padding) ? '0'.repeat(padding - hrUs.length) + hrUs : '' + hrUs ;
-        return hrUsPadded;
+        const hrUs = this.deltaMs().padStart(padding, '0');
+        // const hrUsPadded = (hrUs.length < padding) ? '0'.repeat(padding - hrUs.length) + hrUs : '' + hrUs ;
+        // return hrUsPadded;
+        return hrUs;
     }
 
     public createDateTimestamp(): string {
@@ -630,4 +641,17 @@ export function quoteShellAndCmdChars(s): string {
 
 export function quoteShellCmdLine(list: string[]): string {
     return list.map((s) => quoteShellAndCmdChars(s)).join(' ');
+}
+
+export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean {
+    const modes = Object.values(ADAPTER_DEBUG_MODE);
+    if ((config.showDevDebugOutput === false) || (config.showDevDebugOutput === 'none')) {
+        delete config.showDevDebugOutput;
+    } else if (config.showDevDebugOutput === true) {
+        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.PARSED;
+    } else if (modes.indexOf(config.showDevDebugOutput) < 0) {
+        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.BOTH;
+        return false;       // Meaning, needed adjustment
+    }
+    return true;
 }

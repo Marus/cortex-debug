@@ -1,11 +1,13 @@
-import { Breakpoint, DataBreakpoint, IBackend, Stack, Variable, VariableObject, MIError, InstructionBreakpoint } from '../backend';
+import { IBackend, Stack, Variable, VariableObject, MIError,
+    OurInstructionBreakpoint, OurDataBreakpoint, OurSourceBreakpoint } from '../backend';
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
 import { posix } from 'path';
 import * as nativePath from 'path';
 import { ServerConsoleLog } from '../server';
-import { commands } from 'vscode';
+import { hexFormat } from '../../frontend/utils';
+import { ADAPTER_DEBUG_MODE } from '../../common';
 const path = posix;
 
 export function escape(str: string) {
@@ -26,7 +28,7 @@ function couldBeOutput(line: string) {
 const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
-    public debugOutput: boolean | 'raw' | 'raw-only';
+    public debugOutput: ADAPTER_DEBUG_MODE;
     public procEnv: any;
     protected currentToken: number = 1;
     protected handlers: { [index: number]: (info: MINode) => any } = {};
@@ -197,11 +199,11 @@ export class MI2 extends EventEmitter implements IBackend {
             }
             else {
                 const parsed = parseMI(line);
-                if (this.debugOutput) {
-                    if ((this.debugOutput === 'raw-only') || (this.debugOutput === 'raw')) {
+                if (this.debugOutput && (this.debugOutput !== ADAPTER_DEBUG_MODE.NONE)) {
+                    if ((this.debugOutput === ADAPTER_DEBUG_MODE.RAW) || (this.debugOutput === ADAPTER_DEBUG_MODE.BOTH)) {
                         this.log('log', '-> ' + line);
                     }
-                    if (this.debugOutput !== 'raw-only') {
+                    if (this.debugOutput !== ADAPTER_DEBUG_MODE.RAW) {
                         this.log('log', 'GDB -> App: ' + JSON.stringify(parsed));
                     }
                 }
@@ -508,21 +510,21 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.sendCommand('break-condition ' + bkptNum + ' ' + condition);
     }
 
-    public addBreakPoint(breakpoint: Breakpoint): Promise<Breakpoint> {
+    public addBreakPoint(breakpoint: OurSourceBreakpoint): Promise<OurSourceBreakpoint> {
         if (trace) {
             this.log('stderr', 'addBreakPoint');
         }
         return new Promise((resolve, reject) => {
             let bkptArgs = '';
-            if (breakpoint.countCondition) {
-                if (breakpoint.countCondition[0] === '>') {
-                    bkptArgs += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
+            if (breakpoint.hitCondition) {
+                if (breakpoint.hitCondition[0] === '>') {
+                    bkptArgs += '-i ' + numRegex.exec(breakpoint.hitCondition.substr(1))[0] + ' ';
                 }
                 else {
-                    const match = numRegex.exec(breakpoint.countCondition)[0];
-                    if (match.length !== breakpoint.countCondition.length) {
+                    const match = numRegex.exec(breakpoint.hitCondition)[0];
+                    if (match.length !== breakpoint.hitCondition.length) {
                         // tslint:disable-next-line:max-line-length
-                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.countCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
+                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
                         bkptArgs += '-t ';
                     }
                     else if (parseInt(match) !== 0) {
@@ -546,8 +548,12 @@ export class MI2 extends EventEmitter implements IBackend {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
                     const line = result.result('bkpt.line');
+                    const addr = result.result('bkpt.addr');
                     breakpoint.line = line ? parseInt(line) : breakpoint.line;
                     breakpoint.number = bkptNum;
+                    if (addr) {
+                        breakpoint.address = addr;
+                    }
 
                     if (breakpoint.file === undefined) {
                         const file = result.result('bkpt.fullname') || result.record('bkpt.file');
@@ -562,7 +568,7 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public addInstrBreakPoint(breakpoint: InstructionBreakpoint): Promise<InstructionBreakpoint> {
+    public addInstrBreakPoint(breakpoint: OurInstructionBreakpoint): Promise<OurInstructionBreakpoint> {
         if (trace) {
             this.log('stderr', 'addBreakPoint');
         }
@@ -572,7 +578,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 bkptArgs += `-c "${breakpoint.condition}" `;
             }
 
-            bkptArgs += '*' + escape(breakpoint.instructionReference);
+            bkptArgs += '*' + hexFormat(breakpoint.address);
             
             this.sendCommand(`break-insert ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
@@ -604,21 +610,21 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public addDataBreakPoint(breakpoint: DataBreakpoint): Promise<DataBreakpoint> {
+    public addDataBreakPoint(breakpoint: OurDataBreakpoint): Promise<OurDataBreakpoint> {
         if (trace) {
             this.log('stderr', 'addBreakPoint');
         }
         return new Promise((resolve, reject) => {
             let bkptArgs = '';
-            if (breakpoint.countCondition) {
-                if (breakpoint.countCondition[0] === '>') {
-                    bkptArgs += '-i ' + numRegex.exec(breakpoint.countCondition.substr(1))[0] + ' ';
+            if (breakpoint.hitCondition) {
+                if (breakpoint.hitCondition[0] === '>') {
+                    bkptArgs += '-i ' + numRegex.exec(breakpoint.hitCondition.substr(1))[0] + ' ';
                 }
                 else {
-                    const match = numRegex.exec(breakpoint.countCondition)[0];
-                    if (match.length !== breakpoint.countCondition.length) {
+                    const match = numRegex.exec(breakpoint.hitCondition)[0];
+                    if (match.length !== breakpoint.hitCondition.length) {
                         // tslint:disable-next-line:max-line-length
-                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.countCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
+                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
                         bkptArgs += '-t ';
                     }
                     else if (parseInt(match) !== 0) {
@@ -627,7 +633,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 }
             }
 
-            bkptArgs += breakpoint.exp;
+            bkptArgs += breakpoint.dataId;
             const aType = breakpoint.accessType === 'read' ? '-r' : (breakpoint.accessType === 'readWrite' ? '-a' : '');
             this.sendCommand(`break-watch ${aType} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {

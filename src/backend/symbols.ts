@@ -31,8 +31,8 @@ const SCOPE_MAP: { [id: string]: SymbolScope } = {
 };
 
 export class MemoryRegion {
-    public vmaEnd: number;
-    public lmaEnd: number;
+    public vmaEnd: number;      // Inclusive
+    public lmaEnd: number;      // Exclusive
     constructor(
         public name: string,
         public size: number,
@@ -40,16 +40,16 @@ export class MemoryRegion {
         public lmaStart: number,   // Load memory address
         public attrs: string[]
     ) {
-        this.vmaEnd = this.vmaStart + this.size;
-        this.lmaEnd = this.lmaStart + this.size;
+        this.vmaEnd = this.vmaStart + this.size + 1;
+        this.lmaEnd = this.lmaStart + this.size + 1;
     }
 
     public inVmaRegion(addr: number) {
-        return (addr >= this.vmaStart) && (addr <= this.vmaEnd);
+        return (addr >= this.vmaStart) && (addr < this.vmaEnd);
     }
 
     public inLmaRegion(addr: number) {
-        return (addr >= this.lmaStart) && (addr <= this.lmaEnd);
+        return (addr >= this.lmaStart) && (addr < this.lmaEnd);
     }
 
     public inRegion(addr: number) {

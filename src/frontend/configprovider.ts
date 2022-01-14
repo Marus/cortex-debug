@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ChainedConfigurations, ChainedEvents, CortexDebugKeys } from '../common';
+import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug } from '../common';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import * as path from 'path';
 
@@ -118,6 +118,13 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
+        if (config.showDevDebugOutput === undefined) {
+            config.showDevDebugOutput = configuration.get(CortexDebugKeys.DEV_DEBUG_MODE, ADAPTER_DEBUG_MODE.NONE);
+        }
+        if (!sanitizeDevDebug(config)) {
+            const modes = Object.values(ADAPTER_DEBUG_MODE);
+            vscode.window.showInformationMessage(`launch.json: "showDevDebugOutput" muse be one of ${modes}. Setting to "${config.showDevDebugOutput}"`);
+        }
 
         if (config.armToolchainPath) { config.toolchainPath = config.armToolchainPath; }
         this.setOsSpecficConfigSetting(config, 'toolchainPath', 'armToolchainPath');

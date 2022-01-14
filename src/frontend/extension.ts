@@ -10,7 +10,7 @@ import { RTTCore, SWOCore } from './swo/core';
 import { SWORTTSource } from './swo/sources/common';
 import { NumberFormat, ConfigurationArguments,
     RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
-    CortexDebugKeys, ChainedEvents } from '../common';
+    CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -101,6 +101,7 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
 
             vscode.commands.registerCommand('cortex-debug.resetDevice', this.resetDevice.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.pvtEnableDebug', this.pvtCycleDebugMode.bind(this)),
 
             vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
             vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
@@ -206,6 +207,17 @@ export class CortexDebugExtension {
             const config = vscode.workspace.getConfiguration('cortex-debug');
             const fName = config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '');
             this.gdbServerConsole.createLogFile(fName);
+        }
+        if (e.affectsConfiguration(`cortex-debug.${CortexDebugKeys.DEV_DEBUG_MODE}`)) {
+            const config = vscode.workspace.getConfiguration('cortex-debug');
+            const dbgMode = config.get(CortexDebugKeys.DEV_DEBUG_MODE, ADAPTER_DEBUG_MODE.NONE);
+            for (const s of CDebugSession.CurrentSessions) {
+                try {
+                    s.session.customRequest('set-debug-mode', { mode: dbgMode });
+                }
+                catch (e) {
+                }
+            }
         }
     }
     
@@ -524,6 +536,15 @@ export class CortexDebugExtension {
         catch (e) {
             console.error(e);
         }
+    }
+
+    private pvtCycleDebugMode() {
+        const config = vscode.workspace.getConfiguration('cortex-debug');
+        const curVal: ADAPTER_DEBUG_MODE = config.get(CortexDebugKeys.DEV_DEBUG_MODE, ADAPTER_DEBUG_MODE.NONE);
+        const validVals = Object.values(ADAPTER_DEBUG_MODE);
+        let ix = validVals.indexOf(curVal);
+        ix = ix < 0 ? ix = 0 : ((ix + 1) % validVals.length);
+        config.set(CortexDebugKeys.DEV_DEBUG_MODE, validVals[ix]);
     }
 
     // Debug Events

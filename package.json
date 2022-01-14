@@ -368,6 +368,17 @@
                     ],
                     "default": null,
                     "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
+                },
+                "cortex-debug.showDevDebugOutput": {
+                    "enum": [
+                        "none",
+                        "parsed",
+                        "raw",
+                        "both"
+                    ],
+                    "default": "none",
+                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prings results after parsing, 'both' prints both",
+                    "type": "string"
                 }
             }
         },
@@ -920,9 +931,15 @@
                                 "type": "array"
                             },
                             "showDevDebugOutput": {
-                                "default": false,
-                                "description": "Prints all GDB (parsed) responses to the console. Can also be a string 'raw' or 'raw-only'",
-                                "type": ["boolean", "string"]
+                                "enum": [
+                                    "none",
+                                    "parsed",
+                                    "raw",
+                                    "both"
+                                ],
+                                "default": "none",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prings results after parsing, 'both' prints both",
+                                "type": "string"
                             },
                             "showDevDebugTimestamps": {
                                 "default": false,
@@ -1879,9 +1896,15 @@
                                 "type": "array"
                             },
                             "showDevDebugOutput": {
-                                "default": false,
-                                "description": "Prints all GDB (parsed) responses to the console. Can also be a string 'raw' or 'raw-only'",
-                                "type": ["boolean", "string"]
+                                "enum": [
+                                    "none",
+                                    "parsed",
+                                    "raw",
+                                    "both"
+                                ],
+                                "default": "none",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prings results after parsing, 'both' prints both",
+                                "type": "string"
                             },
                             "showDevDebugTimestamps": {
                                 "default": false,

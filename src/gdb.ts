@@ -6,10 +6,10 @@ import {
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { MI2 } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
-import { Breakpoint, Variable, VariableObject, MIError, DataBreakpoint, InstructionBreakpoint } from './backend/backend';
+import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
-    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin
+    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -151,9 +151,9 @@ export class GDBDebugSession extends DebugSession {
     private stoppedEventPending = false;
 
     protected functionBreakpoints = [];
-    protected breakpointMap: Map<string, Breakpoint[]> = new Map();
-    protected instrBreakpointMap: Map<number, InstructionBreakpoint[]> = new Map();
-    protected dataBreakpointMap: Map<number, DataBreakpoint> = new Map();
+    protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map();
+    protected instrBreakpointMap: Map<number, OurInstructionBreakpoint[]> = new Map();
+    protected dataBreakpointMap: Map<number, OurDataBreakpoint> = new Map();
     protected fileExistsCache: Map<string, boolean> = new Map();
 
     private currentFile: string;
@@ -652,7 +652,7 @@ export class GDBDebugSession extends DebugSession {
         }
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
-        this.miDebugger.debugOutput = this.args.showDevDebugOutput;
+        this.miDebugger.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
         this.initDebugger();
         await this.miDebugger.start(this.args.cwd, this.args.executable, [
             'interpreter-exec console "set print demangle on"',
@@ -1497,15 +1497,15 @@ export class GDBDebugSession extends DebugSession {
             await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
             this.functionBreakpoints = [];
 
-            const all = new Array<Promise<Breakpoint | MIError>>();
+            const all = new Array<Promise<OurSourceBreakpoint | MIError>>();
             args.breakpoints.forEach((brk) => {
-                all.push(
-                    this.miDebugger.addBreakPoint({
-                        raw: brk.name,
-                        condition: brk.condition,
-                        countCondition: brk.hitCondition
-                    }).catch((err: MIError) => err)
-                );
+                const arg: OurSourceBreakpoint = {
+                    ...brk,
+                    raw: brk.name,
+                    file: undefined,
+                    line: undefined
+                };
+                all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
             });
 
             try {
@@ -1531,6 +1531,7 @@ export class GDBDebugSession extends DebugSession {
                                 name: brkp.raw
                             },
                             line: brkp.line,
+                            instructionReference: brkp.address,
                             id: brkp.number,
                             verified: true
                         } as DebugProtocol.Breakpoint;
@@ -1579,7 +1580,7 @@ export class GDBDebugSession extends DebugSession {
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
                 this.breakpointMap.set(args.source.path, []);
 
-                const all: Array<Promise<Breakpoint | MIError>> = [];
+                const all: Array<Promise<OurSourceBreakpoint | MIError>> = [];
                 const sourcepath = decodeURIComponent(args.source.path);
 
                 if (sourcepath.startsWith('disassembly:/')) {
@@ -1604,13 +1605,12 @@ export class GDBDebugSession extends DebugSession {
                         args.breakpoints.forEach((brk) => {
                             if (brk.line <= symbol.instructions.length) {
                                 const line = symbol.instructions[brk.line - 1];
-                                all.push(this.miDebugger.addBreakPoint({
+                                const arg: OurSourceBreakpoint = {
+                                    ...brk,
                                     file: args.source.path,
-                                    line: brk.line,
-                                    condition: brk.condition,
-                                    countCondition: brk.hitCondition,
                                     raw: line.address
-                                }).catch((err: MIError) => err));
+                                };
+                                all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
                             } else {
                                 all.push(
                                     Promise.resolve(
@@ -1626,12 +1626,11 @@ export class GDBDebugSession extends DebugSession {
                 }
                 else {
                     args.breakpoints.forEach((brk) => {
-                        all.push(this.miDebugger.addBreakPoint({
-                            file: args.source.path,
-                            line: brk.line,
-                            condition: brk.condition,
-                            countCondition: brk.hitCondition
-                        }).catch((err: MIError) => err));
+                        const arg: OurSourceBreakpoint = {
+                            ...brk,
+                            file: args.source.path
+                        };
+                        all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
                     });
                 }
 
@@ -1654,12 +1653,13 @@ export class GDBDebugSession extends DebugSession {
                         return {
                             line: bp.line,
                             id: bp.number,
+                            instructionReference: bp.address,
                             verified: true
                         };
                     })
                 };
 
-                this.breakpointMap.set(args.source.path, brkpoints.filter((bp) => !(bp instanceof MIError)) as Breakpoint[]);
+                this.breakpointMap.set(args.source.path, brkpoints.filter((bp) => !(bp instanceof MIError)) as OurSourceBreakpoint[]);
                 this.sendResponse(response);
                 this.pendingBkptResponse = false;
             }
@@ -1716,10 +1716,10 @@ export class GDBDebugSession extends DebugSession {
                 this.disableSendStoppedEvents = false;
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
-                const all: Array<Promise<InstructionBreakpoint | MIError>> = [];
+                const all: Array<Promise<OurInstructionBreakpoint | MIError>> = [];
                 args.breakpoints.forEach((brk) => {
                     const addr = parseInt(brk.instructionReference) + brk.offset || 0;
-                    const bpt: InstructionBreakpoint = { ...brk, number: -1, address: addr };
+                    const bpt: OurInstructionBreakpoint = { ...brk, number: -1, address: addr };
                     all.push(this.miDebugger.addInstrBreakPoint(bpt).catch((err: MIError) => err));
                 });
 
@@ -1826,15 +1826,10 @@ export class GDBDebugSession extends DebugSession {
                 this.dataBreakpointMap = new Map();
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
-                const all: Array<Promise<DataBreakpoint | MIError>> = [];
+                const all: Array<Promise<OurDataBreakpoint | MIError>> = [];
 
                 args.breakpoints.forEach((brk) => {
-                    const bkp: DataBreakpoint = {
-                        exp: brk.dataId,
-                        accessType: brk.accessType,
-                        countCondition: brk.hitCondition,
-                        condition: brk.condition
-                    };
+                    const bkp: OurDataBreakpoint = { ...brk };
                     all.push(this.miDebugger.addDataBreakPoint(bkp).catch((err: MIError) => err));
                 });
 
@@ -2001,7 +1996,7 @@ export class GDBDebugSession extends DebugSession {
                 const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
                 const file = element.file;
                 let disassemble = this.forceDisassembly || !file;
-                if (!disassemble) { disassemble = !(await this.checkFileExists(file)); }
+                if (!disassemble) { disassemble = !this.checkFileExists(file); }
                 if (!disassemble && this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                     const symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
                     let url: string;
@@ -2652,7 +2647,7 @@ export class GDBDebugSession extends DebugSession {
                 assemblyMode = this.forceDisassembly;
                 if (!assemblyMode) {
                     const frame = await this.miDebugger.getFrame(args.threadId, 0);
-                    assemblyMode = !(await this.checkFileExists(frame.file));
+                    assemblyMode = !this.checkFileExists(frame.file);
 
                     if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                         const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
@@ -2694,7 +2689,7 @@ export class GDBDebugSession extends DebugSession {
                 assemblyMode = this.forceDisassembly;
                 if (!assemblyMode) {
                     const frame = await this.miDebugger.getFrame(args.threadId, 0);
-                    assemblyMode = !(await this.checkFileExists(frame.file));
+                    assemblyMode = !this.checkFileExists(frame.file);
 
                     if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
                         const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
@@ -2720,19 +2715,18 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    protected checkFileExists(name: string): Promise<boolean> {
-        if (!name) { return Promise.resolve(false); }
-
-        if (this.fileExistsCache.has(name)) { // Check cache
-            return Promise.resolve(this.fileExistsCache.get(name));
+    protected checkFileExists(name: string): boolean {
+        if (!name) {
+            return false;
         }
 
-        return new Promise((resolve, reject) => {
-            fs.exists(name, (exists) => {
-                this.fileExistsCache.set(name, exists);
-                resolve(exists);
-            });
-        });
+        if (this.fileExistsCache.has(name)) { // Check cache
+            return this.fileExistsCache.get(name);
+        }
+
+        const ret = fs.existsSync(name);
+        this.fileExistsCache.set(name, true);
+        return ret;
     }
 
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
