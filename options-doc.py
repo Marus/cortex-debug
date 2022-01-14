@@ -42,7 +42,7 @@ category_name = ''
 category_list = []
 for line in config_args.splitlines():
     line = line.strip()
-    if len(line) == 0:
+    if len(line) == 0 or line.startswith('///'):
         continue
     if line.startswith('// '):
         categories[category_name] = category_list

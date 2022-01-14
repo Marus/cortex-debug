@@ -240,8 +240,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
     graphConfig: any[];
-    // We dont expect the following to be in booleann form or have the valueof 'none' after
-    // The config provider has done the conversion. If it exists, it means output 'something'
+    /// Triple slashes will cause the line to be ignored by the options-doc.py script
+    /// We dont expect the following to be in booleann form or have the valueof 'none' after
+    /// The config provider has done the conversion. If it exists, it means output 'something'
     showDevDebugOutput: ADAPTER_DEBUG_MODE;
     showDevDebugTimestamps: boolean;
     cwd: string;

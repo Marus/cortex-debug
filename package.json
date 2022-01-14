@@ -377,7 +377,7 @@
                         "both"
                     ],
                     "default": "none",
-                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prings results after parsing, 'both' prints both",
+                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
                     "type": "string"
                 }
             }
@@ -938,7 +938,7 @@
                                     "both"
                                 ],
                                 "default": "none",
-                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prings results after parsing, 'both' prints both",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
                                 "type": "string"
                             },
                             "showDevDebugTimestamps": {
@@ -1903,7 +1903,7 @@
                                     "both"
                                 ],
                                 "default": "none",
-                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prings results after parsing, 'both' prints both",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
                                 "type": "string"
                             },
                             "showDevDebugTimestamps": {
