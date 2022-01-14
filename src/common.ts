@@ -646,11 +646,16 @@ export function quoteShellCmdLine(list: string[]): string {
 
 export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean {
     const modes = Object.values(ADAPTER_DEBUG_MODE);
-    if ((config.showDevDebugOutput === false) || (config.showDevDebugOutput === 'none')) {
+    let val = config.showDevDebugOutput;
+    if (typeof(val) === 'string') {
+        val = val.toLowerCase().trim();
+        config.showDevDebugOutput = val;
+    }
+    if ((val === false) || (val === 'false') || (val === '') || (val === 'none')) {
         delete config.showDevDebugOutput;
-    } else if (config.showDevDebugOutput === true) {
+    } else if ((val === true) || (val === 'true)')) {
         config.showDevDebugOutput = ADAPTER_DEBUG_MODE.PARSED;
-    } else if (modes.indexOf(config.showDevDebugOutput) < 0) {
+    } else if (modes.indexOf(val) < 0) {
         config.showDevDebugOutput = ADAPTER_DEBUG_MODE.BOTH;
         return false;       // Meaning, needed adjustment
     }
