@@ -23,7 +23,8 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
 
 # Other
 
-* High: WSL: First class support. This includes Docker, WSL and perhaps 'ssh'. VSCode and WSL seem to be maturing. Still not there but...there may be enough.
+* Medium: RTOS plugins. There is a PR for FreeRTOS but we may want to thing of creaating a plugin mecheanism for various RTOSes. I don't want to hardcode all the different RTOS data structures but rather have one generic one driven by a JSON file or a custom ones.
+* Medium: WSL: First class support. This includes Docker, WSL and perhaps 'ssh'. VSCode and WSL seem to be maturing. Still not there but...there may be enough.
   * This may not be needed anymore since there is an effort to support a USB proxy mechanism in WSL. If that works out, then there is no need for us to do anything.
 * Low: Live Debug: See if we can update program status without stopping the program. Not sure what will work and with which gdb-server
   * invasive method: program is periodically paused and updates provided -- it has the look of live but is invasive for sure
