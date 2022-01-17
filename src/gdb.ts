@@ -122,7 +122,7 @@ export class GDBDebugSession extends DebugSession {
     public miDebugger: MI2;
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
-    protected disassember: GdbDisassembler = new GdbDisassembler(this);
+    protected disassember: GdbDisassembler;
     // currentThreadId is the currently selected thread or where execution has stopped. It not very
     // meaningful since the current thread id in gdb can change in many ways (when you use a --thread
     // option on certain commands) 
@@ -366,6 +366,7 @@ export class GDBDebugSession extends DebugSession {
         this.stopped = false;
         this.continuing = false;
         this.activeThreadIds.clear();
+        this.disassember = new GdbDisassembler(this, this.args);
         // dbgResumeStopCounter = 0;
 
         if (!await this.startGdb(response)) {
@@ -889,7 +890,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): void {
-        this.disassember.disassembleProtocolRequest(this.args, response, args, request);
+        this.disassember.disassembleProtocolRequest(response, args, request);
     }
 
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {

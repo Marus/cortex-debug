@@ -1,5 +1,5 @@
 {
-    "version": "1.1.8",
+    "version": "1.1.9",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -534,6 +534,12 @@
             },
             {
                 "language": "asm"
+            },
+            {
+                "language": "S"
+            },
+            {
+                "language": "s"
             },
             {
                 "language": "cortex-debug.disassembly"

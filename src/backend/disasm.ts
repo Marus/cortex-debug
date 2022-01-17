@@ -145,8 +145,8 @@ class DisassemblyReturn {
     }
 }
 
-export class GdbDisassembler extends EventEmitter {
-    public static debug: boolean = true;
+export class GdbDisassembler {
+    public static debug: boolean = true;    // TODO: Remove this once stable. Merge with showDevDebugOutput
     public doTiming = true;
     private maxInstrSize = 4;       // We only support ARM devices and that too 32-bit. But we got users with RISC, so need to check
     private minInstrSize = 2;
@@ -154,9 +154,10 @@ export class GdbDisassembler extends EventEmitter {
     private cache: InstructionRange[] = [];
     public memoryRegions: MemoryRegion[];
 
-    constructor(public gdbSession: GDBDebugSession) {
-        super();
-        this.on('next', () => this.runDisasmRequest.bind(this));
+    constructor(public gdbSession: GDBDebugSession, public launchArgs: ConfigurationArguments) {
+        if (launchArgs.showDevDebugOutput && (launchArgs.showDevDebugOutput !== ADAPTER_DEBUG_MODE.NONE)) {
+            GdbDisassembler.debug = true;       // Can't turn it off, once enabled. Intentional
+        }
         /*
         const buf = fs.readFileSync('/Users/hdm/tmp/tmp.json');
         const tmp = JSON.parse(buf.toString());
@@ -170,6 +171,10 @@ export class GdbDisassembler extends EventEmitter {
 
     public get miDebugger(): MI2 {
         return this.gdbSession.miDebugger;
+    }
+
+    private handleMsg(type: string, str: string) {
+        this.gdbSession.handleMsg(type, str);
     }
 
     protected isRangeInValidMem(startAddress: number, endAddress: number): boolean {
@@ -200,26 +205,53 @@ export class GdbDisassembler extends EventEmitter {
         if (this.memoryRegions) {
             return;
         }
-        this.memoryRegions = [];
-        this.miDebugger.startCaptureConsole();
-        await this.miDebugger.sendCommand('interpreter-exec console "info mem"');
-        const str = this.miDebugger.endCaptureConsole();
-        let match: RegExpExecArray;
-        const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
-        // Num Enb Low Addr   High Addr  Attrs 
-        // 1   y  	0x10000000 0x10100000 flash blocksize 0x200 nocache
-        while (match = regex.exec(str)) {
-            const [flag, lowAddr, highAddr, attrsStr] = match.slice(1, 5);
-            if (flag === 'y') {
-                const nHighAddr = parseInt(highAddr);
-                const nlowAddr = parseInt(lowAddr);
-                const attrs = attrsStr.split(/\s+/g);
-                const name = `Region${this.memoryRegions.length}`;
-                this.memoryRegions.push(new MemoryRegion(name, nHighAddr - nlowAddr, nlowAddr, nlowAddr, attrs));
+        try {
+            this.memoryRegions = [];
+            this.miDebugger.startCaptureConsole();
+            await this.miDebugger.sendCommand('interpreter-exec console "info mem"');
+            const str = this.miDebugger.endCaptureConsole();
+            let match: RegExpExecArray;
+            const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
+            // Num Enb Low Addr   High Addr  Attrs 
+            // 1   y  	0x10000000 0x10100000 flash blocksize 0x200 nocache
+            while (match = regex.exec(str)) {
+                const [flag, lowAddr, highAddr, attrsStr] = match.slice(1, 5);
+                if (flag === 'y') {
+                    const nHighAddr = parseInt(highAddr);
+                    const nlowAddr = parseInt(lowAddr);
+                    const attrs = attrsStr.split(/\s+/g);
+                    const name = `GdbInfo${this.memoryRegions.length}`;
+                    this.memoryRegions.push(new MemoryRegion(name, nHighAddr - nlowAddr, nlowAddr, nlowAddr, attrs));
+                }
             }
+        } catch (e) {
+            this.handleMsg('log', `Eror: ${e.toString()}`);
         }
-        if (this.memoryRegions.length === 0) {
-            this.memoryRegions = Array.from(this.gdbSession.symbolTable.memoryRegions);
+        // tslint:disable-next-line: max-line-length
+        const fromGdb = this.memoryRegions.length;
+        this.memoryRegions = this.memoryRegions.concat(this.gdbSession.symbolTable.memoryRegions);
+        if (this.memoryRegions.length > 0) {
+            this.handleMsg('log', 'Note: We detected the following memory regions as valid using gdb "info mem" and "objdump -h"\n');
+            this.handleMsg('log', '    This information is used to adjust bounds only when normal disassembly fails.\n');            const hdrs = ['Size', 'VMA Beg', 'VMA End', 'LMA Beg', 'LMA End'].map((x: string) => x.padStart(10));
+            const line = ''.padEnd(80, '=') + '\n';
+            this.handleMsg('stdout', line);
+            this.handleMsg('stdout', '  Using following memory regions for disassembly\n');
+            this.handleMsg('stdout', line);
+            this.handleMsg('stdout', hdrs.join('') + '  Attributes\n');
+            this.handleMsg('stdout', line);
+            let count = 0;
+            for (const r of this.memoryRegions) {
+                if (count++ === fromGdb) {
+                    this.handleMsg('stdout', '  '.padEnd(80, '-') + '\n');
+                }
+                const vals = [r.size, r.vmaStart, r.vmaEnd - 1, r.lmaStart, r.lmaEnd - 1].map((v) => hexFormat(v, 8, false).padStart(10));
+                if (r.vmaStart === r.lmaStart) {
+                    vals[3] = vals[4] = '  '.padEnd(10, '-');
+                }
+                const attrs = ((count > fromGdb) ? `(${r.name}) ` : '') + r.attrs.join(' ');
+                this.handleMsg('stdout', vals.join('') + '  ' + attrs + '\n');
+            }
+            this.handleMsg('stdout', line);
         }
     }
 
@@ -343,7 +375,7 @@ export class GdbDisassembler extends EventEmitter {
         }
         if (this.doTiming) {
             const total = srcCount + asmCount;
-            this.gdbSession.handleMsg('log', `Debug: Found ${total} Instrunctions. ${srcCount} with source code, ${asmCount} without\n`);
+            this.handleMsg('log', `Debug: Found ${total} Instrunctions. ${srcCount} with source code, ${asmCount} without\n`);
         }
         return new DisassemblyReturn(instructions, foundIx, false);
     }
@@ -383,7 +415,7 @@ export class GdbDisassembler extends EventEmitter {
                 }
                 if (this.doTiming) {
                     const count = endAddress - startAddress;
-                    this.gdbSession.handleMsg('log', `Debug: Gdb command: -${cmd}, ${count} bytes\n`);
+                    this.handleMsg('log', `Debug: Gdb command: -${cmd}, ${count} bytes\n`);
                 }
                 this.miDebugger.sendCommand(cmd).then((result) => {
                     try {
@@ -410,7 +442,7 @@ export class GdbDisassembler extends EventEmitter {
                         reject(e);
                     }
                 }, (e) => {
-                    this.gdbSession.handleMsg('log', `Error: GDB failed: ${e.toString()}\n`);
+                    this.handleMsg('log', `Error: GDB failed: ${e.toString()}\n`);
                     let doReject = true;
                     if ((iter === 0) && adjustForMemEror && this.isValidAddr(validationAddr)) {
                         adjustForMemEror = false;
@@ -422,7 +454,7 @@ export class GdbDisassembler extends EventEmitter {
                             doReject = false;
                             const msg = 'Info: Recovering from failed disassembly. Adjusting start,end addresses' +
                                 ` from ${hexFormat(olds)},${hexFormat(olde)} to ${hexFormat(startAddress)}, ${hexFormat(endAddress)}`;
-                            this.gdbSession.handleMsg('log', msg + '\n');
+                            this.handleMsg('log', msg + '\n');
                             if (GdbDisassembler.debug) {
                                 console.log(msg);
                             }
@@ -491,18 +523,14 @@ export class GdbDisassembler extends EventEmitter {
     // valid.
     //
     public disassembleProtocolRequest(
-        launchArgs: ConfigurationArguments,
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): Promise<void>
     {
         const seq = request?.seq;
-        if (launchArgs.showDevDebugOutput && (launchArgs.showDevDebugOutput !== ADAPTER_DEBUG_MODE.NONE)) {
-            GdbDisassembler.debug = true;       // Can't turn it off, once enabled. Intentional
-        }
         return new Promise((resolve, reject) => {
             if (GdbDisassembler.debug) {
-                this.gdbSession.handleMsg('log', `Debug-${seq}: Enqueuing ${JSON.stringify(request)}\n`);
+                this.handleMsg('log', `Debug-${seq}: Enqueuing ${JSON.stringify(request)}\n`);
             }
             const req: DisasmRequest = {
                 response: response,
@@ -511,11 +539,11 @@ export class GdbDisassembler extends EventEmitter {
                 resolve: resolve,
                 reject: reject
             };
-            this.disasmRequestQueue.splice(0, 0, req);
+            this.disasmRequestQueue.push(req);
             if (!this.disasmBusy) {
                 this.runDisasmRequest();
             } else if (this.doTiming) {
-                this.gdbSession.handleMsg('log', `Debug-${seq}: ******** Waiting for previous request to complete\n`);
+                this.handleMsg('log', `Debug-${seq}: ******** Waiting for previous request to complete\n`);
             }
         });
     }
@@ -529,7 +557,7 @@ export class GdbDisassembler extends EventEmitter {
     private runDisasmRequest() {
         if (this.disasmRequestQueue.length > 0) {
             this.disasmBusy = true;
-            const next = this.disasmRequestQueue.pop();
+            const next = this.disasmRequestQueue.shift();
             this.disassembleProtocolRequest2(next.response, next.args, next.request).then(() => {
                 this.disasmBusy = false;
                 next.resolve();
@@ -550,7 +578,7 @@ export class GdbDisassembler extends EventEmitter {
         return new Promise(async (resolve, reject) => {
             const seq = request?.seq;
             if (GdbDisassembler.debug) {
-                this.gdbSession.handleMsg('log', `Debug-${seq}: Dequeuing...\n`);
+                this.handleMsg('log', `Debug-${seq}: Dequeuing...\n`);
                 console.log('disassembleRequest: ', args);
             }
             await this.getMemoryRegions();
@@ -629,7 +657,7 @@ export class GdbDisassembler extends EventEmitter {
                     };
                     if (this.doTiming) {
                         const ms = timer.createPaddedMs(3);
-                        this.gdbSession.handleMsg('log', `Debug-${seq}: Timing Request: ${ms} ms\n`);
+                        this.handleMsg('log', `Debug-${seq}: Timing Request: ${ms} ms\n`);
                     }
                     this.gdbSession.sendResponse(response);
                     resolve();

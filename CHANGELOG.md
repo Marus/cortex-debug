@@ -1,5 +1,9 @@
 ChangeLog
 
+# V1.1.9
+* Print memory region found/used during disassembly (will be removed once disassembly matures)
+* Allow file extensions `.S`, `.s` as valid assembly language extensions for setting breakpoints
+
 # V1.1.8
 * Feature: you can now customize the `objdumpPath` like you can the `gdbPath` you your settings or in launch.json
 * Some improvements in disassembly
