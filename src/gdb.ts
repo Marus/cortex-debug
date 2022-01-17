@@ -152,7 +152,7 @@ export class GDBDebugSession extends DebugSession {
 
     protected functionBreakpoints = [];
     protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map();
-    protected instrBreakpointMap: Map<number, OurInstructionBreakpoint[]> = new Map();
+    protected instrBreakpointMap: Map<number, OurInstructionBreakpoint> = new Map();
     protected dataBreakpointMap: Map<number, OurDataBreakpoint> = new Map();
     protected fileExistsCache: Map<string, boolean> = new Map();
 
@@ -1712,6 +1712,7 @@ export class GDBDebugSession extends DebugSession {
         }
         const createBreakpoints = async (shouldContinue) => {
             const currentBreakpoints = Array.from(this.instrBreakpointMap.keys());
+            this.instrBreakpointMap.clear();
 
             try {
                 this.disableSendStoppedEvents = false;
@@ -1735,7 +1736,7 @@ export class GDBDebugSession extends DebugSession {
                             } as DebugProtocol.Breakpoint;
                         }
 
-                        this.instrBreakpointMap[bp.number] = bp;
+                        this.instrBreakpointMap.set(bp.number, bp);
                         return {
                             id: bp.number,
                             verified: true
@@ -1820,11 +1821,11 @@ export class GDBDebugSession extends DebugSession {
             return;
         }
         const createBreakpoints = async (shouldContinue) => {
-            const currentBreakpoints = [ ...this.dataBreakpointMap.keys() ];
+            const currentBreakpoints = Array.from(this.dataBreakpointMap.keys());
+            this.dataBreakpointMap.clear();
 
             try {
                 this.disableSendStoppedEvents = false;
-                this.dataBreakpointMap = new Map();
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
                 const all: Array<Promise<OurDataBreakpoint | MIError>> = [];
