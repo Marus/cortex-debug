@@ -7,12 +7,7 @@
 # for SWO.
 #
 set USE_SWO 0
-proc CDSWOConfigure { CDCPUFreqHz CDSWOFreqHz CDSWOOutput } {
-	#global swv_cmd
-    #set swv_cmd [list "0" "1" "2" $CDSWOOutput "4" $CDCPUFreqHz ]
-    #swv start 1500000 [expr {$CDSWOFreqHz / 1000}]
-    #return "Blah"
-    
+proc CDSWOConfigure { CDCPUFreqHz CDSWOFreqHz CDSWOOutput } {    
     # We don't create/configure the entire TPIU which requires advanced knowledge of the device
     # like which DAP/AP ports to use, what their bases addresses are, etc. That should already
     # be done by the config files from the Silicon Vendor
