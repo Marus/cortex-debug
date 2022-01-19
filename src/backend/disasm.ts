@@ -1,4 +1,4 @@
-import { Source, Variable } from '@vscode/debugadapter';
+import { Source } from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { hexFormat } from '../frontend/utils';
 import { MI2 } from './mi2/mi2';
@@ -9,8 +9,6 @@ import { DisassemblyInstruction, ConfigurationArguments, ADAPTER_DEBUG_MODE, HrT
 import { SymbolInformation } from '../symbols';
 import { assert } from 'console';
 import { MemoryRegion } from './symbols';
-import * as fs from 'fs';
-import { EventEmitter } from 'stream';
 
 /*
 ** We currently have two disassembler interfaces. One that follows the DAP protocol and VSCode is the client

@@ -5,6 +5,7 @@ import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
 import { posix } from 'path';
 import * as nativePath from 'path';
+import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
 import { ADAPTER_DEBUG_MODE } from '../../common';
@@ -45,6 +46,7 @@ export class MI2 extends EventEmitter implements IBackend {
     public status: 'running' | 'stopped' | 'none' = 'none';
     public pid: number = -1;
     protected lastContinueSeqId = -1;
+    protected actuallyStarted = false;
 
     constructor(public application: string, public args: string[]) {
         super();
@@ -68,6 +70,7 @@ export class MI2 extends EventEmitter implements IBackend {
             });
 
             this.sendCommand('gdb-set target-async on', true).then(() => {
+                this.actuallyStarted = true;
                 this.startCaptureConsole();
                 this.sendCommand('gdb-version').then((v: MINode) => {
                     const str = this.endCaptureConsole();
@@ -129,7 +132,13 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private onExit() {
-        console.log('GDB: exited');
+        if (!this.actuallyStarted) {
+            if (os.platform() === 'linux') {
+                this.log('log', 'Error: Unable to start GDB. Make sure you can start gdb from the command-line and run\n' +
+                    '    a command like "echo hello". If you cannot, it is most likely becaues "libncurses5" is not installed.\n');
+            }
+        }
+        ServerConsoleLog('GDB: exited', this.pid);
         this.exited = true;
         this.emit('quit');
     }

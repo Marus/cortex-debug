@@ -34,7 +34,7 @@ interface SVDInfo {
 export class CortexDebugExtension {
     private adapterOutputChannel: vscode.OutputChannel = null;
     private clearAdapterOutputChannel = false;
-    public rttTerminals: RTTTerminal[] = [];
+    private rttTerminals: RTTTerminal[] = [];
 
     private gdbServerConsole: GDBServerConsole = null;
 

@@ -1,5 +1,8 @@
 ChangeLog
 
+# V1.1.10
+* Bugfix: Unable to delete instruction breakpoint
+
 # V1.1.9
 * Print memory region found/used during disassembly (will be removed once disassembly matures)
 * Allow file extensions `.S`, `.s` as valid assembly language extensions for setting breakpoints
