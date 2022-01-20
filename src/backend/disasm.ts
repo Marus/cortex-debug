@@ -10,6 +10,12 @@ import { SymbolInformation } from '../symbols';
 import { assert } from 'console';
 import { MemoryRegion } from './symbols';
 
+function ConsoleLog(msg: any, ...params: any[]) {
+    if (false) {
+        console.log(msg, ...params);
+    }
+}
+
 /*
 ** We currently have two disassembler interfaces. One that follows the DAP protocol and VSCode is the client
 ** for it. The other is the original that works on a function at a time and the client is our own extension.
@@ -125,7 +131,7 @@ class InstructionRange {
                 this.startAddress = Math.min(this.startAddress, other.startAddress);
                 this.endAddress = Math.max(this.endAddress, other.endAddress);
                 if (GdbDisassembler.debug) {
-                    console.log('Merge @', this.instructions[lx - 1], this.instructions[lx], this.instructions[lx + 1]);
+                    ConsoleLog('Merge @', this.instructions[lx - 1], this.instructions[lx], this.instructions[lx + 1]);
                 }
                 return true;
             }
@@ -163,7 +169,7 @@ export class GdbDisassembler {
         const vAddr = parseInt('0x00001ec0');
 
         const ret = this.parseDisassembleResults(result, vAddr, true);
-        console.log(ret);
+        ConsoleLog(ret);
         */
     }
 
@@ -284,24 +290,29 @@ export class GdbDisassembler {
             endLine: number;
         }
         const parseIntruction = (miInstr: MINode, srcInfo?: ParseSourceInfo) => {
-            const address = MINode.valueOf(miInstr, 'address');
-            // const functionName = MINode.valueOf(miInstr, 'func-name');
-            const offset = parseInt(MINode.valueOf(miInstr, 'offset'));
+            const address = MINode.valueOf(miInstr, 'address') as string || '0x????????';
+            const fName = MINode.valueOf(miInstr, 'func-name') as string || undefined;
+            const offset = parseInt(MINode.valueOf(miInstr, 'offset') || '0');
             const ins = MINode.valueOf(miInstr, 'inst');
-            const opcodes = MINode.valueOf(miInstr, 'opcodes');
+            const opcodes = MINode.valueOf(miInstr, 'opcodes') as string || '';
             const nAddress = parseInt(address);
             // If entire range is valid, use that info but otherwise check specifically for this address
             const flag = entireRangeGood ? '' : this.getMemFlagForAddr(nAddress);
-            const useInstr = ((opcodes as string) || ' ').padEnd(3 * this.maxInstrSize + 4) + flag + ins;
+            const useInstr = (opcodes.replace(/\s/g, '')).padEnd(2 * this.maxInstrSize + 2) + flag + ins;
+            const sym = fName ? '<' + (fName.length > 22 ? '..' + fName.substring(fName.length - 20) : fName) + `+${offset}>` : undefined;
             const instr: ProtocolInstruction = {
                 address: address,
                 pvtAddress: nAddress,
                 instruction: useInstr,
                 // VSCode doesn't do anything with 'symbol'
-                // symbol: functionName ? `<${functionName}+${offset === undefined ? '??' : offset}>` : undefined,
+                symbol: fName,
+                // symbol: fName ? `<${fName}+${offset === undefined ? '??' : offset}>` : undefined,
                 // The UI is not good when we provide this using `instructionBytes` but we need it
                 pvtInstructionBytes: opcodes
             };
+            if (sym) {
+                instr.instructionBytes = sym;
+            }
             if (srcInfo) {
                 instr.location = srcInfo.source;
                 instr.line = srcInfo.startLine;
@@ -315,7 +326,8 @@ export class GdbDisassembler {
         };
     
         let srcCount = 0;
-        let asmCount = 0;        let foundIx = -1;
+        let asmCount = 0;
+        let foundIx = -1;
         const instructions: ProtocolInstruction[] = [];
         const asmInsns = result.result('asm_insns') || [];
         // You can have all non-source instructions, all source instructions or a mix where within
@@ -409,7 +421,7 @@ export class GdbDisassembler {
                 }
                 const cmd = `data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(endAddress)} -- 5`;
                 if (GdbDisassembler.debug) {
-                    console.log('Actual request: ' + cmd);
+                    ConsoleLog('Actual request: ' + cmd);
                 }
                 if (this.doTiming) {
                     const count = endAddress - startAddress;
@@ -422,7 +434,7 @@ export class GdbDisassembler {
                         if (foundIx < 0) {
                             if (GdbDisassembler.debug) {
                                 const msg = `Could not disassemble at this address Looking for ${hexFormat(validationAddr)}: ${cmd} `;
-                                console.log(msg, ret.instructions);
+                                ConsoleLog(msg, ret.instructions);
                             }
                             if ((startAddress >= this.instrMultiple) && (iter === 0)) {
                                 iter++;
@@ -454,7 +466,7 @@ export class GdbDisassembler {
                                 ` from ${hexFormat(olds)},${hexFormat(olde)} to ${hexFormat(startAddress)}, ${hexFormat(endAddress)}`;
                             this.handleMsg('log', msg + '\n');
                             if (GdbDisassembler.debug) {
-                                console.log(msg);
+                                ConsoleLog(msg);
                             }
                             doWork();
                         }
@@ -472,7 +484,7 @@ export class GdbDisassembler {
         for (const old of this.cache) {
             if (old.isInsideRange(startAddr, endAddr)) {
                 if (GdbDisassembler.debug) {
-                    console.log('Instruction cache hit: ',
+                    ConsoleLog('Instruction cache hit: ',
                         {startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}, old);
                 }
                 return old;
@@ -577,7 +589,7 @@ export class GdbDisassembler {
             const seq = request?.seq;
             if (GdbDisassembler.debug) {
                 this.handleMsg('log', `Debug-${seq}: Dequeuing...\n`);
-                console.log('disassembleRequest: ', args);
+                ConsoleLog('disassembleRequest: ', args);
             }
             await this.getMemoryRegions();
             const baseAddress = parseInt(args.memoryReference);
@@ -604,9 +616,9 @@ export class GdbDisassembler {
                     let instrs = ret.instructions;
                     let foundIx = ret.foundAt;
                     if (GdbDisassembler.debug) {
-                        console.log(`Found ${instrs.length}. baseInstrIndex = ${foundIx}.`);
-                        console.log(instrs[foundIx]);
-                        // console.log(instrs.map((x) => x.address));
+                        ConsoleLog(`Found ${instrs.length}. baseInstrIndex = ${foundIx}.`);
+                        ConsoleLog(instrs[foundIx]);
+                        // ConsoleLog(instrs.map((x) => x.address));
                     }
                     // Spec says must have exactly `count` instructions. Kinda harsh but...gotta do it
                     // These are corner cases that are hard to test. This would happen if we are falling
@@ -640,10 +652,10 @@ export class GdbDisassembler {
                     }
 
                     if (GdbDisassembler.debug) {
-                        console.log(`Returning ${instrs.length} instructions of ${ret.instructions.length} queried. baseInstrIndex = ${foundIx}.`);
-                        // console.log(instrs.map((x) => x.address));
+                        ConsoleLog(`Returning ${instrs.length} instructions of ${ret.instructions.length} queried. baseInstrIndex = ${foundIx}.`);
+                        // ConsoleLog(instrs.map((x) => x.address));
                         if ((foundIx >= 0) && (foundIx < instrs.length)) {
-                            console.log(instrs[foundIx]);
+                            ConsoleLog(instrs[foundIx]);
                         } else if ((foundIx !== instrOffset) && (foundIx !== (instrs.length + instrOffset))) {
                             console.error(`This may be a problem. Referenced index should be exactly ${instrOffset} off`);
                         }
@@ -663,7 +675,7 @@ export class GdbDisassembler {
                 catch (e) {
                     const msg = `Unable to disassemble: ${e.toString()}: ${JSON.stringify(request)}`;
                     if (GdbDisassembler.debug) {
-                        console.log(msg + '\n');
+                        ConsoleLog(msg + '\n');
                     }
                     this.gdbSession.sendErrorResponsePub(response, 1, msg);
                     resolve();
@@ -671,7 +683,7 @@ export class GdbDisassembler {
             }, (e) => {
                 const msg = `Unable to disassemble: ${e.toString()}: ${JSON.stringify(request)}`;
                 if (GdbDisassembler.debug) {
-                    console.log(msg + '\n');
+                    ConsoleLog(msg + '\n');
                 }
                 this.gdbSession.sendErrorResponsePub(response, 1, msg);
                 resolve();
