@@ -32,8 +32,6 @@ interface SVDInfo {
 }
 
 export class CortexDebugExtension {
-    private adapterOutputChannel: vscode.OutputChannel = null;
-    private clearAdapterOutputChannel = false;
     private rttTerminals: RTTTerminal[] = [];
 
     private gdbServerConsole: GDBServerConsole = null;
@@ -605,8 +603,6 @@ export class CortexDebugExtension {
                 }
                 mySession.rttPortMap = {};
             }
-
-            this.clearAdapterOutputChannel = true;
         }
         catch (e) {
             vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
@@ -631,9 +627,6 @@ export class CortexDebugExtension {
                 break;
             case 'rtt-configure':
                 this.receivedRTTConfigureEvent(e);
-                break;
-            case 'adapter-output':
-                this.receivedAdapterOutput(e);
                 break;
             case 'record-event':
                 this.receivedEvent(e);
@@ -933,22 +926,6 @@ export class CortexDebugExtension {
 
     private terminalClosed(terminal: vscode.Terminal) {
         this.rttTerminals = this.rttTerminals.filter((t) => t.terminal !== terminal);
-    }
-
-    private receivedAdapterOutput(e) {
-        let output = e.body.content;
-        if (!output.endsWith('\n')) { output += '\n'; }
-        if (!this.adapterOutputChannel) {
-            this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
-            this.adapterOutputChannel.appendLine('DEPRECATED: Please check the \'TERMINALS\' tab for \'gdb-server\' output. ' +
-                'This \'Adapter Output\' will not appear in future releases');
-            // this.adapterOutputChannel.show();
-        } else if (this.clearAdapterOutputChannel) {
-            this.adapterOutputChannel.clear();
-        }
-        this.clearAdapterOutputChannel = false;
-
-        this.adapterOutputChannel.append(output);
     }
 
     private initializeSWO(session: vscode.DebugSession, args) {

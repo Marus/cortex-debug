@@ -9,7 +9,7 @@ import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
-    AdapterOutputEvent, DisassemblyInstruction, createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE
+    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -403,7 +403,6 @@ export class GDBDebugSession extends DebugSession {
                 }
             }
             this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort, consolePort);
-            this.server.on('output', this.handleAdapterOutput.bind(this));
             this.server.on('quit', () => {
                 if (this.started) {
                     this.quitEvent();
@@ -1209,10 +1208,6 @@ export class GDBDebugSession extends DebugSession {
         } else {
             return str;
         }
-    }
-
-    protected handleAdapterOutput(output) {
-        this.sendEvent(new AdapterOutputEvent(output, 'out'));
     }
 
     private serverControllerEvent(event: DebugProtocol.Event) {

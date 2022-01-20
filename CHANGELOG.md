@@ -14,7 +14,8 @@ This is a rather large release. Contains many enhancements, new features and bug
   * SWO and RTT are now session aware
   * SVD files: You can have multiple SVD files (one for each session) but hopefully, you only need one as they are slow. But given that we also support multi-session, we do not restrict the number of SVD files.
   * One can see the relationship of the various items in the chained configurations in the `Call Stack` window. Children are nested (indented) a bit.
-* **[Full Disassembly with inline source](https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging)**: Thanks to a Viewer from Microsoft and our backend+gdb, we now have full disassembly of your entire program (virtual and on demand so it is performant). [See details here](https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging). Thanks to @hongshui3000 for taking this for a ride and providing valuable feedback. *Note: The old style disassembly of functions without source will be **DEPRECATED***
+* **[Full Disassembly with inline source](https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging)**: Thanks to a Viewer from Microsoft and our backend+gdb, we now have full disassembly of your entire program (virtual and on demand so it is performant). [See details here](https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging). Thanks to @hongshui3000 for taking this for a ride and providing valuable feedback. *Note: The old style disassembly of functions without source will be **DEPRECATED***<br>
+*Known issue*: Sometimes you may not see source code when the current instruction is near a bunch of other functions that do not have source. This happens for example if you are stopped in main, and your main is small, and it is surrounded by startup code that does not have source. Not sure why gdb is doing this
 * **Registers**: `Registers` are now available in the `Variables` panel. You can now change the values of registers. But more importantly, unlike the `Registers` panel, this will track your current thread/frame in the `Call Stack` window. This means that registers are now shown in the context of the current frame. What we had before in the `Registers` panel was information we had at the time a halt/breakpoint was hit and potentially incorrect when you refreshed -- this was because there was no API in VSCode for extensions to track the Call Stack window. **`The old Registers panel will be DEPRECATED`**
 * **Website changes**: Our github repo always had a [Wiki](https://github.com/Marus/cortex-debug/wiki) but it was pretty weak. Many thanks to @PhilippHaefele for a lot of edits he did over the last couple of months and also helping closing many issues that were already addressed.
 * **SWO configuration**: SWO was a hit and miss as multi-core devices appeared and device manufacturers were not using the default base addresses for the ARM debug hardware like TPIU, DWT, ITM, etc. We factored this out in a user settable gdb script as well a small TCL file for OpenOCD which needs additional configuration. See https://github.com/Marus/cortex-debug/wiki/SWO-Output#swo-configuration
@@ -29,7 +30,9 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
 * Issue #522: Qemu launch failed because it does not have a matching regular expression that indicated a start. It never does and code to handle that did not work. Fixed.
 * Issue #539: Using GDB to get some symbol information for locals and globals. Hopefully, gives better performance for large executables. Most information still comes from objdump though.
-
+# Others
+* The `Adapter Output` window in the `OUTPUT` tab is no more. We have had a deprecation notice for months now and have been using the `gdb-server` tab in the `TERMINALS` tab.
+ 
 # V1.1.10
 * Bugfix: Unable to delete instruction breakpoint
 

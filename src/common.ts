@@ -38,18 +38,6 @@ export class GenericCustomEvent extends Event implements DebugProtocol.Event {
     }
 }
 
-export class AdapterOutputEvent extends Event implements DebugProtocol.Event {
-    public body: {
-        type: string,
-        content: string
-    };
-    public event: string;
-
-    constructor(content: string, type: string) {
-        super('adapter-output', { content: content, type: type });
-    }
-}
-
 export class StoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
         reason: string;
