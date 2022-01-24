@@ -537,6 +537,10 @@ export class GdbDisassembler {
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): Promise<void>
     {
+        if (args.memoryReference === undefined) {
+            // This is our own request.
+            return this.customDisassembleRequest(response, args);
+        }
         const seq = request?.seq;
         return new Promise((resolve, reject) => {
             if (GdbDisassembler.debug) {
