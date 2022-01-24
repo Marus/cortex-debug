@@ -2722,7 +2722,7 @@ export class GDBDebugSession extends DebugSession {
         }
 
         const ret = fs.existsSync(name);
-        this.fileExistsCache.set(name, true);
+        this.fileExistsCache.set(name, ret);
         return ret;
     }
 
