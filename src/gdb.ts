@@ -620,7 +620,7 @@ export class GDBDebugSession extends DebugSession {
                 this.sendErrorResponse(
                     response,
                     103,
-                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
+                    `GDB executable "${gdbExePath}" was not found.\n` +
                     'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
                 );
                 return false;
@@ -631,7 +631,7 @@ export class GDBDebugSession extends DebugSession {
                 this.sendErrorResponse(
                     response,
                     103,
-                    `${this.serverController.name} GDB executable "${gdbExePath}" was not found.\n` +
+                    `GDB executable "${gdbExePath}" was not found.\n` +
                     'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
                 );
                 return false;
