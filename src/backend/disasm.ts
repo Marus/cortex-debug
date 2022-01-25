@@ -8,10 +8,11 @@ import { GDBDebugSession } from '../gdb';
 import { DisassemblyInstruction, ConfigurationArguments, ADAPTER_DEBUG_MODE, HrTimer } from '../common';
 import { SymbolInformation } from '../symbols';
 import { assert } from 'console';
-import { MemoryRegion } from './symbols';
+import { MemoryRegion, SymbolNode } from './symbols';
+import { IntervalTree } from 'node-interval-tree';
 
 function ConsoleLog(msg: any, ...params: any[]) {
-    if (false) {
+    if (true) {
         console.log(msg, ...params);
     }
 }
@@ -25,6 +26,14 @@ function ConsoleLog(msg: any, ...params: any[]) {
 interface  ProtocolInstruction extends DebugProtocol.DisassembledInstruction {
     pvtAddress: number;
     pvtInstructionBytes?: string;
+}
+
+interface DisasmRange {
+    start: number;
+    qStart: number;
+    qEnd: number;
+    end: number;
+    verify: number;
 }
 
 interface DisasmRequest {
@@ -68,7 +77,7 @@ class InstructionRange {
         const e = Math.max(this.endAddress, endAddress);
         const l = e - s;
         if (l > (this.span + length)) {
-            // combined length is greather than the sum of two engths
+            // combined length is greather than the sum of two lengths
             return false;
         }
         return true;
@@ -102,7 +111,7 @@ class InstructionRange {
 
         // See if totally overlapping or adjacent
         if ((this.span === other.span) && (this.startAddress === other.startAddress)) {
-            return true;                                        // They are idendical
+            return true;                                        // They are identical
         } else if (this.endAddress === other.startAddress) {    // adjacent at end of this
             this.instructions = this.instructions.concat(other.instructions);
             this.endAddress = other.endAddress;
@@ -137,14 +146,14 @@ class InstructionRange {
             }
         }
         // start/end addresses are original search ranges. According to that, the ranges overlap. But
-        // the acutal instructions may not overlap or even abut
+        // the actual instructions may not overlap or even abut
         return false;
     }
 }
 
 class DisassemblyReturn {
     constructor(public instructions: ProtocolInstruction[], public foundAt: number, makeCopy = true) {
-        // We onky want to return a copy so the caches are not corrupted
+        // We only want to return a copy so the caches are not corrupted
         this.instructions = makeCopy ? Array.from(this.instructions) : this.instructions;
     }
 }
@@ -216,7 +225,7 @@ export class GdbDisassembler {
             const str = this.miDebugger.endCaptureConsole();
             let match: RegExpExecArray;
             const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
-            // Num Enb Low Addr   High Addr  Attrs 
+            // Num Enb  Low Addr   High Addr  Attrs 
             // 1   y  	0x10000000 0x10100000 flash blocksize 0x200 nocache
             while (match = regex.exec(str)) {
                 const [flag, lowAddr, highAddr, attrsStr] = match.slice(1, 5);
@@ -229,14 +238,17 @@ export class GdbDisassembler {
                 }
             }
         } catch (e) {
-            this.handleMsg('log', `Eror: ${e.toString()}`);
+            this.handleMsg('log', `Error: ${e.toString()}`);
         }
-        // tslint:disable-next-line: max-line-length
         const fromGdb = this.memoryRegions.length;
+        // There is a caveat here. Adding regions from executables is not reliable when you have PIC
+        // (Position Independent Code) -- so far have not seen such a thing but it is possible
         this.memoryRegions = this.memoryRegions.concat(this.gdbSession.symbolTable.memoryRegions);
+
         if (this.memoryRegions.length > 0) {
             this.handleMsg('log', 'Note: We detected the following memory regions as valid using gdb "info mem" and "objdump -h"\n');
-            this.handleMsg('log', '    This information is used to adjust bounds only when normal disassembly fails.\n');            const hdrs = ['Size', 'VMA Beg', 'VMA End', 'LMA Beg', 'LMA End'].map((x: string) => x.padStart(10));
+            this.handleMsg('log', '    This information is used to adjust bounds only when normal disassembly fails.\n');
+            const hdrs = ['Size', 'VMA Beg', 'VMA End', 'LMA Beg', 'LMA End'].map((x: string) => x.padStart(10));
             const line = ''.padEnd(80, '=') + '\n';
             this.handleMsg('stdout', line);
             this.handleMsg('stdout', '  Using following memory regions for disassembly\n');
@@ -331,12 +343,12 @@ export class GdbDisassembler {
         const instructions: ProtocolInstruction[] = [];
         const asmInsns = result.result('asm_insns') || [];
         // You can have all non-source instructions, all source instructions or a mix where within
-        // the source instructions, you can have instructions wihout source. I have not seen a mix
+        // the source instructions, you can have instructions without source. I have not seen a mix
         // of 'src_and_asm_line' and naked ones as if we did not ask for source info. But, I have
         // seen records of 'src_and_asm_line' with no source info. Understandably, it can happen
         // due to compiler optimizations and us asking for a random range where insructions from
-        // different object files are in the same area and compiled differently. None of this documente
-        // though. Looked at gdb-soure and actually saw what i documented above.
+        // different object files are in the same area and compiled differently. None of this documented
+        // though. Looked at gdb-source and actually saw what i documented above.
         let lastLine = 0;
         let lastPath = '';
         for (const srcLineVal of asmInsns) {
@@ -456,14 +468,14 @@ export class GdbDisassembler {
                     let doReject = true;
                     if ((iter === 0) && adjustForMemEror && this.isValidAddr(validationAddr)) {
                         adjustForMemEror = false;
-                        const olds = startAddress;
-                        const olde = endAddress;
+                        const oldS = startAddress;
+                        const oldE = endAddress;
                         startAddress = this.clipLow(validationAddr, startAddress);
                         endAddress = this.clipHigh(validationAddr, endAddress);
-                        if ((olds !== startAddress) || (olde !== endAddress)) {
+                        if ((oldS !== startAddress) || (oldE !== endAddress)) {
                             doReject = false;
                             const msg = 'Info: Recovering from failed disassembly. Adjusting start,end addresses' +
-                                ` from ${hexFormat(olds)},${hexFormat(olde)} to ${hexFormat(startAddress)}, ${hexFormat(endAddress)}`;
+                                ` from ${hexFormat(oldS)},${hexFormat(oldE)} to ${hexFormat(startAddress)}, ${hexFormat(endAddress)}`;
                             this.handleMsg('log', msg + '\n');
                             if (GdbDisassembler.debug) {
                                 ConsoleLog(msg);
@@ -537,6 +549,11 @@ export class GdbDisassembler {
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): Promise<void>
     {
+        if (args.memoryReference === undefined) {
+            // This is our own request.
+            return this.customDisassembleRequest(response, args);
+        }
+
         const seq = request?.seq;
         return new Promise((resolve, reject) => {
             if (GdbDisassembler.debug) {
@@ -559,7 +576,7 @@ export class GdbDisassembler {
     }
 
     // VSCode as a client, frequently makes duplicate requests, back to back before results for the first one are ready
-    // As a result, older results are not in cache yet, we endup doing work that was not needed. It also happens
+    // As a result, older results are not in cache yet, we end up doing work that was not needed. It also happens
     // windows get re-arranged, during reset because we have back to back stops and in other situations. So, we
     // put things in a queue before starting work on the next item. Save quite a bit of work
     private disasmRequestQueue: DisasmRequest[] = [];
@@ -592,6 +609,7 @@ export class GdbDisassembler {
                 ConsoleLog('disassembleRequest: ', args);
             }
             await this.getMemoryRegions();
+
             const baseAddress = parseInt(args.memoryReference);
             const offset = args.offset || 0;
             const instrOffset = args.instructionOffset || 0;
@@ -606,6 +624,11 @@ export class GdbDisassembler {
             const endAddr = startAddr + args.instructionCount * this.maxInstrSize;
             const trueStart = Math.max(0, Math.min(baseAddress - this.maxInstrSize, startAddr));
             const trueEnd = Math.max(baseAddress + this.maxInstrSize, endAddr);
+
+            if (true) {
+                const ranges = this.findDisasmRanges(trueStart, trueEnd, baseAddress);
+            }
+
             // We are using 'baseAddress' as the validation address. Instead of 'baseAddress + offset'
             // Generally, 'baseAddress' is something we returned previously either through here
             // or as part of a stacktrace so it is likely a valid instruction. But there could be other
@@ -699,23 +722,89 @@ export class GdbDisassembler {
         }
     }
 
+    private findDisasmRanges(trueStart: number, trueEnd: number, baseAddress: number): DisasmRange[] {
+        const printFunc = (item: SymbolNode) => {
+            const file = item.func.parsedFile || '<unknown-file>';
+            const msg = `(${hexFormat(item.low)}, ${item.low}), (${hexFormat(item.high)}, ${item.high}) ${item.func.name} ${file}`;
+            this.handleMsg('stdout', msg + '\n');
+            ConsoleLog(msg);
+        };
+
+        this.handleMsg('stdout', `${hexFormat(trueStart)}, ${hexFormat(trueEnd)} Search range\n`);
+        this.handleMsg('stdout', '-'.repeat(80) + '\n');
+        const ret: DisasmRange[] = [];
+        const functions = this.gdbSession.symbolTable.functionsAsTree.search(trueStart, trueEnd);
+        let current: DisasmRange = {
+            start: trueStart,
+            qStart: trueStart,
+            qEnd: trueEnd,
+            end: trueEnd,
+            verify: baseAddress
+        };
+        ret.push(current);
+        if (functions.length > 0) {
+            const first = functions[0];
+            printFunc(first);
+            current.qStart = first.low;
+            current.qEnd = first.high + 1;
+            current.end = first.high + 1;
+            current.verify = first.low;
+            current.start = Math.min(trueStart, current.qStart)
+            for (let ix = 1; ix < functions.length; ix++ ) {
+                const item = functions[ix];
+                const diff = item.low - current.qEnd;
+                if (diff <= this.maxInstrSize) {
+                    current.end = current.qEnd = item.high + 1;
+                } else {
+                    current.end = item.low;
+                    current = {
+                        start: current.end,
+                        qStart: item.low,
+                        qEnd: item.high + 1,
+                        end: item.high + 1,
+                        verify: item.low
+                    };
+                    ret.push(current);
+                }
+                current.end = Math.max(current.end, trueEnd);
+                printFunc(item);
+            }
+            current.qEnd = Math.max(current.qEnd, trueEnd);
+        }
+        console.table(ret);
+        return ret;
+    }
+
     // Remove location information for any consecutive instructions having the
     // same location. This will remove lot of redundant source lines from presentation
     private cleaupAndCheckInstructions(instrs: ProtocolInstruction[]) {
         if (instrs.length > 0) {
-            let prev = instrs[0];
-            for (let ix = 1; ix < instrs.length; ix++ ) {
+            let prev = null;
+            const maxBytes = this.maxInstrSize * 2;
+            const minBytes = this.minInstrSize * 2;
+            let count = 0;
+            for (let ix = 0; ix < instrs.length; ix++ ) {
                 const instr = instrs[ix];
-                const delta = instr.pvtAddress - prev.pvtAddress;
-                if ((delta < this.minInstrSize) || (delta > this.maxInstrSize)) {
-                    throw new Error('Bad/corrupted disassembly. Please report this problem');
+                const bytes = instr.pvtInstructionBytes ? instr.pvtInstructionBytes.replace(/\s/g, '') : '';
+                if ((bytes.length < minBytes) || (bytes.length > maxBytes)) {
+                    throw new Error('Bad/corrupted disassembly? Please report this problem');
                 }
-                if ((instr.line === prev.line) && instr.location && prev.location && (instr.location.path === prev.location.path)) {
-                    // Don't modify the original source as they also exist in the cache. produce a copy
-                    const copy = Object.assign({}, instr);
-                    delete copy.location;
-                    delete copy.line;
-                    instrs[ix] = copy;
+                if (prev && (instr.line === prev.line) && instr.location && prev.location && (instr.location.path === prev.location.path)) {
+                    // If you remove too many instructions because the source line is same, then VSCode
+                    // does not display any source for any line. Real threshold may be more than 10 but
+                    // even visually, doesn't hurt to repeat
+                    if (count < 10) {
+                        // Don't modify the original source as they also exist in the cache. produce a copy
+                        const copy = Object.assign({}, instr);
+                        count++;
+                        delete copy.location;
+                        delete copy.line;
+                        instrs[ix] = copy;
+                    } else {
+                        count = 0;
+                    }
+                } else {
+                    count = 0;
                 }
                 prev = instr;
             }
@@ -729,7 +818,7 @@ export class GdbDisassembler {
                 response.body = {
                     instructions: funcInfo.instructions,
                     name: funcInfo.name,
-                    file: funcInfo.file,
+                    file: funcInfo.parsedFile,
                     address: funcInfo.address,
                     length: funcInfo.length
                 };
@@ -744,11 +833,11 @@ export class GdbDisassembler {
             try {
                 let funcInfo = this.gdbSession.symbolTable.getFunctionAtAddress(args.startAddress);
                 if (funcInfo) {
-                    funcInfo = await this.getDisassemblyForFunction(funcInfo.name, funcInfo.file);
+                    funcInfo = await this.getDisassemblyForFunction(funcInfo.name, funcInfo.parsedFile);
                     response.body = {
                         instructions: funcInfo.instructions,
                         name: funcInfo.name,
-                        file: funcInfo.file,
+                        file: funcInfo.parsedFile,
                         address: funcInfo.address,
                         length: funcInfo.length
                     };

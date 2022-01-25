@@ -1,5 +1,5 @@
 {
-    "version": "1.2.0",
+    "version": "1.2.2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -426,7 +426,7 @@
             },
             {
                 "command": "cortex-debug.varHexModeTurnOff",
-                "title": "Enable Natural mode",
+                "title": "Disable Hex mode",
                 "icon": {
                     "light": "images/hex-on-light.svg",
                     "dark": "images/hex-on-dark.svg"
@@ -485,7 +485,7 @@
                 "command": "cortex-debug.toggleVariableHexFormat",
                 "key": "ctrl+shift+x",
                 "when": "debugType == cortex-debug"
-            }            
+            }
         ],
         "languages": [
             {
@@ -2753,6 +2753,7 @@
         "debug": "^4.3.1",
         "hasbin": "^1.2.3",
         "nan": "^2.14.2",
+        "node-interval-tree": "^1.3.3",
         "prebuild-install": "^5.3.6",
         "ringbufferjs": "^1.1.0",
         "safe-buffer": "^5.2.1",

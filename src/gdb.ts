@@ -1997,7 +1997,8 @@ export class GDBDebugSession extends DebugSession {
             const ret: StackFrame[] = [];
             for (const element of stack) {
                 const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
-                const file = element.file;
+                const file = 'bcd'; // element.file;
+                let useNewDisassembly = true;
                 let disassemble = this.forceDisassembly || !file;
                 if (!disassemble) { disassemble = !this.checkFileExists(file); }
                 if (!disassemble && this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
@@ -2010,36 +2011,50 @@ export class GDBDebugSession extends DebugSession {
                         else {
                             url = `disassembly:///${symbolInfo.name}.cdasm`;
                         }
-                        if (url === this.activeEditorPath) { disassemble = true; }
+                        if (url === this.activeEditorPath) {
+                            useNewDisassembly = false;
+                            disassemble = true;
+                        }
                     }
                 }
 
                 try {
                     if (disassemble) {
-                        const symbolInfo = await this.disassember.getDisassemblyForFunction(element.function, element.fileName);
-                        let line = -1;
-                        symbolInfo.instructions.forEach((inst, idx) => {
-                            if (inst.address === element.address) { line = idx + 1; }
-                        });
+                        if (useNewDisassembly) {
+                            const tmp = `${element.function}@${element.address}`;
+                            const sf = new StackFrame(stackId, tmp);
+                            sf.instructionPointerReference = element.address;
+                            ret.push(sf);
+                        } else {
+                            const symbolInfo = await this.disassember.getDisassemblyForFunction(element.function, element.fileName);
+                            let line = -1;
+                            symbolInfo.instructions.forEach((inst, idx) => {
+                                if (inst.address === element.address) { line = idx + 1; }
+                            });
 
-                        if (line !== -1) {
-                            let fname: string;
-                            if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
-                                fname = `${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
+                            if (line !== -1) {
+                                let fname: string;
+                                if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
+                                    fname = `${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
+                                }
+                                else {
+                                    fname = `${symbolInfo.name}.cdasm`;
+                                }
+
+                                const url = 'disassembly:///' + fname;
+                                const sf = new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0);
+                                sf.instructionPointerReference = element.address;
+                                ret.push(sf);
                             }
                             else {
-                                fname = `${symbolInfo.name}.cdasm`;
+                                const sf = new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0);
+                                sf.instructionPointerReference = element.address;
+                                ret.push(sf);
                             }
-
-                            const url = 'disassembly:///' + fname;
-                            ret.push(new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0));
                         }
-                        else {
-                            ret.push(new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0));
-                        }
-                    }
-                    else {
-                        const sf = new StackFrame(stackId, element.function + '@' + element.address, new Source(element.fileName, file), element.line, 0);
+                    } else {
+                        const src = file ? new Source(element.fileName, file) : undefined;
+                        const sf = new StackFrame(stackId, element.function + '@' + element.address, src, element.line, 0);
                         sf.instructionPointerReference = element.address;
                         ret.push(sf);
                     }
@@ -2049,6 +2064,12 @@ export class GDBDebugSession extends DebugSession {
                     sf.instructionPointerReference = element.address;
                     ret.push(sf);
                 }
+            }
+
+            if ((ret.length > 0) && !ret[0].source) {
+                setTimeout(() => {
+                    this.sendEvent(new GenericCustomEvent('open-disassembly', {}));
+                }, 10);
             }
 
             response.body = {
@@ -2728,7 +2749,7 @@ export class GDBDebugSession extends DebugSession {
         }
 
         const ret = fs.existsSync(name);
-        this.fileExistsCache.set(name, true);
+        this.fileExistsCache.set(name, ret);
         return ret;
     }
 

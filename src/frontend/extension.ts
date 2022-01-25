@@ -631,6 +631,9 @@ export class CortexDebugExtension {
             case 'record-event':
                 this.receivedEvent(e);
                 break;
+            case 'custom-event-open-disassembly':
+                vscode.commands.executeCommand('editor.debug.action.openDisassemblyView');
+                break;
             case 'custom-event-post-start-server':
                 this.startChainedConfigs(e, ChainedEvents.POSTSTART);
                 break;

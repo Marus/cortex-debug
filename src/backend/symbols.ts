@@ -4,12 +4,14 @@ import * as path from 'path';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import { IntervalTree, Interval } from 'node-interval-tree';
+const commandExistsSync = require('command-exists').sync;
 
 import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
-import { MI2 } from './mi2/mi2';
 import { MINode } from './mi_parse';
+import { GDBDebugSession } from '../gdb';
 
-const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]+)/mg;
+const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]*)$/mg;
 // DW_AT_name && DW_AT_comp_dir may have optional stuff that looks like '(indirect string, offset: 0xf94): '
 const COMP_UNIT_REGEX = /\n <0>.*\(DW_TAG_compile_unit\)[\s\S]*?DW_AT_name[\s]*: (\(.*\):\s)?(.*)[\r\n]+([\s\S]*?)\n </mg;
 // DW_AT_comp_dir may not exist
@@ -30,6 +32,13 @@ const SCOPE_MAP: { [id: string]: SymbolScope } = {
     '!': SymbolScope.Both
 };
 
+export class SymbolNode implements Interval {
+    constructor(
+        public readonly func: SymbolInformation,
+        public readonly low: number,            // Inclusive near as I can tell
+        public readonly high: number            // Inclusive near as I can tell
+    ) {}
+}
 export class MemoryRegion {
     public vmaEnd: number;      // Inclusive
     public lmaEnd: number;      // Exclusive
@@ -74,9 +83,11 @@ export class SymbolTable {
     private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
     private fileMap: {[key: string]: string[]} = {};                    // basename of a file to a potential list of aliases we found
     public memoryRegions: MemoryRegion[] = [];
+    public functionsAsTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
+    public symmbolsByAddress: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
 
     constructor(
-        private gdb: MI2, toolchainPath: string,
+        private gdbSession: GDBDebugSession, toolchainPath: string,
         toolchainPrefix: string, private objdumpPath: string, private executable: string)
     {
         if (!this.objdumpPath) {
@@ -89,9 +100,9 @@ export class SymbolTable {
 
     private async loadSymbolFilesFromGdb(): Promise<boolean> {
         try {
-            this.gdb.startCaptureConsole();
-            await this.gdb.sendCommand('interpreter-exec console "info sources"');
-            const str = this.gdb.endCaptureConsole();
+            this.gdbSession.miDebugger.startCaptureConsole();
+            await this.gdbSession.miDebugger.sendCommand('interpreter-exec console "info sources"');
+            const str = this.gdbSession.miDebugger.endCaptureConsole();
             const lines = str.split(/[\r\n]+/g);
             for (let line of lines) {
                 line = line.trim();
@@ -105,7 +116,7 @@ export class SymbolTable {
             }
         }
         catch {
-            const str = this.gdb.endCaptureConsole();
+            const str = this.gdbSession.miDebugger.endCaptureConsole();
             console.error('gdb info sources failed');
             return false;
         }
@@ -113,7 +124,7 @@ export class SymbolTable {
 
     private loadSymbolFilesFromGdbUnused(): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
-            if (!this.gdb || this.gdb.gdbMajorVersion < 9) {
+            if (!this.gdbSession.miDebugger || this.gdbSession.miDebugger.gdbMajorVersion < 9) {
                 return resolve(false);
             }
 
@@ -129,7 +140,7 @@ export class SymbolTable {
             }
 
             try {
-                const miNode: MINode = await this.gdb.sendCommand('symbol-info-variables');
+                const miNode: MINode = await this.gdbSession.miDebugger.sendCommand('symbol-info-variables');
                 const results = getProp(miNode?.resultRecords?.results, 'symbols');
                 const dbgInfo = getProp(results, 'debug');
                 if (dbgInfo) {
@@ -173,69 +184,61 @@ export class SymbolTable {
                 return resolve(false);
             }
 
-            // TODO: We should also get statuc function names but that is very slow. In the future, we will probably
+            // TODO: We should also get status function names but that is very slow. In the future, we will probably
             // be doing full disassembly so ignore it until it is a real issue.
             return resolve(true);
         });
     }
 
     /**
-     * Most symbol tables are manageable in size. Problem is by default, `objdump --syms` does not give
-     * give you actual file names, just base file name. Well, that only works if all files are compiled
-     * in the current directory of source and you can have duplicates. We ask gdb for variable info which
-     * is not that fast either but better than the -Wi option. But this is only possible with gdb version
-     * 9+ and then we resort to using the '-Wi' to dump debug section to determine all the compilation units
-     * and the directory they were from (relative path and a dir) Gdb uses the relative path (and the full path).
-     * This is needed when looking up static vars/funcs.
-     *
-     * Problem is `-Wi` produces extremely huge output, that default `spawnSync` buffer overflows and we
-     * get truncated results. So we have to output to a file and read that file. Hope we all have SSDs...
-     *
-     * Next problem is parsing line by line is very slow. We are talking multiple seconds even on a fast
-     * machine. So, we try to parse the objdump output without converting to lines. The file mapping produced
-     * by -Wi can be so large that we have to cache it in a tmp dir. So, we use the '-Wi' sparingly. For
-     * now, we do not cache the actual symbols because that JSON file would become huge. It is faster to
-     * re-parse the objdump output each time.
+     * Problem statement:
+     * We need a read the symbol table for multiple types of information and none of the tools so far
+     * give all all we need
      * 
-     * Even using the '-Wi', it is not bullet proof in matching sym-table to file names. A lot more work
-     * would be needed to do that. Wish gdb could give us that info rather than using objdump, but testing
-     * showed that it is both complex and very slow.
-     * *
-     * We still have to use objdump because gdb does not give important info like (function end addresses,
-     * no clear scope of objects). We have switched to using gdb for variable info because of Issue #539
-     * where the output of objdump was in Gigabytes when using the -Wi option
+     * 1. List of static variables by file
+     * 2. List og globals
+     * 3. Functions (global and static) with their addresses and lengths
+     * 
+     * Things we tried:
+     * 1.-Wi option objdump -- produces super large output (100MB+) and take minutes to produce and parse
+     * 2. Using gdb: We can get variable/function to file information but no addresses -- not super fast but
+     *    inconvenient. We have a couple of do it a couple of different ways and it is still ugly
+     * 3. Use nm: This looked super promising until we found out it is super inacurate in telling the type of
+     *    symbol. It classifies variables as functions and vice-versa. But for figuring out which variable
+     *    belongs to which file that is pretty accurate
+     * 4. Use readelf. This went nowhere because you can't get even basic file to symbol mapping from this
+     *    and it is not as universal for handling file formats as objdump.
+     * 
+     * So, we are not using option 3 and fall back to option 2. We will never go back to option 1
+     * 
+     * Another problem is that we may have to query for symbols using different ways -- partial file names,
+     * full path names, etc. So, we keep a map of file to statics.
+     * 
+     * Other uses for objdump is to get a section headers for memory regions that can be used for disassembly
+     * 
+     * We avoid splitting the output(s) into lines and then parse line at a time.
      */
 
-    public loadSymbols(noCache: boolean = false, useObjdumpFname: string = ''): Promise<void> {
+    public loadSymbols(useObjdumpFname: string = ''): Promise<void> {
         return new Promise(async (resolve, reject) => {
             try {
-                /*
-                let objdumpExePath = 
-                os.platform() !== 'win32' ? `${this.toolchainPrefix}-objdump` : `${this.toolchainPrefix}-objdump.exe`;
-                if (this.toolchainPath) {
-                    objdumpExePath = path.normalize(path.join(this.toolchainPath, objdumpExePath));
-                }
-                */
-                const restored = noCache ? false : this.deSerializeFileMaps(this.executable);
-                const options = ['--syms', '-C', '-h', '-w'];
-                let didGetInfoFromGdb = false;
-                if (!restored) {
-                    didGetInfoFromGdb = await this.loadSymbolFilesFromGdb();    // Even this is not super fast but faster
-                    if (!didGetInfoFromGdb) {
-                        options.push('-Wi');    // WARNING! Creates super large output
-                    }
-                }
-
-                if (!useObjdumpFname || !fs.existsSync(useObjdumpFname)) {
+                let nxtLabel = 'Finished running objdump';
+                console.time(nxtLabel);
+                const doUnlink = !useObjdumpFname;
+                if (!useObjdumpFname) {
                     useObjdumpFname = tmp.tmpNameSync();
+                    const options = ['--syms', '-C', '-h', '-w'];
                     const outFd = fs.openSync(useObjdumpFname, 'w');
                     const objdump = childProcess.spawnSync(this.objdumpPath, [...options, this.executable], {
                         stdio: ['ignore', outFd, 'ignore']
                     });
                     fs.closeSync(outFd);
                 }
-                const str = this.readLinesAndFileMaps(useObjdumpFname, !restored && !didGetInfoFromGdb);
+                console.timeEnd(nxtLabel);
+                nxtLabel = 'Finished parsing objdump';
+                console.time(nxtLabel);
 
+                const str = this.readNonSymbolStuff(useObjdumpFname, false);
                 const regex = RegExp(SYMBOL_REGEX);
                 let currentFile: string = null;
                 let match: RegExpExecArray;
@@ -267,22 +270,93 @@ export class SymbolTable {
                         section: match[9].trim(),
                         length: parseInt(match[10], 16),
                         name: name,
-                        file: scope === SymbolScope.Local ? currentFile : null,
+                        isStatic: (scope === SymbolScope.Local) && currentFile ? true : false,
+                        parsedFile: currentFile,
                         instructions: null,
                         hidden: hidden
                     };
+                    if (type === SymbolType.Function) {
+                        const treeSym = new SymbolNode(sym, sym.address, sym.address + Math.max(1, sym.length) - 1);
+                        this.functionsAsTree.insert(treeSym);
+                    }
+                    this.symmbolsByAddress.set(sym.address, sym);
                     this.allSymbols.push(sym);
                 }
+
+                console.timeEnd(nxtLabel);
+                nxtLabel = 'Finished parsing nm';
+                console.time(nxtLabel);
+                if (!this.loadSymFileInfoFromNm()) {
+                    nxtLabel = 'Finished parsing gdb';
+                    console.time(nxtLabel);
+                    await this.loadSymbolFilesFromGdb();
+                    console.timeEnd(nxtLabel);
+                } else {
+                    console.timeEnd(nxtLabel);
+                }
+
+                nxtLabel = 'Finished postprocessing symbols';
+                console.time(nxtLabel);
                 this.categorizeSymbols();
                 this.sortGlobalVars();
-
-                if (!restored && !noCache) {
-                    this.serializeFileMaps(this.executable);
+                resolve();
+                if (doUnlink) {
+                    fs.unlinkSync(useObjdumpFname);
                 }
+                console.timeEnd(nxtLabel);
+            }
+            catch (e) {
+                // We treat this is non-fatal, but why did it fail?
+                this.gdbSession.handleMsg('log', `Error: objdump failed! statics/global/functions may not be properly classified: ${e.toString()}`);
+                this.gdbSession.handleMsg('log', '    Please report this problem.');
                 resolve();
             }
-            catch (e) { resolve(); }
         });
+    }
+
+    public loadSymFileInfoFromNm(): boolean {
+        const nmProg = this.objdumpPath.replace(/objdump/i, 'nm');
+        const commandExistsSync = require('command-exists').sync;
+        if (!commandExistsSync(nmProg)) {
+            return false;
+        }
+        try {
+            const options = [
+                '--defined-only',
+                '-S',   // Want size as well
+                '-l',   // File/line info
+                '-C',   // Demangle
+                '-p'    // do bother sorting
+                // Do not use posix format. It is inaccurate
+            ];
+
+            const useNmDumpFname = tmp.tmpNameSync();
+            const outFd = fs.openSync(useNmDumpFname, 'w');
+            const objdump = childProcess.spawnSync(nmProg, [...options, this.executable], {
+                stdio: ['ignore', outFd, 'ignore']
+            });
+            fs.closeSync(outFd);
+            const str = fs.readFileSync(useNmDumpFname, {encoding: 'utf8'});
+            // const regex = RegExp(/^([0-9a-f]+)\s([0-9a-f]+)\s(.)\s([^\s]+)([^\r\n]*)/mg);
+            const regex = RegExp(/^([0-9a-f]+)\s([0-9a-f]+)\s(.)\s([^\s]+)\s(.+):[1-9][0-9]*/mg);
+            let match: RegExpExecArray | null;
+            while ((match = regex.exec(str)) !== null) {
+                const address = parseInt(match[1], 16);
+                const sym = this.symmbolsByAddress.get(address);
+                if (sym) {
+                    const file = match[5];
+                    sym.parsedFile = file;
+                    this.addPathVariations(file);
+                }
+            }
+            fs.unlinkSync(useNmDumpFname);
+            return true;
+        }
+        catch (e) {
+            this.gdbSession.handleMsg('log', `Error: ${nmProg} failed! statics/global/functions may not be properly classified: ${e.toString()}`);
+            this.gdbSession.handleMsg('log', '    Please report this problem.');
+            return false;
+        }
     }
 
     private sortGlobalVars() {
@@ -319,7 +393,7 @@ export class SymbolTable {
                         }
                     }
                 }
-            } else if (sym.file) {
+            } else if (sym.parsedFile) {
                 // Yes, you can have statics with no file association in C++. They are neither
                 // truly global or local. Some can be considered global but not sure how to filter.
                 if (type === SymbolType.Object) {
@@ -354,18 +428,18 @@ export class SymbolTable {
             } else if (sym.type === SymbolType.Object) {
                 str += ' (o)';
             }
-            if (sym.file) {
+            if (sym.parsedFile) {
                 str += ' (s)';
             }
             cb(str);
-            if (sym.file) {
-                const maps = this.fileMap[sym.file];
+            if (sym.parsedFile) {
+                const maps = this.fileMap[sym.parsedFile];
                 if (maps) {
                     for (const f of maps) {
                         cb('\t' + f);
                     }
                 } else {
-                    cb('\tNoMap for? ' + sym.file);
+                    cb('\tNoMap for? ' + sym.parsedFile);
                 }
             }
         }
@@ -386,7 +460,6 @@ export class SymbolTable {
     }
 
     private addToFileMap(key: string, newMap: string): string[] {
-        console.log(key, newMap);
         newMap = SymbolTable.NormalizePath(newMap);
         const value = this.fileMap[key] || [];
         if (value.indexOf(newMap) === -1) {
@@ -396,7 +469,7 @@ export class SymbolTable {
         return value;
     }
 
-    protected readLinesAndFileMaps(fileName: string, readFileMaps: boolean): string {
+    protected readNonSymbolStuff(fileName: string, readFileMaps: boolean): string {
         try {
             const start = Date.now();
             let str = fs.readFileSync(fileName, {encoding: 'utf8'});
@@ -474,8 +547,10 @@ export class SymbolTable {
     protected getFileNameHashed(fileName: string): string {
         try {
             fileName = SymbolTable.NormalizePath(fileName);
-            const schemaVer = 2;   // Please increment if schema changes or how objdump is invoked changes
-            const ver = `v${schemaVer}-gdb.${this.gdb.gdbMajorVersion}.${this.gdb.gdbMinorVersion}}`;
+            const schemaVer = 3;   // Please increment if schema changes or how objdump is invoked changes
+            const maj = this.gdbSession.miDebugger.gdbMajorVersion;
+            const min = this.gdbSession.miDebugger.gdbMinorVersion;
+            const ver = `v${schemaVer}-gdb.${maj}.${min}`;
             const stats = fs.statSync(fileName);            // Can fail
             const str = `${fileName}-${stats.mtimeMs}-${os.userInfo().username}-${ver}`;
             const hasher = crypto.createHash('sha256');
@@ -554,9 +629,13 @@ export class SymbolTable {
         if (!ret) {
             ret = [];
             for (const s of this.staticVars) {
-                const maps = this.fileMap[s.file];
-                if (maps && (maps.indexOf(file) !== -1)) {
+                if (s.parsedFile === file) {
                     ret.push(s);
+                } else {
+                    const maps = this.fileMap[s.parsedFile];
+                    if (maps && (maps.indexOf(file) !== -1)) {
+                        ret.push(s);
+                    }
                 }
             }
             this.staticsByFile[file] = ret;
@@ -570,10 +649,10 @@ export class SymbolTable {
             const syms = this.staticFuncsMap[name];
             if (syms) {
                 for (const s of syms) {                 // Try exact matches first (maybe not needed)
-                    if (s.file === file) { return s; }
+                    if (s.parsedFile === file) { return s; }
                 }
                 for (const s of syms) {                 // Try any match
-                    const maps = this.fileMap[s.file];  // Bunch of files/aliases that may have the same symbol name
+                    const maps = this.fileMap[s.parsedFile];  // Bunch of files/aliases that may have the same symbol name
                     if (maps && (maps.indexOf(file) !== -1)) {
                         return s;
                     }
@@ -588,9 +667,9 @@ export class SymbolTable {
 
     public getGlobalOrStaticVarByName(name: string, file?: string): SymbolInformation {
         if (file) {      // If a file is given only search for static variables by file
-            file = SymbolTable.NormalizePath(file);
+            const nfile = SymbolTable.NormalizePath(file);
             for (const s of this.staticVars) {
-                if ((s.name === name) && (s.file === file)) {
+                if ((s.name === name) && ((s.parsedFile === file) || (s.parsedFile === nfile))) {
                     return s;
                 }
             }
