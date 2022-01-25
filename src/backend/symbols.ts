@@ -359,6 +359,12 @@ export class SymbolTable {
         }
     }
 
+    public updateFunctionSize(node: SymbolNode, len: number) {
+        this.functionsAsTree.remove(node);
+        node = new SymbolNode(node.func, node.low, node.low + len - 1);
+        this.functionsAsTree.insert(node);
+    }
+
     private sortGlobalVars() {
         // We only sort globalVars. Want to preserve statics original order though.
         this.globalVars.sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));

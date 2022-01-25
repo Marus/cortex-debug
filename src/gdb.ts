@@ -1997,7 +1997,7 @@ export class GDBDebugSession extends DebugSession {
             const ret: StackFrame[] = [];
             for (const element of stack) {
                 const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
-                const file = 'bcd'; // element.file;
+                const file = element.file;
                 let useNewDisassembly = true;
                 let disassemble = this.forceDisassembly || !file;
                 if (!disassemble) { disassemble = !this.checkFileExists(file); }
