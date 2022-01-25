@@ -581,6 +581,10 @@ export class HrTimer {
         this.start = process.hrtime.bigint();
     }
 
+    public restart(): void {
+        this.start = process.hrtime.bigint();
+    }
+
     public getStart(): bigint {
         return this.start;
     }

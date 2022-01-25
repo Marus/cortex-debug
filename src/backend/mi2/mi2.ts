@@ -552,8 +552,13 @@ export class MI2 extends EventEmitter implements IBackend {
             else {
                 bkptArgs += '"' + escape(breakpoint.file) + ':' + breakpoint.line + '"';
             }
+
+            const cmd = breakpoint.logMessage ? 'dprintf-insert' : 'break-insert';
+            if (breakpoint.logMessage) {
+                bkptArgs += ' ' + breakpoint.logMessage;
+            }
             
-            this.sendCommand(`break-insert ${bkptArgs}`).then((result) => {
+            this.sendCommand(`${cmd} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
                     const line = result.result('bkpt.line');

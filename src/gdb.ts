@@ -151,10 +151,11 @@ export class GDBDebugSession extends DebugSession {
     private stoppedEventPending = false;
 
     protected functionBreakpoints = [];
-    protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map();
-    protected instrBreakpointMap: Map<number, OurInstructionBreakpoint> = new Map();
-    protected dataBreakpointMap: Map<number, OurDataBreakpoint> = new Map();
-    protected fileExistsCache: Map<string, boolean> = new Map();
+    protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map<string, OurSourceBreakpoint[]>();
+    protected breakpointById: Map<number, OurSourceBreakpoint> = new Map<number, OurSourceBreakpoint>();
+    protected instrBreakpointMap: Map<number, OurInstructionBreakpoint> = new Map<number, OurInstructionBreakpoint>();
+    protected dataBreakpointMap: Map<number, OurDataBreakpoint> = new Map<number, OurDataBreakpoint>();
+    protected fileExistsCache: Map<string, boolean> = new Map<string, boolean>();
 
     private currentFile: string;
     protected onConfigDone: EventEmitter = new EventEmitter();
@@ -196,6 +197,7 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsHitConditionalBreakpoints = true;
         response.body.supportsConfigurationDoneRequest = true;
         response.body.supportsConditionalBreakpoints = true;
+        response.body.supportsLogPoints = true;
         response.body.supportsFunctionBreakpoints = true;
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
@@ -212,9 +214,6 @@ export class GDBDebugSession extends DebugSession {
 
     private launchAttachInit(args: ConfigurationArguments) {
         this.args = this.normalizeArguments(args);
-        this.breakpointMap = new Map();
-        this.dataBreakpointMap = new Map();
-        this.fileExistsCache = new Map();
     }
 
     private dbgSymbolTable: SymbolTable = null;
@@ -226,7 +225,7 @@ export class GDBDebugSession extends DebugSession {
             this.handleMsg('log', `Reading symbols from '${this.args.executable}'\n`);
         }
         this.symbolTable = new SymbolTable(
-            this.miDebugger,
+            this,
             this.args.toolchainPath,
             this.args.toolchainPrefix,
             this.args.objdumpPath,
@@ -259,9 +258,9 @@ export class GDBDebugSession extends DebugSession {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
             const toolchainPath = true ? '/Applications/ARM/bin' : args.toolchainPath;
-            const tmpSymbols = new SymbolTable(this.miDebugger, toolchainPath, args.toolchainPrefix, args.objdumpPath, elfFile);
+            const tmpSymbols = new SymbolTable(this, toolchainPath, args.toolchainPrefix, args.objdumpPath, elfFile);
             this.dbgSymbolTable = tmpSymbols;
-            await tmpSymbols.loadSymbols(true, '/Users/hdm/Downloads/objdump.txt');
+            await tmpSymbols.loadSymbols('/Users/hdm/Downloads/objdump.txt');
             tmpSymbols.printToFile(elfFile + '.cd-dump');
             let sym = tmpSymbols.getFunctionByName(func, file);
             console.log(sym);
@@ -557,7 +556,7 @@ export class GDBDebugSession extends DebugSession {
             }
         }
         catch (e) {
-            const msg = `SWO/RTT Initializaiton failed: ${e}`;
+            const msg = `SWO/RTT Initialization failed: ${e}`;
             this.handleMsg('stderr', msg);
             this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
         }
@@ -1574,6 +1573,9 @@ export class GDBDebugSession extends DebugSession {
             try {
                 this.disableSendStoppedEvents = false;
                 await this.miDebugger.removeBreakpoints(currentBreakpoints);
+                for (const old of currentBreakpoints) {
+                    this.breakpointById.delete(old);
+                }
                 this.breakpointMap.set(args.source.path, []);
 
                 const all: Array<Promise<OurSourceBreakpoint | MIError>> = [];
@@ -1655,7 +1657,11 @@ export class GDBDebugSession extends DebugSession {
                     })
                 };
 
-                this.breakpointMap.set(args.source.path, brkpoints.filter((bp) => !(bp instanceof MIError)) as OurSourceBreakpoint[]);
+                const bpts: OurSourceBreakpoint[] = brkpoints.filter((bp) => !(bp instanceof MIError)) as OurSourceBreakpoint[];
+                for (const bpt of bpts) {
+                    this.breakpointById.set(bpt.number, bpt);
+                }
+                this.breakpointMap.set(args.source.path, bpts);
                 this.sendResponse(response);
                 this.pendingBkptResponse = false;
             }
@@ -1998,8 +2004,8 @@ export class GDBDebugSession extends DebugSession {
                     const symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
                     let url: string;
                     if (symbolInfo) {
-                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                        if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
                         }
                         else {
                             url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -2018,8 +2024,8 @@ export class GDBDebugSession extends DebugSession {
 
                         if (line !== -1) {
                             let fname: string;
-                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                fname = `${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
+                                fname = `${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 fname = `${symbolInfo.name}.cdasm`;
@@ -2640,7 +2646,7 @@ export class GDBDebugSession extends DebugSession {
         try {
             let assemblyMode = args.granularity === 'instruction';
             if (!assemblyMode) {
-                // Following will be depracated
+                // Following will be deprecated
                 assemblyMode = this.forceDisassembly;
                 if (!assemblyMode) {
                     const frame = await this.miDebugger.getFrame(args.threadId, 0);
@@ -2650,8 +2656,8 @@ export class GDBDebugSession extends DebugSession {
                         const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                         if (symbolInfo) {
                             let url: string;
-                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
+                                url = `disassembly:///${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -2692,8 +2698,8 @@ export class GDBDebugSession extends DebugSession {
                         const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                         if (symbolInfo) {
                             let url: string;
-                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
+                                url = `disassembly:///${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 url = `disassembly:///${symbolInfo.name}.cdasm`;
