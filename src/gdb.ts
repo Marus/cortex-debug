@@ -1079,11 +1079,8 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.DisconnectArguments): Promise<void> {
         this.isDisconnecting = true;
         ServerConsoleLog('Begin disconnectRequest', this.miDebugger?.pid);
-        let bkptsDeleted = false;
-        const doDisconnectProcessing = () => {
-            if (!bkptsDeleted) {
-                this.tryDeleteBreakpoints();
-            }
+        const doDisconnectProcessing = async () => {
+            await this.tryDeleteBreakpoints();
             this.disableSendStoppedEvents = false;
             this.attached = false;
             this.waitForServerExitAndRespond(response);     // Will wait asynchronously until the following actions are done
@@ -1100,43 +1097,32 @@ export class GDBDebugSession extends DebugSession {
 
         this.disableSendStoppedEvents = true;
         if (this.miDebugger) {
-            if (this.stopped) {
-                bkptsDeleted = true;
-                this.tryDeleteBreakpoints();
-            }
-            let deferred = false;
-            if (args.terminateDebuggee || args.suspendDebuggee) {
-                if (!this.stopped) {
-                    deferred = true;
-                    // Many ways things can fail. See issue #561
-                    // exec-interrupt can fail because gdb is wedged and does not respond with proper status ever
-                    // use a timeout and try to end session anyways.
-                    let to = setTimeout(() => {
-                        if (to) {
-                            to = null;
-                            this.handleMsg('log', 'GDB never responded to an interrupt request. Trying to end session anyways\n');
-                            doDisconnectProcessing();
-                        }
-                    }, 250);
-                    this.miDebugger.once('generic-stopped', () => {
-                        if (to) {
-                            clearTimeout(to);
-                            to = null;
-                            doDisconnectProcessing();
-                        }
-                    });
-                    try {
-                        await this.miDebugger.sendCommand('exec-interrupt');
+            if (!this.stopped) {
+                // Many ways things can fail. See issue #561
+                // exec-interrupt can fail because gdb is wedged and does not respond with proper status ever
+                // use a timeout and try to end session anyways.
+                let to = setTimeout(() => {
+                    if (to) {
+                        to = null;
+                        this.handleMsg('log', 'GDB never responded to an interrupt request. Trying to end session anyways\n');
+                        doDisconnectProcessing();
                     }
-                    catch (e) {
-                        // The timeout will take care of it...
-                        this.handleMsg('log', `Could not interrupt program. Trying to end session anyways ${e}\n`);
+                }, 250);
+                this.miDebugger.once('generic-stopped', () => {
+                    if (to) {
+                        clearTimeout(to);
+                        to = null;
+                        doDisconnectProcessing();
                     }
+                });
+                try {
+                    await this.miDebugger.sendCommand('exec-interrupt');
                 }
-            } else if (this.stopped) {
-                this.sendContinue(true);
-            }
-            if (!deferred) {
+                catch (e) {
+                    // The timeout will take care of it...
+                    this.handleMsg('log', `Could not interrupt program. Trying to end session anyways ${e}\n`);
+                }
+            } else {
                 doDisconnectProcessing();
             }
         }
@@ -1789,8 +1775,7 @@ export class GDBDebugSession extends DebugSession {
             return false;
         }
 
-        console.log(`isVarRefGlobalOrStatic: What is this? varRef = ${varRef}`);
-        console.log(id);
+        console.log(`isVarRefGlobalOrStatic: What is this? varRef = ${varRef}`, id);
         return false;
     }
 

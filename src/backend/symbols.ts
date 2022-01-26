@@ -282,16 +282,22 @@ export class SymbolTable {
                     this.symmbolsByAddress.set(sym.address, sym);
                     this.allSymbols.push(sym);
                 }
-
                 console.timeEnd(nxtLabel);
-                nxtLabel = 'Finished parsing nm';
+
+                nxtLabel = 'deserializeFileMaps';
                 console.time(nxtLabel);
-                if (!this.loadSymFileInfoFromNm()) {
-                    nxtLabel = 'Finished parsing gdb';
+                const restored = this.deSerializeFileMaps(this.executable);
+                console.timeEnd(nxtLabel);
+
+                if (!restored) {
+                    nxtLabel = 'Finished running and parsing nm';
                     console.time(nxtLabel);
-                    await this.loadSymbolFilesFromGdb();
-                    console.timeEnd(nxtLabel);
-                } else {
+                    if (!this.loadSymFileInfoFromNm()) {
+                        nxtLabel = 'Finished parsing gdb';
+                        console.time(nxtLabel);
+                        await this.loadSymbolFilesFromGdb();
+                    }
+                    this.serializeFileMaps(this.executable);
                     console.timeEnd(nxtLabel);
                 }
 
@@ -344,17 +350,20 @@ export class SymbolTable {
             // * Double check the following expressions
             // const regexWithSize = RegExp(/^([0-9a-f]+) ([0-9a-f]+) (.) ([^\t]+)\t(.+):[1-9][0-9]*/mg);
             // const regexNoSize = RegExp(/^([0-9a-f]+) (.) ([^\t]+)\t(.+):[1-9][0-9]*/mg);
-            const regex = RegExp(/^([0-9a-f]+).*\t([^\r\n:]+):[1-9][0-9]*[\r\n]+/mg);     // For now, we only need two things
-            let match: RegExpExecArray | null;
-            while ((match = regex.exec(str)) !== null) {
-                const address = parseInt(match[1], 16);
-                const sym = this.symmbolsByAddress.get(address);
-                if (sym) {
-                    const file = match[2];
-                    sym.parsedFile = file;
-                    this.addPathVariations(file);
-                } else {
-                    console.error('Unknown symbol. Need to investigate', match[0]);
+            const lines = str.split('\n');
+            const regex = RegExp(/^([0-9a-f]+).*\t(.+):[0-9]+/);     // For now, we only need two things
+            for (const line of lines) {
+                const match = line.match(regex);
+                if (match) {
+                    const address = parseInt(match[1], 16);
+                    const sym = this.symmbolsByAddress.get(address);
+                    if (sym) {
+                        const file = match[2];
+                        sym.parsedFile = file;
+                        this.addPathVariations(file);
+                    } else {
+                        console.error('Unknown symbol. Need to investigate', match[0]);
+                    }
                 }
             }
             fs.unlinkSync(useNmDumpFname);
@@ -555,6 +564,7 @@ export class SymbolTable {
         const curSimpleName = path.basename(curName);
         this.addToFileMap(curSimpleName, curSimpleName);
         this.addToFileMap(curSimpleName, curName);
+        this.addToFileMap(curName, curSimpleName);
         return { curSimpleName, curName };
     }
 
