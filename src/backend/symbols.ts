@@ -11,7 +11,7 @@ import { SymbolType, SymbolScope, SymbolInformation } from '../symbols';
 import { MINode } from './mi_parse';
 import { GDBDebugSession } from '../gdb';
 
-const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]*)$/mg;
+const SYMBOL_REGEX = /\n([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\s+([0-9a-f]+)\s([^\r\n]+)/mg;
 // DW_AT_name && DW_AT_comp_dir may have optional stuff that looks like '(indirect string, offset: 0xf94): '
 const COMP_UNIT_REGEX = /\n <0>.*\(DW_TAG_compile_unit\)[\s\S]*?DW_AT_name[\s]*: (\(.*\):\s)?(.*)[\r\n]+([\s\S]*?)\n </mg;
 // DW_AT_comp_dir may not exist
@@ -337,16 +337,24 @@ export class SymbolTable {
             });
             fs.closeSync(outFd);
             const str = fs.readFileSync(useNmDumpFname, {encoding: 'utf8'});
-            // const regex = RegExp(/^([0-9a-f]+)\s([0-9a-f]+)\s(.)\s([^\s]+)([^\r\n]*)/mg);
-            const regex = RegExp(/^([0-9a-f]+)\s([0-9a-f]+)\s(.)\s([^\s]+)\s(.+):[1-9][0-9]*/mg);
+
+            // If we do chose to use nm for more than file names, remember the following
+            // * Even if you ask for symbols with size, you will get some without size (esp for asm funcs)
+            // * Expect spaces in function names -- since we demangle, you can have whole func. signatures
+            // * Double check the following expressions
+            // const regexWithSize = RegExp(/^([0-9a-f]+) ([0-9a-f]+) (.) ([^\t]+)\t(.+):[1-9][0-9]*/mg);
+            // const regexNoSize = RegExp(/^([0-9a-f]+) (.) ([^\t]+)\t(.+):[1-9][0-9]*/mg);
+            const regex = RegExp(/^([0-9a-f]+).*\t([^\r\n:]+):[1-9][0-9]*[\r\n]+/mg);     // For now, we only need two things
             let match: RegExpExecArray | null;
             while ((match = regex.exec(str)) !== null) {
                 const address = parseInt(match[1], 16);
                 const sym = this.symmbolsByAddress.get(address);
                 if (sym) {
-                    const file = match[5];
+                    const file = match[2];
                     sym.parsedFile = file;
                     this.addPathVariations(file);
+                } else {
+                    console.error('Unknown symbol. Need to investigate', match[0]);
                 }
             }
             fs.unlinkSync(useNmDumpFname);

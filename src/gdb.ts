@@ -522,12 +522,12 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private startComplete(mode: SessionMode, fakeStop = true) {
+    private startComplete(mode: SessionMode, sendStoppedEvents = true) {
         this.disableSendStoppedEvents = false;
         this.pendingBkptResponse = false;
         this.continuing = false;
         this.stopped = this.miDebugger.status !== 'running';        // Set to real status
-        if (fakeStop && !this.args.noDebug && this.stopped) {
+        if (sendStoppedEvents && !this.args.noDebug && this.stopped) {
             this.stoppedReason = mode;
             this.stoppedThreadId = this.currentThreadId;
             // We have to fake a continue and then stop, since we may already be in stopped mode in VSCode's view

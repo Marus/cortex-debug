@@ -711,7 +711,7 @@ export class GdbDisassembler {
                 };
                 if (this.doTiming) {
                     const ms = timer.createPaddedMs(3);
-                    this.handleMsg('log', `Debug-${seq}: Timing Request: ${ms} ms\n`);
+                    this.handleMsg('log', `Debug-${seq}: Elapsed time for Disassembly Request: ${ms} ms\n`);
                 }
                 this.gdbSession.sendResponse(response);
                 resolve();
@@ -739,16 +739,20 @@ export class GdbDisassembler {
     // information when there are gaps between functions. There is also a problem with functions
     // that do not have a size
     private findDisasmRanges(trueStart: number, trueEnd: number, baseAddress: number): DisasmRange[] {
+        const doDbgPrint = false;
         const printFunc = (item: SymbolNode) => {
-            return;
-            const file = item.func.parsedFile || '<unknown-file>';
-            const msg = `(${hexFormat(item.low)}, ${item.low}), (${hexFormat(item.high)}, ${item.high}) ${item.func.name} ${file}`;
-            this.handleMsg('stdout', msg + '\n');
-            ConsoleLog(msg);
+            if (doDbgPrint) {
+                const file = item.func.parsedFile || '<unknown-file>';
+                const msg = `(${hexFormat(item.low)}, ${item.low}), (${hexFormat(item.high)}, ${item.high}) ${item.func.name} ${file}`;
+                this.handleMsg('stdout', msg + '\n');
+                ConsoleLog(msg);
+            }
         };
 
-        this.handleMsg('stdout', `${hexFormat(trueStart)}, ${hexFormat(trueEnd)} Search range\n`);
-        this.handleMsg('stdout', '-'.repeat(80) + '\n');
+        if (doDbgPrint) {
+            this.handleMsg('stdout', `${hexFormat(trueStart)}, ${hexFormat(trueEnd)} Search range\n`);
+            this.handleMsg('stdout', '-'.repeat(80) + '\n');
+        }
         const ret: DisasmRange[] = [];
         const functions = this.gdbSession.symbolTable.functionsAsTree.search(trueStart, trueEnd);
         let range: DisasmRange = {
