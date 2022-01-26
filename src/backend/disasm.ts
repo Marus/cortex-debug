@@ -565,7 +565,6 @@ export class GdbDisassembler {
             // This is our own request.
             return this.customDisassembleRequest(response, args);
         }
-
         const seq = request?.seq;
         return new Promise((resolve, reject) => {
             if (GdbDisassembler.debug) {

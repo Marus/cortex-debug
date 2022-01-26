@@ -1,6 +1,9 @@
 ChangeLog
 =========
 
+# V1.2.1
+* Hotfix: Issue #579 -- debugger won't start (hangs) if a program stopped in a function with no source file. Wrong version of the disassembler was being invoked.
+
 # V1.2.0
 This is a rather large release. Contains many enhancements, new features and bug fixes
 ## New Features
