@@ -1,10 +1,7 @@
 ChangeLog
 =========
-# V1.2.2
-* Hotfix: Issue #585 -- RTT terminal windows not getting reclaimed/cleaned-up
-
-# V1.2.2
-* New Feature: Support for Logpoints. Log points allow you to print debug information to the Debug Console without stopping the program (but a breakpoint has to be used internally by gdb). [Setting Logpoints is similar to setting+editing breakpoints in the editor](https://code.visualstudio.com/blogs/2018/07/12/introducing-logpoints-and-auto-attach#_introducing-logpoints). The value of what you enter in the dialog box is similar to the arguments to printf (but don't actually use the word printf and ***NO commas and arguments should be separated by a space***)
+# V1.3.0 (preview release for 1.4.0)
+* New Feature: Support for Logpoints. Log points allow you to print debug information to the Debug Console without stopping the program (but a breakpoint has to be used internally by gdb). [Setting Logpoints is similar to setting/editing breakpoints in the editor](https://code.visualstudio.com/blogs/2018/07/12/introducing-logpoints-and-auto-attach#_introducing-logpoints). The value of what you enter in the dialog box is similar to arguments to printf (but don't actually use the word printf and ***NO commas and arguments should be separated by a space***)
     ```sh
     "Value of counter is %d\n" counter
     ```
@@ -12,9 +9,14 @@ ChangeLog
     ```C
     printf("Value of counter is %d\n", counter);
     ```
-  Any variables that are referenced must be in scope of the log-point and not optimized out by the compiler. This feature used the `dprintf` feature of gdb. See https://doc.ecoscentric.com/gnutools/doc/gdb/Dynamic-Printf.html and is configurable
-* Feature: Some refinements in disassembly. If the program ever stops where there is source code available, the new disassembly is displayed automatically
+  Any variables that are referenced must be in scope of the log-point and not optimized out by the compiler. This feature uses the `dprintf` feature of gdb. See https://doc.ecoscentric.com/gnutools/doc/gdb/Dynamic-Printf.html and is configurable
+* Feature: Some refinements in disassembly. If the program ever stops where there is NO source code available, a disassembly is displayed automatically. But we now use the new disassembler which is full disassembly of the program whereas before it was only function disassembly. This is another step towards obsoleting the old disassembler.
 * Feature: Allow `runToEntryPoint` for `attach` type sessions. Only applies when you use the Restart/Reset buttons
+* Under the hood: We now use `nm` along with `objdump` to get information of global/static variables/functions. Objdump is unreliable for file names and nm is unreliable for symbol types, gdb is too slow and incomplete. This information is used to display globals/statics in the variable window and for disassembly. There is no setting for `nm` but we take the path for `objdump` and replace it determine `nm`. It will work without `nm` being installed but your results may not be as good/accurate.
+* Bugfix: `Detach` while a program was running was broken under certain conditions. Note that `Detach` is not the same as `Disconnect/Stop`.
+
+# V1.2.2
+* Hotfix: Issue #585 -- RTT terminal windows not getting reclaimed/cleaned-up
 
 # V1.2.1
 * Hotfix: Issue #579 -- debugger won't start (hangs) if a program stopped in a function with no source file. Wrong version of the disassembler was being invoked.
