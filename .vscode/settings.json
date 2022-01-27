@@ -23,6 +23,7 @@
 		"insn",
 		"insns",
 		"instrs",
+		"Logpoints",
 		"Syms"
 	]
 }

@@ -9,7 +9,7 @@ pp = pprint.PrettyPrinter()
 expected_diff_properties = ['overrideAttachCommands', 'overrideLaunchCommands',
                             'postAttachCommands', 'postLaunchCommands',
                             'preAttachCommands', 'preLaunchCommands',
-                            'runToEntryPoint', 'runToMain']
+                            'runToEntryPoint', 'runToMain', 'loadFiles']
 
 def get_properties(pkg, type):
     attributes = pkg['contributes']['debuggers'][0]['configurationAttributes'][type]
