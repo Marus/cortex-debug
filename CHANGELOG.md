@@ -1,5 +1,7 @@
 ChangeLog
 =========
+# V1.2.2
+* Hotfix: Issue #585 -- RTT terminal windows not getting reclaimed/cleaned-up
 
 # V1.2.2
 * New Feature: Support for Logpoints. Log points allow you to print debug information to the Debug Console without stopping the program (but a breakpoint has to be used internally by gdb). [Setting Logpoints is similar to setting+editing breakpoints in the editor](https://code.visualstudio.com/blogs/2018/07/12/introducing-logpoints-and-auto-attach#_introducing-logpoints). The value of what you enter in the dialog box is similar to the arguments to printf (but don't actually use the word printf and ***NO commas and arguments should be separated by a space***)
