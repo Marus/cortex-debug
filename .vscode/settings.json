@@ -20,6 +20,8 @@
 	"svg.preview.background": "transparent",
 	"cortex-debug.registerUseNaturalFormat": false,
 	"cSpell.words": [
+		"cdasm",
+		"cdmem",
 		"dprintf",
 		"insn",
 		"insns",

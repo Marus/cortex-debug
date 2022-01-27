@@ -733,7 +733,7 @@ export class CortexDebugExtension {
                     vscode.window.showErrorMessage(`Cortex-Debug: Bug? session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
                 });
             }
-            // Following does not work. Apparently, a customRequest cannot be sent probaboy because this is being called
+            // Following does not work. Apparently, a customRequest cannot be sent probably because this is being called
             // while parent is terminating
             mySession.session.customRequest('notified-children-to-terminate');
         }
@@ -871,7 +871,7 @@ export class CortexDebugExtension {
         }
     }
 
-    // The retured value is a connection source. It may still be in disconnected
+    // The returned value is a connection source. It may still be in disconnected
     // state.
     private createRTTSource(e: vscode.DebugSessionCustomEvent, tcpPort: string, channel: number): Promise<SocketRTTSource> {
         const mySession = CDebugSession.GetSession(e.session);
@@ -894,7 +894,6 @@ export class CortexDebugExtension {
     }
 
     private cleanupRTTTerminals() {
-        return;     // Maybe no need to remove them. User can do so and they will harmlessly hangaround and get recycled
         this.rttTerminals = this.rttTerminals.filter((t) => {
             if (!t.inUse) {
                 t.dispose();
