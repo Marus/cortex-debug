@@ -18,13 +18,12 @@ export interface SymbolInformation {
     address: number;
     length: number;
     name: string;
-    section?: string;            // Not available with nm
+    section?: string;             // Not available with nm
     type: SymbolType;
     scope: SymbolScope;
     isStatic: boolean;
-    // file: string;                // The official file name (only stored for statics)
-    parsedFile: string;          // The actual file name parsed (more reliable with nm
-    line?: number;                // Only available when using nm
+    file: string;                 // The actual file name parsed (more reliable with nm)
+    // line?: number;                // Only available when using nm
     instructions: DisassemblyInstruction[];
     hidden: boolean;
 }

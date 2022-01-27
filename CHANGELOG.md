@@ -8,7 +8,7 @@ ChangeLog
     ```
     The above turns into the equivalent of
     ```C
-    pritnf("Value of counter is %d\n", counter);
+    printf("Value of counter is %d\n", counter);
     ```
   Any variables that are referenced must be in scope of the log-point and not optimized out by the compiler. This feature used the `dprintf` feature of gdb. See https://doc.ecoscentric.com/gnutools/doc/gdb/Dynamic-Printf.html and is configurable
 * Feature: Some refinements in disassembly. If the program ever stops where there is source code available, the new disassembly is displayed automatically

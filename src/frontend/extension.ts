@@ -290,11 +290,11 @@ export class CortexDebugExtension {
                 url = `disassembly:///${funcname}.cdasm`;
             }
             else if (functions.length === 1) {
-                if (!functions[0].parsedFile || (functions[0].scope === SymbolScope.Global)) {
+                if (!functions[0].file || (functions[0].scope === SymbolScope.Global)) {
                     url = `disassembly:///${functions[0].name}.cdasm`;
                 }
                 else {
-                    url = `disassembly:///${functions[0].parsedFile}:::${functions[0].name}.cdasm`;
+                    url = `disassembly:///${functions[0].file}:::${functions[0].name}.cdasm`;
                 }
             }
             else if (functions.length > 31) { /* arbitrary limit. 31 is prime! */
@@ -305,9 +305,9 @@ export class CortexDebugExtension {
                     return {
                         label: f.name,
                         name: f.name,
-                        file: f.parsedFile,
+                        file: f.file,
                         scope: f.scope,
-                        description: (!f.parsedFile || (f.scope === SymbolScope.Global)) ? 'Global Scope' : `Static in ${f.parsedFile}`
+                        description: (!f.file || (f.scope === SymbolScope.Global)) ? 'Global Scope' : `Static in ${f.file}`
                     };
                 }), {
                     ignoreFocusOut: true

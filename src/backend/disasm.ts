@@ -741,7 +741,7 @@ export class GdbDisassembler {
         const doDbgPrint = false;
         const printFunc = (item: SymbolNode) => {
             if (doDbgPrint) {
-                const file = item.func.parsedFile || '<unknown-file>';
+                const file = item.func.file || '<unknown-file>';
                 const msg = `(${hexFormat(item.low)}, ${item.low}), (${hexFormat(item.high)}, ${item.high}) ${item.func.name} ${file}`;
                 this.handleMsg('stdout', msg + '\n');
                 ConsoleLog(msg);
@@ -839,7 +839,7 @@ export class GdbDisassembler {
                 response.body = {
                     instructions: funcInfo.instructions,
                     name: funcInfo.name,
-                    file: funcInfo.parsedFile,
+                    file: funcInfo.file,
                     address: funcInfo.address,
                     length: funcInfo.length
                 };
@@ -854,11 +854,11 @@ export class GdbDisassembler {
             try {
                 let funcInfo = this.gdbSession.symbolTable.getFunctionAtAddress(args.startAddress);
                 if (funcInfo) {
-                    funcInfo = await this.getDisassemblyForFunction(funcInfo.name, funcInfo.parsedFile);
+                    funcInfo = await this.getDisassemblyForFunction(funcInfo.name, funcInfo.file);
                     response.body = {
                         instructions: funcInfo.instructions,
                         name: funcInfo.name,
-                        file: funcInfo.parsedFile,
+                        file: funcInfo.file,
                         address: funcInfo.address,
                         length: funcInfo.length
                     };

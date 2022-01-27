@@ -1990,8 +1990,8 @@ export class GDBDebugSession extends DebugSession {
                     const symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
                     let url: string;
                     if (symbolInfo) {
-                        if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
-                            url = `disassembly:///${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
+                        if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                            url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                         }
                         else {
                             url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -2019,8 +2019,8 @@ export class GDBDebugSession extends DebugSession {
 
                             if (line !== -1) {
                                 let fname: string;
-                                if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
-                                    fname = `${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
+                                if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                    fname = `${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                                 }
                                 else {
                                     fname = `${symbolInfo.name}.cdasm`;
@@ -2662,8 +2662,8 @@ export class GDBDebugSession extends DebugSession {
                         const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                         if (symbolInfo) {
                             let url: string;
-                            if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 url = `disassembly:///${symbolInfo.name}.cdasm`;
@@ -2704,8 +2704,8 @@ export class GDBDebugSession extends DebugSession {
                         const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
                         if (symbolInfo) {
                             let url: string;
-                            if (symbolInfo.parsedFile && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.parsedFile}:::${symbolInfo.name}.cdasm`;
+                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
+                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
                             }
                             else {
                                 url = `disassembly:///${symbolInfo.name}.cdasm`;

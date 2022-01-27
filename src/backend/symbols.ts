@@ -271,7 +271,7 @@ export class SymbolTable {
                         length: parseInt(match[10], 16),
                         name: name,
                         isStatic: (scope === SymbolScope.Local) && currentFile ? true : false,
-                        parsedFile: currentFile,
+                        file: currentFile,
                         instructions: null,
                         hidden: hidden
                     };
@@ -359,7 +359,7 @@ export class SymbolTable {
                     const sym = this.symmbolsByAddress.get(address);
                     if (sym) {
                         const file = match[2];
-                        sym.parsedFile = file;
+                        sym.file = file;
                         this.addPathVariations(file);
                     } else {
                         console.error('Unknown symbol. Need to investigate', match[0]);
@@ -416,7 +416,7 @@ export class SymbolTable {
                         }
                     }
                 }
-            } else if (sym.parsedFile) {
+            } else if (sym.file) {
                 // Yes, you can have statics with no file association in C++. They are neither
                 // truly global or local. Some can be considered global but not sure how to filter.
                 if (type === SymbolType.Object) {
@@ -451,18 +451,18 @@ export class SymbolTable {
             } else if (sym.type === SymbolType.Object) {
                 str += ' (o)';
             }
-            if (sym.parsedFile) {
+            if (sym.file) {
                 str += ' (s)';
             }
             cb(str);
-            if (sym.parsedFile) {
-                const maps = this.fileMap[sym.parsedFile];
+            if (sym.file) {
+                const maps = this.fileMap[sym.file];
                 if (maps) {
                     for (const f of maps) {
                         cb('\t' + f);
                     }
                 } else {
-                    cb('\tNoMap for? ' + sym.parsedFile);
+                    cb('\tNoMap for? ' + sym.file);
                 }
             }
         }
@@ -648,16 +648,18 @@ export class SymbolTable {
         if (!file) {
             return [];
         }
-        file = SymbolTable.NormalizePath(file);
+        const nfile = SymbolTable.NormalizePath(file);
         let ret = this.staticsByFile[file];
         if (!ret) {
             ret = [];
             for (const s of this.staticVars) {
-                if (s.parsedFile === file) {
+                if ((s.file === nfile) || (s.file === file)) {
                     ret.push(s);
                 } else {
-                    const maps = this.fileMap[s.parsedFile];
-                    if (maps && (maps.indexOf(file) !== -1)) {
+                    const maps = this.fileMap[s.file];
+                    if (maps && (maps.indexOf(nfile) !== -1)) {
+                        ret.push(s);
+                    } else if (maps && (maps.indexOf(file) !== -1)) {
                         ret.push(s);
                     }
                 }
@@ -669,15 +671,17 @@ export class SymbolTable {
 
     public getFunctionByName(name: string, file?: string): SymbolInformation {
         if (file) {      // Try to find static function first
-            file = SymbolTable.NormalizePath(file);
+            const nfile = SymbolTable.NormalizePath(file);
             const syms = this.staticFuncsMap[name];
             if (syms) {
                 for (const s of syms) {                 // Try exact matches first (maybe not needed)
-                    if (s.parsedFile === file) { return s; }
+                    if ((s.file === file) || (s.file === nfile)) { return s; }
                 }
                 for (const s of syms) {                 // Try any match
-                    const maps = this.fileMap[s.parsedFile];  // Bunch of files/aliases that may have the same symbol name
-                    if (maps && (maps.indexOf(file) !== -1)) {
+                    const maps = this.fileMap[s.file];  // Bunch of files/aliases that may have the same symbol name
+                    if (maps && (maps.indexOf(nfile) !== -1)) {
+                        return s;
+                    } else if (maps && (maps.indexOf(file) !== -1)) {
                         return s;
                     }
                 }
@@ -693,7 +697,7 @@ export class SymbolTable {
         if (file) {      // If a file is given only search for static variables by file
             const nfile = SymbolTable.NormalizePath(file);
             for (const s of this.staticVars) {
-                if ((s.name === name) && ((s.parsedFile === file) || (s.parsedFile === nfile))) {
+                if ((s.name === name) && ((s.file === file) || (s.file === nfile))) {
                     return s;
                 }
             }

@@ -20,6 +20,7 @@
 	"svg.preview.background": "transparent",
 	"cortex-debug.registerUseNaturalFormat": false,
 	"cSpell.words": [
+		"dprintf",
 		"insn",
 		"insns",
 		"instrs",
