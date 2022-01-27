@@ -1,5 +1,7 @@
 ChangeLog
 =========
+# V1.2.2
+* Hotfix: Issue #585 -- RTT terminal windows not getting reclaimed/cleaned-up
 
 # V1.2.1
 * Hotfix: Issue #579 -- debugger won't start (hangs) if a program stopped in a function with no source file. Wrong version of the disassembler was being invoked.

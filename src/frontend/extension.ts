@@ -891,7 +891,6 @@ export class CortexDebugExtension {
     }
 
     private cleanupRTTTerminals() {
-        return;     // Maybe no need to remove them. User can do so and they will harmlessly hangaround and get recycled
         this.rttTerminals = this.rttTerminals.filter((t) => {
             if (!t.inUse) {
                 t.dispose();
