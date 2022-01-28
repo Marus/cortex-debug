@@ -16,12 +16,17 @@ export class RegisterTreeForSession extends BaseNode {
     private registerMap: { [index: number]: RegisterNode } = {};
     private loaded: boolean = false;
     public myTreeItem: TreeItem;
+    public wsFolderPath: string;
 
     constructor(
         public session: vscode.DebugSession,
         public state: vscode.TreeItemCollapsibleState,
         private fireCb: () => void) {
         super();
+        try {
+            // Remember the path as it may not be available when session ends
+            this.wsFolderPath = this.session.workspaceFolder.uri.fsPath;
+        } catch {}
         this.myTreeItem = new TreeItem(this.session.name, this.state);
         this.myTreeItem.tooltip = DeprecationToolTip;
     }
@@ -70,9 +75,11 @@ export class RegisterTreeForSession extends BaseNode {
     }
 
     public getStateFilename() {
-        const fspath = path.join(this.session.workspaceFolder.uri.fsPath,
-            '.vscode', '.cortex-debug.registers.state.json');
-        return fspath;
+        if (this.wsFolderPath) {
+            const fspath = path.join(this.wsFolderPath, '.vscode', '.cortex-debug.registers.state.json');
+            return fspath;
+        }
+        return undefined;
     }
 
     public createRegisters(regInfo: string[]) {
@@ -90,7 +97,7 @@ export class RegisterTreeForSession extends BaseNode {
 
         try {
             const fspath = this.getStateFilename();
-            if (fs.existsSync(fspath)) {
+            if (fspath && fs.existsSync(fspath)) {
                 const data = fs.readFileSync(fspath, 'utf8');
                 const settings = JSON.parse(data);
                 
@@ -119,13 +126,15 @@ export class RegisterTreeForSession extends BaseNode {
     public sessionTerminated() {
         try {
             const fspath = this.getStateFilename();
-            const state: NodeSetting[] = [];
-            this.registers.forEach((r) => {
-                state.push(...r._saveState());
-            });
-    
-            fs.mkdirSync(path.dirname(fspath), { recursive: true });
-            fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+            if (fspath) {
+                const state: NodeSetting[] = [];
+                this.registers.forEach((r) => {
+                    state.push(...r._saveState());
+                });
+        
+                fs.mkdirSync(path.dirname(fspath), { recursive: true });
+                fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+            }
         } catch (e) {
             vscode.window.showWarningMessage(`Unable to save register preferences ${e}`);
         }
