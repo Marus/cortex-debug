@@ -1,5 +1,11 @@
 ChangeLog
 =========
+# V1.3.1 (preview release for 1.4.0)
+* Improved startup code for `launch` and `attach`. Quite a bit of old unneeded code removed following VSCode's current APIs. We were doing a few things inefficiently and thew updated VSCode APIs helped. We have a few too many options for startup like `runToEntryPoint`, `breakAfterReset`, etc. along with user defined overrides/pre/post commands. These are consolidated. This will also reduce the number of updated that happen to the various windows. We tested best we could but this is yet another major change.
+* Also the reset/restart processing uses virtually the same code as startup.
+* More improvements in disassembly, faster and better. Tried to make it a bit more generic to handle non-ARM architectures, but 32-bit ARM remains a priority and that is the only thing available for testing.
+* Issue #585, hopefully addressed.
+
 # V1.3.0 (preview release for 1.4.0)
 * New Feature: Support for Logpoints. Log points allow you to print debug information to the Debug Console without stopping the program (but a breakpoint has to be used internally by gdb). [Setting Logpoints is similar to setting/editing breakpoints in the editor](https://code.visualstudio.com/blogs/2018/07/12/introducing-logpoints-and-auto-attach#_introducing-logpoints). The value of what you enter in the dialog box is similar to arguments to printf (but don't actually use the word printf and ***NO commas and arguments should be separated by a space***)
     ```sh

@@ -658,12 +658,12 @@ export class GdbDisassembler {
     {
         return new Promise(async (resolve, reject) => {
             try {
+                await this.getMemoryRegions();
                 const seq = request?.seq;
                 if (GdbDisassembler.debug) {
                     this.handleMsg('log', `Debug-${seq}: Dequeuing...\n`);
                     ConsoleLog('disassembleRequest: ', args);
                 }
-                await this.getMemoryRegions();
 
                 const baseAddress = parseInt(args.memoryReference);
                 const offset = args.offset || 0;
@@ -675,8 +675,8 @@ export class GdbDisassembler {
                 }
                 const startAddr = Math.max(0, Math.min(baseAddress, baseAddress + (instrOffset * this.maxInstrSize)));
                 const endAddr = baseAddress + (args.instructionCount + instrOffset) * this.maxInstrSize;
-                this.handleMsg('log', 'Start: ' + ([startAddr, baseAddress, baseAddress - startAddr].map((x) => hexFormat(x))).join(',') + '\n');
-                this.handleMsg('log', 'End  : ' + ([baseAddress, endAddr, endAddr - baseAddress].map((x) => hexFormat(x))).join(',') + '\n');
+                // this.handleMsg('log', 'Start: ' + ([startAddr, baseAddress, baseAddress - startAddr].map((x) => hexFormat(x))).join(',') + '\n');
+                // this.handleMsg('log', 'End  : ' + ([baseAddress, endAddr, endAddr - baseAddress].map((x) => hexFormat(x))).join(',') + '\n');
 
                 const ranges = this.findDisasmRanges(startAddr, endAddr, baseAddress);
                 const promises = ranges.map((r) => this.getProtocolDisassembly(r, args));
