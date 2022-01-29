@@ -2,7 +2,7 @@
 
 Low, medium, high are importance/usefulness. But they sometimes represent *bang-for-the-buck* as well where the effort could be high vs. relative usefulness. Some of there are here because there is new functionality in VSCode APIs
 
-* **In progreess**: High: near completetion. Better support for multi-core and multi-session debugging in a single instance of the IDE
+* **Done**: High: Better support for multi-core and multi-session debugging in a single instance of the IDE
 * Low: `Set Value` in `Watch` Window
 * **In Progress**: Medium: Support full disassembly using the new Debug Protocol perhaps.
   * Source with assembly -- Available but UI could be better. You can toggle source embedding on/off.
@@ -12,7 +12,7 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
   * Registers (in Variables Window), Call stack, source code, Disassembly can all be in sync -- takes a bit of window arrangement but not hard.
   * We can say goodbye to our version of Disassembly soon
   * Performance is a bit worrisome. May need an option to turn off the feature completely. Didn't see an issue unless you start Disassembly and even after that but not sure on slower computers.
-* Medium: Logpoints: See #542
+* **Done**: Medium: Logpoints: See #542
 * Super Low: New memory window using MS Hex Editor
   * They messed up the UX where it inteferes with a debug session repeately. They do not appear willing to revert back to the way they had it which was much nicer. We could fork or include it but it is way too much work.
 * **Done**: Low: Add registers to `Variables` Window
