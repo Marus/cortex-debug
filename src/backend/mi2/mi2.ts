@@ -135,7 +135,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (!this.actuallyStarted) {
             if (os.platform() === 'linux') {
                 this.log('log', 'Error: Unable to start GDB. Make sure you can start gdb from the command-line and run\n' +
-                    '    a command like "echo hello". If you cannot, it is most likely becaues "libncurses5" is not installed.\n');
+                    '    any command like "echo hello". If you cannot, it is most likely because "libncurses5" is not installed.\n');
             }
         }
         ServerConsoleLog('GDB: exited', this.pid);

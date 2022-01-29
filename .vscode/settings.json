@@ -20,6 +20,7 @@
 	"svg.preview.background": "transparent",
 	"cortex-debug.registerUseNaturalFormat": false,
 	"cSpell.words": [
+		"aarch",
 		"cdasm",
 		"cdmem",
 		"dprintf",
@@ -27,6 +28,7 @@
 		"insns",
 		"instrs",
 		"Logpoints",
-		"Syms"
+		"Syms",
+		"xtensa"
 	]
 }
