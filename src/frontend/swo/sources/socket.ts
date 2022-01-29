@@ -32,7 +32,10 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                 this.client.on('data', (buffer) => {
                     this.emit('data', buffer);
                 });
-                this.client.on('end', () => { this.emit('disconnected'); });
+                this.client.on('end', () => {
+                    this.emit('disconnected');
+                    this.dispose();
+                });
                 this.client.on('error', (e) => {
                     const code: string = (e as any).code;
                     if ((code === 'ECONNRESET') && this.connected) {

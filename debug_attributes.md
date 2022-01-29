@@ -1,6 +1,6 @@
 | Attribute | Applies To | Description |
 | --------- | ---------- | ----------- |
-| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` if `runToEntryPoint` is used.
+| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` or if `runToEntryPoint` is used.
 | chainedConfigurations | Common | (unknown)
 | cwd | Common | Directory to run commands from
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
@@ -31,7 +31,7 @@
 | request | Common | ????
 | rtos | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be ChibiOS, eCos, embKernel, FreeRTOS, mqx, nuttx, ThreadX, uCOS-III, or auto.
 | rttConfig | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future
-| runToEntryPoint | Common | If enabled the debugger will run until the start of the given function.
+| runToEntryPoint | Common | If enabled the debugger will run until the start of the given function. There is a 5 second timeout
 | runToMain | Common | Deprecated: please use 'runToEntryPoint' instead.
 | serverArgs | Common | Additional arguments to pass to GDB Server command line
 | serverpath | Common | This setting can be used to override the GDB Server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH

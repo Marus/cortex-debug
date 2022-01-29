@@ -32,8 +32,6 @@ interface SVDInfo {
 }
 
 export class CortexDebugExtension {
-    private adapterOutputChannel: vscode.OutputChannel = null;
-    private clearAdapterOutputChannel = false;
     private rttTerminals: RTTTerminal[] = [];
 
     private gdbServerConsole: GDBServerConsole = null;
@@ -605,8 +603,6 @@ export class CortexDebugExtension {
                 }
                 mySession.rttPortMap = {};
             }
-
-            this.clearAdapterOutputChannel = true;
         }
         catch (e) {
             vscode.window.showInformationMessage(`Debug session did not terminate cleanly ${e}\n${e ? e.stackstrace : ''}. Please report this problem`);
@@ -632,11 +628,11 @@ export class CortexDebugExtension {
             case 'rtt-configure':
                 this.receivedRTTConfigureEvent(e);
                 break;
-            case 'adapter-output':
-                this.receivedAdapterOutput(e);
-                break;
             case 'record-event':
                 this.receivedEvent(e);
+                break;
+            case 'custom-event-open-disassembly':
+                vscode.commands.executeCommand('editor.debug.action.openDisassemblyView');
                 break;
             case 'custom-event-post-start-server':
                 this.startChainedConfigs(e, ChainedEvents.POSTSTART);
@@ -737,7 +733,7 @@ export class CortexDebugExtension {
                     vscode.window.showErrorMessage(`Cortex-Debug: Bug? session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
                 });
             }
-            // Following does not work. Apparently, a customRequest cannot be sent probaboy because this is being called
+            // Following does not work. Apparently, a customRequest cannot be sent probably because this is being called
             // while parent is terminating
             mySession.session.customRequest('notified-children-to-terminate');
         }
@@ -875,7 +871,7 @@ export class CortexDebugExtension {
         }
     }
 
-    // The retured value is a connection source. It may still be in disconnected
+    // The returned value is a connection source. It may still be in disconnected
     // state.
     private createRTTSource(e: vscode.DebugSessionCustomEvent, tcpPort: string, channel: number): Promise<SocketRTTSource> {
         const mySession = CDebugSession.GetSession(e.session);
@@ -898,7 +894,6 @@ export class CortexDebugExtension {
     }
 
     private cleanupRTTTerminals() {
-        return;     // Maybe no need to remove them. User can do so and they will harmlessly hangaround and get recycled
         this.rttTerminals = this.rttTerminals.filter((t) => {
             if (!t.inUse) {
                 t.dispose();
@@ -933,22 +928,6 @@ export class CortexDebugExtension {
 
     private terminalClosed(terminal: vscode.Terminal) {
         this.rttTerminals = this.rttTerminals.filter((t) => t.terminal !== terminal);
-    }
-
-    private receivedAdapterOutput(e) {
-        let output = e.body.content;
-        if (!output.endsWith('\n')) { output += '\n'; }
-        if (!this.adapterOutputChannel) {
-            this.adapterOutputChannel = vscode.window.createOutputChannel('Adapter Output');
-            this.adapterOutputChannel.appendLine('DEPRECATED: Please check the \'TERMINALS\' tab for \'gdb-server\' output. ' +
-                'This \'Adapter Output\' will not appear in future releases');
-            // this.adapterOutputChannel.show();
-        } else if (this.clearAdapterOutputChannel) {
-            this.adapterOutputChannel.clear();
-        }
-        this.clearAdapterOutputChannel = false;
-
-        this.adapterOutputChannel.append(output);
     }
 
     private initializeSWO(session: vscode.DebugSession, args) {

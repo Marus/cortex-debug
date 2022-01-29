@@ -18,12 +18,17 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     private svdFileName: string;
     private gapThreshold: number = 16;
     private errMessage: string = 'No SVD file loaded';
+    private wsFolderPath: string;
     
     constructor(
         public session: vscode.DebugSession,
         public state: vscode.TreeItemCollapsibleState,
         private fireCb: () => void) {
         super();
+        try {
+            // Remember the path as it may not be available when session ends
+            this.wsFolderPath = this.session.workspaceFolder.uri.fsPath;
+        } catch {}
         this.myTreeItem = new TreeItem(this.session.name, this.state);
     }
 
@@ -34,8 +39,10 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         });
         
         try {
-            fs.mkdirSync(path.dirname(fspath), { recursive: true });
-            fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+            if (fspath) {
+                fs.mkdirSync(path.dirname(fspath), { recursive: true });
+                fs.writeFileSync(fspath, JSON.stringify(state), { encoding: 'utf8', flag: 'w' });
+            }
         }
         catch (e) {
             vscode.window.showWarningMessage(`Unable to save periperal preferences ${e}`);
@@ -115,8 +122,8 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
 
     public sessionStarted(SVDFile: string, thresh: any): Thenable<any> {
         this.svdFileName = SVDFile;
-        if (!path.isAbsolute(this.svdFileName)) {
-            const fullpath = path.normalize(path.join(this.session.workspaceFolder.uri.fsPath, this.svdFileName));
+        if (!path.isAbsolute(this.svdFileName) && this.wsFolderPath) {
+            const fullpath = path.normalize(path.join(this.wsFolderPath, this.svdFileName));
             this.svdFileName = fullpath;
         }
 
@@ -133,7 +140,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
             
             this.loadSVD().then(() => {
                 const fspath = this.stateFileName();
-                if (fs.existsSync(fspath)) {
+                if (fspath && fs.existsSync(fspath)) {
                     const data = fs.readFileSync(fspath, 'utf8');
                     const settings = JSON.parse(data);
                     settings.forEach((s: NodeSetting) => {
@@ -163,8 +170,8 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     }
 
     public stateFileName(): string {
-        const fspath = path.join(this.session.workspaceFolder.uri.fsPath,
-            '.vscode', '.cortex-debug.peripherals.state.json');
+        const fspath = this.wsFolderPath ?
+            path.join(this.wsFolderPath, '.vscode', '.cortex-debug.peripherals.state.json') : undefined;
         return fspath;
     }
 

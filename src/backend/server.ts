@@ -141,39 +141,43 @@ export class GDBServer extends EventEmitter {
 
     private onStdout(data) {
         this.sendToConsole(data);        // Send it without any processing or buffering
-        if (typeof data === 'string') { this.outBuffer += data; }
-        else { this.outBuffer += data.toString('utf8'); }
+        if (this.initResolve) {
+            if (typeof data === 'string') { this.outBuffer += data; }
+            else { this.outBuffer += data.toString('utf8'); }
 
-        if (this.initResolve && this.initMatch && this.initMatch.test(this.outBuffer)) {
-            // console.log(`********* Got initmatch on stdout ${Date.now() - this.startTime}ms`);
-            this.initResolve(true);
-            this.initResolve = null;
-            this.initReject = null;
-        }
+            if (this.initResolve && this.initMatch && this.initMatch.test(this.outBuffer)) {
+                // console.log(`********* Got initmatch on stdout ${Date.now() - this.startTime}ms`);
+                this.initResolve(true);
+                this.initResolve = null;
+                this.initReject = null;
+            }
 
-        const end = this.outBuffer.lastIndexOf('\n');
-        if (end !== -1) {
-            this.emit('output', this.outBuffer.substring(0, end));
-            this.outBuffer = this.outBuffer.substring(end + 1);
+            const end = this.outBuffer.lastIndexOf('\n');
+            if (end !== -1) {
+                // this.emit('output', this.outBuffer.substring(0, end));
+                this.outBuffer = this.outBuffer.substring(end + 1);
+            }
         }
     }
 
     private onStderr(data) {
         this.sendToConsole(data);        // Send it without any processing or buffering
-        if (typeof data === 'string') { this.errBuffer += data; }
-        else { this.errBuffer += data.toString('utf8'); }
+        if (this.initResolve) {
+            if (typeof data === 'string') { this.errBuffer += data; }
+            else { this.errBuffer += data.toString('utf8'); }
 
-        if (this.initResolve && this.initMatch && this.initMatch.test(this.errBuffer)) {
-            // console.log(`********* Got initmatch on stderr ${Date.now() - this.startTime}ms`);
-            this.initResolve(true);
-            this.initResolve = null;
-            this.initReject = null;
-        }
+            if (this.initResolve && this.initMatch && this.initMatch.test(this.errBuffer)) {
+                // console.log(`********* Got initmatch on stderr ${Date.now() - this.startTime}ms`);
+                this.initResolve(true);
+                this.initResolve = null;
+                this.initReject = null;
+            }
 
-        const end = this.errBuffer.lastIndexOf('\n');
-        if (end !== -1) {
-            this.emit('output', this.errBuffer.substring(0, end));
-            this.errBuffer = this.errBuffer.substring(end + 1);
+            const end = this.errBuffer.lastIndexOf('\n');
+            if (end !== -1) {
+                // this.emit('output', this.errBuffer.substring(0, end));
+                this.errBuffer = this.errBuffer.substring(end + 1);
+            }
         }
     }
 
