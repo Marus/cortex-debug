@@ -95,8 +95,8 @@ export class TcpPortScanner {
                     resolve(true);
                     return;
                 }
-                resolve(false);
             }
+            resolve(false);
         });
     }
 

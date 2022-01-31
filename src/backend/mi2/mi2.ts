@@ -11,6 +11,24 @@ import { hexFormat } from '../../frontend/utils';
 import { ADAPTER_DEBUG_MODE } from '../../common';
 const path = posix;
 
+export interface ReadMemResults {
+    startAddress: string;
+    endAddress: string;
+    data: string;
+}
+
+export function parseReadMemResults(node: MINode): ReadMemResults {
+    const startAddress = node.resultRecords.results[0][1][0][0][1];
+    const endAddress = node.resultRecords.results[0][1][0][2][1];
+    const data = node.resultRecords.results[0][1][0][3][1];
+    const ret: ReadMemResults = {
+        startAddress: startAddress,
+        endAddress: endAddress,
+        data: data
+    };
+    return ret;
+}
+
 export function escape(str: string) {
     return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }

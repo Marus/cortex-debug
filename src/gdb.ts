@@ -4,7 +4,7 @@ import {
     StackFrame, Scope, Source, Handles, Event
 } from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { MI2 } from './backend/mi2/mi2';
+import { MI2, parseReadMemResults } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
@@ -700,7 +700,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected isMIStatusStopped(): boolean {
-        // We get the status from the MI because we may not have recieved the event yet
+        // We get the status from the MI because we may not have received the event yet
         return (this.miDebugger.status !== 'running');
     }
 
@@ -872,13 +872,11 @@ export class GDBDebugSession extends DebugSession {
 
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
         this.miDebugger.sendCommand(`data-read-memory-bytes "${startAddress}" ${length}`).then((node) => {
-            const startAddress = node.resultRecords.results[0][1][0][0][1];
-            const endAddress = node.resultRecords.results[0][1][0][2][1];
-            const data = node.resultRecords.results[0][1][0][3][1];
-            const bytes = data.match(/[0-9a-f]{2}/g).map((b) => parseInt(b, 16));
+            const results = parseReadMemResults(node);
+            const bytes = results.data.match(/[0-9a-f]{2}/g).map((b) => parseInt(b, 16));
             response.body = {
-                startAddress: startAddress,
-                endAddress: endAddress,
+                startAddress: results.startAddress,
+                endAddress: results.endAddress,
                 bytes: bytes
             };
             this.sendResponse(response);
