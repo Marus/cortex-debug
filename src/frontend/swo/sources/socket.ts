@@ -33,17 +33,20 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                     this.emit('data', buffer);
                 });
                 this.client.on('end', () => {
-                    this.emit('disconnected');
                     this.dispose();
+                });
+                this.client.on('close', () => {
+                    // This can happen because we are destroying ourselves although we never
+                    // got connected.... the retry timer may still be running.
+                    this.disposeClient();
                 });
                 this.client.on('error', (e) => {
                     const code: string = (e as any).code;
                     if ((code === 'ECONNRESET') && this.connected) {
-                        // Server closed the connection. Done with this session. Should we emit('disconnected')?
-                        if (!this.connected) {  // This should never be true
-                            this.connError = e;
-                            reject(e);
-                        }
+                        // Server closed the connection. Done with this session, not in the normal way but we are done.
+                        // Lot of people have issues on what to expect events end/close/error(ECONNRESET). Protect against
+                        // all of them. This problem is wideley seen in various versions of NODE and OS dependent and not
+                        // sure which doc/webpage/blog is the authoritative thing here.
                         this.dispose();
                     } else if (code === 'ECONNREFUSED') {
                         // We expect 'ECONNREFUSED' if the server has not yet started.
@@ -77,13 +80,19 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
 
     private disposeClient() {
         try {
+            if (this.connected) {
+                this.connected = false;
+                this.emit('disconnected');
+            }
             if (this.client) {
-                this.client.destroy();
+                const saved = this.client;
+                this.client = null;
+                saved.destroy();
             }
         }
-        finally {
-            this.client = null;
-            this.connected = false;
+        catch (e) {
+            // For debug only
+            console.log(`Socked destroy error ${e}`);
         }
     }
 
