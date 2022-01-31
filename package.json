@@ -2750,6 +2750,7 @@
         }
     },
     "dependencies": {
+        "@vscode/extension-telemetry": "^0.4.5",
         "binary-parser": "^1.7.0",
         "bindings": "^1.5.0",
         "command-exists": "^1.2.9",
@@ -2765,7 +2766,7 @@
         "tmp": "0.0.33",
         "universal-analytics": "0.4.16",
         "uuid": "^8.3.2",
-        "vscode-extension-telemetry": "0.1.1",
+        "vscode-jsonrpc": "^6.0.0",
         "xml2js": "^0.4.23"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
