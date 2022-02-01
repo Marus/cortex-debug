@@ -388,12 +388,15 @@ export class GdbDisassembler {
         constInstrs: ProtocolInstruction[], instructions: ProtocolInstruction[],
         fName: string, offset: number)
     {
+        // We would rather do a 16 byte line but we may not be able to fill the quota
+        // of the instructions is all we found was data
+        const bytesPerLine = Math.min(16, Math.floor((this.maxInstrSize + 3) / 4) * 4);
         const dbg: ProtocolInstruction[] = [];
         let gotSource = constInstrs[0].location;
         let first: ProtocolInstruction;
         const handleLine = () => {
             const opcodes = line.trim();
-            line = line.padEnd(16 * 3 + 1, ' ');
+            line = line.padEnd(bytesPerLine * 3 + 1, ' ');
             for (const byte of bytes) {
                 if (byte <= 32 || (byte >= 127 && byte <= 159)) {
                     line += '.';
@@ -435,10 +438,10 @@ export class GdbDisassembler {
                 line += byte + ' ';
                 bytes.push(parseInt(byte, 16));
                 bCount++;
-                if (bCount === 16) {
+                if (bCount === bytesPerLine) {
                     handleLine();
                     bCount = 0; line = ''; bytes = [];
-                    offset += 16;
+                    offset += bytesPerLine;
                 }
             }
         }
@@ -911,7 +914,7 @@ export class GdbDisassembler {
         function dummyInstr(tmp: number): ProtocolInstruction {
             return {
                 address: hexFormat(tmp),
-                instruction: '<mem-out-of-bounds>',
+                instruction: '<mem-out-of-bounds?>',
                 pvtAddress: tmp
             };
         }

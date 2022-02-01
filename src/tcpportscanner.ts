@@ -83,12 +83,12 @@ export class TcpPortScanner {
      * @param port port to use. Must be > 0 and <= 65535
      * @param host host ip address to use. Ignored. All loopback addresses are checked
      */
-    public static isPortInUseEx(port: number, _host: string): Promise<boolean> {
+    public static isPortInUseEx(port: number, host: string): Promise<boolean> {
         const tries = TcpPortScanner.getLocalHostAliases();
         const promises = tries.map((host) => TcpPortScanner.isPortInUse(port, host));
 
-        return new Promise(async (resolve, reject) => {
-            const results = await Promise.all(promises.map(p => p.then(x => x).catch(e => e)));
+        return new Promise(async (resolve) => {
+            const results = await Promise.all(promises.map((p) => p.then((x) => x).catch((e) => e)));
             ConsoleLog(`isPortInUseEx: Results ${results}`);
             for (const r of results) {
                 if (r !== false) {
