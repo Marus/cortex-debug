@@ -1,4 +1,4 @@
-import { DebugSession, Source } from '@vscode/debugadapter';
+import { Source } from '@vscode/debugadapter';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { hexFormat } from '../frontend/utils';
 import { MI2, parseReadMemResults } from './mi2/mi2';
@@ -31,7 +31,7 @@ interface DisasmRange {
     qEnd: number;
     verify: number;
     isKnownStart: boolean;        // Set to true if this is a range has a known good start address
-    symbol?: SymbolNode;          // Can be function or data
+    symNode?: SymbolNode;         // Not really used. debugging aid
 }
 
 interface DisasmRequest {
@@ -384,91 +384,13 @@ export class GdbDisassembler {
         return `<${nm}+${offset}>`;
     }
 
-    private convertToData(
-        constInstrs: ProtocolInstruction[], instructions: ProtocolInstruction[],
-        fName: string, offset: number)
-    {
-        // We would rather do a 16 byte line but we may not be able to fill the quota
-        // of the instructions is all we found was data
-        const bytesPerLine = Math.min(16, Math.floor((this.maxInstrSize + 3) / 4) * 4);
-        const dbg: ProtocolInstruction[] = [];
-        let gotSource = constInstrs[0].location;
-        let first: ProtocolInstruction;
-        const handleLine = () => {
-            const opcodes = line.trim();
-            line = line.padEnd(bytesPerLine * 3 + 1, ' ');
-            for (const byte of bytes) {
-                if (byte <= 32 || (byte >= 127 && byte <= 159)) {
-                    line += '.';
-                }
-                else {
-                    line += String.fromCharCode(byte);
-                }
-            }
-            const newInstr: ProtocolInstruction = {
-                pvtAddress: startAddr + offset,
-                pvtIsData: true,
-                address: hexFormat(startAddr + offset),
-                pvtInstructionBytes: opcodes,
-                instructionBytes: this.formatSym(fName, offset),
-                instruction: line
-            };
-            first = first || newInstr;
-            instructions.push(newInstr);
-            dbg.push(newInstr);
-        };
-
-        const startAddr = constInstrs[0].pvtAddress - offset;
-        const re = RegExp(/[0-9a-f]{2}/g);
-        let bCount = 0;
-        let line = '';
-        let bytes: number[] = [];
-        let start: number;
-        let end: number;
-        for (const instr of constInstrs) {
-            if (!gotSource && instr.location) {
-                gotSource = instr.location;
-            }
-            if (instr.location) {
-                start = (start === undefined) ? instr.line : Math.min(start, instr.line || start);
-                const tmp = (instr.endLine || instr.line || end);
-                end = (end === undefined) ? tmp : Math.max(end, tmp);
-            }
-            for (const byte of instr.pvtInstructionBytes.match(re)) {
-                line += byte + ' ';
-                bytes.push(parseInt(byte, 16));
-                bCount++;
-                if (bCount === bytesPerLine) {
-                    handleLine();
-                    bCount = 0; line = ''; bytes = [];
-                    offset += bytesPerLine;
-                }
-            }
-        }
-
-        if (bCount > 0) {
-            handleLine();
-        }
-
-        if (first && gotSource) {
-            first.location = gotSource;
-            first.line = start;
-            first.endLine = end;
-            first.column = first.endColumn = 1;
-        }
-        console.log(dbg);
-    }
-
     private parseDisassembleResults(result: MINode, validationAddr: number, entireRangeGood: boolean, cmd: string): DisassemblyReturn {
         interface ParseSourceInfo {
             source: Source;
             startLine: number;
             endLine: number;
         }
-        let curSymbol: SymbolInformation;
-        let constInstrs: ProtocolInstruction[];
-        let lastFName: string;
-        let curSymbolOffset: number;
+
         const parseIntruction = (miInstr: MINode, srcInfo?: ParseSourceInfo) => {
             const address = MINode.valueOf(miInstr, 'address') as string || '0x????????';
             const fName = MINode.valueOf(miInstr, 'func-name') as string || undefined;
@@ -505,31 +427,7 @@ export class GdbDisassembler {
                 foundIx = instructions.length;
             }
 
-            let done = false;
-            if (fName) {
-                if (constInstrs && (lastFName === fName)) {
-                    constInstrs.push(instr);
-                    done = true;
-                } else if (fName !== lastFName) {
-                    if (constInstrs && (constInstrs.length > 0)) {
-                        this.convertToData(constInstrs, instructions, lastFName, curSymbolOffset);
-                    }
-                    curSymbol = this.gdbSession.symbolTable.symmbolsByAddress.get(nAddress - offset);
-                    if (curSymbol && (curSymbol.type !== SymbolType.Function)) {
-                        constInstrs = [instr];
-                        curSymbolOffset = offset;
-                        done = true;
-                    } else {
-                        constInstrs = undefined;
-                        curSymbol = undefined;
-                        curSymbolOffset = undefined;
-                    }
-                }
-            }
-            if (!done) {
-                instructions.push(instr);
-            }
-            lastFName = fName;
+            instructions.push(instr);
         };
     
         let srcCount = 0;
@@ -588,18 +486,14 @@ export class GdbDisassembler {
                 }
             }
         }
-        if (constInstrs && (constInstrs.length > 0)) {
-            this.convertToData(constInstrs, instructions, lastFName, curSymbolOffset);
-        }
         if (this.doTiming) {
             const total = srcCount + asmCount;
-            this.handleMsg('log', `Debug: ${cmd} => Found ${total} instrunctions. ${srcCount} with source code, ${asmCount} without\n`);
+            this.handleMsg('stdout', `Debug: ${cmd} => Found ${total} instrunctions. ${srcCount} with source code, ${asmCount} without\n`);
         }
         return new DisassemblyReturn(instructions, foundIx, false);
     }
 
-    protected getProtocolDisassembly(range: DisasmRange, args: DebugProtocol.DisassembleArguments): Promise<DisassemblyReturn | Error>
-    {
+    protected getProtocolDisassembly(range: DisasmRange, args: DebugProtocol.DisassembleArguments): Promise<DisassemblyReturn | Error> {
         let startAddress = range.qStart;
         const endAddress = range.qEnd;
         const validationAddr = range.verify;
@@ -608,7 +502,7 @@ export class GdbDisassembler {
             let iter = 0;
             const maxTries = Math.ceil((this.maxInstrSize - this.minInstrSize) / this.instrMultiple);
             const doWork = () => {
-                const old = range.symbol ? null : this.findInCache(startAddress, endAddress);
+                const old = this.findInCache(startAddress, endAddress);
                 if (old) {
                     const foundIx = old.findInstrIndex(validationAddr);
                     if (foundIx < 0) {
@@ -625,17 +519,11 @@ export class GdbDisassembler {
                 const end = endAddress;
                 // const end = range.isData ? endAddress : this.clipHigh(endAddress, endAddress + this.maxInstrSize); // Get a bit more for functions
                 let cmd: string;
-                if (range.symbol) {
-                    cmd = 'data-disassemble -a ' + range.symbol.symbol.name + ' -- 5';
-                } else {
-                    cmd = `data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(end)} -- 5`;
-                }
-                if (GdbDisassembler.debug) {
-                    console.log('Actual request: ' + cmd);
-                }
+                cmd = `data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(end)} -- 5`;
                 if (this.doTiming) {
-                    const count = range.symbol ? '' : `, ${end - startAddress} bytes`;
-                    this.handleMsg('log', `Debug: Gdb command: -${cmd}${count}\n`);
+                    const symName = range.symNode ? ` (${range.symNode.symbol.name})` : '';
+                    const count = `${end - startAddress} bytes`.padStart(15);
+                    this.handleMsg('log', `Debug: Gdb command: -${cmd}${count} ${symName}\n`);
                 }
                 this.miDebugger.sendCommand(cmd).then((result) => {
                     try {
@@ -646,7 +534,7 @@ export class GdbDisassembler {
                                 const msg = `Could not disassemble at this address Looking for ${hexFormat(validationAddr)}: ${cmd} `;
                                 console.log(msg, ret.instructions);
                             }
-                            if (!range.symbol && (startAddress >= this.instrMultiple) && (iter < maxTries)) {
+                            if ((startAddress >= this.instrMultiple) && (iter < maxTries)) {
                                 iter++;
                                 startAddress -= this.instrMultiple;      // Try again with this address
                                 doWork();
@@ -658,9 +546,6 @@ export class GdbDisassembler {
                         } else {
                             const instrRange = new InstructionRange(ret.instructions);
                             this.addToCache(instrRange);
-                            if (range.symbol && (instrRange.span > 0)) {
-                                this.gdbSession.symbolTable.updateSymbolSize(range.symbol, instrRange.span);
-                            }
                             resolve(ret);
                         }
                     }
@@ -954,27 +839,26 @@ export class GdbDisassembler {
             let prev = functions[0];
             printFunc(prev);
             let high = prev.high + 1;
-            let verySmallFunc = (prev.symbol.type === SymbolType.Function) && ((high - prev.low) < this.minInstrSize);
             range.qEnd = high;
             range.verify = range.qStart = prev.low;
-            range.symbol = verySmallFunc ? prev : undefined;
+            range.symNode = prev;
             range.isKnownStart = true;
             for (let ix = 1; ix < functions.length; ix++ ) {
                 const item = functions[ix];
                 if ((prev.low !== item.low) || (prev.high !== item.high)) { // Yes, duplicates are possible
                     const diff = item.low - high;
                     high = item.high + 1;
-                    verySmallFunc = (item.symbol.type === SymbolType.Function) && ((high - item.low) < this.minInstrSize);
-                    if ((diff === 0) && !verySmallFunc &&  !range.symbol) {
+                    if (diff === 0) {
                         range.qEnd = high;      // extend the range
                     } else {
+                        range.qEnd = Math.max(range.qEnd, item.low /*- 1*/);
                         // If we want to deal with gaps between functions as if they are data, this is the place to do it
                         range = {       // Start a new range
                             qStart: item.low,
                             qEnd: high,
                             verify: item.low,
                             isKnownStart: true,
-                            symbol: verySmallFunc ? item : undefined
+                            symNode: item
                         };
                         ret.push(range);
                     }
