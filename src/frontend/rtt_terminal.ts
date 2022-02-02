@@ -38,7 +38,7 @@ export class RTTTerminal {
             if (code === 'ECONNRESET') {
                 // Server closed the connection. We are done with this session
             } else if (code === 'ECONNREFUSED') {
-                // We expect 'ECONNREFUSED' if the server has not yet started afer all the retries
+                // We expect 'ECONNREFUSED' if the server has not yet started after all the retries
                 magentaWrite(`${e}\n.`, this.ptyTerm);
             } else {
                 magentaWrite(`${e}\n`, this.ptyTerm);

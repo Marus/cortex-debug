@@ -698,12 +698,14 @@ export class SpawnLineReader extends EventEmitter {
         super();
     }
 
-    public startWithProgram(prog: string, args: readonly string[] = [], cb: (line: string) => boolean = null): Promise<boolean> {
+    public startWithProgram(
+        prog: string, args: readonly string[] = [],
+        spawnOpts: childProcess.SpawnOptions = {}, cb: (line: string) => boolean = null): Promise<boolean> {
         if (this.promise) { throw new Error('SpawnLineReader: can\'t reuse this object'); }
         this.callback = cb;
         this.promise = new Promise<boolean>((resolve) => {
             try {
-                const child = childProcess.spawn(prog as string, args);
+                const child = childProcess.spawn(prog, args, spawnOpts);
                 child.on('error', (err) => {
                     this.emit('error', err);
                     resolve(false);

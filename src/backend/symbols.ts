@@ -283,7 +283,13 @@ export class SymbolTable {
         });
     }
 
+    private rttSymbol;
+    private readonly rttSymbolName = '_SEGGER_RTT';
     private addSymbol(sym: SymbolInformation) {
+        if (!this.rttSymbol && (sym.name === this.rttSymbolName) && (sym.type === SymbolType.Object) && (sym.length > 0)) {
+            this.rttSymbol = sym;
+        }
+
         this.allSymbols.push(sym);
         if ((sym.type === SymbolType.Function) || (sym.length > 0)) {
             const treeSym = new SymbolNode(sym, sym.address, sym.address + Math.max(1, sym.length) - 1);
@@ -375,6 +381,8 @@ export class SymbolTable {
 
     private async loadFromObjdumpAndNm(useObjdumpFname: string = '', useNmFname: string = '') {
         try {
+            const spawnOpts = {cwd: this.gdbSession.args.cwd};
+            const objdumpStart = Date.now();
             const objDumpArgs = [
                 '--syms',   // Of course, we want symbols
                 '-C',       // Demangle
@@ -387,14 +395,25 @@ export class SymbolTable {
                 throw e;
             });
             this.objdumpReader.on('exit', (code, signal) => {
-                this.objdumpReader = undefined;
-                this.currentObjDumpFile = null;
                 // console.log('objdump exited', code, signal);
             });
+            this.objdumpReader.on('close', (code, signal) => {
+                this.objdumpReader = undefined;
+                this.currentObjDumpFile = null;
+                if (this.gdbSession.args.showDevDebugOutput) {
+                    const ms = Date.now() - objdumpStart;
+                    this.gdbSession.handleMsg('log', `Reading symbols from objdump: Time: ${ms} ms\n`);
+                }
+            });
+
+            if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
+                this.gdbSession.handleMsg('log', `Reading symbols from ${this.objdumpPath} ${objDumpArgs.join(' ')}\n`);
+            }
             const objdumpPromise = (useObjdumpFname ?
                 this.objdumpReader.startWithFile(useObjdumpFname, null, this.readObjdumpHeaderLine.bind(this)) :
-                this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, this.readObjdumpHeaderLine.bind(this)));
-
+                this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this)));
+            
+            const nmStart = Date.now();
             const nmProg = this.objdumpPath.replace(/objdump/i, 'nm');
             const nmArgs = [
                 '--defined-only',
@@ -414,9 +433,19 @@ export class SymbolTable {
             nmReader.on('exit', (code, signal) => {
                 // console.log('nm exited', code, signal);
             });
+            nmReader.on('close', () => {
+                if (this.gdbSession.args.showDevDebugOutput) {
+                    const ms = Date.now() - nmStart;
+                    this.gdbSession.handleMsg('log', `Reading symbols from nm: Time: ${ms} ms\n`);
+                }
+            });
+
+            if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
+                this.gdbSession.handleMsg('log', `Reading symbols from ${nmProg} ${nmArgs.join(' ')}\n`);
+            }
             const nmPromise = (useNmFname ?
                 nmReader.startWithFile(useNmFname, null, this.readNmSymbolLine.bind(this)) :
-                nmReader.startWithProgram(nmProg, nmArgs, this.readNmSymbolLine.bind(this)));
+                nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this)));
 
             // Yes, we launch both programs and wait for both to finish. Running them back to back
             // takes almost twice as much time. Neither should technically fail.
@@ -672,6 +701,10 @@ export class SymbolTable {
     }
 
     public getGlobalOrStaticVarByName(name: string, file?: string): SymbolInformation {
+        if (!file && this.rttSymbol && (name === this.rttSymbolName) ) {
+            return this.rttSymbol;
+        }
+
         if (file) {      // If a file is given only search for static variables by file
             const nfile = SymbolTable.NormalizePath(file);
             for (const s of this.staticVars) {

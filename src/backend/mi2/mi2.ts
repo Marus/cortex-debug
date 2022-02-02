@@ -70,7 +70,7 @@ export class MI2 extends EventEmitter implements IBackend {
         super();
     }
 
-    public start(cwd: string, executable: string, init: string[]): Thenable<any> {
+    public start(cwd: string, executable: string, init: string[]): Promise<void> {
         if (!nativePath.isAbsolute(executable)) {
             executable = nativePath.join(cwd, executable);
         }

@@ -106,7 +106,7 @@ const traceThreads = false;
 
 export class GDBDebugSession extends DebugSession {
     private server: GDBServer;
-    private args: ConfigurationArguments;
+    public args: ConfigurationArguments;
     private ports: { [name: string]: number };
     private serverController: GDBServerController;
     public symbolTable: SymbolTable;
@@ -215,41 +215,36 @@ export class GDBDebugSession extends DebugSession {
     }
 
     private dbgSymbolTable: SymbolTable = null;
-    private async loadSymbols() {
-        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
-        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
-        // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
-        if (this.args.showDevDebugOutput) {
-            this.handleMsg('log', `Reading symbols from '${this.args.executable}'\n`);
-        }
-        this.symbolTable = new SymbolTable(
-            this,
-            this.args.toolchainPath,
-            this.args.toolchainPrefix,
-            this.args.objdumpPath,
-            this.args.executable);
-        await this.symbolTable.loadSymbols();
-
-        if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
-            const symName = '_SEGGER_RTT';
-            const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
-            if (!rttSym) {
-                this.args.rttConfig.enabled = false;
-                this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
-                    'Make sure you complile/link with debug ON or you can specify your own RTT address\n');
-            } else {
-                const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
-                this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
-                this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
-                this.args.rttConfig.searchId = searchStr;
-                this.args.rttConfig.clearSearch = (this.args.rttConfig.clearSearch === undefined) ? true : this.args.rttConfig.clearSearch;
-            }
-        }
-
-        // this.symbolTable.printToFile(args.executable + '.cd-dump');
-        if (this.args.showDevDebugOutput) {
-            this.handleMsg('log', 'Finished reading symbols\n');
-        }
+    private loadSymbols(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
+            // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
+            // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
+            this.symbolTable = new SymbolTable(
+                this,
+                this.args.toolchainPath,
+                this.args.toolchainPrefix,
+                this.args.objdumpPath,
+                this.args.executable);
+            this.symbolTable.loadSymbols().then(() => {
+                if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
+                    const symName = '_SEGGER_RTT';
+                    const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
+                    if (!rttSym) {
+                        this.args.rttConfig.enabled = false;
+                        this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
+                            'Make sure you complile/link with debug ON or you can specify your own RTT address\n');
+                    } else {
+                        const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
+                        this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
+                        this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
+                        this.args.rttConfig.searchId = searchStr;
+                        this.args.rttConfig.clearSearch = (this.args.rttConfig.clearSearch === undefined) ? true : this.args.rttConfig.clearSearch;
+                    }
+                }
+                resolve();
+            });
+        });
     }
 
     private async dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
@@ -366,10 +361,10 @@ export class GDBDebugSession extends DebugSession {
         this.disassember = new GdbDisassembler(this, this.args);
         // dbgResumeStopCounter = 0;
 
-        if (!await this.startGdb(response)) {
-            return;
-        }
-
+        const gbdExePath = this.getGdbPath(response);
+        if (!gbdExePath) { return; }
+        const gdbPromise = this.startGdb(gbdExePath);
+        const symbolsPromise = this.loadSymbols();
         const usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
         this.getTCPPorts(usingParentServer).then(() => {
             const executable = usingParentServer ? null : this.serverController.serverExecutable();
@@ -378,7 +373,7 @@ export class GDBDebugSession extends DebugSession {
             if (executable) {
                 const dbgMsg = 'Launching gdb-server: ' + quoteShellCmdLine([executable, ...args]) + '\n';
                 this.handleMsg('log', dbgMsg);
-                this.handleMsg('log', `Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
+                this.handleMsg('log', `    Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
             }
 
             const consolePort = (this.args as any).gdbServerConsolePort;
@@ -403,8 +398,7 @@ export class GDBDebugSession extends DebugSession {
             this.server.on('quit', () => {
                 if (this.started) {
                     this.quitEvent();
-                }
-                else {
+                } else {
                     this.sendErrorResponse(
                         response,
                         103,
@@ -432,20 +426,23 @@ export class GDBDebugSession extends DebugSession {
                     clearTimeout(timeout);
                     timeout = null;
                 }
-
-                await this.serverController.serverLaunchCompleted();
-                this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
-
                 const commands = [
                     `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
                     `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
                 ];
-
-                if (!this.args.variableUseNaturalFormat) {
-                    commands.push(...this.formatRadixGdbCommand());
-                }
-
                 try {
+                    // This is where 4 things meet
+                    // 1. Gdb has been started
+                    // 2. We read the symbols for ourselves
+                    // 3,4. Found free TCP ports and launched gdb-server
+                    await gdbPromise;
+                    await symbolsPromise;
+                    await this.serverController.serverLaunchCompleted();
+                    this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
+
+                    if (!this.args.variableUseNaturalFormat) {
+                        commands.push(...this.formatRadixGdbCommand());
+                    }
                     commands.push(...this.serverController.initCommands());
 
                     if (attach) {
@@ -454,8 +451,7 @@ export class GDBDebugSession extends DebugSession {
                             this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
                         commands.push(...attachCommands);
                         commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
-                    }
-                    else {
+                    } else {
                         commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
                         const launchCommands = this.args.overrideLaunchCommands != null ?
                             this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
@@ -588,7 +584,7 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private async startGdb(response: DebugProtocol.LaunchResponse): Promise<boolean> {
+    private getGdbPath(response: DebugProtocol.LaunchResponse): string {
         let gdbExePath = os.platform() !== 'win32' ? `${this.args.toolchainPrefix}-gdb` : `${this.args.toolchainPrefix}-gdb.exe`;
         if (this.args.toolchainPath) {
             gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
@@ -606,27 +602,28 @@ export class GDBDebugSession extends DebugSession {
                     `GDB executable "${gdbExePath}" was not found.\n` +
                     'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
                 );
-                return false;
+                return null;
             }
         }
-        else {
-            if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
-                this.sendErrorResponse(
-                    response,
-                    103,
-                    `GDB executable "${gdbExePath}" was not found.\n` +
-                    'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
-                );
-                return false;
-            }
+        else if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
+            this.sendErrorResponse(
+                response,
+                103,
+                `GDB executable "${gdbExePath}" was not found.\n` +
+                'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
+            );
+            return null;
         }
+        return gdbExePath;
+    }
 
+    private startGdb(gdbExePath: string): Promise<void> {
         let gdbargs = ['-q', '--interpreter=mi2'];
         gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs, this.args.executable]) + '\n';
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
-            this.handleMsg('log', 'Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
+            this.handleMsg('log', '    Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
                 'here. Helpful to debug issues or report problems\n');
             if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
                 const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
@@ -637,12 +634,11 @@ export class GDBDebugSession extends DebugSession {
         this.miDebugger = new MI2(gdbExePath, gdbargs);
         this.miDebugger.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
         this.initDebugger();
-        await this.miDebugger.start(this.args.cwd, this.args.executable, [
+        const ret = this.miDebugger.start(this.args.cwd, this.args.executable, [
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"'
         ]);
-        this.loadSymbols();
-        return true;
+        return ret;
     }
 
     private async sendContinue(wait: boolean = false) {
@@ -1164,8 +1160,7 @@ export class GDBDebugSession extends DebugSession {
     protected wrapTimeStamp(str: string): string {
         if (this.args.showDevDebugOutput && this.args.showDevDebugTimestamps) {
             const elapsed = Date.now() - this.timeStart;
-            let elapsedStr = elapsed.toString();
-            while (elapsedStr.length < 10) { elapsedStr = '0' + elapsedStr; }
+            const elapsedStr = elapsed.toString().padStart(10, '0');
             return elapsedStr + ': ' + str;
         } else {
             return str;
