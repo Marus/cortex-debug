@@ -1,5 +1,8 @@
 ChangeLog
 =========
+# V1.3.3
+* Bigfix: Regression since introducing chained configurations a month ago. We were not waiting for the gdb-server to open a TCP port and launching gdb far ahead or time. Most times, this worked okay but this is wrong. Reverting back to old/proper behavior.
+  
 # V1.3.2
 * Major change: We now require both `objdump` and `nm` for extract the source-file, type, address and size of symbols from the executable elf file. `objdump` gives us better (not perfect) symbol information and its types but bad file information. `nm` gives good file information but is wrong in classifying symbols types (function vs data). Gdb does not give us size information, hard to correlate and very version dependent. We need everything addresses, sizes, names and origin (files). Without this, we have trouble giving a proper experience wrt Statics, Globals and other things like disassembly.<br><br>
   There is no special setting for this. We modify the path to `objdump` and expect to find `nm` there. If not, we will continue with the debug session but experience will not be as good (you will see a warning in the Debug Console)

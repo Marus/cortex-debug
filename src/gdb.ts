@@ -380,11 +380,10 @@ export class GDBDebugSession extends DebugSession {
             const gdbPort = this.ports[createPortName(this.args.targetProcessor)];
             let initMatch = null;
             if (!usingParentServer) {
-                this.serverController.initMatch();
+                initMatch = this.serverController.initMatch();
                 if (this.args.overrideGDBServerStartedRegex) {
                     initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
                 }
-
                 if (consolePort === undefined) {
                     this.sendErrorResponse(
                         response,
