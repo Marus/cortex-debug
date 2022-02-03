@@ -39,7 +39,7 @@ export class TcpPortScanner {
      * @param host host ip address to use. This should be an alias to a localhost. Can be null or empty string
      * in which case the Node.js default rules apply.
      */
-    public static isPortInUse(port: number, host: string): Promise<boolean> {
+    public static isPortInUse(port: number, host: string, seq: number = 9999): Promise<boolean> {
         ConsoleLog(`isPortInUse: testing port ${host}:${port}`);
         return new Promise((resolve, reject) => {
             const server = net.createServer((c) => {
@@ -50,20 +50,20 @@ export class TcpPortScanner {
                     // console.log(`port ${host}:${port} is used`, code);
                     if (code === 'EACCES') {
                         // Technically, EACCES means permission denied, so we consider it as used
-                        ConsoleLog(`isPortInUse: port ${host}:${port} returned code EACCES?`);
+                        ConsoleLog(`isPortInUse: port ${host}:${port} returned code EACCES?, ${seq}`);
                     }
-                    ConsoleLog(`isPortInUse: port ${host}:${port} is busy`);
+                    ConsoleLog(`isPortInUse: port ${host}:${port} is busy, ${seq}`);
                     resolve(true);				// Port in use
                 } else {
                     // This should never happen so, log it always
-                    ConsoleLog(`isPortInUse: port ${host}:${port} unexpected error `, e);
+                    ConsoleLog(`isPortInUse: port ${host}:${port} unexpected error , ${seq}`, e);
                     reject(e);					// some other failure
                 }
                 server.close();
             });
 
             server.once('close', () => {
-                ConsoleLog(`isPortInUse: port ${host}:${port} is free`);
+                ConsoleLog(`isPortInUse: port ${host}:${port} is free, ${seq}`);
                 resolve(false);
             });
 
@@ -83,15 +83,23 @@ export class TcpPortScanner {
      * @param port port to use. Must be > 0 and <= 65535
      * @param host host ip address to use. Ignored. All loopback addresses are checked
      */
+    private static SeqNumber = 0;
     public static isPortInUseEx(port: number, host: string): Promise<boolean> {
+        const seq = TcpPortScanner.SeqNumber++;
         const tries = TcpPortScanner.getLocalHostAliases();
-        const promises = tries.map((host) => TcpPortScanner.isPortInUse(port, host));
-
-        return new Promise(async (resolve) => {
-            const results = await Promise.all(promises.map((p) => p.then((x) => x).catch((e) => e)));
-            ConsoleLog(`isPortInUseEx: Results ${results}`);
-            for (const r of results) {
-                if (r !== false) {
+        // We could have launced all tests at once and waited on a Promise.all but that fails on Linux
+        // Have seen cases where it steps on itself. In the same try, it will give an EADDRINUSE and a listen
+        // will succeed. Doing one at a time avoids that but that Linux behavior is strange indeed
+        return new Promise<boolean> (async (resolve) => {
+            for (const host of tries) {
+                try {
+                    const inUse = await TcpPortScanner.isPortInUse(port, host, seq);
+                    if (inUse) {
+                        resolve(true);
+                        return;
+                    }
+                }
+                catch (e) {
                     resolve(true);
                     return;
                 }
