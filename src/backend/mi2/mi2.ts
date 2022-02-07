@@ -157,6 +157,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }
         }
         ServerConsoleLog('GDB: exited', this.pid);
+        this.process = null;
         this.exited = true;
         this.emit('quit');
     }
@@ -952,7 +953,7 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public isReady(): boolean {
+    public isRunning(): boolean {
         return !!this.process;
     }
 }

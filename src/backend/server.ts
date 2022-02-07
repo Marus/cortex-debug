@@ -114,11 +114,6 @@ export class GDBServer extends EventEmitter {
     }
 
     private onExit(code, signal) {
-        if (this.initReject) {
-            this.initReject(new Error('Server exited before establishing connection'));
-            this.initReject = null;
-            this.initResolve = null;
-        }
         ServerConsoleLog(`GDBServer: exited ${code} ${signal}`);
         this.process = null;
         if (this.exitTimeout) {

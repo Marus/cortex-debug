@@ -4,7 +4,6 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
-import { exec } from 'child_process';
 
 function get_ST_DIR() {
     switch (os.platform()) {
@@ -21,7 +20,6 @@ function get_ST_DIR() {
 // Path of the top-level STM32CubeIDE installation directory, os-dependant
 const ST_DIR = get_ST_DIR();
 const SERVER_EXECUTABLE_NAME = os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver';
-const LD_PATH_NAME = os.platform() === 'darwin' ? 'DYLD_FALLBACK_LIBRARY_PATH' : 'LD_LIBRARY_PATH';
 
 const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/i;
 // Example: c:\ST\STM32CubeIDE_1.5.0\
@@ -39,7 +37,7 @@ const GCC_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.gnu-tools-for-st
 function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, executable = '')
 {
     const dir = path.join(...dirSegments);
-    let resolvedDir;
+    let resolvedDir: string;
     try {
         for (const subDir of fs.readdirSync(dir).sort()) {
             const fullPath = path.join(dir, subDir);
@@ -52,7 +50,9 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
             if (match) {
                 const fullPath = path.join(dir, match[0], suffix, executable);
                 if (fs.existsSync(fullPath)) {
-                    resolvedDir = fullPath;
+                    if (!resolvedDir || (resolvedDir.localeCompare(fullPath, undefined, {sensitivity: 'base', numeric: true})) < 0) {
+                        resolvedDir = fullPath;     // Many times, multiple versions exist. Take latest. Hopefully!!
+                    }
                 }
             }
         }
@@ -66,7 +66,6 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
 export class STLinkServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'ST-LINK';
     public readonly portsNeeded: string[] = ['gdbPort'];
-    private saveLdPath: string | undefined = undefined;
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
@@ -170,8 +169,6 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             }
             serverargs.push('-cp', stm32cubeprogrammer);
         }
-
-        this.setLDPath(stm32cubeprogrammer);
          
         if (this.args.interface !== 'jtag') {
             serverargs.push('--swd');
@@ -192,38 +189,12 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         return serverargs;
     }
 
-    private setLDPath(programmer: string) {
-        if (os.platform() !== 'win32') {
-            const exe = path.dirname(this.serverExecutable());
-            const paths = [];
-            for (const dir of [programmer, exe]) {
-                for (const subdir of ['', '../lib']) {
-                    const p = subdir ? path.join(dir, subdir) : dir;
-                    if (fs.existsSync(p)) {
-                        paths.push(p);
-                    }
-                }
-            }
-            const ldPath = paths.join(':');
-            this.saveLdPath = process.env[LD_PATH_NAME];
-            process.env[LD_PATH_NAME] = this.saveLdPath ? (this.saveLdPath + ':' + ldPath) : ldPath;
-        }
-    }
-
     public initMatch(): RegExp {
         return /(Waiting for debugger connection|Listening at).*/ig;
     }
 
     public serverLaunchStarted(): void {}
-    public serverLaunchCompleted(): void {
-        if (os.platform() !== 'win32') {
-            if (this.saveLdPath === undefined) {
-                delete process.env[LD_PATH_NAME];
-            } else {
-                process.env[LD_PATH_NAME] = this.saveLdPath;
-            }
-        }
-    }
+    public serverLaunchCompleted(): void {}
     
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}

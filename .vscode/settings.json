@@ -28,6 +28,9 @@
 		"insns",
 		"instrs",
 		"Logpoints",
+		"pyocd",
+		"SEGGER",
+		"stlink",
 		"Syms",
 		"xtensa"
 	]

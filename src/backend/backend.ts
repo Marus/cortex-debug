@@ -50,7 +50,7 @@ export interface IBackend {
     getStack(threadId: number, startLevel: number, maxLevels: number): Thenable<Stack[]>;
     getStackVariables(thread: number, frame: number): Thenable<Variable[]>;
     evalExpression(name: string, threadId: number, frameId: number): Thenable<any>;
-    isReady(): boolean;
+    isRunning(): boolean;
     changeVariable(name: string, rawValue: string): Thenable<any>;
     examineMemory(from: number, to: number): Thenable<any>;
 }

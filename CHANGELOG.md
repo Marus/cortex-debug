@@ -1,5 +1,12 @@
 ChangeLog
 =========
+# V1.3.4
+* ST-Link users may see a change a couple of changes
+  * In version 1.2.X, a change was made to automatically add certain directories to LD_LIBRARY_PATH (linux) and DYLD_LIBRARY_PATH (Mac). While that worked for most people, it can have un-intended consequences. On all platforms we now use the location of the gdb-server as the current directory to make the executable find the dynamic libraries properly
+  * In previous versions, when auto-discovering ST link install directories for the gdb-server and the programmer, we picked any installation. ST seems to ship multiple versions, so we now pick the latest version as indicated by the version number in the directory.
+  * The safest thing to do is to set the paths yourself using one of the extension settings or settings in launch.json. Normally, not an issue but can cause problems when you have multiple installs or installs in non-standard locations.
+
+
 # V1.3.3
 * Bigfix: Regression since introducing chained configurations a month ago. We were not waiting for the gdb-server to open a TCP port and launching gdb far ahead or time. Most times, this worked okay but this is wrong. Reverting back to old/proper behavior.
   

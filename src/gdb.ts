@@ -233,7 +233,7 @@ export class GDBDebugSession extends DebugSession {
                     if (!rttSym) {
                         this.args.rttConfig.enabled = false;
                         this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
-                            'Make sure you complile/link with debug ON or you can specify your own RTT address\n');
+                            'Make sure you compile/link with debug ON or you can specify your own RTT address\n');
                     } else {
                         const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
                         this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
@@ -361,6 +361,16 @@ export class GDBDebugSession extends DebugSession {
         this.disassember = new GdbDisassembler(this, this.args);
         // dbgResumeStopCounter = 0;
 
+        let errResponseSent = false;
+        const sendErrorResponse = (
+            response: DebugProtocol.Response, codeOrMessage: number | DebugProtocol.Message,
+            format?: string, variables?: any, dest?: any): void => {
+            if (!errResponseSent) {
+                errResponseSent = true;
+                this.sendErrorResponse(response, codeOrMessage, format, variables, dest);
+            }
+        };
+
         const gbdExePath = this.getGdbPath(response);
         if (!gbdExePath) { return; }
         const gdbPromise = this.startGdb(gbdExePath);
@@ -369,6 +379,7 @@ export class GDBDebugSession extends DebugSession {
         this.getTCPPorts(usingParentServer).then(() => {
             const executable = usingParentServer ? null : this.serverController.serverExecutable();
             const args = usingParentServer ? [] : this.serverController.serverArguments();
+            const serverCwd = this.getServerCwd(executable);
 
             if (executable) {
                 const dbgMsg = 'Launching gdb-server: ' + quoteShellCmdLine([executable, ...args]) + '\n';
@@ -385,7 +396,7 @@ export class GDBDebugSession extends DebugSession {
                     initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
                 }
                 if (consolePort === undefined) {
-                    this.sendErrorResponse(
+                    sendErrorResponse(
                         response,
                         107,
                         'GDB Server Console tcp port is undefined.'
@@ -393,12 +404,12 @@ export class GDBDebugSession extends DebugSession {
                     return;
                 }
             }
-            this.server = new GDBServer(this.args.cwd, executable, args, initMatch, gdbPort, consolePort);
-            this.server.on('quit', () => {
+            this.server = new GDBServer(serverCwd, executable, args, initMatch, gdbPort, consolePort);
+            this.server.on('exit', () => {
                 if (this.started) {
-                    this.quitEvent();
+                    this.serverQuitEvent();
                 } else {
-                    this.sendErrorResponse(
+                    sendErrorResponse(
                         response,
                         103,
                         `${this.serverController.name} GDB Server Quit Unexpectedly. See gdb-server output for more details.`
@@ -406,7 +417,7 @@ export class GDBDebugSession extends DebugSession {
                 }
             });
             this.server.on('launcherror', (err) => {
-                this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
+                sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
             });
 
             let timeout = setTimeout(() => {
@@ -416,7 +427,7 @@ export class GDBDebugSession extends DebugSession {
                     'Launching Server',
                     `Failed to launch ${this.serverController.name} GDB Server: Timeout.`
                 ));
-                this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
+                sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
             }, GDBServer.SERVER_TIMEOUT);
 
             this.serverController.serverLaunchStarted();
@@ -461,7 +472,7 @@ export class GDBDebugSession extends DebugSession {
                 catch (err) {
                     const msg = err.toString() + '\n' + err.stack.toString();
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `Failed to generate gdb commands: ${msg}`));
-                    this.sendErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
+                    sendErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
                     return;
                 }
 
@@ -486,7 +497,7 @@ export class GDBDebugSession extends DebugSession {
                     this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
                     this.sendResponse(response);
                 }, (err) => {
-                    this.sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
+                    sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
                     this.miDebugger.stop();     // This should also kill the server if there is one
                     this.server.exit();
@@ -502,14 +513,34 @@ export class GDBDebugSession extends DebugSession {
                     'Launching Server',
                     `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
                 ));
-                this.sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
+                sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
                 this.server.exit();
             });
 
         }, (err) => {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
-            this.sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
+            sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    //
+    // Following function should never exist. The only way ST tools work is if the are run from the dir. where the
+    // executable lives. Tried setting LD_LIBRARY_PATH, worked for some people and broke other peoples environments.
+    // Normally, we NEED the server's CWD to be same as what the user wanted from the config. Because this where
+    // the server scripts (OpenOCD, JLink, etc.) live and changing cwd for all servers will break for other servers
+    // that are not so quirky.
+    //
+    private getServerCwd(serverExe: string) {
+        let serverCwd = this.args.cwd || process.cwd();
+        if (this.args.serverCwd) {
+            serverCwd = this.args.serverCwd;
+        } else if (this.args.servertype === 'stlink') {
+            serverCwd = path.dirname(serverExe) || '.';
+            if (serverCwd !== '.') {
+                this.handleMsg('log', `Setting GDB-SErver CWD: ${serverCwd}\n`);
+            }
+        }
+        return serverCwd;
     }
 
     private notifyStopped(doCustom = true) {
@@ -1364,6 +1395,7 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected quitEvent() {
+        this.quit = true;
         if (traceThreads) {
             this.handleMsg('log', '**** quit event\n');
         }
@@ -1372,14 +1404,21 @@ export class GDBDebugSession extends DebugSession {
             ServerConsoleLog('quitEvent: Killing server', this.miDebugger?.pid);
             this.server.exit();
         }
-        this.quit = true;
         setTimeout(() => {
             // In case GDB quit because of normal processing, let that process finish. Wait for,\
-            // a disconnect reponse to be sent before we send a TerminatedEvent();. Note that we could
+            // a disconnect response to be sent before we send a TerminatedEvent();. Note that we could
             // also be here because the server crashed/quit on us before gdb-did
             ServerConsoleLog('quitEvent: sending VSCode TerminatedEvent', this.miDebugger?.pid);
             this.sendEvent(new TerminatedEvent());
         }, 10);
+    }
+
+    protected serverQuitEvent() {
+        if (this.miDebugger.isRunning() && !this.quit) {
+            // Server quit before gdb quit. Maybe it crashed. Gdb is still running so stop it
+            // which will in turn notify VSCode via `quitEvent()`
+            this.miDebugger.stop();
+        }
     }
 
     protected launchError(err: any) {
