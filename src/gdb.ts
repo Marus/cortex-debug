@@ -593,8 +593,10 @@ export class GDBDebugSession extends DebugSession {
                     if (timeout) {
                         clearTimeout(timeout);
                         timeout = null;
-                        this.startComplete(mode);
                     }
+                    // Wether the breakpoint worked or we were forced to interrupt with the timeout,
+                    // we need to synchronize the states and finish up the startup sequence.
+                    this.startComplete(mode);
                 });
                 this.sendContinue();
             }, (err) => {
