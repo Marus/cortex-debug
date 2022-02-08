@@ -5,6 +5,7 @@ ChangeLog
   * In version 1.2.X, a change was made to automatically add certain directories to LD_LIBRARY_PATH (linux) and DYLD_LIBRARY_PATH (Mac). While that worked for most people, it can have un-intended consequences. On all platforms we now use the location of the gdb-server as the current directory to make the executable find the dynamic libraries properly
   * In previous versions, when auto-discovering ST link install directories for the gdb-server and the programmer, we picked any installation. ST seems to ship multiple versions, so we now pick the latest version as indicated by the version number in the directory.
   * The safest thing to do is to set the paths yourself using one of the extension settings or settings in launch.json. Normally, not an issue but can cause problems when you have multiple installs or installs in non-standard locations.
+* Bugfix: Issue #596 If neither `breakAfterReset` or `runToEntryPoint` were used, the pause button failed to work. The program would run but the debug buttons didn't do anything. We don't know which version of VSCode broke this but we created a workaround that is being tested
 
 
 # V1.3.3
