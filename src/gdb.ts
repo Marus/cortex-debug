@@ -756,7 +756,22 @@ export class GDBDebugSession extends DebugSession {
         return new Promise<boolean>((resolve, reject) => {
             const doResolve = () => {
                 if (this.args.noDebug || (shouldContinue && this.isMIStatusStopped())) {
-                    this.sendContinue();
+                    if ((mode === SessionMode.LAUNCH) && !this.args.breakAfterReset) {
+                        // This is a total hack. We should be able to continue but VSCode is confused at our state
+                        // unless we let it query the thread-id's at least once in the session. Or, even though the button
+                        // state is right we never get interrupt (pause) requests when user presses on it.
+                        const interval = 5;
+                        let tries = 250 / interval;
+                        this.threadIdsCalledHack = false;
+                        const to = setInterval(() => {
+                            if ((tries-- <= 0) || this.threadIdsCalledHack) {
+                                clearInterval(to);
+                                this.sendContinue();
+                            }
+                        }, interval);
+                    } else {
+                        this.sendContinue();
+                    }
                     resolve(true);
                 } else {
                     resolve(false);
@@ -1870,11 +1885,13 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
+    private threadIdsCalledHack = false;
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
+        response.body = { threads: [] };
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
-            response.body = { threads: [] };
             this.sendResponse(response);
-            return Promise.resolve();
+            this.threadIdsCalledHack = true;
+            return;
         }
         try {
             const threadIdNode = await this.miDebugger.sendCommand('thread-list-ids');
@@ -1883,9 +1900,9 @@ export class GDBDebugSession extends DebugSession {
 
             if (!threadIds || (threadIds.length === 0)) {
                 // Yes, this does happen at the very beginning of an RTOS session
-                response.body = { threads: [] };
                 this.sendResponse(response);
-                return Promise.resolve();
+                this.threadIdsCalledHack = true;
+                return;
             }
 
             for (const thId of threadIds) {
@@ -1958,22 +1975,26 @@ export class GDBDebugSession extends DebugSession {
                 threads: threads
             };
             this.sendResponse(response);
+            this.threadIdsCalledHack = true;
         }
         catch (e) {
-            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occured
+            this.threadIdsCalledHack = true;
+            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
                 this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
+            } else {
+                this.sendResponse(response);
             }
         }
     }
 
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
+        response.body = {
+            stackFrames: [],
+            totalFrames: 0
+        };
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
-            response.body = {
-                stackFrames: [],
-                totalFrames: 0
-            };
             this.sendResponse(response);
-            return Promise.resolve();
+            return;
         }
         try {
             const maxDepth = await this.miDebugger.getStackDepth(args.threadId);
@@ -2065,8 +2086,10 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occured
+            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
                 this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
+            } else {
+                this.sendResponse(response);
             }
         }
     }
@@ -2373,10 +2396,10 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
+        response.body = { variables: [] };
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
-            response.body = { variables: [] };
             this.sendResponse(response);
-            return Promise.resolve();
+            return;
         }
         const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
@@ -2427,8 +2450,10 @@ export class GDBDebugSession extends DebugSession {
             this.sendResponse(response);
         }
         catch (err) {
-            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occured
+            if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
                 this.sendErrorResponse(response, 1, `Could not get stack variables: ${err}`);
+            } else {
+                this.sendResponse(response);
             }
         }
     }
@@ -2469,10 +2494,10 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+        response.body = { variables: [] };
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
-            response.body = { variables: [] };
             this.sendResponse(response);
-            return Promise.resolve();
+            return;
         }
         let id: number | string | VariableObject | ExtendedVariable;
 
