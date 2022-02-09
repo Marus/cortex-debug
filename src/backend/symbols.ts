@@ -87,27 +87,25 @@ export class SymbolTable {
     // The following are caches that are either created on demand or on symbol load. Helps performance
     // on large executables since most of our searches are linear. Or, to avoid a search entirely if possible
     // Case sensitivity for path names is an issue: We follow just what gcc records so inherently case-sensitive
-    // or case-preserving. We don't try to re-interpret/massage those path-names. Maybe later.
-    //
-    // TODO: Support for source-maps for both gdb and for symbol/file lookups
-    // TODO: some of the arrays below should be maps. Later.
+    // or case-preserving. We don't try to re-interpret/massage those path-names (but we do Normalize).
     private staticsByFile: {[file: string]: SymbolInformation[]} = {};
     private globalVars: SymbolInformation[] = [];
     private globalFuncsMap: {[key: string]: SymbolInformation} = {};    // Key is function name
     private staticVars: SymbolInformation[] = [];
     private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
-    private fileMap: {[key: string]: string[]} = {};                    // basename of a file to a potential list of aliases we found
-    public symbolsAsTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
-    public symmbolsByAddress: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
+    private fileMap: {[key: string]: string[]} = {};                    // Potential list of file aliases we found
+    public symbolsAsIntervalTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
+    public symbolsByAddress: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
 
-    constructor(
-        private gdbSession: GDBDebugSession, toolchainPath: string,
-        toolchainPrefix: string, private objdumpPath: string, private executable: string)
-    {
+    private objdumpPath: string;
+
+    constructor(private gdbSession: GDBDebugSession, private executable: string) {
+        const args = this.gdbSession.args;
+        this.objdumpPath = args.objdumpPath;
         if (!this.objdumpPath) {
-            this.objdumpPath = os.platform() !== 'win32' ? `${toolchainPrefix}-objdump` : `${toolchainPrefix}-objdump.exe`;
-            if (toolchainPath) {
-                this.objdumpPath = path.normalize(path.join(toolchainPath, this.objdumpPath));
+            this.objdumpPath = os.platform() !== 'win32' ? `${args.toolchainPrefix}-objdump` : `${args.toolchainPrefix}-objdump.exe`;
+            if (args.toolchainPath) {
+                this.objdumpPath = path.normalize(path.join(args.toolchainPath, this.objdumpPath));
             }
         }
     }
@@ -293,9 +291,9 @@ export class SymbolTable {
         this.allSymbols.push(sym);
         if ((sym.type === SymbolType.Function) || (sym.length > 0)) {
             const treeSym = new SymbolNode(sym, sym.address, sym.address + Math.max(1, sym.length) - 1);
-            this.symbolsAsTree.insert(treeSym);
+            this.symbolsAsIntervalTree.insert(treeSym);
         }
-        this.symmbolsByAddress.set(sym.address, sym);
+        this.symbolsByAddress.set(sym.address, sym);
     }
 
     private objdumpReader: SpawnLineReader;
@@ -454,7 +452,7 @@ export class SymbolTable {
 
             // This part needs to run after both of the above finished
             for (const item of this.addressToFile) {
-                const sym = this.symmbolsByAddress.get(item[0]);
+                const sym = this.symbolsByAddress.get(item[0]);
                 if (sym) {
                     sym.file = item[1];
                 } else {
@@ -481,10 +479,10 @@ export class SymbolTable {
     }
 
     public updateSymbolSize(node: SymbolNode, len: number) {
-        this.symbolsAsTree.remove(node);
+        this.symbolsAsIntervalTree.remove(node);
         node.symbol.length = len;
         node = new SymbolNode(node.symbol, node.low, node.low + len - 1);
-        this.symbolsAsTree.insert(node);
+        this.symbolsAsIntervalTree.insert(node);
     }
 
     private sortGlobalVars() {
@@ -633,7 +631,7 @@ export class SymbolTable {
     }
 
     public getFunctionAtAddress(address: number): SymbolInformation {
-        const symNodes = this.symbolsAsTree.search(address, address);
+        const symNodes = this.symbolsAsIntervalTree.search(address, address);
         for (const symNode of symNodes) {
             if (symNode && (symNode.symbol.type === SymbolType.Function)) {
                 return symNode.symbol;

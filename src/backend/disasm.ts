@@ -827,7 +827,7 @@ export class GdbDisassembler {
         trueEnd = this.clipHigh(referenceAddress, trueEnd);
 
         const ret: DisasmRange[] = [];
-        const functions = this.gdbSession.symbolTable.symbolsAsTree.search(trueStart, trueEnd);
+        const functions = this.gdbSession.symbolTable.symbolsAsIntervalTree.search(trueStart, trueEnd);
         let range: DisasmRange = {
             qStart: Math.min(trueStart, referenceAddress),
             qEnd: Math.max(trueEnd, referenceAddress + this.maxInstrSize),

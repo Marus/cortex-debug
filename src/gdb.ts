@@ -172,7 +172,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected initDebugger() {
-        this.miDebugger.on('launcherror', this.launchError.bind(this));
         this.miDebugger.on('quit', this.quitEvent.bind(this));
         this.miDebugger.on('exited-normally', this.quitEvent.bind(this));
         this.miDebugger.on('stopped', this.stopEvent.bind(this));
@@ -220,12 +219,7 @@ export class GDBDebugSession extends DebugSession {
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
-            this.symbolTable = new SymbolTable(
-                this,
-                this.args.toolchainPath,
-                this.args.toolchainPrefix,
-                this.args.objdumpPath,
-                this.args.executable);
+            this.symbolTable = new SymbolTable(this, this.args.executable);
             this.symbolTable.loadSymbols().then(() => {
                 if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
                     const symName = '_SEGGER_RTT';
@@ -250,8 +244,7 @@ export class GDBDebugSession extends DebugSession {
     private async dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
-            const toolchainPath = true ? '/Applications/ARM/bin' : args.toolchainPath;
-            const tmpSymbols = new SymbolTable(this, toolchainPath, args.toolchainPrefix, args.objdumpPath, elfFile);
+            const tmpSymbols = new SymbolTable(this, elfFile);
             this.dbgSymbolTable = tmpSymbols;
             await tmpSymbols.loadSymbols('/Users/hdm/Downloads/objdump.txt');
             tmpSymbols.printToFile(elfFile + '.cd-dump');
@@ -361,19 +354,9 @@ export class GDBDebugSession extends DebugSession {
         this.disassember = new GdbDisassembler(this, this.args);
         // dbgResumeStopCounter = 0;
 
-        let errResponseSent = false;
-        const sendErrorResponse = (
-            response: DebugProtocol.Response, codeOrMessage: number | DebugProtocol.Message,
-            format?: string, variables?: any, dest?: any): void => {
-            if (!errResponseSent) {
-                errResponseSent = true;
-                this.sendErrorResponse(response, codeOrMessage, format, variables, dest);
-            }
-        };
-
         const gbdExePath = this.getGdbPath(response);
         if (!gbdExePath) { return; }
-        const gdbPromise = this.startGdb(gbdExePath);
+        const gdbPromise = this.startGdb(gbdExePath, response);
         const symbolsPromise = this.loadSymbols();
         const usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
         this.getTCPPorts(usingParentServer).then(() => {
@@ -396,7 +379,7 @@ export class GDBDebugSession extends DebugSession {
                     initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
                 }
                 if (consolePort === undefined) {
-                    sendErrorResponse(
+                    this.launchErrorResponse(
                         response,
                         107,
                         'GDB Server Console tcp port is undefined.'
@@ -409,7 +392,7 @@ export class GDBDebugSession extends DebugSession {
                 if (this.started) {
                     this.serverQuitEvent();
                 } else {
-                    sendErrorResponse(
+                    this.launchErrorResponse(
                         response,
                         103,
                         `${this.serverController.name} GDB Server Quit Unexpectedly. See gdb-server output for more details.`
@@ -417,7 +400,7 @@ export class GDBDebugSession extends DebugSession {
                 }
             });
             this.server.on('launcherror', (err) => {
-                sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
+                this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
             });
 
             let timeout = setTimeout(() => {
@@ -427,7 +410,7 @@ export class GDBDebugSession extends DebugSession {
                     'Launching Server',
                     `Failed to launch ${this.serverController.name} GDB Server: Timeout.`
                 ));
-                sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
+                this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
             }, GDBServer.SERVER_TIMEOUT);
 
             this.serverController.serverLaunchStarted();
@@ -472,7 +455,7 @@ export class GDBDebugSession extends DebugSession {
                 catch (err) {
                     const msg = err.toString() + '\n' + err.stack.toString();
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `Failed to generate gdb commands: ${msg}`));
-                    sendErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
+                    this.launchErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
                     return;
                 }
 
@@ -497,7 +480,7 @@ export class GDBDebugSession extends DebugSession {
                     this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
                     this.sendResponse(response);
                 }, (err) => {
-                    sendErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
+                    this.launchErrorResponse(response, 103, `Failed to launch GDB: ${err.toString()}`);
                     this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', err.toString()));
                     this.miDebugger.stop();     // This should also kill the server if there is one
                     this.server.exit();
@@ -513,14 +496,25 @@ export class GDBDebugSession extends DebugSession {
                     'Launching Server',
                     `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
                 ));
-                sendErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
+                this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
                 this.server.exit();
             });
 
         }, (err) => {
             this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
-            sendErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
+            this.launchErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);
         });
+    }
+
+    // There are so many ways launching can fail but we only want to send the error response once.
+    // However, send everything to the Debug Console anyways.
+    private errResponseSent = false;
+    private launchErrorResponse(response: DebugProtocol.LaunchResponse, code: number, msg: string) {
+        this.handleMsg('stderr', `Error ${code}: ` + msg.endsWith('\n') ? msg : msg + '\n');
+        if (!this.errResponseSent) {
+            this.errResponseSent = true;
+            this.sendErrorResponse(response, code, msg);
+        }
     }
 
     //
@@ -621,35 +615,25 @@ export class GDBDebugSession extends DebugSession {
         if (this.args.toolchainPath) {
             gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
         }
+        const gdbMissingMsg = `GDB executable "${gdbExePath}" was not found.\n` +
+            'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.';
+        
         if (this.args.gdbPath) {
             gdbExePath = this.args.gdbPath;
-        }
-
-        // Check to see if gdb exists.
-        if (path.isAbsolute(gdbExePath)) {
+        } else if (path.isAbsolute(gdbExePath)) {
             if (fs.existsSync(gdbExePath) === false) {
-                this.sendErrorResponse(
-                    response,
-                    103,
-                    `GDB executable "${gdbExePath}" was not found.\n` +
-                    'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.'
-                );
+                this.launchErrorResponse(response, 103, gdbMissingMsg);
                 return null;
             }
         }
         else if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
-            this.sendErrorResponse(
-                response,
-                103,
-                `GDB executable "${gdbExePath}" was not found.\n` +
-                'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath"  correctly.'
-            );
+            this.launchErrorResponse(response, 103, gdbMissingMsg);
             return null;
         }
         return gdbExePath;
     }
 
-    private startGdb(gdbExePath: string): Promise<void> {
+    private startGdb(gdbExePath: string, response: DebugProtocol.LaunchResponse): Promise<void> {
         let gdbargs = ['-q', '--interpreter=mi2'];
         gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs, this.args.executable]) + '\n';
@@ -665,6 +649,11 @@ export class GDBDebugSession extends DebugSession {
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
         this.miDebugger.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
+        this.miDebugger.on('launcherror', (err) => {
+            const msg = 'Could not start GDB process, does the program exist in filesystem?\n' + err.toString() + '\n';
+            this.launchErrorResponse(response, 103, msg);
+            this.quitEvent();
+        });
         this.initDebugger();
         const ret = this.miDebugger.start(this.args.cwd, this.args.executable, [
             'interpreter-exec console "set print demangle on"',
@@ -1220,7 +1209,7 @@ export class GDBDebugSession extends DebugSession {
 
     public handleMsg(type: string, msg: string) {
         if (this.suppressRadixMsgs && (type === 'console') && /radix/.test(msg)) {
-            // Filter out unneccessary radix change messages
+            // Filter out unnecessary radix change messages
             return;
         }
         if (type === 'target') { type = 'stdout'; }
@@ -1436,12 +1425,6 @@ export class GDBDebugSession extends DebugSession {
             // which will in turn notify VSCode via `quitEvent()`
             this.miDebugger.stop();
         }
-    }
-
-    protected launchError(err: any) {
-        this.handleMsg('stderr', 'Could not start debugger process, does the program exist in filesystem?\n');
-        this.handleMsg('stderr', err.toString() + '\n');
-        this.quitEvent();
     }
 
     // returns [threadId, frameId]
