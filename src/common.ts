@@ -204,6 +204,7 @@ export interface RTTConfiguration {
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
+    name: string;
     request: string;
     toolchainPath: string;
     toolchainPrefix: string;

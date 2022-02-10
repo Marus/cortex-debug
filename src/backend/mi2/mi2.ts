@@ -914,7 +914,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (raw.includes('undefined')) {
             console.log(raw);
         }
-        this.process.stdin.write(raw + '\n');
+        this.process.stdin.write(raw + '\n');   // Sometimes, process is already null
     }
 
     public getCurrentToken(): number {
@@ -924,6 +924,17 @@ export class MI2 extends EventEmitter implements IBackend {
     public sendCommand(command: string, suppressFailure = false, swallowStdout = false): Thenable<MINode> {
         const sel = this.currentToken++;
         return new Promise((resolve, reject) => {
+            const errReport = (arg: MINode | Error) => {
+                const nd = arg as MINode;
+                if (suppressFailure && nd) {
+                    this.log('stderr', `WARNING: Error executing command '${command}'`);
+                    resolve(nd);
+                } else if (!nd) {
+                    reject(new MIError(arg ? arg.toString() : 'Unknown error', command));
+                } else {
+                    reject(new MIError(nd.result('msg') || 'Internal error', command));
+                }
+            };
             if (swallowStdout) {
                 this.needOutput[sel] = '';
             }
@@ -932,13 +943,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     delete this.needOutput[sel];
                 }
                 if (node.resultRecords.resultClass === 'error') {
-                    if (suppressFailure) {
-                        this.log('stderr', `WARNING: Error executing command '${command}'`);
-                        resolve(node);
-                    }
-                    else {
-                        reject(new MIError(node.result('msg') || 'Internal error', command));
-                    }
+                    errReport(node);
                 }
                 else {
                     resolve(node);
@@ -947,7 +952,12 @@ export class MI2 extends EventEmitter implements IBackend {
             if (command.startsWith('exec-continue')) {
                 this.lastContinueSeqId = sel;
             }
-            this.sendRaw(sel + '-' + command);
+            try {
+                this.sendRaw(sel + '-' + command);
+            }
+            catch (e) {
+                errReport(e);
+            }
         });
     }
 

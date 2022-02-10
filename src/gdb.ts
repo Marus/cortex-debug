@@ -783,6 +783,11 @@ export class GDBDebugSession extends DebugSession {
         });
     }
 
+    public serverConsoleLog(msg: string) {
+        const pid = this.miDebugger && this.miDebugger.pid > 0 ? this.miDebugger.pid : process.pid;
+        ServerConsoleLog(`${this.args.name}: ` + msg, pid);
+    }
+
     protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
         if (this.serverController.customRequest(command, response, args)) {
             this.sendResponse(response);
@@ -857,10 +862,12 @@ export class GDBDebugSession extends DebugSession {
             case 'reset-device':
                 this.resetDevice(response, args);
                 break;
-            case 'set-stop-debugging-type':
+            case 'custom-stop-debugging':
+                this.serverConsoleLog(`Got request ${command}`);
                 this.disconnectRequest2(response, args);
                 break;
             case 'notified-children-to-terminate':  // We never get this request
+                this.serverConsoleLog(`Got request ${command}`);
                 this.emit('children-terminating');
                 this.sendResponse(response);
                 break;
@@ -1017,7 +1024,7 @@ export class GDBDebugSession extends DebugSession {
                     clearInterval(to);
                     to = null;
                     this.server.exit();
-                    ServerConsoleLog('disconnectRequest sendResponse 3', this.miDebugger?.pid);
+                    this.serverConsoleLog('disconnectRequest sendResponse 3');
                     this.sendResponse(response);
                 } else {
                     nTimes--;
@@ -1027,14 +1034,14 @@ export class GDBDebugSession extends DebugSession {
                 if (to) {
                     clearInterval(to);
                     to = null;
-                    ServerConsoleLog('disconnectRequest sendResponse 2', this.miDebugger?.pid);
+                    this.serverConsoleLog('disconnectRequest sendResponse 2');
                     this.sendResponse(response);
                 }
             });
             // Note: If gdb exits first, then we kill the server anyways
         } else {
             this.miDebugger.once('quit', () => {
-                ServerConsoleLog('disconnectRequest sendResponse 1', this.miDebugger?.pid);
+                this.serverConsoleLog('disconnectRequest sendResponse 1');
                 this.sendResponse(response);
             });
         }
@@ -1051,11 +1058,11 @@ export class GDBDebugSession extends DebugSession {
             return;
         }
         if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
-            ServerConsoleLog('Begin disconnectRequest children', this.miDebugger?.pid);
+            this.serverConsoleLog('Begin disconnectRequest children');
             this.sendEvent(new GenericCustomEvent('session-terminating', args));
             let timeout = setTimeout(() => {
                 if (timeout) {
-                    ServerConsoleLog('Timed out waiting for children to exit', this.miDebugger?.pid);
+                    this.serverConsoleLog('Timed out waiting for children to exit');
                     timeout = null;
                     this.disconnectRequest2(response, args);
                 }
@@ -1087,7 +1094,7 @@ export class GDBDebugSession extends DebugSession {
         response: DebugProtocol.DisconnectResponse | DebugProtocol.Response,
         args: DebugProtocol.DisconnectArguments): Promise<void> {
         this.isDisconnecting = true;
-        ServerConsoleLog('Begin disconnectRequest', this.miDebugger?.pid);
+        this.serverConsoleLog('Begin disconnectRequest');
         const doDisconnectProcessing = async () => {
             await this.tryDeleteBreakpoints();
             this.disableSendStoppedEvents = false;
@@ -1160,7 +1167,7 @@ export class GDBDebugSession extends DebugSession {
 
             this.miDebugger.restart(commands).then((done) => {
                 if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
-                    ServerConsoleLog(`Begin ${mode} children`, this.miDebugger?.pid);
+                    this.serverConsoleLog(`Begin ${mode} children`);
                     this.sendEvent(new GenericCustomEvent(`session-${mode}`, args));
                 }
     
@@ -1383,7 +1390,17 @@ export class GDBDebugSession extends DebugSession {
             this.sendEvent(new ThreadEvent('exited', thId));
         }
         this.activeThreadIds.clear();
-        // this.sendEvent(new TerminatedEvent());
+        /*
+        if (this.started) {
+            // If this is happening after the session has started, it means that gdb probably lost connection
+            // with the server, but keeps running
+            if (this.miDebugger.isRunning() && !this.quit) {
+                // Server quit before gdb quit. Maybe it crashed. Gdb is still running so stop it
+                // which will in turn notify VSCode via `quitEvent()`
+                this.miDebugger.stop();
+            }
+        }
+        */
     }
 
     protected stopEvent(info: MINode, reason: string = 'exception') {
@@ -1407,14 +1424,14 @@ export class GDBDebugSession extends DebugSession {
         }
         if (this.server && this.server.isProcessRunning()) {
             // A gdb quit may be happening with VSCode asking us to finish or a crash or user doing something
-            ServerConsoleLog('quitEvent: Killing server', this.miDebugger?.pid);
+            this.serverConsoleLog('quitEvent: Killing server');
             this.server.exit();
         }
         setTimeout(() => {
             // In case GDB quit because of normal processing, let that process finish. Wait for,\
             // a disconnect response to be sent before we send a TerminatedEvent();. Note that we could
             // also be here because the server crashed/quit on us before gdb-did
-            ServerConsoleLog('quitEvent: sending VSCode TerminatedEvent', this.miDebugger?.pid);
+            this.serverConsoleLog('quitEvent: sending VSCode TerminatedEvent');
             this.sendEvent(new TerminatedEvent());
         }, 10);
     }

@@ -7,7 +7,6 @@ import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 
 import { RTTCore, SWOCore } from './swo/core';
-import { SWORTTSource } from './swo/sources/common';
 import { NumberFormat, ConfigurationArguments,
     RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
     CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE } from '../common';
@@ -24,6 +23,7 @@ import { SymbolInformation, SymbolScope } from '../symbols';
 import { RTTTerminal } from './rtt_terminal';
 import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
+import { ServerConsoleLog } from '../backend/server';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -641,6 +641,7 @@ export class CortexDebugExtension {
                 this.startChainedConfigs(e, ChainedEvents.POSTINIT);
                 break;
             case 'custom-event-session-terminating':
+                ServerConsoleLog('Got event for sessions terminating', process.pid);
                 this.endChainedConfigs(e);
                 break;
             case 'custom-event-session-restart':
@@ -728,14 +729,18 @@ export class CortexDebugExtension {
 
             while (deathList.length > 0) {
                 const s = deathList.pop();
-                s.session.customRequest('set-stop-debugging-type', e.body.info).then(() => {
+                // We cannot actually use the following API. We have to do this ourselves. Probably because we own
+                // the lifetime management.
+                // vscode.debug.stopDebugging(s.session);
+                ServerConsoleLog(`Sending custom-stop-debugging to ${s.session.name}`, process.pid);
+                s.session.customRequest('custom-stop-debugging', e.body.info).then(() => {
                 }, (reason) => {
                     vscode.window.showErrorMessage(`Cortex-Debug: Bug? session.customRequest('set-stop-debugging-type', ... failed ${reason}\n`);
                 });
             }
-            // Following does not work. Apparently, a customRequest cannot be sent probably because this is being called
-            // while parent is terminating
-            mySession.session.customRequest('notified-children-to-terminate');
+            // Following does not work. Apparently, a customRequest cannot be sent probably because this session is already
+            // terminating.
+            // mySession.session.customRequest('notified-children-to-terminate');
         }
     }
 
