@@ -231,9 +231,8 @@ export class GdbDisassembler {
     }
 
     public async setArchitecture(): Promise<void> {
-        this.miDebugger.startCaptureConsole();
-        await this.miDebugger.sendCommand('interpreter-exec console "show architecture"');
-        const str = this.miDebugger.endCaptureConsole();
+        const miNode = await this.miDebugger.sendCommand('interpreter-exec console "show architecture"', false, true);
+        const str = miNode.output;
         let found = false;
         // Some of this copied from MIEngine. Of course nothing other Arm-32 was tested
         for (const line of str.toLowerCase().split('\n')) {
@@ -292,9 +291,8 @@ export class GdbDisassembler {
         try {
             await this.setArchitecture();
             this.memoryRegions = [];
-            this.miDebugger.startCaptureConsole();
-            await this.miDebugger.sendCommand('interpreter-exec console "info mem"');
-            const str = this.miDebugger.endCaptureConsole();
+            const miNode = await this.miDebugger.sendCommand('interpreter-exec console "info mem"', false, true);
+            const str = miNode.output;
             let match: RegExpExecArray;
             const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
             // Num Enb  Low Addr   High Addr  Attrs 

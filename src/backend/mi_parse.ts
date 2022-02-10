@@ -58,6 +58,7 @@ export class MINode implements MIInfo {
     public token: number;
     public outOfBandRecord: Array<{ isStream: boolean, type: string, asyncClass: string, output: Array<[string, any]>, content: string }>;
     public resultRecords: { resultClass: string, results: Array<[string, any]> };
+    public output: string = '';
 
     public static valueOf(start: any, path: string): any {
         if (!start) {

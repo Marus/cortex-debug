@@ -50,15 +50,15 @@ export class MI2 extends EventEmitter implements IBackend {
     public debugOutput: ADAPTER_DEBUG_MODE;
     public procEnv: any;
     protected currentToken: number = 1;
+    protected nextTokenComing = 1;          // This will be the next token output from gdb
     protected handlers: { [index: number]: (info: MINode) => any } = {};
-    protected buffer: string;
-    protected errbuf: string;
+    protected needOutput: { [index: number]: '' } = {};
+    protected buffer: string = '';
+    protected errbuf: string = '';
     protected process: ChildProcess.ChildProcess;
     protected stream;
     protected firstStop: boolean = true;
     protected exited: boolean = false;
-    protected captureConsole: boolean = false;
-    protected capturedConsole: string = '';
     public gdbMajorVersion: number | undefined;
     public gdbMinorVersion: number | undefined;
     public status: 'running' | 'stopped' | 'none' = 'none';
@@ -89,16 +89,14 @@ export class MI2 extends EventEmitter implements IBackend {
 
             this.sendCommand('gdb-set target-async on', true).then(() => {
                 this.actuallyStarted = true;
-                this.startCaptureConsole();
-                this.sendCommand('gdb-version').then((v: MINode) => {
-                    const str = this.endCaptureConsole();
+                this.sendCommand('gdb-version', false, true).then((v: MINode) => {
+                    const str = v.output;
                     this.parseVersionInfo(str);
                     const promises = init.map((c) => this.sendCommand(c));
                     Promise.all(promises).then(() => {
                         resolve();
                     }, reject);
                 }, () => {
-                    const str = this.endCaptureConsole();
                     reject();
                 });
             }, () => {
@@ -109,18 +107,6 @@ export class MI2 extends EventEmitter implements IBackend {
 
     private onError(err) {
         this.emit('launcherror', err);
-    }
-
-    public startCaptureConsole(): void {
-        this.captureConsole = true;
-        this.capturedConsole = '';
-    }
-
-    public endCaptureConsole(): string {
-        const ret = this.capturedConsole;
-        this.captureConsole = false;
-        this.capturedConsole = '';
-        return ret;
     }
 
     private parseVersionInfo(str: string) {
@@ -235,6 +221,12 @@ export class MI2 extends EventEmitter implements IBackend {
                         this.log('log', 'GDB -> App: ' + JSON.stringify(parsed));
                     }
                 }
+                if (parsed.token !== undefined) {
+                    if (this.needOutput[parsed.token] !== undefined) {
+                        parsed.output = this.needOutput[parsed.token];
+                    }
+                    this.nextTokenComing = parsed.token + 1;
+                }
                 let handled = false;
                 if (parsed.token !== undefined && parsed.resultRecords) {
                     if (this.handlers[parsed.token]) {
@@ -257,8 +249,8 @@ export class MI2 extends EventEmitter implements IBackend {
                 if (parsed.outOfBandRecord) {
                     parsed.outOfBandRecord.forEach((record) => {
                         if (record.isStream) {
-                            if (this.captureConsole && (record.type === 'console')) {
-                                this.capturedConsole += record.content;
+                            if ((record.type === 'console') && (this.needOutput[this.nextTokenComing] !== undefined)) {
+                                this.needOutput[this.nextTokenComing] += record.content;
                             } else {
                                 this.log(record.type, record.content);
                             }
@@ -929,10 +921,16 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.currentToken;
     }
 
-    public sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
+    public sendCommand(command: string, suppressFailure = false, swallowStdout = false): Thenable<MINode> {
         const sel = this.currentToken++;
         return new Promise((resolve, reject) => {
+            if (swallowStdout) {
+                this.needOutput[sel] = '';
+            }
             this.handlers[sel] = (node: MINode) => {
+                if (swallowStdout) {
+                    delete this.needOutput[sel];
+                }
                 if (node.resultRecords.resultClass === 'error') {
                     if (suppressFailure) {
                         this.log('stderr', `WARNING: Error executing command '${command}'`);
