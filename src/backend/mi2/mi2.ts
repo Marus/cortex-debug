@@ -65,6 +65,7 @@ export class MI2 extends EventEmitter implements IBackend {
     public pid: number = -1;
     protected lastContinueSeqId = -1;
     protected actuallyStarted = false;
+    public gdbVarsPromise: Promise<MINode> = null;
 
     constructor(public application: string, public args: string[]) {
         super();
@@ -89,11 +90,20 @@ export class MI2 extends EventEmitter implements IBackend {
 
             this.sendCommand('gdb-set target-async on', true).then(() => {
                 this.actuallyStarted = true;
-                this.sendCommand('gdb-version', false, true).then((v: MINode) => {
+                this.sendCommand('gdb-version', false, true, true).then((v: MINode) => {
                     const str = v.output;
                     this.parseVersionInfo(str);
                     const promises = init.map((c) => this.sendCommand(c));
                     Promise.all(promises).then(() => {
+                        if (this.gdbMajorVersion >= 9) {
+                            this.gdbVarsPromise = new Promise((resolve) => {
+                                this.sendCommand('symbol-info-variables', false, false, true).then((x) => {
+                                    resolve(x);
+                                }, (e) => {
+                                    reject(e);
+                                });
+                            });
+                        }
                         resolve();
                     }, reject);
                 }, () => {
@@ -117,7 +127,7 @@ export class MI2 extends EventEmitter implements IBackend {
             this.gdbMajorVersion = parseInt(match[1]);
             this.gdbMinorVersion = parseInt(match[2]);
             if (this.gdbMajorVersion < 9) {
-                this.log('stderr', 'WARNING: Cortex-Debug will deprecate use of GDB version 8. Please upgrade to version 9+\n');
+                this.log('stderr', 'WARNING: Cortex-Debug will deprecate use of GDB version 8 after July 2022. Please upgrade to version 9+\n');
             }
         }
         if (str) {
@@ -911,9 +921,6 @@ export class MI2 extends EventEmitter implements IBackend {
         if (this.debugOutput || trace) {
             this.log('log', raw);
         }
-        if (raw.includes('undefined')) {
-            console.log(raw);
-        }
         this.process.stdin.write(raw + '\n');   // Sometimes, process is already null
     }
 
@@ -921,7 +928,7 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.currentToken;
     }
 
-    public sendCommand(command: string, suppressFailure = false, swallowStdout = false): Thenable<MINode> {
+    public sendCommand(command: string, suppressFailure = false, swallowStdout = false, forceNoDebug = false): Thenable<MINode> {
         const sel = this.currentToken++;
         return new Promise((resolve, reject) => {
             const errReport = (arg: MINode | Error) => {
@@ -938,7 +945,17 @@ export class MI2 extends EventEmitter implements IBackend {
             if (swallowStdout) {
                 this.needOutput[sel] = '';
             }
+            const save = this.debugOutput;
+            if (forceNoDebug && this.debugOutput) {
+                this.log('log', `Suppressing output for '${sel}-${command}'`);
+                // We need to be more sophisticated than this. There could be other commands in flight
+                // We should do this how we do the swallowStdout
+                this.debugOutput = undefined;
+            }
             this.handlers[sel] = (node: MINode) => {
+                if (forceNoDebug) {
+                    this.debugOutput = save;
+                }
                 if (swallowStdout) {
                     delete this.needOutput[sel];
                 }
@@ -956,6 +973,9 @@ export class MI2 extends EventEmitter implements IBackend {
                 this.sendRaw(sel + '-' + command);
             }
             catch (e) {
+                if (forceNoDebug) {
+                    this.debugOutput = save;
+                }
                 errReport(e);
             }
         });

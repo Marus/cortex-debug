@@ -221,21 +221,30 @@ export class GDBDebugSession extends DebugSession {
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
             this.symbolTable = new SymbolTable(this, this.args.executable);
             this.symbolTable.loadSymbols().then(() => {
-                if (this.args.rttConfig.enabled && (this.args.rttConfig.address === 'auto')) {
-                    const symName = '_SEGGER_RTT';
-                    const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
-                    if (!rttSym) {
-                        this.args.rttConfig.enabled = false;
-                        this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
-                            'Make sure you compile/link with debug ON or you can specify your own RTT address\n');
-                    } else {
-                        const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
-                        this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
-                        this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
-                        this.args.rttConfig.searchId = searchStr;
-                        this.args.rttConfig.clearSearch = (this.args.rttConfig.clearSearch === undefined) ? true : this.args.rttConfig.clearSearch;
+                if (this.args.rttConfig.enabled) {
+                    const symName = this.symbolTable.rttSymbolName;
+                    if (!this.args.rttConfig.address) {
+                        this.handleMsg('stderr', 'INFO: "rttConfig.address" not specified. Defaulting to "auto"\n');
+                        this.args.rttConfig.address = 'auto';
+                    }
+                    if (this.args.rttConfig.address === 'auto') {
+                        const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
+                        if (!rttSym) {
+                            this.args.rttConfig.enabled = false;
+                            this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
+                                'Make sure you compile/link with debug ON or you can specify your own RTT address\n');
+                        } else {
+                            const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
+                            this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
+                            this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
+                            this.args.rttConfig.searchId = searchStr;
+                            this.args.rttConfig.clearSearch = (this.args.rttConfig.clearSearch === undefined) ? true : this.args.rttConfig.clearSearch;
+                        }
                     }
                 }
+                resolve();
+            }, (e) => {
+                this.handleMsg('log', `WARNING: Loading symbols failed. Please report this issue. Debugging may still work ${e}\n`);
                 resolve();
             });
         });
@@ -429,6 +438,7 @@ export class GDBDebugSession extends DebugSession {
                     // 2. We read the symbols for ourselves
                     // 3,4. Found free TCP ports and launched gdb-server
                     await gdbPromise;
+                    await this.symbolTable.loadSymbolsFromGdb();
                     await symbolsPromise;
                     await this.serverController.serverLaunchCompleted();
                     this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
@@ -2307,18 +2317,18 @@ export class GDBDebugSession extends DebugSession {
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             let file = frame.file; // Prefer full path name first
-            let staticSymbols = this.symbolTable.getStaticVariables(file);
-            if (!staticSymbols || (staticSymbols.length === 0)) {
+            let staticNames = await this.symbolTable.getStaticVariableNames(file);
+            if (!staticNames) {
                 file = frame.fileName;
-                staticSymbols = this.symbolTable.getStaticVariables(file);
+                staticNames = await this.symbolTable.getStaticVariableNames(file) || [];
             }
 
             const hasher = crypto.createHash('sha256');
             hasher.update(file);
             const fHash = hasher.digest('hex');
 
-            for (const symbol of staticSymbols) {
-                const varObjName = this.createStaticVarName(fHash, symbol.name);
+            for (const symName of staticNames) {
+                const varObjName = this.createStaticVarName(fHash, symName);
                 let varObj: VariableObject;
                 try {
                     const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
@@ -2338,9 +2348,9 @@ export class GDBDebugSession extends DebugSession {
                         // with function/block scoped static variables (objdump uses one name and gdb uses another)
                         // Try to report what we can. Others show up under the Locals section hopefully.
                         if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, symbol.name, varObjName);
+                            varObj = await this.miDebugger.varCreate(args.variablesReference, symName, varObjName);
                             const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = symbol.name;
+                            varObj.exp = symName;
                             varObj.id = varId;
                         } else {
                             throw err;
@@ -2348,7 +2358,7 @@ export class GDBDebugSession extends DebugSession {
                     }
                     catch (err) {
                         if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', `Could not create static variable ${file}:${symbol.name}\n`);
+                            this.handleMsg('stderr', `Could not create static variable ${file}:${symName}\n`);
                             this.handleMsg('stderr', `Error: ${err}\n`);
                         }
                         varObj = null;
@@ -2356,7 +2366,7 @@ export class GDBDebugSession extends DebugSession {
                 }
 
                 if (varObj) {
-                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
+                    this.putFloatingVariable(args.variablesReference, symName, varObj);
                     statics.push(varObj.toProtocolVariable());
                 }
             }

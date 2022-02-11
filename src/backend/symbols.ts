@@ -11,6 +11,8 @@ import * as zlib from 'zlib';
 import { SymbolType, SymbolScope, SymbolInformation as SymbolInformation } from '../symbols';
 import { GDBDebugSession } from '../gdb';
 import { hexFormat } from '../frontend/utils';
+import { MINode } from './mi_parse';
+import { nextTick } from 'process';
 
 const OBJDUMP_SYMBOL_RE = RegExp(/^([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\t([0-9a-f]+)\s(.*)$/);
 const NM_SYMBOL_RE = RegExp(/^([0-9a-f]+).*\t(.+):[0-9]+/);     // For now, we only need two things
@@ -96,6 +98,8 @@ export class SymbolTable {
     private fileMap: {[key: string]: string[]} = {};                    // Potential list of file aliases we found
     public symbolsAsIntervalTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
     public symbolsByAddress: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
+    private varsByFile: {[path: string]: VariablesInFile} = null;
+    private nmPromise: Promise<boolean> = null;
 
     private objdumpPath: string;
 
@@ -250,10 +254,9 @@ export class SymbolTable {
      */
     public loadSymbols(useObjdumpFname: string = '', useNmFname: string = ''): Promise<void> {
         return new Promise(async (resolve) => {
+            const total = 'Total running objdump & nm';
+            console.time(total);
             try {
-                const total = 'Total running objdump & nm';
-                console.time(total);
-
                 // Currently not using caching. JSON save and especially restore is super slow. It
                 // faster to just re-rerun objdump and nm. The serialization methods work but ... barely
                 // When get really super large executables maybe they become is useful
@@ -270,7 +273,6 @@ export class SymbolTable {
                 this.sortGlobalVars();
                 resolve();
                 console.timeEnd(nxtLabel);
-                console.timeEnd(total);
             }
             catch (e) {
                 // We treat this is non-fatal, but why did it fail?
@@ -278,11 +280,14 @@ export class SymbolTable {
                 this.gdbSession.handleMsg('log', '    Please report this problem.');
                 resolve();
             }
+            finally {
+                console.timeEnd(total);
+            }
         });
     }
 
     private rttSymbol;
-    private readonly rttSymbolName = '_SEGGER_RTT';
+    public readonly rttSymbolName = '_SEGGER_RTT';
     private addSymbol(sym: SymbolInformation) {
         if (!this.rttSymbol && (sym.name === this.rttSymbolName) && (sym.type === SymbolType.Object) && (sym.length > 0)) {
             this.rttSymbol = sym;
@@ -377,92 +382,122 @@ export class SymbolTable {
         return true;
     }
 
-    private async loadFromObjdumpAndNm(useObjdumpFname: string = '', useNmFname: string = '') {
-        try {
-            const spawnOpts = {cwd: this.gdbSession.args.cwd};
-            const objdumpStart = Date.now();
-            const objDumpArgs = [
-                '--syms',   // Of course, we want symbols
-                '-C',       // Demangle
-                '-h',       // Want section headers
-                '-w',       // Don't wrap lines (wide format)
-                this.executable];
-            this.currentObjDumpFile = null;
-            this.objdumpReader = new SpawnLineReader();
-            this.objdumpReader.on('error', (e) => {
-                throw e;
-            });
-            this.objdumpReader.on('exit', (code, signal) => {
-                // console.log('objdump exited', code, signal);
-            });
-            this.objdumpReader.on('close', (code, signal) => {
-                this.objdumpReader = undefined;
+    private loadFromObjdumpAndNm(useObjdumpFname: string = '', useNmFname: string = '') {
+        return new Promise<void>(async (resolve, reject) => {
+            let rejected = false;
+            try {
+                const spawnOpts = {cwd: this.gdbSession.args.cwd};
+                const objdumpStart = Date.now();
+                const objDumpArgs = [
+                    '--syms',   // Of course, we want symbols
+                    '-C',       // Demangle
+                    '-h',       // Want section headers
+                    '-w',       // Don't wrap lines (wide format)
+                    this.executable];
                 this.currentObjDumpFile = null;
-                if (this.gdbSession.args.showDevDebugOutput) {
-                    const ms = Date.now() - objdumpStart;
-                    this.gdbSession.handleMsg('log', `Reading symbols from objdump: Time: ${ms} ms\n`);
+                this.objdumpReader = new SpawnLineReader();
+                this.objdumpReader.on('error', (e) => {
+                    rejected = true;
+                    reject(e);
+                });
+                this.objdumpReader.on('exit', (code, signal) => {
+                    // console.log('objdump exited', code, signal);
+                });
+                this.objdumpReader.on('close', (code, signal) => {
+                    this.objdumpReader = undefined;
+                    this.currentObjDumpFile = null;
+                    if (this.gdbSession.args.showDevDebugOutput) {
+                        const ms = Date.now() - objdumpStart;
+                        this.gdbSession.handleMsg('log', `Reading symbols from objdump: Time: ${ms} ms\n`);
+                    }
+                });
+
+                if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
+                    this.gdbSession.handleMsg('log', `Reading symbols from ${this.objdumpPath} ${objDumpArgs.join(' ')}\n`);
                 }
-            });
+                const objdumpPromise = (useObjdumpFname ?
+                    this.objdumpReader.startWithFile(useObjdumpFname, null, this.readObjdumpHeaderLine.bind(this)) :
+                    this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this)));
+                
+                const nmStart = Date.now();
+                const nmProg = this.objdumpPath.replace(/objdump/i, 'nm');
+                const nmArgs = [
+                    '--defined-only',
+                    '-S',   // Want size as well
+                    '-l',   // File/line info
+                    '-C',   // Demangle
+                    '-p',   // do bother sorting
+                    // Do not use posix format. It is inaccurate
+                    this.executable
+                ];
+                this.addressToFile = new Map<number, string>();
+                const nmReader = new SpawnLineReader();
+                nmReader.on('error', (e) => {
+                    this.gdbSession.handleMsg('log', `Error: ${nmProg} failed! statics/global/functions may not be properly classified: ${e.toString()}\n`);
+                    this.gdbSession.handleMsg('log', '    Expecting `nm` next to `objdump`. If that is not the problem please report this.\n');
+                    this.nmPromise = null;
+                });
+                nmReader.on('exit', (code, signal) => {
+                    // console.log('nm exited', code, signal);
+                });
+                nmReader.on('close', () => {
+                    if (this.gdbSession.args.showDevDebugOutput) {
+                        const ms = Date.now() - nmStart;
+                        this.gdbSession.handleMsg('log', `Reading symbols from nm: Time: ${ms} ms\n`);
+                    }
+                    nextTick(() => {
+                        // Yes, we don't wait for this. We have enough to move on
+                        this.finishNmSymbols();
+                    });
+                });
 
-            if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
-                this.gdbSession.handleMsg('log', `Reading symbols from ${this.objdumpPath} ${objDumpArgs.join(' ')}\n`);
-            }
-            const objdumpPromise = (useObjdumpFname ?
-                this.objdumpReader.startWithFile(useObjdumpFname, null, this.readObjdumpHeaderLine.bind(this)) :
-                this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this)));
-            
-            const nmStart = Date.now();
-            const nmProg = this.objdumpPath.replace(/objdump/i, 'nm');
-            const nmArgs = [
-                '--defined-only',
-                '-S',   // Want size as well
-                '-l',   // File/line info
-                '-C',   // Demangle
-                '-p',   // do bother sorting
-                // Do not use posix format. It is inaccurate
-                this.executable
-            ];
-            this.addressToFile = new Map<number, string>();
-            const nmReader = new SpawnLineReader();
-            nmReader.on('error', (e) => {
-                this.gdbSession.handleMsg('log', `Error: ${nmProg} failed! statics/global/functions may not be properly classified: ${e.toString()}\n`);
-                this.gdbSession.handleMsg('log', '    Expecting `nm` next to `objdump`. If that is not the problem please report this.\n');
-            });
-            nmReader.on('exit', (code, signal) => {
-                // console.log('nm exited', code, signal);
-            });
-            nmReader.on('close', () => {
-                if (this.gdbSession.args.showDevDebugOutput) {
-                    const ms = Date.now() - nmStart;
-                    this.gdbSession.handleMsg('log', `Reading symbols from nm: Time: ${ms} ms\n`);
+                if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
+                    this.gdbSession.handleMsg('log', `Reading symbols from ${nmProg} ${nmArgs.join(' ')}\n`);
                 }
-            });
+                this.nmPromise = (useNmFname ?
+                    nmReader.startWithFile(useNmFname, null, this.readNmSymbolLine.bind(this)) :
+                    nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this)));
 
-            if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
-                this.gdbSession.handleMsg('log', `Reading symbols from ${nmProg} ${nmArgs.join(' ')}\n`);
+                // Yes, we launch both programs and wait for both to finish. Running them back to back
+                // takes almost twice as much time. Neither should technically fail.
+                await objdumpPromise;
+                if (!rejected) {
+                    resolve();
+                }
             }
-            const nmPromise = (useNmFname ?
-                nmReader.startWithFile(useNmFname, null, this.readNmSymbolLine.bind(this)) :
-                nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this)));
+            catch (e) {
+                if (!rejected) {
+                    rejected = true;
+                    reject(e);
+                }
+            }
+        });
+    }
 
-            // Yes, we launch both programs and wait for both to finish. Running them back to back
-            // takes almost twice as much time. Neither should technically fail.
-            await objdumpPromise;
-            await nmPromise;
-
+    private async finishNmSymbols() {
+        if (!this.nmPromise) {
+            return;
+        }
+        try {
+            await this.nmPromise;
             // This part needs to run after both of the above finished
-            for (const item of this.addressToFile) {
-                const sym = this.symbolsByAddress.get(item[0]);
-                if (sym) {
-                    sym.file = item[1];
-                } else {
-                    console.error('Unknown symbol address. Need to investigate', hexFormat(item[0]), item);
+            if (this.addressToFile) {
+                for (const item of this.addressToFile) {
+                    const sym = this.symbolsByAddress.get(item[0]);
+                    if (sym) {
+                        sym.file = item[1];
+                    } else {
+                        console.error('Unknown symbol address. Need to investigate', hexFormat(item[0]), item);
+                    }
                 }
             }
-            this.addressToFile = undefined;
         }
         catch (e) {
-            throw e;
+            // console.log('???');
+        }
+        finally {
+            this.addressToFile = undefined;
+            this.nmPromise = null;
         }
     }
 
@@ -649,6 +684,21 @@ export class SymbolTable {
         return this.globalVars;
     }
 
+    public async getStaticVariableNames(file: string): Promise<string[]> {
+        if (this.varsByFile) {
+            const nfile = SymbolTable.NormalizePath(file);
+            const obj = this.varsByFile[nfile] || this.varsByFile[file];
+            if (obj) {
+                return obj.staticNames; // Could be empty array
+            }
+            return null;
+        }
+        await this.finishNmSymbols();
+        const syms = this.getStaticVariables(file);
+        const ret = syms.map((s) => s.name);
+        return ret;
+    }
+
     public getStaticVariables(file: string): SymbolInformation[] {
         if (!file) {
             return [];
@@ -723,6 +773,43 @@ export class SymbolTable {
         return null;
     }
 
+    public loadSymbolsFromGdb(): Promise<boolean> {
+        return new Promise<boolean>(async (resolve) => {
+            const p = this.gdbSession.miDebugger.gdbVarsPromise;
+            if (!p) {
+                resolve(false);
+                return;
+            }
+            try {
+                const result = await p;
+                this.varsByFile = {};
+                const dbgInfo = result.result('symbols.debug');
+                for (const item of dbgInfo || []) {
+                    const fullname = getProp(item, 'fullname');
+                    const filename = getProp(item, 'fullname');
+                    const symbols = getProp(item, 'symbols');
+                    if (symbols && (symbols.length > 0) && (fullname || filename)) {
+                        const fInfo = new VariablesInFile(fullname || filename);
+                        for (const sym of symbols) {
+                            fInfo.add(sym);
+                        }
+                        this.varsByFile[fInfo.filename] = fInfo;
+                        if (fullname && (fullname !== fInfo.filename)) {
+                            this.varsByFile[fullname] = fInfo;
+                        }
+                        if (filename && (filename !== fInfo.filename)) {
+                            this.varsByFile[filename] = fInfo;
+                        }
+                    }
+                }
+                resolve(true);
+            }
+            catch (e) {
+                resolve(false);
+            }
+        });
+    }
+    
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }
         if (os.platform() === 'win32') {
@@ -736,5 +823,39 @@ export class SymbolTable {
             pathName = pathName.toLowerCase();
         }
         return pathName;
+    }
+}
+
+function getProp(ary: any, name: string): any {
+    if (ary) {
+        for (const item of ary) {
+            if (item[0] === name) {
+                return item[1];
+            }
+        }
+    }
+    return undefined;
+}
+interface SymInfoFromGdb {
+    name: string;
+    line: number;
+}
+class VariablesInFile {
+    public statics: SymInfoFromGdb[] = [];
+    public globals: SymInfoFromGdb[] = [];
+    public staticNames: string[] = [];
+    constructor(public filename: string) {}
+    public add(item: MINode) {
+        const isStatic = (getProp(item, 'description') || '').startsWith('static');
+        const tmp: SymInfoFromGdb = {
+            name: getProp(item, 'name'),
+            line: parseInt(getProp(item, 'line') || '1')
+        };
+        if (isStatic) {
+            this.statics.push(tmp);
+            this.staticNames.push(tmp.name);
+        } else {
+            this.globals.push(tmp);
+        }
     }
 }
