@@ -326,12 +326,15 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}`;
         }
 
-        if (!config.configFiles || config.configFiles.length === 0) {
-            return 'At least one OpenOCD Configuration File must be specified.';
-        }
+        if (!CDebugChainedSessionItem.FindByName(config.name)) {
+            // Not chained so configFiles, searchDir matter
+            if (!config.configFiles || config.configFiles.length === 0) {
+                return 'At least one OpenOCD Configuration File must be specified.';
+            }
 
-        if (!config.searchDir || config.searchDir.length === 0) {
-            config.searchDir = [];
+            if (!config.searchDir || config.searchDir.length === 0) {
+                config.searchDir = [];
+            }
         }
 
         return null;

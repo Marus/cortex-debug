@@ -307,6 +307,20 @@ export class GDBDebugSession extends DebugSession {
             });
         }
 
+        if (args.chainedConfigurations && args.chainedConfigurations.enabled && args.chainedConfigurations.launches) {
+            for (const config of args.chainedConfigurations.launches) {
+                let folder = config.folder || args.cwd || process.cwd();
+                if (!path.isAbsolute(folder)) {
+                    folder = path.join(args.cwd || process.cwd(), folder);
+                }
+                folder = path.normalize(folder).replace('\\', '/');
+                while ((folder.length > 1) && folder.endsWith('/') && !folder.endsWith(':/')) {
+                    folder = folder.substring(0, folder.length - 1);
+                }
+                config.folder = folder;
+            }
+        }
+
         return args;
     }
 
@@ -363,10 +377,13 @@ export class GDBDebugSession extends DebugSession {
         this.disassember = new GdbDisassembler(this, this.args);
         // dbgResumeStopCounter = 0;
 
-        const gbdExePath = this.getGdbPath(response);
-        if (!gbdExePath) { return; }
-        const gdbPromise = this.startGdb(gbdExePath, response);
-        const symbolsPromise = this.loadSymbols();
+        this.serverConsoleLog(`******* Starting new session request type="${this.args.request}"`);
+
+        if (!this.getGdbPath(response)) {
+            return;
+        }
+        const symbolsPromise = this.loadSymbols();      // This is totally async and in most cases, done while gdb is starting
+        const gdbPromise = this.startGdb(response);
         const usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
         this.getTCPPorts(usingParentServer).then(() => {
             const executable = usingParentServer ? null : this.serverController.serverExecutable();
@@ -640,10 +657,12 @@ export class GDBDebugSession extends DebugSession {
             this.launchErrorResponse(response, 103, gdbMissingMsg);
             return null;
         }
+        this.args.gdbPath = gdbExePath;     // This now becomes the official gdb-path
         return gdbExePath;
     }
 
-    private startGdb(gdbExePath: string, response: DebugProtocol.LaunchResponse): Promise<void> {
+    private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
+        const gdbExePath = this.args.gdbPath;
         let gdbargs = ['-q', '--interpreter=mi2'];
         gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs, this.args.executable]) + '\n';
@@ -651,10 +670,10 @@ export class GDBDebugSession extends DebugSession {
         if (!this.args.showDevDebugOutput) {
             this.handleMsg('log', '    Set "showDevDebugOutput": true in your "launch.json" to see verbose GDB transactions ' +
                 'here. Helpful to debug issues or report problems\n');
-            if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
-                const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
-                this.handleMsg('log', str + '\n');
-            }
+        }
+        if (this.args.showDevDebugOutput && this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
+            const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
+            this.handleMsg('log', str + '\n');
         }
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);

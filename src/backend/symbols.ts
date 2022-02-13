@@ -81,6 +81,25 @@ interface ISymbolTableSerData {
     allSymbols: any[][];
 }
 
+// Replace last part of the path containing a program to another. If search string not found
+// or replacement the same as search string, then null is returned
+function replaceProgInPath(filepath: string, search: string | RegExp, replace: string): string {
+    if (os.platform() === 'win32') {
+        filepath = filepath.toLowerCase().replace('\\', '/');
+    }
+    const ix = filepath.lastIndexOf('/');
+    const prefix = (ix >= 0) ? filepath.substring(0, ix + 1) : '' ;
+    const suffix = filepath.substring(ix + 1);
+    const replaced = suffix.replace(search, replace);
+    if (replaced === suffix) {
+        return null;
+    }
+    const ret = prefix + replaced;
+    return ret;
+}
+
+const trace = true;
+
 export class SymbolTable {
     private allSymbols: SymbolInformation[] = [];
     private fileTable: string[] = [];
@@ -110,6 +129,9 @@ export class SymbolTable {
             this.objdumpPath = os.platform() !== 'win32' ? `${args.toolchainPrefix}-objdump` : `${args.toolchainPrefix}-objdump.exe`;
             if (args.toolchainPath) {
                 this.objdumpPath = path.normalize(path.join(args.toolchainPath, this.objdumpPath));
+            } else if (args.gdbPath) {
+                const tmp = replaceProgInPath(args.gdbPath, /gdb/i, 'objdump');
+                this.objdumpPath = tmp || this.objdumpPath;
             }
         }
     }
@@ -277,7 +299,7 @@ export class SymbolTable {
             catch (e) {
                 // We treat this is non-fatal, but why did it fail?
                 this.gdbSession.handleMsg('log', `Error: objdump failed! statics/globals/functions may not be properly classified: ${e.toString()}`);
-                this.gdbSession.handleMsg('log', '    Please report this problem.');
+                this.gdbSession.handleMsg('log', '    ENOENT means program not found. If that is not the issue, please report this problem.');
                 resolve();
             }
             finally {
@@ -401,18 +423,18 @@ export class SymbolTable {
                     reject(e);
                 });
                 this.objdumpReader.on('exit', (code, signal) => {
-                    // console.log('objdump exited', code, signal);
+                    console.log('objdump exited', code, signal);
                 });
                 this.objdumpReader.on('close', (code, signal) => {
                     this.objdumpReader = undefined;
                     this.currentObjDumpFile = null;
-                    if (this.gdbSession.args.showDevDebugOutput) {
+                    if (trace || this.gdbSession.args.showDevDebugOutput) {
                         const ms = Date.now() - objdumpStart;
-                        this.gdbSession.handleMsg('log', `Reading symbols from objdump: Time: ${ms} ms\n`);
+                        this.gdbSession.handleMsg('log', `Finished reading symbols from objdump: Time: ${ms} ms\n`);
                     }
                 });
 
-                if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
+                if (!useObjdumpFname && (trace || this.gdbSession.args.showDevDebugOutput)) {
                     this.gdbSession.handleMsg('log', `Reading symbols from ${this.objdumpPath} ${objDumpArgs.join(' ')}\n`);
                 }
                 const objdumpPromise = (useObjdumpFname ?
@@ -420,7 +442,7 @@ export class SymbolTable {
                     this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this)));
                 
                 const nmStart = Date.now();
-                const nmProg = this.objdumpPath.replace(/objdump/i, 'nm');
+                const nmProg = replaceProgInPath(this.objdumpPath, /objdump/i, 'nm');
                 const nmArgs = [
                     '--defined-only',
                     '-S',   // Want size as well
@@ -441,9 +463,9 @@ export class SymbolTable {
                     // console.log('nm exited', code, signal);
                 });
                 nmReader.on('close', () => {
-                    if (this.gdbSession.args.showDevDebugOutput) {
+                    if (trace || this.gdbSession.args.showDevDebugOutput) {
                         const ms = Date.now() - nmStart;
-                        this.gdbSession.handleMsg('log', `Reading symbols from nm: Time: ${ms} ms\n`);
+                        this.gdbSession.handleMsg('log', `Finished reading symbols from nm: Time: ${ms} ms\n`);
                     }
                     nextTick(() => {
                         // Yes, we don't wait for this. We have enough to move on
@@ -451,7 +473,7 @@ export class SymbolTable {
                     });
                 });
 
-                if (!useObjdumpFname && this.gdbSession.args.showDevDebugOutput) {
+                if (!useObjdumpFname && (trace || this.gdbSession.args.showDevDebugOutput)) {
                     this.gdbSession.handleMsg('log', `Reading symbols from ${nmProg} ${nmArgs.join(' ')}\n`);
                 }
                 this.nmPromise = (useNmFname ?

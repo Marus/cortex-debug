@@ -153,9 +153,11 @@ export class MI2 extends EventEmitter implements IBackend {
             }
         }
         ServerConsoleLog('GDB: exited', this.pid);
-        this.process = null;
-        this.exited = true;
-        this.emit('quit');
+        if (this.process) {
+            this.process = null;
+            this.exited = true;
+            this.emit('quit');
+        }
     }
 
     private stdout(data) {
@@ -372,6 +374,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }
             catch (e) {
                 this.log('log', `kill failed for ${-proc.pid}` + e);
+                this.onExit();      // Process already died or quit. Cleanup
             }
         }
     }

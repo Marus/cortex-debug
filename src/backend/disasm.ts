@@ -523,7 +523,7 @@ export class GdbDisassembler {
                     const count = `${end - startAddress} bytes`.padStart(15);
                     this.handleMsg('log', `Debug: Gdb command: -${cmd}${count} ${symName}\n`);
                 }
-                this.miDebugger.sendCommand(cmd).then((result) => {
+                this.miDebugger.sendCommand(cmd, false, false, true).then((result) => {
                     try {
                         const ret = this.parseDisassembleResults(result, validationAddr, entireRangeGood, cmd);
                         const foundIx = ret.foundAt;
