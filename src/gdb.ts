@@ -1196,10 +1196,12 @@ export class GDBDebugSession extends DebugSession {
 
             this.miDebugger.restart(commands).then((done) => {
                 if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
-                    this.serverConsoleLog(`Begin ${mode} children`);
-                    this.sendEvent(new GenericCustomEvent(`session-${mode}`, args));
+                    setTimeout(() => {      // Maybe this delay should be handled in the front-end
+                        this.serverConsoleLog(`Begin ${mode} children`);
+                        this.sendEvent(new GenericCustomEvent(`session-${mode}`, args));
+                    }, 250);
                 }
-    
+
                 this.sendResponse(response);
                 this.finishStartSequence(mode);
             }, (msg) => {
@@ -1460,8 +1462,12 @@ export class GDBDebugSession extends DebugSession {
             // In case GDB quit because of normal processing, let that process finish. Wait for,\
             // a disconnect response to be sent before we send a TerminatedEvent();. Note that we could
             // also be here because the server crashed/quit on us before gdb-did
-            this.serverConsoleLog('quitEvent: sending VSCode TerminatedEvent');
-            this.sendEvent(new TerminatedEvent());
+            try {
+                this.sendEvent(new TerminatedEvent());
+                this.serverConsoleLog('quitEvent: sending VSCode TerminatedEvent');
+            }
+            catch (e) {
+            }
         }, 10);
     }
 
