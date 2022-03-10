@@ -102,8 +102,13 @@ export class VariableObject {
         return ret;
     }
 
-    public applyChanges(node: MINode) {
+    public applyChanges(node: MINode/*, def?: string*/) {
         this.value = MINode.valueOf(node, 'value');
+        /*
+        if (this.value === undefined) {
+            this.value = def;
+        }
+        */
         if (!!MINode.valueOf(node, 'type_changed')) {
             this.type = MINode.valueOf(node, 'new_type');
         }

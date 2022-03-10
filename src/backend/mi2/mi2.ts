@@ -829,7 +829,9 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(parent: number, expression: string, name: string = '-', scope: string = '@'): Promise<VariableObject> {
+    public async varCreate(
+        parent: number, expression: string, name: string = '-', scope: string = '@',
+        threadId?: number, frameId?: number): Promise<VariableObject> {
         if (trace) {
             this.log('stderr', 'varCreate');
         }
@@ -841,7 +843,8 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         expression = expression.replace(/"/g, '\\"');
 
-        const createResp = await this.sendCommand(`var-create ${name} ${scope} "${expression}"`);
+        const thFr = ((scope === '*') && (threadId !== undefined) && (frameId !== undefined)) ? `--thread ${threadId} --frame ${threadId}` : '';
+        const createResp = await this.sendCommand(`var-create ${thFr} ${name} ${scope} "${expression}"`);
         let overrideVal = null;
         if (fmt && name !== '-') {
             const formatResp = await this.sendCommand(`var-set-format ${name} ${MI2.FORMAT_SPEC_MAP[fmt]}`);

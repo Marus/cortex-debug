@@ -2190,9 +2190,8 @@ export class GDBDebugSession extends DebugSession {
         try {
             const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
             const fmt = this.args.variableUseNaturalFormat ? 'N' : 'x';
-            // --thread --frame does not work properly
-            this.miDebugger.sendCommand(`thread-select ${threadId}`);
-            this.miDebugger.sendCommand(`stack-select-frame ${frameId}`);
+            // --thread --frame does not work properly when combined with -data-list-register-values
+            this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             const node = await this.miDebugger.sendCommand(`data-list-register-values ${fmt}`);
             if (node.resultRecords.resultClass === 'done') {
                 const rv = node.resultRecords.results[0][1];
@@ -2442,6 +2441,7 @@ export class GDBDebugSession extends DebugSession {
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
+            this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
                 try {
@@ -2454,7 +2454,7 @@ export class GDBDebugSession extends DebugSession {
                             const name = MINode.valueOf(change, 'name');
                             const vId = this.variableHandlesReverse[name];
                             const v = this.variableHandles.get(vId) as any;
-                            v.applyChanges(change);
+                            v.applyChanges(change/*, variable.valueStr*/);
                         });
                         const varId = this.variableHandlesReverse[varObjName];
                         varObj = this.variableHandles.get(varId) as any;
@@ -2462,7 +2462,7 @@ export class GDBDebugSession extends DebugSession {
                     catch (err) {
                         if (err instanceof MIError && err.message === 'Variable object not found') {
                             // Create variable in current frame/thread context. Matters when we have to set the variable */
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, variable.name, varObjName, '*');
+                            varObj = await this.miDebugger.varCreate(args.variablesReference, variable.name, varObjName, '*', threadId, frameId);
                             const varId = this.findOrCreateVariable(varObj);
                             varObj.exp = variable.name;
                             varObj.id = varId;
@@ -2916,8 +2916,7 @@ export class GDBDebugSession extends DebugSession {
         else {
             // REPL: Set the proper thread/frame context before sending command to gdb. We don't know
             // what the command is but it needs to be run in the proper context.
-            this.miDebugger.sendCommand(`thread-select ${threadId}`);
-            this.miDebugger.sendCommand(`stack-select-frame ${frameId}`);
+            this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             this.miDebugger.sendUserInput(args.expression).then((output) => {
                 if (typeof output === 'undefined') {
                     response.body = {
