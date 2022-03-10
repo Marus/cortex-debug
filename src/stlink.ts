@@ -170,7 +170,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             serverargs.push('-cp', stm32cubeprogrammer);
         }
          
-        if (this.args.interface !== 'jtag') {
+        if ((this.args.interface !== 'jtag') && (this.args.interface !== 'cjtag')) {       // TODO: handle ctag in when this server supports it
             serverargs.push('--swd');
         }
 

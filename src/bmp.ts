@@ -43,7 +43,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             // keep last power state (do nothing)
         }
 
-        if (this.args.interface === 'jtag') {
+        if (this.args.interface === 'jtag') {       // TODO: handle ctag in when this server supports it
             commands.push('interpreter-exec console "monitor jtag_scan"');
         }
         else {

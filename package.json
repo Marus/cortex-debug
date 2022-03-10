@@ -1,5 +1,5 @@
 {
-    "version": "1.3.5-pre1",
+    "version": "1.3.5-pre2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -755,13 +755,23 @@
                                         "minimum": 0,
                                         "default": 5
                                     },
+                                    "overrides": {
+                                        "default": {},
+                                        "description": "Values to override/set in this child configuration. A set of name/value pairs. Set value to 'null' (no quotes) to delete. Sorry, no IntelliSense",
+                                        "type": "object"
+                                    },
+                                    "inherits": {
+                                        "default": [],
+                                        "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
+                                        "type": "string"
+                                    },
                                     "launches": {
                                         "type": "array",
                                         "items": {
                                             "properties": {
                                                 "name": {
                                                     "default": "",
-                                                    "description": "Name of launch configuration",
+                                                    "description": "Name of launch configuration. Sorry, no IntelliSense",
                                                     "type": "string"
                                                 },
                                                 "folder": {
@@ -785,7 +795,7 @@
                                                         "postInit"
                                                     ],
                                                     "default": "postInit",
-                                                    "description": "Wait for an event. 'postStart' means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                                    "description": "Wait for an event. 'postStart' means wait for gdb-server connecting, 'postInit' is after init commands are completed by gdb",
                                                     "type": "string"
                                                 },
                                                 "delayMs": {
@@ -799,6 +809,16 @@
                                                     "default": true,
                                                     "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root",
                                                     "type": "boolean"
+                                                },
+                                                "overrides": {
+                                                    "default": {},
+                                                    "description": "Values to override/set in this child configuration. A set of name/value pairs. Set value to 'null' (no quotes) to delete. Sorry, no IntelliSense",
+                                                    "type": "object"
+                                                },
+                                                "inherits": {
+                                                    "default": [],
+                                                    "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
+                                                    "type": "string"
                                                 }
                                             }
                                         }
@@ -1431,7 +1451,8 @@
                                 "type": "string",
                                 "enum": [
                                     "swd",
-                                    "jtag"
+                                    "jtag",
+                                    "cjtag"
                                 ]
                             },
                             "openOCDLaunchCommands": {
@@ -1720,13 +1741,23 @@
                                         "minimum": 0,
                                         "default": 5
                                     },
+                                    "overrides": {
+                                        "default": {},
+                                        "description": "Values to override/set in this child configuration. A set of name/value pairs. Set value to 'null' (no quotes) to delete. Sorry, no IntelliSense",
+                                        "type": "object"
+                                    },
+                                    "inherits": {
+                                        "default": [],
+                                        "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
+                                        "type": "string"
+                                    },
                                     "launches": {
                                         "type": "array",
                                         "items": {
                                             "properties": {
                                                 "name": {
                                                     "default": "",
-                                                    "description": "Name of launch configuration",
+                                                    "description": "Name of launch configuration. Sorry, no IntelliSense",
                                                     "type": "string"
                                                 },
                                                 "folder": {
@@ -1750,7 +1781,7 @@
                                                         "postInit"
                                                     ],
                                                     "default": "postInit",
-                                                    "description": "Wait for an event. 'postStart' means wait for gdb-server connecting, 'postInit' is aftrer init commands are completed by gdb",
+                                                    "description": "Wait for an event. 'postStart' means wait for gdb-server connecting, 'postInit' is after init commands are completed by gdb",
                                                     "type": "string"
                                                 },
                                                 "delayMs": {
@@ -1764,6 +1795,16 @@
                                                     "default": true,
                                                     "description": "Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root",
                                                     "type": "boolean"
+                                                },
+                                                "overrides": {
+                                                    "default": {},
+                                                    "description": "Values to override/set in this child configuration. A set of name/value pairs. Set value to 'null' (no quotes) to delete. Sorry, no IntelliSense",
+                                                    "type": "object"
+                                                },
+                                                "inherits": {
+                                                    "default": [],
+                                                    "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
+                                                    "type": "string"
                                                 }
                                             }
                                         }
@@ -2396,7 +2437,8 @@
                                 "type": "string",
                                 "enum": [
                                     "swd",
-                                    "jtag"
+                                    "jtag",
+                                    "cjtag"
                                 ]
                             },
                             "jlinkscript": {

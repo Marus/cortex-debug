@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug } from '../common';
+import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments } from '../common';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import * as path from 'path';
 
@@ -31,6 +31,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'linux': Object.assign(config, config.linux); delete config.linux; break;
             default: console.log(`Unknown platform ${os.platform()}`);
         }
+        this.sanitizeChainedConfigs(config);
         if (config.debugger_args && !config.debuggerArgs) {
             config.debuggerArgs = config.debugger_args;
         }
@@ -163,7 +164,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
-        this.sanitizeChainedConfigs(config);
         let validationResponse: string = null;
 
         switch (config.servertype) {
@@ -181,6 +181,51 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         return config;
+    }
+
+    private handleChainedInherits(config: vscode.DebugConfiguration, parent: any, props: any) {
+        if (!props) {
+            return;
+        }
+        const blackList: string[] = [
+            'type',
+            'name',
+            'request',
+            'chainedConfigurations'
+        ];
+
+        for (const propName of Object.keys(props)) {
+            if (blackList.includes(propName) || propName.startsWith('pvt')) {
+                continue;
+            }
+            const val = parent[propName];
+            if (val !== undefined) {
+                config[propName] = val;
+            }
+        }
+    }
+
+    private handleChainedOverrides(config: vscode.DebugConfiguration, props: any) {
+        if (!props) {
+            return;
+        }
+        const blackList: string[] = [
+            'type',
+            'name',
+            'request'
+        ];
+
+        for (const propName of Object.keys(props)) {
+            if (blackList.includes(propName) || propName.startsWith('pvt')) {
+                continue;
+            }
+            const val = props[propName];
+            if (val === null) {
+                delete config[propName];
+            } else {
+                config[propName] = val;
+            }
+        }
     }
 
     private sanitizeChainedConfigs(config: vscode.DebugConfiguration) {
@@ -207,6 +252,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if ((chained.lifecycleManagedByParent === undefined) || (chained.lifecycleManagedByParent === null)) {
             chained.lifecycleManagedByParent = true;
         }
+        const overrides = chained.overrides || {};
         for (const launch of chained.launches) {
             if ((launch.enabled === undefined) || (launch.enabled === null)) {
                 launch.enabled = true;
@@ -222,6 +268,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             }
             if ((launch.lifecycleManagedByParent === undefined) || (launch.lifecycleManagedByParent === null)) {
                 launch.lifecycleManagedByParent = chained.lifecycleManagedByParent;
+            }
+            const inherits = {};
+            (chained.inherits || []).concat(launch.inherits || []).forEach((x) => { inherits[x] = true; });
+            this.handleChainedInherits(config, config.pvtParent, inherits);
+
+            const tmp = launch.overrides || {};
+            if ((Object.keys(overrides).length > 0) || (Object.keys(tmp).length > 0)) {
+                this.handleChainedOverrides(config, Object.assign(overrides, tmp));
             }
         }
     }
@@ -267,13 +321,17 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'Device Identifier is required for J-Link configurations. Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
         }
 
-        if (config.interface === 'jtag' && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
+        if (((config.interface === 'jtag') || (config.interface === 'cjtag')) && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
             return 'SWO Decoding cannot be performed through the J-Link Probe in JTAG mode.';
         }
 
         if (config.rttConfig && config.rttConfig.enabled && config.rttConfig.decoders && (config.rttConfig.decoders.length !== 0)) {
-            if ((config.rttConfig.decoders.length > 1) || (config.rttConfig.decoders[0].port !== 0)) {
-                return 'Currently, JLink RTT can have a maximum of one decoder and it has to be port/channel 0';
+            for (const dec of config.rttConfig.decoders) {
+                if (dec.port === undefined) {
+                    dec.port = 0;
+                } else if (dec.port !== 0) {
+                    return `Invalid port/channel '${dec.port}'. JLink RTT port/channel has to be 0 because that is the only one supported by JLinkGDBServer`;
+                }
             }
         }
 

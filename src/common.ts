@@ -120,7 +120,7 @@ export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     label: string;      // label for window
     prompt: string;     // Prompt to use
     noprompt: boolean;  // disable prompt
-    noclear: boolean;   // do not vlear screen buffer on connect
+    noclear: boolean;   // do not clear screen buffer on connect
     logfile: string;    // log IO to file
     inputmode: TerminalInputMode;
     iencoding: TextEncoding;       // Encoding used for input
@@ -171,6 +171,8 @@ export interface ChainedConfig {
     detached: boolean;
     lifecycleManagedByParent: boolean;
     folder: string;
+    overrides: {[key: string]: any};
+    inherits: string[];
 }
 
 export interface ChainedConfigurations {
@@ -180,6 +182,8 @@ export interface ChainedConfigurations {
     detached: boolean;
     lifecycleManagedByParent: boolean;
     delayMs: number;
+    overrides: {[key: string]: any};
+    inherits: string[];
 }
 
 export interface SWOConfiguration {
@@ -244,7 +248,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cwd: string;
     extensionPath: string;
     rtos: string;
-    interface: string;
+    interface: 'jtag' | 'swd' | 'cjtag';
     targetId: string | number;
     runToMain: boolean;         // Deprecated: kept here for backwards compatibility
     runToEntryPoint: string;
