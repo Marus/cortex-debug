@@ -843,7 +843,7 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         expression = expression.replace(/"/g, '\\"');
 
-        const thFr = ((scope === '*') && (threadId !== undefined) && (frameId !== undefined)) ? `--thread ${threadId} --frame ${threadId}` : '';
+        const thFr = ((scope === '*') && (threadId !== undefined) && (frameId !== undefined)) ? `--thread ${threadId} --frame ${frameId}` : '';
         const createResp = await this.sendCommand(`var-create ${thFr} ${name} ${scope} "${expression}"`);
         let overrideVal = null;
         if (fmt && name !== '-') {
