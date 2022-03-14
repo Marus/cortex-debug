@@ -111,7 +111,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public launchCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor halt"',
+           // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
             'enable-pretty-printing'
@@ -121,7 +121,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public attachCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor halt"',
+            // 'interpreter-exec console "monitor halt"', // Not needed because of --attach
             'enable-pretty-printing'
         ];
         return commands;
@@ -177,13 +177,13 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (this.args.serialNumber) {
             serverargs.push('--serial-number', this.args.serialNumber);
         }
-        
+        if (this.args.request === 'attach') {
+            serverargs.push('--attach');
+        }
+        serverargs.push('--halt');      // Need this for reset to work as expected (perform a halt)
+
         if (this.args.serverArgs) {
             serverargs = serverargs.concat(this.args.serverArgs);
-        } else {
-            // User may want to not use our default behavior but no other way to control it
-            // If they continue to want the halting behaviour, it has to be speicifed by 'serverArgs'
-            serverargs.push('--halt');
         }
 
         return serverargs;
