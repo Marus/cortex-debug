@@ -206,6 +206,7 @@ export class GDBDebugSession extends DebugSession {
         response.body.supportsDisassembleRequest = true;
         response.body.supportsSteppingGranularity = true;
         response.body.supportsInstructionBreakpoints = true;
+        response.body.supportsReadMemoryRequest = true;
         this.sendResponse(response);
     }
 
@@ -936,6 +937,31 @@ export class GDBDebugSession extends DebugSession {
         args: DebugProtocol.DisassembleArguments,
         request?: DebugProtocol.Request): void {
         this.disassember.disassembleProtocolRequest(response, args, request);
+    }
+
+    protected readMemoryRequest(response: DebugProtocol.ReadMemoryResponse, args: DebugProtocol.ReadMemoryArguments, request?: DebugProtocol.Request): void {
+        const startAddress = args.memoryReference;
+        const length = args.count;
+        const offset = args.offset ? `-o ${args.offset}` : '';
+        const command = `data-read-memory-bytes ${offset} "${startAddress}" ${length}`;
+        this.miDebugger.sendCommand(command).then((node) => {
+            const results = parseReadMemResults(node);
+            const numBytes = results.data.length / 2;
+            const intAry = new Uint8Array(numBytes);
+            for (let ix = 0; ix < numBytes; ix++) {
+                intAry[ix] = parseInt(results.data.substring(ix * 2, 2), 16);
+            }
+            const buf = Buffer.from(intAry);
+            const b64Data = buf.toString('base64');
+            response.body = {
+                address: results.startAddress,
+                data: b64Data
+            };
+            this.sendResponse(response);
+        }, (error) => {
+            this.sendErrorResponse(response, 114, `Read memory error: ${error.toString()}`);
+            this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', command));
+        });
     }
 
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
@@ -2837,13 +2863,13 @@ export class GDBDebugSession extends DebugSession {
             this.handleMsg('log', `Thread Warning: ${args.context}: eval. expression '${args.expression}' with no thread context. Using default\n`);
         }
 
-        if (args.context === 'watch') {
+        if ((args.context === 'watch') || (args.context === 'hover')) {
             try {
                 const exp = args.expression;
                 const hasher = crypto.createHash('sha256');
                 hasher.update(exp);
                 const watchName = hasher.digest('hex');
-                const varObjName = `watch_${watchName}`;
+                const varObjName = `${args.context}_${watchName}`;
                 let varObj: VariableObject;
                 try {
                     const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
@@ -2856,10 +2882,6 @@ export class GDBDebugSession extends DebugSession {
                     });
                     const varId = this.variableHandlesReverse[varObjName];
                     varObj = this.variableHandles.get(varId) as any;
-                    response.body = {
-                        result: varObj.value,
-                        variablesReference: varObj.id
-                    };
                 }
                 catch (err) {
                     if (err instanceof MIError && err.message === 'Variable object not found') {
@@ -2867,31 +2889,37 @@ export class GDBDebugSession extends DebugSession {
                         const varId = findOrCreateVariable(varObj);
                         varObj.exp = exp;
                         varObj.id = varId;
-                        response.body = {
-                            result: varObj.value,
-                            variablesReference: varObj.id
-                        };
                     }
                     else {
                         throw err;
                     }
                 }
 
+                response.body = {
+                    result: varObj.value,
+                    type: varObj.type,
+                    presentationHint: {
+                        kind: varObj.displayhint
+                    },
+                    variablesReference: varObj.id
+                };
                 this.sendResponse(response);
             }
             catch (err) {
                 response.body = {
-                    result: `<${err.toString()}>`,
+                    result: (args.context === 'hover') ? null : `<${err.toString()}>`,
                     variablesReference: 0
                 };
                 this.sendResponse(response);
                 if (this.args.showDevDebugOutput) {
-                    this.handleMsg('stderr', 'watch: ' + err.toString());
+                    this.handleMsg('stderr', args.context + ' ' + err.toString());
                 }
                 // this.sendErrorResponse(response, 7, err.toString());
             }
         }
         else if (args.context === 'hover') {
+            // No longer used. We treat hover and watch same now. This allows clients to variable references
+            // and using those, they further expand arrays/objects
             try {
                 const res = await this.miDebugger.evalExpression(args.expression, threadId, frameId);
                 response.body = {

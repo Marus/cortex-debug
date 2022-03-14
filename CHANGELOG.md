@@ -1,12 +1,18 @@
 ChangeLog
 =========
+
+# V1.3.5
+* Hover is now much more powerful. You can expand arrays, objects, etc.
+* STLink: We no longer use `monitor halt` during startup because halt is automatic with a --attach or --halt command-line options. Also, `monitor halt` is not supported in some versions of STLink server. We also now use --attach when attaching as documented in the STLink manual. Most people will not see much difference but it helps when people are using older versions of the server. More importantly we do what the STLink manual suggests.
+* Initial support for `overrides` and `inherits` in chained configurations.
+* Issues addressed: #599 #598, #539, #295, #601, #602, #593
+
 # V1.3.4
 * ST-Link users may see a change a couple of changes
   * In version 1.2.X, a change was made to automatically add certain directories to LD_LIBRARY_PATH (linux) and DYLD_LIBRARY_PATH (Mac). While that worked for most people, it can have un-intended consequences. On all platforms we now use the location of the gdb-server as the current directory to make the executable find the dynamic libraries properly
   * In previous versions, when auto-discovering ST link install directories for the gdb-server and the programmer, we picked any installation. ST seems to ship multiple versions, so we now pick the latest version as indicated by the version number in the directory.
   * The safest thing to do is to set the paths yourself using one of the extension settings or settings in launch.json. Normally, not an issue but can cause problems when you have multiple installs or installs in non-standard locations.
 * Bugfix: Issue #596 If neither `breakAfterReset` or `runToEntryPoint` were used, the pause button failed to work. The program would run but the debug buttons didn't do anything. We don't know which version of VSCode broke this but we created a workaround that is being tested
-
 
 # V1.3.3
 * Bigfix: Regression since introducing chained configurations a month ago. We were not waiting for the gdb-server to open a TCP port and launching gdb far ahead or time. Most times, this worked okay but this is wrong. Reverting back to old/proper behavior.

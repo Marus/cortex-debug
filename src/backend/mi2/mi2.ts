@@ -331,11 +331,14 @@ export class MI2 extends EventEmitter implements IBackend {
                             else if (record.type === 'notify') {
                                 let tid: undefined | string;
                                 let gid: undefined | string;
+                                let fid: undefined | string;
                                 for (const item of record.output) {
                                     if (item[0] === 'id') {
                                         tid = item[1];
                                     } else if (item[0] === 'group-id') {
                                         gid = item[1];
+                                    } else if (item[0] === 'frame') {
+                                        fid = item[1];  // for future use, available for thread-selected
                                     }
                                 }
                                 if (record.asyncClass === 'thread-created') {
@@ -345,7 +348,7 @@ export class MI2 extends EventEmitter implements IBackend {
                                     this.emit('thread-exited', { threadId: parseInt(tid), threadGroupId: gid });
                                 }
                                 else if (record.asyncClass === 'thread-selected') {
-                                    this.emit('thread-selected', { threadId: parseInt(tid) });
+                                    this.emit('thread-selected', { threadId: parseInt(tid), frameId: fid });
                                 }
                                 else if (record.asyncClass === 'thread-group-exited') {
                                     this.emit('thread-group-exited', { threadGroupId: tid });
