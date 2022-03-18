@@ -23,6 +23,7 @@
 		"aarch",
 		"cdasm",
 		"cdmem",
+		"cppdbg",
 		"dprintf",
 		"insn",
 		"insns",

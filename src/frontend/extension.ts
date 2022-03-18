@@ -24,6 +24,7 @@ import { RTTTerminal } from './rtt_terminal';
 import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import { ServerConsoleLog } from '../backend/server';
+import { RTOSTracker } from './rtos/rtos';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -52,6 +53,8 @@ export class CortexDebugExtension {
         this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
+
+        // const rtosTracker = new RTOSTracker(context);
 
         let tmp = [];
         try {
