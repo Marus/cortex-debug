@@ -17,19 +17,21 @@ export abstract class RTOSBase {
     public progStatus: 'started' | 'stopped' | 'running' | 'exited';
     public status: 'failed' | 'initialized' | 'none';
     protected exprValues: Map<string, RTOSVarHelper> = new Map<string, RTOSVarHelper>();
+    protected failedWhy: any;   // For debug
 
     protected constructor(public session: vscode.DebugSession, public readonly name) {
         this.status = 'none';
         this.progStatus = 'started';
     }
 
-    // Following must be called and it will either
-    // 1. Detect an RTOS and set status to 'initialized'
+    //
+    // When the promise resolves, check the 'status' property which starts out as 'none'
+    // 1. status set to 'initialized' to indicate RTOS has been detected
     // 2. Could not detect an RTOS because session is busy (caller to try again). Status is unmodified. This may
     //    happen because user did a continue or a step
-    // 3. Failed to detect an RTOS in which case, it will return false and the host should no
-    //    longer try use this instance.
-    public abstract tryDetect(useFrameId: number): Promise<boolean>;
+    // 3. Failed to detect an RTOS in which case, status is 'failed' and the host should no longer try use this instance.
+    //
+    public abstract tryDetect(useFrameId: number): Promise<RTOSBase>;
 
     public onStopped(frameId: number): Promise<void> {
         this.progStatus = 'stopped';

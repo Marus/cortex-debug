@@ -2827,7 +2827,30 @@ export class GDBDebugSession extends DebugSession {
         return ret;
     }
 
-    protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
+    private evaluateQueue = [];
+    private evaluateQueueBusy = false;
+    protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
+        // We queue these requests as there can be a flood of them. Especially if you have two variables or same name back to back
+        // the second can fail because we are still in the process of creating that variable (update, fail, then create). Sources
+        // for requests are from RTOS viewers, watch windows and hover. Even a watch window can have duplicates.
+        return new Promise(async (resolve, reject) => {
+            this.evaluateQueue.push({response: response, args: args, resolve: resolve, reject: reject});
+            while (!this.evaluateQueueBusy && (this.evaluateQueue.length > 0)) {
+                this.evaluateQueueBusy = true;
+                const obj = this.evaluateQueue.pop();
+                try {
+                    await this.evaluateRequestOne(obj.response, obj.args);
+                    obj.resolve();
+                }
+                catch (e) {
+                    obj.reject(e);
+                }
+                this.evaluateQueueBusy = false;
+            }
+        });
+    }
+
+    protected async evaluateRequestOne(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
         const createVariable = (arg, options?) => {
             if (options) {
                 return this.variableHandles.create(new ExtendedVariable(arg, options));

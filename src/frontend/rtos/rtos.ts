@@ -11,37 +11,55 @@ export class RTOSSession {
 
     constructor(public session: vscode.DebugSession) {
         this.allRTOSes.push(new RTOSFreeRTOS(session));
+        this.allRTOSes.push(new RTOSFreeRTOS(session));
     }
 
     public async onStopped(frameId: number): Promise<void> {
-        try {
+        return new Promise<void>(async (resolve, reject) => {
+            const doRefresh = () => {
+                if (this.rtos) {
+                    this.html = '<p>Failed to get RTOS information</p>\n';
+                    this.rtos.onStopped(frameId).then(() => {
+                        this.html = this.rtos.getHTML();
+                        console.log(this.html);
+                        resolve();
+                    });
+                } else {
+                    this.html = '';
+                    resolve();
+                }
+            };
+
             this.lastFrameId = frameId;
             if (this.rtos === undefined && this.allRTOSes.length > 0) {
-                for (let ix = this.allRTOSes.length - 1; ix >= 0; ix--) {
-                    const rtos = this.allRTOSes[ix];
-                    const ret = await rtos.tryDetect(frameId);
-                    if (!ret) {
-                        this.allRTOSes.splice(ix, 1);
-                    } else if (rtos.status === 'initialized') {
-                        this.allRTOSes = [];
-                        this.rtos = rtos;
-                        break;
-                    }
+                // Let them all work in parallel. Since this will generate a ton of gdb traffic and traffic from other sources
+                // like variable, watch windows, things can fail. But our own backend queues things up so failures are unlikely
+                // With some other backend (if for instace we support cppdbg), not sure what happens. Worst case, try one OS
+                // at a time.
+                const promises = [];
+                for (const rtos of this.allRTOSes) {
+                    promises.push(rtos.tryDetect(frameId));
                 }
-            }
 
-            if (this.rtos) {
-                this.html = '<p>Failed to get RTOS information</p>\n';
-                await this.rtos.onStopped(frameId);
-                this.html = this.rtos.getHTML();
-                console.log(this.html);
+                Promise.all(promises).then((results) => {
+                    for (const rtos of results) {
+                        if (rtos.status === 'failed') {
+                            const ix = this.allRTOSes.findIndex((v) => v === rtos);
+                            this.allRTOSes.splice(ix, 1);
+                        } else if (rtos.status === 'initialized') {
+                            this.allRTOSes = [];
+                            this.rtos = rtos;
+                            doRefresh();
+                            return;
+                        }
+                    }
+                    // Nothing fully matched. Some may have partially worked before getting interrupted, try again on next pause
+                    resolve();
+                });
             } else {
-                this.html = '';
+                doRefresh();
             }
-        }
-        catch (e) {
-            // This should not fail even if aborted
-        }
+        });
     }
 
     public onContinued(): void {
@@ -53,8 +71,9 @@ export class RTOSSession {
 
     public onExited(): void {
         if (this.rtos) {
-            this.rtos.onContinued();
+            this.rtos.onExited();
         }
+        this.lastFrameId = undefined;
         this.rtos = undefined;
     }
 
@@ -64,7 +83,7 @@ export class RTOSSession {
 
     public refresh() {
         if (this.rtos && (this.rtos.progStatus === 'stopped') && (this.lastFrameId !== undefined)) {
-            this.rtos.onStopped(this.lastFrameId);
+            this.onStopped(this.lastFrameId);
         }
     }
 }

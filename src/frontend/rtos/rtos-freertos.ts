@@ -2,13 +2,14 @@ import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import * as RTOSCommon from './rtos-common';
 import { hexFormat } from '../utils';
+import { escape } from 'querystring';
 
 interface FreeRTOSThreadInfo {
     'Address': string;
     'Task Name': string;
     'Status': string;
     'Stack Start': string;
-    'Stack Current': string;
+    'Stack Top': string;
     'Stack Used': string;
     'Stack End'?: string;
     'Stack Size'?: string;
@@ -46,11 +47,14 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         super(session, 'FreeRTOS');
     }
 
-    public async tryDetect(useFrameId: number): Promise<boolean> {
+    public async tryDetect(useFrameId: number): Promise<RTOSCommon.RTOSBase> {
         this.progStatus = 'stopped';
         try {
             if (this.status === 'none') {
-                // We only get references to all the interesting variables
+                // We only get references to all the interesting variables. Note that any one of the following can fail
+                // and the caller may try again until we know that it definitely passed or failed. Note that while we
+                // re-try everything, we do remember what already had succeeded and don't waste time trying again. That
+                // is how this.getVarIfEmpty() works
                 this.uxCurrentNumberOfTasks = await this.getVarIfEmpty(this.uxCurrentNumberOfTasks, useFrameId, 'uxCurrentNumberOfTasks');
                 this.pxReadyTasksLists = await this.getVarIfEmpty(this.pxReadyTasksLists, useFrameId, 'pxReadyTasksLists');
                 this.xDelayedTaskList1 = await this.getVarIfEmpty(this.xDelayedTaskList1, useFrameId, 'xDelayedTaskList1');
@@ -61,12 +65,13 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 this.xTasksWaitingTermination = await this.getVarIfEmpty(this.xTasksWaitingTermination, useFrameId, 'xTasksWaitingTermination', true);
                 this.status = 'initialized';
             }
+            return this;
         }
         catch (e) {
             this.status = 'failed';
-            return false;
+            this.failedWhy = e;
+            return this;
         }
-        return true;
     }
 
     public refresh(frameId: number): Promise<void> {
@@ -157,7 +162,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             'Task Name'     : thName,
                             'Status'        : (threadId === this.curThreadAddr) ? 'RUNNING' : state,
                             'Stack Start'   : hexFormat(stackInfo.stackStart),
-                            'Stack Current' : hexFormat(stackInfo.stackTopCurrent),
+                            'Stack Top'     : hexFormat(stackInfo.stackTopCurrent),
                             'Stack Used'    : stackInfo.stackCurUsed.toString(),
                             'stackInfo'     : stackInfo
                         };
@@ -166,6 +171,8 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             th['Stack Size'] = stackInfo.stackSize.toString();
                             th['Stack Peak'] = stackInfo.stackPeakUsed ? stackInfo.stackPeakUsed.toString() : 'Read mem fail';
                             th['Stack Free'] = stackInfo.stackFree.toString();
+                        } else {
+                            th['Stack End']  = '&lt;Unknown&gt;';
                         }
                         this.foundThreads.push(th);
                         curRef = element['pxPrevious-ref'];
@@ -252,7 +259,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         } else if ((this.uxCurrentNumberOfTasksVal !== Number.MAX_SAFE_INTEGER) && (this.finalThreads.length !== this.uxCurrentNumberOfTasksVal)) {
             ret += `<p>Expecting ${this.uxCurrentNumberOfTasksVal} threads, found ${this.finalThreads.length}. Thread data may be unreliable<p>\n`;
         } else if (this.finalThreads.length === 0) {
-            return `<p>Detected ${this.name}, but no threads detected. Yet!</p>\n`;
+            return `<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`;
         }
         
         let header = '';
