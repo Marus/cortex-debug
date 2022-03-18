@@ -2786,7 +2786,7 @@
             "panel": [
                 {
                     "id": "cortex-debug",
-                    "title": "RTOS Info",
+                    "title": "RTOS",
                     "icon": "images/hex-on-dark.svg"
                 }
             ]
@@ -2796,7 +2796,7 @@
 				{
                     "id": "cortex-debug.rtos",
 					"type": "webview",
-					"name": "RTOS Info",
+					"name": "RTOS",
                     "icon": "images/hex-on-dark.svg"
 				}
 			],
