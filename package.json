@@ -2797,6 +2797,7 @@
                     "id": "cortex-debug.rtos",
 					"type": "webview",
 					"name": "RTOS",
+                    "when": "false",
                     "icon": "images/hex-on-dark.svg"
 				}
 			],

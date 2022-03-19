@@ -11,7 +11,6 @@ export class RTOSSession {
 
     constructor(public session: vscode.DebugSession) {
         this.allRTOSes.push(new RTOSFreeRTOS(session));
-        this.allRTOSes.push(new RTOSFreeRTOS(session));
     }
 
     public async onStopped(frameId: number): Promise<void> {

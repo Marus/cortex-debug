@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import * as RTOSCommon from './rtos-common';
 import { hexFormat } from '../utils';
-import { escape } from 'querystring';
 
 interface FreeRTOSThreadInfo {
     'Address': string;
     'Task Name': string;
     'Status': string;
+    'Priority': string;
     'Stack Start': string;
     'Stack Top': string;
     'Stack Used': string;
@@ -15,6 +15,7 @@ interface FreeRTOSThreadInfo {
     'Stack Size'?: string;
     'Stack Peak'?: string;
     'Stack Free'?: string;
+    '%Runtime'?: string;
     stackInfo: RTOSCommon.RTOSStackInfo;
 }
 
@@ -36,6 +37,8 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
     private pxCurrentTCB: RTOSCommon.RTOSVarHelper;
     private xSuspendedTaskList: RTOSCommon.RTOSVarHelper;
     private xTasksWaitingTermination: RTOSCommon.RTOSVarHelper;
+    private ulTotalRunTime: RTOSCommon.RTOSVarHelper;
+    private ulTotalRunTimeVal: number;
 
     private stale: boolean;
     private curThreadAddr: number;
@@ -63,6 +66,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 this.pxCurrentTCB = await this.getVarIfEmpty(this.pxCurrentTCB, useFrameId, 'pxCurrentTCB');
                 this.xSuspendedTaskList = await this.getVarIfEmpty(this.xSuspendedTaskList, useFrameId, 'xSuspendedTaskList', true);
                 this.xTasksWaitingTermination = await this.getVarIfEmpty(this.xTasksWaitingTermination, useFrameId, 'xTasksWaitingTermination', true);
+                this.ulTotalRunTime = await this.getVarIfEmpty(this.ulTotalRunTime, useFrameId, 'ulTotalRunTime', true);
                 this.status = 'initialized';
             }
             return this;
@@ -96,6 +100,10 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                                 tmpArray.push(await this.getVarIfEmpty(undefined, frameId, v.evaluateName));
                             }
                             this.pxReadyTasksListsItems = tmpArray;
+                        }
+                        if (this.ulTotalRunTime) {
+                            const tmp = await this.ulTotalRunTime.getValue(frameId);
+                            this.ulTotalRunTimeVal = parseInt(tmp);
                         }
                         const cur = await this.pxCurrentTCB.getValue(frameId);
                         this.curThreadAddr = parseInt(cur);
@@ -157,15 +165,20 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         const match = tmpThName.match(/"([^*]*)"$/);
                         const thName = match ? match[1] : tmpThName;
                         const stackInfo = await this.getStackInfo(thInfo, 0xA5);
+                        // This is the order we want stuff in
                         const th: FreeRTOSThreadInfo = {
                             'Address'       : hexFormat(threadId),
                             'Task Name'     : thName,
                             'Status'        : (threadId === this.curThreadAddr) ? 'RUNNING' : state,
+                            'Priority'      : thInfo['uxPriority-val'],
                             'Stack Start'   : hexFormat(stackInfo.stackStart),
                             'Stack Top'     : hexFormat(stackInfo.stackTopCurrent),
                             'Stack Used'    : stackInfo.stackCurUsed.toString(),
                             'stackInfo'     : stackInfo
                         };
+                        if (thInfo['uxBasePriority-val']) {
+                            th['Priority'] += ` (${thInfo['uxBasePriority-val']})`;
+                        }
                         if (stackInfo.stackSize) {
                             th['Stack End']  = hexFormat(stackInfo.stackEnd);
                             th['Stack Size'] = stackInfo.stackSize.toString();
@@ -173,6 +186,10 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             th['Stack Free'] = stackInfo.stackFree.toString();
                         } else {
                             th['Stack End']  = '&lt;Unknown&gt;';
+                        }
+                        if (thInfo['ulRunTimeCounter-val'] && this.ulTotalRunTimeVal) {
+                            const tmp = ((parseInt(thInfo['ulRunTimeCounter-val']) / this.ulTotalRunTimeVal) * 100).toFixed(2);
+                            th['%Runtime'] = tmp.padStart(5, '0') + '%';
                         }
                         this.foundThreads.push(th);
                         curRef = element['pxPrevious-ref'];
