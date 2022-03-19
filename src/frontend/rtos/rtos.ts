@@ -157,7 +157,8 @@ export class RTOSTracker
             ),
             // vscode.debug.registerDebugAdapterTrackerFactory('cppdbg', this);
             vscode.window.registerWebviewViewProvider(RTOSViewProvider.viewType, this.provider),
-            vscode.debug.registerDebugAdapterTrackerFactory('cortex-debug', this)
+            vscode.debug.registerDebugAdapterTrackerFactory('cortex-debug', this),
+            vscode.commands.registerCommand('cortex-debug.rtos.refresh', this.refresh.bind(this))
         );
     }
 
@@ -293,7 +294,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
 				<title>RTOS Threads</title>
 			</head>
 			<body>
-                <vscode-button id="refresh-button" appearance="primary">Refresh</vscode-button>
+                <!--vscode-button id="refresh-button" appearance="primary">Refresh</vscode-button-->
                 ${body}
                 <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
 				<script type="module" nonce="${nonce}" src="${scriptUri}"></script>

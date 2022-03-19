@@ -409,6 +409,11 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "cortex-debug.rtos.refresh",
+                "title": "Refresh",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "cortex-debug.registers.regHexModeTurnOff",
                 "title": "Enable Natural mode",
                 "icon": {
@@ -2762,6 +2767,11 @@
                     "command": "cortex-debug.registers.refresh",
                     "when": "view == cortex-debug.registers && debugState == stopped",
                     "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.rtos.refresh",
+                    "when": "view == cortex-debug.rtos",
+                    "group": "navigation@99"                    
                 },
                 {
                     "command": "cortex-debug.peripherals.forceRefresh",
