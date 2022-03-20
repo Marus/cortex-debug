@@ -1,8 +1,24 @@
 ChangeLog
 =========
 
-# V1.3.5
+# V1.4.0
+## New Features
 * Hover is now much more powerful. You can expand arrays, objects, etc.
+* RTOS View is now available. It is experimental and there is only support for FreeRTOS. **With your help, we can add support for more RTOSes**. You can enable this feature using the extension setting `"cortex-debug.showRTOS": true` via the interactive Setting dialog or adding it to User/Workspace/Folder settings.json. You can also use Command Palette  `Cortex-Debug: Toggle RTOS Panel` command. See [#605](https://github.com/Marus/cortex-debug/issues/605) and here is a screnshot ![screenshot](https://user-images.githubusercontent.com/41269583/159186076-e13db666-c7f7-405f-a75d-c9dd523577d4.png)<br>
+  Some notes
+  * It can take a bit of time to update the RTOS info as it requires many tiny queries from GDB. This only occurs if the RTOS panel is visible. You can hide (expose/focus some other panel like `DEBUG CONSOLE` or `TERMINAL`). This will prevent any GDB traffic/updates and won't interfere with fast single stepping or waste your CPU resources. When when exposed it will immediately update itself and continue to do so as long as it is visible
+  * If you are not using an RTOS, there is near zero overhead even if the RTOS panel is visible. The lack of an RTOS is quickly detected using one tiny GDB query and all activity ceases thereafter
+  * The number of columns can vary depending on what features you have enabled disabled in FreeRTOS. For instance, the `Runtime` column will not appear if `configGENERATE_RUN_TIME_STATS` was not enabled in your FreeRTOS config file -- which may require a timer faster than the RTOS tick.
+  * We tried to follow VSCode themes and hopefully it works well under all themes and color schemes.
+  * Note: Microsoft has created a similar feature/extension but it is hardcoded to work with their `cppdbg` debugger. It can easily work with ours and when it does, we have to evaluate which one is better. We have offered our help but got no response yet.
+  * TODO:
+    * Tie a memory view to examine stack data. Helpful? Not sure.
+    * Add support to examine queues, events, semaphores, etc.
+    * Maybe some performance improvements
+    * Prettier -- I am no HTML/CSS expert and appreciate if someone can help
+
+## Others
+* See logs for pre-releases V1.3.x
 * STLink: We no longer use `monitor halt` during startup because halt is automatic with a --attach or --halt command-line options. Also, `monitor halt` is not supported in some versions of STLink server. We also now use --attach when attaching as documented in the STLink manual. Most people will not see much difference but it helps when people are using older versions of the server. More importantly we do what the STLink manual suggests.
 * Initial support for `overrides` and `inherits` in chained configurations.
 * Issues addressed: #599 #598, #539, #295, #601, #602, #593
