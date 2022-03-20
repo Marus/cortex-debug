@@ -5,17 +5,22 @@
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
   font-size: var(--vscode-editor-font-size);
-  margin: 0px;
+}
+
+.threads-header-row {
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.threads-row {
+  border: 1px solid var(--vscode-panel-border);
 }
 
 .threads-header-cell {
   padding: 0px;
-  border: 1px solid var(--vscode-panel-border);
 }
 
 .threads-cell {
   padding: 0px;
-  border: 1px solid var(--vscode-panel-border);
 }
 
 vscode-link {

@@ -335,7 +335,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                     if (key === 'Stack Beg') {
                         txt = `<vscode-link class="threads-link-${makeOneWord(key)}" href="#">${v}</vscode-link>`;
                     }
-                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)}`
+                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)}"`;
                     table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                     col++;
                 }
@@ -354,5 +354,5 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
 }
 
 function makeOneWord(s: string): string {
-    return s.toLocaleLowerCase(s).replace(/\s+/g, '-');
+    return s.toLowerCase().replace(/\s+/g, '-');
 }
