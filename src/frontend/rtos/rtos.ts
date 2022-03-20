@@ -1,34 +1,44 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
+import { description } from 'commander';
 import * as vscode from 'vscode';
 import * as RTOSCommon from './rtos-common';
 import { RTOSFreeRTOS } from './rtos-freertos';
 
+const RTOS_TYPES = {
+    FreeRTOS: RTOSFreeRTOS
+};
 export class RTOSSession {
     public lastFrameId: number;
     public html: string = '';
     public rtos: RTOSCommon.RTOSBase; // The final RTOS
     private allRTOSes: RTOSCommon.RTOSBase[] = [];
+    public triedAndFailed = false;
 
     constructor(public session: vscode.DebugSession) {
-        this.allRTOSes.push(new RTOSFreeRTOS(session));
+        this.lastFrameId = undefined;
+        for (const rtosType of Object.keys(RTOS_TYPES)) {
+            this.allRTOSes.push(new RTOS_TYPES[rtosType](session));
+        }
     }
 
+    // This is the work horse. Do not call it if the panel is in disabled state.
     public async onStopped(frameId: number): Promise<void> {
         return new Promise<void>(async (resolve, reject) => {
+            this.lastFrameId = frameId;
             const doRefresh = () => {
                 if (this.rtos) {
-                    this.html = '<p>Failed to get RTOS information</p>\n';
+                    this.html = '<p>Failed to get RTOS information. Please report an issue if RTOS is actually running</p>\n';
                     this.rtos.onStopped(frameId).then(() => {
                         this.html = this.rtos.getHTML();
                         resolve();
                     });
                 } else {
+                    this.triedAndFailed = true;
                     this.html = '';
                     resolve();
                 }
             };
 
-            this.lastFrameId = frameId;
             if (this.rtos === undefined && this.allRTOSes.length > 0) {
                 // Let them all work in parallel. Since this will generate a ton of gdb traffic and traffic from other sources
                 // like variable, watch windows, things can fail. But our own backend queues things up so failures are unlikely
@@ -44,15 +54,22 @@ export class RTOSSession {
                         if (rtos.status === 'failed') {
                             const ix = this.allRTOSes.findIndex((v) => v === rtos);
                             this.allRTOSes.splice(ix, 1);
+                            if (this.allRTOSes.length === 0) {
+                                doRefresh();
+                                break;
+                            }
                         } else if (rtos.status === 'initialized') {
                             this.allRTOSes = [];
                             this.rtos = rtos;
                             doRefresh();
-                            return;
+                            break;
                         }
                     }
-                    // Nothing fully matched. Some may have partially worked before getting interrupted, try again on next pause
-                    resolve();
+                    if (this.allRTOSes.length > 0) {
+                        // Some RTOSes have not finished detection
+                        this.html = '<p>RTOS detection in progress...</p>\n';
+                        resolve();
+                    }
                 });
             } else {
                 doRefresh();
@@ -80,7 +97,7 @@ export class RTOSSession {
     }
 
     public refresh(): Promise<void> {
-        if (this.rtos && (this.rtos.progStatus === 'stopped') && (this.lastFrameId !== undefined)) {
+        if (this.lastFrameId !== undefined) {
             return this.onStopped(this.lastFrameId);
         }
         return new Promise<void>((r) => r());
@@ -137,7 +154,7 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                 break;
             }
             default: {
-                console.log('Unhandled Message type ' + message.type);
+                // console.log('Unhandled Message type ' + message.type);
                 break;
             }
         }
@@ -148,18 +165,37 @@ export class RTOSTracker
     implements vscode.DebugAdapterTrackerFactory, DebugStopRunEvent {
     private sessionMap: Map<string, RTOSSession> = new Map<string, RTOSSession>();
     private provider: RTOSViewProvider;
+    public enabled: boolean;
+    public visible: boolean;
+
     constructor(private context: vscode.ExtensionContext) {
         this.provider = new RTOSViewProvider(context.extensionUri, this);
+        const config = vscode.workspace.getConfiguration('cortex-debug', null);
+
+        this.enabled = config.get('showRTOS', false);
+        this.visible = this.enabled;
+        vscode.commands.executeCommand('setContext', 'cortex-debug:showRTOS', this.enabled);
         context.subscriptions.push(
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
             vscode.debug.onDidTerminateDebugSession(
                 this.debugSessionTerminated.bind(this)
             ),
+            vscode.debug.registerDebugAdapterTrackerFactory('cortex-debug', this),
             // vscode.debug.registerDebugAdapterTrackerFactory('cppdbg', this);
             vscode.window.registerWebviewViewProvider(RTOSViewProvider.viewType, this.provider),
-            vscode.debug.registerDebugAdapterTrackerFactory('cortex-debug', this),
+            vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.rtos.toggleRTOSPanel', this.toggleRTOSPanel.bind(this)),
             vscode.commands.registerCommand('cortex-debug.rtos.refresh', this.update.bind(this))
         );
+    }
+
+    private settingsChanged(e: vscode.ConfigurationChangeEvent) {
+        if (e.affectsConfiguration('cortex-debug.showRTOS')) {
+            const config = vscode.workspace.getConfiguration('cortex-debug', null);
+            this.enabled = config.get('showRTOS', false);
+            vscode.commands.executeCommand('setContext', 'cortex-debug:showRTOS', this.enabled);
+            this.update();
+        }
     }
 
     public createDebugAdapterTracker(
@@ -171,8 +207,11 @@ export class RTOSTracker
     public async onStopped(session: vscode.DebugSession, frameId: number) {
         for (const rtosSession of this.sessionMap.values()) {
             if (rtosSession.session.id === session.id) {
-                await rtosSession.onStopped(frameId);
-                this.provider.updateHtml();
+                rtosSession.lastFrameId = frameId;
+                if (this.enabled && this.visible) {
+                    await rtosSession.onStopped(frameId);
+                    this.provider.updateHtml();
+                }
                 break;
             }
         }
@@ -198,29 +237,89 @@ export class RTOSTracker
         }
     }
 
-    public async refresh(): Promise<any> {
+    // Only updates the RTOS state. Only debug sessions that are currently stopped will be updated
+    public async updateRTOSInfo(): Promise<any> {
         const promises = [];
-        for (const rtosSession of this.sessionMap.values()) {
-            promises.push(rtosSession.refresh());
+        if (this.enabled && this.visible) {
+            for (const rtosSession of this.sessionMap.values()) {
+                promises.push(rtosSession.refresh());
+            }
         }
         return Promise.all(promises);
     }
 
+    public toggleRTOSPanel() {
+        this.enabled = !this.enabled;
+        this.updateRTOSPanelStatus();
+    }
+
+    private updateRTOSPanelStatus() {
+        const config = vscode.workspace.getConfiguration('cortex-debug', null);
+        config.update('showRTOS', this.enabled);
+        vscode.commands.executeCommand('setContext', 'cortex-debug:showRTOS', this.enabled);
+        /*
+        if (this.enabled) {
+            this.provider.showAndFocus();
+        }
+        this.update();
+        */
+    }
+
+    public notifyPanelDisposed() {
+        this.enabled = this.visible = false;
+        this.updateRTOSPanelStatus();
+    }
+
+    public async visibilityChanged(v: boolean) {
+        if (v !== this.visible) {
+            this.visible = v;
+            if (this.visible) {
+                const msg = 'Some sessions are busy. RTOS panel will be updated when session is paused';
+                for (const rtosSession of this.sessionMap.values()) {
+                    if (rtosSession.lastFrameId === undefined) {
+                        if (msg) {
+                            vscode.window.showInformationMessage(msg);
+                            break;
+                        }
+                    }
+                }
+            }
+            try {
+                await this.update();
+            }
+            catch {}
+        }
+    }
+
+    // Updates RTOS state and the Panel HTML
+    private busyHtml: string;
     public update(): Promise<void> {
         return new Promise<void>((resolve) => {
-            this.refresh().then(() => {
+            if (!this.enabled || !this.visible || !this.sessionMap.size) {
+                resolve();
+            }
+            this.busyHtml = '<h4>Busy updating...</h4>\n';
+            this.provider.updateHtml();
+            this.updateRTOSInfo().then(() => {
+                this.busyHtml = undefined;
                 this.provider.updateHtml();
                 resolve();
             }, (e) => {
+                this.busyHtml = undefined;
                 this.provider.updateHtml();
                 resolve();
             });
         });
     }
 
+    private lastGoodHtml: string;
     public getHtml() {
-        if (this.sessionMap.size === 0) {
-            return '<p>No active/compatible debug sessions running.</p>\n';
+        if (this.busyHtml) {
+            return this.busyHtml;
+        } else if (this.sessionMap.size === 0) {
+            return this.lastGoodHtml || '<p>No active/compatible debug sessions running.</p>\n';
+        } else if (!this.visible || !this.enabled) {
+            return '<p>Contents are not visible, so no html generated</p>\n';
         }
         let ret = '';
         for (const rtosSession of this.sessionMap.values()) {
@@ -229,11 +328,19 @@ export class RTOSTracker
             if (!rtosSession.rtos) {
                 const nameAndStatus = name + ' -- No RTOS detected';
                 ret += /*html*/`<h4>${nameAndStatus}</h4>\n`;
+                if (rtosSession.triedAndFailed) {
+                    const supported = Object.keys(RTOS_TYPES).join(', ');
+                    ret += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
+                        'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
+                } else {
+                    ret += '<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
+                }
             } else {
                 const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' Detected.' + (!rtosHtml ? ' (No data available yet)' : '');
                 ret += /*html*/`<h4>${nameAndStatus}</h4>\n` + rtosHtml;
             }
         }
+        this.lastGoodHtml = ret;
         return ret;
     }
 }
@@ -250,12 +357,24 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         token: vscode.CancellationToken
     ) {
         this.webviewView = webviewView;
+        this.parent.visible = this.webviewView.visible;
+        this.parent.enabled = true;
 
         webviewView.webview.options = {
             // Allow scripts in the webview
             enableScripts: true,
             localResourceRoots: [this.extensionUri]
         };
+        this.webviewView.description = 'View RTOS internals';
+
+        this.webviewView.onDidDispose((e) => {
+            this.webviewView = undefined;
+            this.parent.notifyPanelDisposed();
+        });
+
+        this.webviewView.onDidChangeVisibility((e) => {
+            this.parent.visibilityChanged(this.webviewView.visible);
+        });
 
         this.updateHtml();
 
@@ -269,14 +388,36 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    public updateHtml() {
+    public showAndFocus() {
         if (this.webviewView) {
-            this.webviewView.webview.html = this.getHtmlForWebview(this.webviewView.webview);
-            console.log(this.webviewView.webview.html);
+            this.webviewView.show(false);
         }
     }
 
-    public getHtmlForWebview(webview: vscode.Webview): string {
+    public updateHtml() {
+        if (this.webviewView) {
+            this.webviewView.webview.html = this.getHtmlForWebview();
+            // console.log(this.webviewView.webview.html);
+        }
+    }
+
+    private getHtmlForWebview(): string {
+        const webview = this.webviewView?.webview;
+        if (!webview) {
+            return '';
+        }
+        if (!this.parent.enabled) {
+            return `<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<title>RTOS Threads</title>
+			</head>
+			<body>
+                '<p>Currently disabled. Enable setting "cortex-debug.showRTOS" or use Command "Cortex Debug: Toggle RTOS Panel" to see any RTOS info</p>\n'
+			</body>
+			</html>`;
+        }
         const toolkitUri = getUri(webview, this.extensionUri, [
             'node_modules',
             '@vscode',

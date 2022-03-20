@@ -54,7 +54,7 @@ export class CortexDebugExtension {
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
 
-        // const rtosTracker = new RTOSTracker(context); // You must also enable it in package.json "views"/"cortex-debug"/"when"
+        const rtosTracker = new RTOSTracker(context);
 
         let tmp = [];
         try {

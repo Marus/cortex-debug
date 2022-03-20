@@ -1,5 +1,5 @@
 {
-    "version": "1.3.5",
+    "version": "1.4.0",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -369,6 +369,11 @@
                     "default": null,
                     "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
                 },
+                "cortex-debug.showRTOS": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable/Disable display of RTOS panel"
+                },
                 "cortex-debug.showDevDebugOutput": {
                     "enum": [
                         "none",
@@ -473,6 +478,11 @@
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.viewDisassembly",
                 "title": "View Disassembly (Function)"
+            },
+            {
+                "category": "Cortex-Debug",
+                "command": "cortex-debug.rtos.toggleRTOSPanel",
+                "title": "Toggle RTOS Panel"
             },
             {
                 "category": "Cortex-Debug",
@@ -2656,6 +2666,10 @@
                     "when": "debugType == cortex-debug"
                 },
                 {
+                    "command": "cortex-debug.rtos.toggleRTOSPanel",
+                    "when": "true"
+                },
+                {
                     "command": "cortex-debug.setForceDisassembly",
                     "when": "debugType == cortex-debug"
                 },
@@ -2807,7 +2821,7 @@
                     "id": "cortex-debug.rtos",
 					"type": "webview",
 					"name": "RTOS",
-                    "when": "false",
+                    "when": "cortex-debug:showRTOS",
                     "icon": "images/hex-on-dark.svg"
 				}
 			],

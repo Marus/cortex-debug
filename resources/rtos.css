@@ -2,9 +2,6 @@
   display: vscode-data-grid;
   gap: 0;
   text-align: right;
-  font-family: var(--vscode-editor-font-family);
-  font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);
 }
 
 .threads-header-row {
@@ -21,6 +18,9 @@
 
 .threads-cell {
   padding: 0px;
+  font-family: var(--vscode-editor-font-family);
+  font-weight: var(--vscode-editor-font-weight);
+  font-size: var(--vscode-editor-font-size); 
 }
 
 vscode-link {
