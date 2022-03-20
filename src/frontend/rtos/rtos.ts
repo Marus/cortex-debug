@@ -20,7 +20,6 @@ export class RTOSSession {
                     this.html = '<p>Failed to get RTOS information</p>\n';
                     this.rtos.onStopped(frameId).then(() => {
                         this.html = this.rtos.getHTML();
-                        console.log(this.html);
                         resolve();
                     });
                 } else {
@@ -80,10 +79,11 @@ export class RTOSSession {
         return this.html;
     }
 
-    public refresh() {
+    public refresh(): Promise<void> {
         if (this.rtos && (this.rtos.progStatus === 'stopped') && (this.lastFrameId !== undefined)) {
-            this.onStopped(this.lastFrameId);
+            return this.onStopped(this.lastFrameId);
         }
+        return new Promise<void>((r) => r());
     }
 }
 
@@ -158,7 +158,7 @@ export class RTOSTracker
             // vscode.debug.registerDebugAdapterTrackerFactory('cppdbg', this);
             vscode.window.registerWebviewViewProvider(RTOSViewProvider.viewType, this.provider),
             vscode.debug.registerDebugAdapterTrackerFactory('cortex-debug', this),
-            vscode.commands.registerCommand('cortex-debug.rtos.refresh', this.refresh.bind(this))
+            vscode.commands.registerCommand('cortex-debug.rtos.refresh', this.update.bind(this))
         );
     }
 
@@ -172,7 +172,7 @@ export class RTOSTracker
         for (const rtosSession of this.sessionMap.values()) {
             if (rtosSession.session.id === session.id) {
                 await rtosSession.onStopped(frameId);
-                this.provider.update();
+                this.provider.updateHtml();
                 break;
             }
         }
@@ -198,10 +198,24 @@ export class RTOSTracker
         }
     }
 
-    public refresh() {
+    public async refresh(): Promise<any> {
+        const promises = [];
         for (const rtosSession of this.sessionMap.values()) {
-            rtosSession.refresh();
+            promises.push(rtosSession.refresh());
         }
+        return Promise.all(promises);
+    }
+
+    public update(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            this.refresh().then(() => {
+                this.provider.updateHtml();
+                resolve();
+            }, (e) => {
+                this.provider.updateHtml();
+                resolve();
+            });
+        });
     }
 
     public getHtml() {
@@ -243,22 +257,22 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this.extensionUri]
         };
 
-        this.update();
+        this.updateHtml();
 
         webviewView.webview.onDidReceiveMessage((msg) => {
             switch (msg?.type) {
                 case 'refresh': {
-                    this.parent.refresh();
-                    webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
+                    this.parent.update();
                     break;
                 }
             }
         });
     }
 
-    public update() {
+    public updateHtml() {
         if (this.webviewView) {
             this.webviewView.webview.html = this.getHtmlForWebview(this.webviewView.webview);
+            console.log(this.webviewView.webview.html);
         }
     }
 

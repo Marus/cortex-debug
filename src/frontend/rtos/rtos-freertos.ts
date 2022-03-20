@@ -2,20 +2,22 @@ import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import * as RTOSCommon from './rtos-common';
 import { hexFormat } from '../utils';
+import { HrTimer } from '../../common';
 
 interface FreeRTOSThreadInfo {
+    'ID'?: string;
     'Address': string;
     'Task Name': string;
     'Status': string;
-    'Priority': string;
-    'Stack Start': string;
+    'Pri': string;
+    'Stack Beg': string;
     'Stack Top': string;
     'Stack Used': string;
     'Stack End'?: string;
     'Stack Size'?: string;
     'Stack Peak'?: string;
     'Stack Free'?: string;
-    '%Runtime'?: string;
+    'Runtime'?: string;
     stackInfo: RTOSCommon.RTOSStackInfo;
 }
 
@@ -44,6 +46,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
     private curThreadAddr: number;
     private foundThreads: FreeRTOSThreadInfo[] = [];
     private finalThreads: FreeRTOSThreadInfo[] = [];
+    private timeInfo: string;
     private readonly maxThreads = 1024;
 
     constructor(public session: vscode.DebugSession) {
@@ -85,7 +88,9 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 return;
             }
 
+            const timer = new HrTimer();
             this.stale = true;
+            this.timeInfo = (new Date()).toISOString();
             // uxCurrentNumberOfTasks can go invalid anytime. Like when a reset/restart happens
             this.uxCurrentNumberOfTasksVal = Number.MAX_SAFE_INTEGER;
             this.foundThreads = [];
@@ -117,13 +122,18 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         await this.getThreadInfo(this.xPendingReadyList, 'BLOCKED', frameId);
                         await this.getThreadInfo(this.xSuspendedTaskList, 'SUSPENDED', frameId);
                         await this.getThreadInfo(this.xTasksWaitingTermination, 'TERMINATED', frameId);
-                        this.foundThreads.sort((a, b) => a['Task Name'].toUpperCase().localeCompare(b['Task Name'].toUpperCase()));
+                        if (this.foundThreads[0]['ID']) {
+                            this.foundThreads.sort((a, b) => parseInt(a['ID']) - parseInt(b['ID']));
+                        } else {
+                            this.foundThreads.sort((a, b) => parseInt(a['Address']) - parseInt(b['Address']));
+                        }
                         this.finalThreads = [...this.foundThreads];
                         console.table(this.finalThreads);
                     } else {
                         this.finalThreads = [];
                     }
                     this.stale = false;
+                    this.timeInfo += ' in ' + timer.deltaMs() + ' ms';
                     resolve();
                 }
                 catch (e) {
@@ -167,17 +177,21 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         const stackInfo = await this.getStackInfo(thInfo, 0xA5);
                         // This is the order we want stuff in
                         const th: FreeRTOSThreadInfo = {
+                            'ID'            : thInfo['uxTCBNumber-val'],
                             'Address'       : hexFormat(threadId),
                             'Task Name'     : thName,
                             'Status'        : (threadId === this.curThreadAddr) ? 'RUNNING' : state,
-                            'Priority'      : thInfo['uxPriority-val'],
-                            'Stack Start'   : hexFormat(stackInfo.stackStart),
+                            'Pri'           : thInfo['uxPriority-val'],
+                            'Stack Beg'     : hexFormat(stackInfo.stackStart),
                             'Stack Top'     : hexFormat(stackInfo.stackTopCurrent),
                             'Stack Used'    : stackInfo.stackCurUsed.toString(),
                             'stackInfo'     : stackInfo
                         };
+                        if (typeof th['ID'] !== 'string') {
+                            delete th['ID'];
+                        }
                         if (thInfo['uxBasePriority-val']) {
-                            th['Priority'] += ` (${thInfo['uxBasePriority-val']})`;
+                            th['Pri'] += `,${thInfo['uxBasePriority-val']}`;
                         }
                         if (stackInfo.stackSize) {
                             th['Stack End']  = hexFormat(stackInfo.stackEnd);
@@ -189,7 +203,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         }
                         if (thInfo['ulRunTimeCounter-val'] && this.ulTotalRunTimeVal) {
                             const tmp = ((parseInt(thInfo['ulRunTimeCounter-val']) / this.ulTotalRunTimeVal) * 100).toFixed(2);
-                            th['%Runtime'] = tmp.padStart(5, '0') + '%';
+                            th['Runtime'] = tmp.padStart(5, '0') + '%';
                         }
                         this.foundThreads.push(th);
                         curRef = element['pxPrevious-ref'];
@@ -279,18 +293,32 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
             return `<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`;
         }
         
+        const keys = Object.keys(this.finalThreads[0]);
+        let fmt = '';
+        for (const k of keys) {
+            let tmp = 4;
+            if (k === 'ID') {
+                tmp = 1;
+            } else if (k === 'Task Name') {
+                tmp = 6;
+            } else if (k === 'Pri') {
+                tmp = 2;
+            } else if (k === 'Runtime') {
+                tmp = 2;
+            }
+            fmt += `${tmp}fr `;
+        }
+
+        let table = `<vscode-data-grid class="${this.name}-grid threads-grid" grid-template-columns="${fmt}">\n`;
         let header = '';
-        let table = '<vscode-data-grid>\n';
-        let keys;
         for (const th of this.finalThreads) {
-            keys = keys || Object.keys(th);
             if (!header) {
                 let col = 1;
-                header = '  <vscode-data-grid-row>\n';
+                header = `  <vscode-data-grid-row class="${this.name}-header-row threads-header-row">\n`;
                 for (const key of keys) {
                     const v = th[key];
                     if (typeof v !== 'object') {
-                        header += `    <vscode-data-grid-cell cell-type="columnheader" grid-column="${col}">${key}</vscode-data-grid-cell>\n`;
+                        header += `    <vscode-data-grid-cell class="${this.name}-header-cell threads-header-cell" cell-type="columnheader" grid-column="${col}">${key}</vscode-data-grid-cell>\n`;
                         col++;
                     }
                 }
@@ -299,11 +327,16 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
             }
 
             let col = 1;
-            table += '  <vscode-data-grid-row>\n';
+            table += `  <vscode-data-grid-row class="${this.name}-row threads-row">\n`;
             for (const key of keys) {
                 const v = th[key];
                 if (typeof v !== 'object') {
-                    table += `    <vscode-data-grid-cell grid-column="${col}">${v}</vscode-data-grid-cell>\n`;
+                    let txt = v;
+                    if (key === 'Stack Beg') {
+                        txt = `<vscode-link class="threads-link-${makeOneWord(key)}" href="#">${v}</vscode-link>`;
+                    }
+                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)}`
+                    table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                     col++;
                 }
             }
@@ -311,8 +344,15 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         }
         ret += table;
         ret += '</vscode-data-grid>\n';
+        if (this.timeInfo) {
+            ret += `<p>Data collected at ${this.timeInfo}</p>\n`;
+        }
 
         this.lastValidHtml = ret;
         return ret;
     }
+}
+
+function makeOneWord(s: string): string {
+    return s.toLocaleLowerCase(s).replace(/\s+/g, '-');
 }
