@@ -1,0 +1,772 @@
+{
+  "metadata": {
+    "toolPackage": "@microsoft/api-extractor",
+    "toolVersion": "7.8.1",
+    "schemaVersion": 1003,
+    "oldestForwardsCompatibleVersion": 1001
+  },
+  "kind": "Package",
+  "canonicalReference": "@microsoft/fast-react-wrapper!",
+  "docComment": "",
+  "name": "@microsoft/fast-react-wrapper",
+  "members": [
+    {
+      "kind": "EntryPoint",
+      "canonicalReference": "@microsoft/fast-react-wrapper!",
+      "name": "",
+      "members": [
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "@microsoft/fast-react-wrapper!FoundationElementRegistryElement:type",
+          "docComment": "/**\n * Extracts the element type from a FoundationElementRegistry\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare type FoundationElementRegistryElement<TRegistry> = "
+            },
+            {
+              "kind": "Content",
+              "text": "TRegistry extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "FoundationElementRegistry",
+              "canonicalReference": "@microsoft/fast-foundation!FoundationElementRegistry:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "FoundationElementDefinition",
+              "canonicalReference": "@microsoft/fast-foundation!FoundationElementDefinition:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", infer TElement> ? TElement extends typeof "
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:var"
+            },
+            {
+              "kind": "Content",
+              "text": " ? "
+            },
+            {
+              "kind": "Reference",
+              "text": "InstanceType",
+              "canonicalReference": "!InstanceType:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TElement> : any : any"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "releaseTag": "Public",
+          "name": "FoundationElementRegistryElement",
+          "typeParameters": [
+            {
+              "typeParameterName": "TRegistry",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 10
+          }
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "@microsoft/fast-react-wrapper!provideReactWrapper:function(1)",
+          "docComment": "/**\n * @param React - The React module, typically imported from the `react` npm package\n *\n * @param designSystem - A design system to register the components with.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function provideReactWrapper(React: "
+            },
+            {
+              "kind": "Content",
+              "text": "any"
+            },
+            {
+              "kind": "Content",
+              "text": ", designSystem?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "DesignSystem",
+              "canonicalReference": "@microsoft/fast-foundation!DesignSystem:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    wrap: {\n        <TRegistry extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "FoundationElementRegistry",
+              "canonicalReference": "@microsoft/fast-foundation!FoundationElementRegistry:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "FoundationElementDefinition",
+              "canonicalReference": "@microsoft/fast-foundation!FoundationElementDefinition:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", any>, TEvents>(registry: TRegistry, config?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactWrapperConfig",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactWrapperConfig:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEvents> | undefined): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Constructable",
+              "canonicalReference": "@microsoft/fast-element!Constructable:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.Component",
+              "canonicalReference": "@types/react!~React.Component:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.PropsWithChildren",
+              "canonicalReference": "@types/react!~React.PropsWithChildren:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.PropsWithRef",
+              "canonicalReference": "@types/react!~React.PropsWithRef:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Partial",
+              "canonicalReference": "!Partial:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Pick",
+              "canonicalReference": "!Pick:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "FoundationElementRegistryElement",
+              "canonicalReference": "@microsoft/fast-react-wrapper!FoundationElementRegistryElement:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TRegistry>, "
+            },
+            {
+              "kind": "Reference",
+              "text": "Exclude",
+              "canonicalReference": "!Exclude:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<keyof "
+            },
+            {
+              "kind": "Reference",
+              "text": "FoundationElementRegistryElement",
+              "canonicalReference": "@microsoft/fast-react-wrapper!FoundationElementRegistryElement:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TRegistry>, \"style\" | \"children\">>> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactEvents",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactEvents:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEvents> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.HTMLAttributes",
+              "canonicalReference": "@types/react!~React.HTMLAttributes:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">> & {\n            style?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.CSSProperties",
+              "canonicalReference": "@types/react!~React.CSSProperties:interface"
+            },
+            {
+              "kind": "Content",
+              "text": " | undefined;\n        }>, {}, any>>;\n        <TElement extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", TEvents_1>(type: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Constructable",
+              "canonicalReference": "@microsoft/fast-element!Constructable:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TElement>, config?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactWrapperConfig",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactWrapperConfig:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEvents_1> | undefined): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Constructable",
+              "canonicalReference": "@microsoft/fast-element!Constructable:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.Component",
+              "canonicalReference": "@types/react!~React.Component:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.PropsWithChildren",
+              "canonicalReference": "@types/react!~React.PropsWithChildren:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.PropsWithRef",
+              "canonicalReference": "@types/react!~React.PropsWithRef:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Partial",
+              "canonicalReference": "!Partial:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Pick",
+              "canonicalReference": "!Pick:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TElement, "
+            },
+            {
+              "kind": "Reference",
+              "text": "Exclude",
+              "canonicalReference": "!Exclude:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<keyof TElement, \"style\" | \"children\">>> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactEvents",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactEvents:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEvents_1> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.HTMLAttributes",
+              "canonicalReference": "@types/react!~React.HTMLAttributes:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">> & {\n            style?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.CSSProperties",
+              "canonicalReference": "@types/react!~React.CSSProperties:interface"
+            },
+            {
+              "kind": "Content",
+              "text": " | undefined;\n        }>, {}, any>>;\n    };\n    registry: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Registry",
+              "canonicalReference": "@microsoft/fast-foundation!Registry:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "returnTypeTokenRange": {
+            "startIndex": 5,
+            "endIndex": 68
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "React",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "parameterName": "designSystem",
+              "parameterTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 4
+              }
+            }
+          ],
+          "name": "provideReactWrapper"
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "@microsoft/fast-react-wrapper!ReactEventMap:type",
+          "docComment": "/**\n * Maps React event names to DOM event types for special handling.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare type ReactEventMap<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    [P in keyof T]: string;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "releaseTag": "Public",
+          "name": "ReactEventMap",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 2
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "@microsoft/fast-react-wrapper!ReactEvents:type",
+          "docComment": "/**\n * Event signatures for a React wrapper.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare type ReactEvents<T> = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    [P in keyof T]?: (e: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Event",
+              "canonicalReference": "!Event:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ") => unknown;\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "releaseTag": "Public",
+          "name": "ReactEvents",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "@microsoft/fast-react-wrapper!ReactWrapper:type",
+          "docComment": "/**\n * A React component that wraps a Web Component.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare type ReactWrapper<TElement extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", TEvents> = "
+            },
+            {
+              "kind": "Reference",
+              "text": "Constructable",
+              "canonicalReference": "@microsoft/fast-element!Constructable:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.Component",
+              "canonicalReference": "@types/react!~React.Component:class"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactWrapperProps",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactWrapperProps:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TElement, TEvents>>>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "releaseTag": "Public",
+          "name": "ReactWrapper",
+          "typeParameters": [
+            {
+              "typeParameterName": "TElement",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "TEvents",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 9
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "@microsoft/fast-react-wrapper!ReactWrapperConfig:type",
+          "docComment": "/**\n * Optional configuration for the React wrapper.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare type ReactWrapperConfig<TEvents> = "
+            },
+            {
+              "kind": "Content",
+              "text": "{\n    name?: string;\n    events?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactEventMap",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactEventMap:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEvents>;\n    properties?: string[];\n}"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "releaseTag": "Public",
+          "name": "ReactWrapperConfig",
+          "typeParameters": [
+            {
+              "typeParameterName": "TEvents",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 4
+          }
+        },
+        {
+          "kind": "TypeAlias",
+          "canonicalReference": "@microsoft/fast-react-wrapper!ReactWrapperProps:type",
+          "docComment": "/**\n * The props used by a ReactWrapper.\n *\n * @public\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare type ReactWrapperProps<TElement extends "
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", TEvents> = "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.PropsWithChildren",
+              "canonicalReference": "@types/react!~React.PropsWithChildren:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.PropsWithRef",
+              "canonicalReference": "@types/react!~React.PropsWithRef:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Partial",
+              "canonicalReference": "!Partial:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "Omit",
+              "canonicalReference": "!Omit:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TElement, \"children\" | \"style\">> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactEvents",
+              "canonicalReference": "@microsoft/fast-react-wrapper!ReactEvents:type"
+            },
+            {
+              "kind": "Content",
+              "text": "<TEvents> & "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.HTMLAttributes",
+              "canonicalReference": "@types/react!~React.HTMLAttributes:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "HTMLElement",
+              "canonicalReference": "!HTMLElement:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">> & {\n    style?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "ReactModule.CSSProperties",
+              "canonicalReference": "@types/react!~React.CSSProperties:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ";\n}>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "releaseTag": "Public",
+          "name": "ReactWrapperProps",
+          "typeParameters": [
+            {
+              "typeParameterName": "TElement",
+              "constraintTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            },
+            {
+              "typeParameterName": "TEvents",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              }
+            }
+          ],
+          "typeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 19
+          }
+        }
+      ]
+    }
+  ]
+}

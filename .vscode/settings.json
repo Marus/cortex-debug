@@ -28,6 +28,7 @@
 		"insns",
 		"instrs",
 		"Logpoints",
+		"Prio",
 		"pyocd",
 		"SEGGER",
 		"stlink",

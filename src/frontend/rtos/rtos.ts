@@ -1,5 +1,4 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { description } from 'commander';
 import * as vscode from 'vscode';
 import * as RTOSCommon from './rtos-common';
 import { RTOSFreeRTOS } from './rtos-freertos';
@@ -419,6 +418,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
 			</html>`;
         }
         const toolkitUri = getUri(webview, this.extensionUri, [
+            'webview',
             'node_modules',
             '@vscode',
             'webview-ui-toolkit',

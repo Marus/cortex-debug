@@ -9,7 +9,7 @@ interface FreeRTOSThreadInfo {
     'Address': string;
     'Task Name': string;
     'Status': string;
-    'Pri': string;
+    'Prio': string;
     'Stack Beg': string;
     'Stack Top': string;
     'Stack Used': string;
@@ -181,7 +181,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             'Address'       : hexFormat(threadId),
                             'Task Name'     : thName,
                             'Status'        : (threadId === this.curThreadAddr) ? 'RUNNING' : state,
-                            'Pri'           : thInfo['uxPriority-val'],
+                            'Prio'          : thInfo['uxPriority-val'],
                             'Stack Beg'     : hexFormat(stackInfo.stackStart),
                             'Stack Top'     : hexFormat(stackInfo.stackTopCurrent),
                             'Stack Used'    : stackInfo.stackCurUsed.toString(),
@@ -191,7 +191,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             delete th['ID'];
                         }
                         if (thInfo['uxBasePriority-val']) {
-                            th['Pri'] += `,${thInfo['uxBasePriority-val']}`;
+                            th['Prio'] += `,${thInfo['uxBasePriority-val']}`;
                         }
                         if (stackInfo.stackSize) {
                             th['Stack End']  = hexFormat(stackInfo.stackEnd);
@@ -301,7 +301,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 tmp = 1;
             } else if (k === 'Task Name') {
                 tmp = 6;
-            } else if (k === 'Pri') {
+            } else if (k === 'Prio') {
                 tmp = 2;
             } else if (k === 'Runtime') {
                 tmp = 2;
