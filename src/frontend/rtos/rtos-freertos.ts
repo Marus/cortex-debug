@@ -128,7 +128,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             this.foundThreads.sort((a, b) => parseInt(a['Address']) - parseInt(b['Address']));
                         }
                         this.finalThreads = [...this.foundThreads];
-                        console.table(this.finalThreads);
+                        // console.table(this.finalThreads);
                     } else {
                         this.finalThreads = [];
                     }
@@ -314,7 +314,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         for (const th of this.finalThreads) {
             if (!header) {
                 let col = 1;
-                header = `  <vscode-data-grid-row class="${this.name}-header-row threads-header-row">\n`;
+                header = `  <vscode-data-grid-row row-type="header" class="${this.name}-header-row threads-header-row">\n`;
                 for (const key of keys) {
                     const v = th[key];
                     if (typeof v !== 'object') {
