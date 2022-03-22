@@ -940,7 +940,6 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readMemoryRequest(response: DebugProtocol.ReadMemoryResponse, args: DebugProtocol.ReadMemoryArguments, request?: DebugProtocol.Request): void {
-        console.log(args);
         const startAddress = parseInt(args.memoryReference);
         const length = args.count;
         const useAddr = hexFormat(startAddress + (args.offset || 0));
