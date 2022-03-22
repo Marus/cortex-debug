@@ -328,16 +328,16 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
             }
 
             let col = 1;
+            const running = (th['Status'] === 'RUNNING') ? 'running' : '';
             table += `  <vscode-data-grid-row class="${this.name}-row threads-row">\n`;
             for (const key of keys) {
                 const v = th[key];
                 if (typeof v !== 'object') {
                     let txt = v;
-                    const special = ((key === 'Status') && (v === 'RUNNING')) ? 'running' : '';
                     if (key === 'Stack Beg') {
                         txt = `<vscode-link class="threads-link-${makeOneWord(key)}" href="#">${v}</vscode-link>`;
                     }
-                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)} ${special}"`;
+                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)} ${running}"`;
                     table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                     col++;
                 }
