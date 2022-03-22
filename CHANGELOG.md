@@ -1,6 +1,15 @@
 ChangeLog
 =========
 
+# V1.4.1
+## New Features
+* Experimental: A memory view provided by VSCode can be launched by clicking on variables in the Variables Window. When available it is indicated by a small icon on the right edge.
+  * We don't yet allow this for all variables. Only those that are obviously pointers. So no arrays, structures, expressions, etc.
+  * VSCode is not very nice at the moment. It requests 128KB of memory (twice for one pointer) which for a lot of people could take a lot of time and it affects every time you step/pause/step. We will work with Microsoft to see if this can be customizable. If not we will remove this feature.
+  * There are some issues when the debug session ends -- like it wants to save the file to disk. But only in certain circumstances
+* Bugfix: The RTOS info is more accurate and it was failing earlier when trying to calculate Peak stack usage. The headers are now two rows and all columns are always displayed -- letting you know what else you can see provided you enable those features in FreeRTOS. The table is now more compact and colorful.
+![](https://user-images.githubusercontent.com/41269583/159561475-b9a6fe5d-4fe3-4d29-aca7-9c2cebaf8a19.png)
+
 # V1.4.0
 ## New Features
 * Hover is now much more powerful. You can expand arrays, objects, etc.

@@ -7,13 +7,6 @@ import { HrTimer, toStringDecHexOctBin } from '../../common';
 // We will have two rows of headers for FreeRTOS and the table below describes
 // the columns headers for the two rows and the width of each column as a fraction
 // of the overall space.
-interface DisplayItem {
-    width: number;
-    headerRow1: string;
-    headerRow2: string;
-    fieldName?: string;
-}
-
 enum DisplayFields {
     ID,
     Address,
@@ -30,26 +23,21 @@ enum DisplayFields {
     Runtime
 }
 
-const FieldsStrings: string[] = Object.keys(DisplayFields).filter((x) => /[^\d]/.test(x));
-const FreeRTOSItems: {[key: string]: DisplayItem} = {};
-FreeRTOSItems[FieldsStrings[DisplayFields.ID]]         = {width: 1,   headerRow1: '',        headerRow2: 'ID'};
-FreeRTOSItems[FieldsStrings[DisplayFields.Address]]    = {width: 3,   headerRow1: 'Thread',  headerRow2: 'Address'};
-FreeRTOSItems[FieldsStrings[DisplayFields.TaskName]]   = {width: 4,   headerRow1: '',        headerRow2: 'Task Name'};
-FreeRTOSItems[FieldsStrings[DisplayFields.Status]]     = {width: 3,   headerRow1: '',        headerRow2: 'Status'};
-FreeRTOSItems[FieldsStrings[DisplayFields.Priority]]   = {width: 1.5, headerRow1: 'Prio',    headerRow2: 'rity'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackStart]] = {width: 3,   headerRow1: 'Stack',   headerRow2: 'Start'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackTop]]   = {width: 3,   headerRow1: 'Stack',   headerRow2: 'Top'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackEnd]]   = {width: 3,   headerRow1: 'Stack',   headerRow2: 'End'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackSize]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Size'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackUsed]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Used'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackFree]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Free'};
-FreeRTOSItems[FieldsStrings[DisplayFields.StackPeak]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Peak'};
-FreeRTOSItems[FieldsStrings[DisplayFields.Runtime]]    = {width: 2,   headerRow1: '',        headerRow2: 'Runtime'};
-
-interface FreeRTOSThreadInfo {
-    display: {[key: string]: string};       // Each key is the string of the enum value
-    stackInfo: RTOSCommon.RTOSStackInfo;
-}
+const FreeRTOSItems: {[key: string]: RTOSCommon.DisplayItem} = {};
+FreeRTOSItems[DisplayFields[DisplayFields.ID]]         = {width: 1,   headerRow1: '',        headerRow2: 'ID'};
+FreeRTOSItems[DisplayFields[DisplayFields.Address]]    = {width: 3,   headerRow1: 'Thread',  headerRow2: 'Address'};
+FreeRTOSItems[DisplayFields[DisplayFields.TaskName]]   = {width: 4,   headerRow1: '',        headerRow2: 'Task Name'};
+FreeRTOSItems[DisplayFields[DisplayFields.Status]]     = {width: 3,   headerRow1: '',        headerRow2: 'Status'};
+FreeRTOSItems[DisplayFields[DisplayFields.Priority]]   = {width: 1.5, headerRow1: 'Prio',    headerRow2: 'rity'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackStart]] = {width: 3,   headerRow1: 'Stack',   headerRow2: 'Start'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackTop]]   = {width: 3,   headerRow1: 'Stack',   headerRow2: 'Top'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackEnd]]   = {width: 3,   headerRow1: 'Stack',   headerRow2: 'End'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackSize]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Size'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackUsed]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Used'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackFree]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Free'};
+FreeRTOSItems[DisplayFields[DisplayFields.StackPeak]]  = {width: 2,   headerRow1: 'Stack',   headerRow2: 'Peak'};
+FreeRTOSItems[DisplayFields[DisplayFields.Runtime]]    = {width: 2,   headerRow1: '',        headerRow2: 'Runtime'};
+const DisplayFieldNames: string[] = Object.keys(FreeRTOSItems);
 
 function isNullOrUndefined(x) {
     return (x === undefined) || (x === null);
@@ -74,8 +62,8 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
 
     private stale: boolean;
     private curThreadAddr: number;
-    private foundThreads: FreeRTOSThreadInfo[] = [];
-    private finalThreads: FreeRTOSThreadInfo[] = [];
+    private foundThreads: RTOSCommon.FreeRTOSThreadInfo[] = [];
+    private finalThreads: RTOSCommon.FreeRTOSThreadInfo[] = [];
     private timeInfo: string;
     private readonly maxThreads = 1024;
 
@@ -211,9 +199,9 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         // This is the order we want stuff in
                         const display: {[key: string]: string} = {};
                         const mySetter = (x: DisplayFields, v: string) => {
-                            display[FieldsStrings[x]] = v;
+                            display[DisplayFieldNames[x]] = v;
                         };
-                        const myGetter = (x: DisplayFields) => display[FieldsStrings[x]];
+                        const myGetter = (x: DisplayFields) => display[DisplayFieldNames[x]];
                         mySetter(DisplayFields.ID, thInfo['uxTCBNumber-val'] || '??');
                         mySetter(DisplayFields.Address, hexFormat(threadId));
                         mySetter(DisplayFields.TaskName, thName);
@@ -326,56 +314,8 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         } else if (this.finalThreads.length === 0) {
             return `<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`;
         }
-        
-        const colFormat = FieldsStrings.map((key) => `${FreeRTOSItems[key].width}fr`).join(' ');
-        let table = `<vscode-data-grid class="${this.name}-grid threads-grid" grid-template-columns="${colFormat}">\n`;
-        let header = '';
-        for (const thr of this.finalThreads) {
-            const th = thr.display;
-            if (!header) {
-                let col = 1;
-                const commonHeaderRowPart = '  <vscode-data-grid-row row-type="header" class="threads-header-row">\n';
-                const commonHeaderCellPart = '    <vscode-data-grid-cell cell-type="columnheader" class="threads-header-cell" grid-column=';
-                header = commonHeaderRowPart;
-                for (const key of FieldsStrings) {
-                    const txt = FreeRTOSItems[key].headerRow1;
-                    header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
-                    col++;
-                }
-                header += '  </vscode-data-grid-row>\n';
 
-                col = 1;
-                header += commonHeaderRowPart;
-                for (const key of FieldsStrings) {
-                    const txt = FreeRTOSItems[key].headerRow2;
-                    header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
-                    col++;
-                }
-                header += '  </vscode-data-grid-row>\n';
-                table += header;
-            }
-
-            let col = 1;
-            const running = (th['Status'] === 'RUNNING') ? 'running' : '';
-            table += `  <vscode-data-grid-row class="${this.name}-row threads-row">\n`;
-            for (const key of FieldsStrings) {
-                const v = th[key];
-                let txt = v;
-                if (key === 'StackStart') {
-                    txt = `<vscode-link class="threads-link-${makeOneWord(key)}" href="#">${v}</vscode-link>`;
-                }
-                const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)} ${running}"`;
-                table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
-                col++;
-            }
-            table += '  </vscode-data-grid-row>\n';
-        }
-        ret += table;
-        ret += '</vscode-data-grid>\n';
-        if (this.timeInfo) {
-            ret += `<p>Data collected at ${this.timeInfo}</p>\n`;
-        }
-
+        ret += this.getHTMLCommon(DisplayFieldNames, FreeRTOSItems, this.finalThreads, this.timeInfo);
         // console.log(ret);
         this.lastValidHtml = ret;
         return ret;
