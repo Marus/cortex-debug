@@ -318,7 +318,8 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 for (const key of keys) {
                     const v = th[key];
                     if (typeof v !== 'object') {
-                        header += `    <vscode-data-grid-cell class="${this.name}-header-cell threads-header-cell" cell-type="columnheader" grid-column="${col}">${key}</vscode-data-grid-cell>\n`;
+                        header += `    <vscode-data-grid-cell class="${this.name}-header-cell threads-header-cell" ` +
+                            `cell-type="columnheader" grid-column="${col}">${key}</vscode-data-grid-cell>\n`;
                         col++;
                     }
                 }
@@ -332,10 +333,11 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 const v = th[key];
                 if (typeof v !== 'object') {
                     let txt = v;
+                    const special = ((key === 'Status') && (v === 'RUNNING')) ? 'running' : '';
                     if (key === 'Stack Beg') {
                         txt = `<vscode-link class="threads-link-${makeOneWord(key)}" href="#">${v}</vscode-link>`;
                     }
-                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)}"`;
+                    const cls = `class="${this.name}-cell threads-cell threads-cell-${makeOneWord(key)} ${special}"`;
                     table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                     col++;
                 }
