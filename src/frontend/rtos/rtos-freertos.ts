@@ -12,11 +12,11 @@ interface FreeRTOSThreadInfo {
     'Prio': string;
     'Stack Beg': string;
     'Stack Top': string;
-    'Stack Used': string;
     'Stack End'?: string;
     'Stack Size'?: string;
-    'Stack Peak'?: string;
+    'Stack Used'?: string;
     'Stack Free'?: string;
+    'Stack Peak'?: string;
     'Runtime'?: string;
     stackInfo: RTOSCommon.RTOSStackInfo;
 }
@@ -49,6 +49,9 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
     private timeInfo: string;
     private readonly maxThreads = 1024;
 
+    // Need to do a TON of testing for stack growing the other direction
+    private stackIncrements = -1;
+
     constructor(public session: vscode.DebugSession) {
         super(session, 'FreeRTOS');
     }
@@ -61,15 +64,15 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 // and the caller may try again until we know that it definitely passed or failed. Note that while we
                 // re-try everything, we do remember what already had succeeded and don't waste time trying again. That
                 // is how this.getVarIfEmpty() works
-                this.uxCurrentNumberOfTasks = await this.getVarIfEmpty(this.uxCurrentNumberOfTasks, useFrameId, 'uxCurrentNumberOfTasks');
-                this.pxReadyTasksLists = await this.getVarIfEmpty(this.pxReadyTasksLists, useFrameId, 'pxReadyTasksLists');
-                this.xDelayedTaskList1 = await this.getVarIfEmpty(this.xDelayedTaskList1, useFrameId, 'xDelayedTaskList1');
-                this.xDelayedTaskList2 = await this.getVarIfEmpty(this.xDelayedTaskList2, useFrameId, 'xDelayedTaskList2');
-                this.xPendingReadyList = await this.getVarIfEmpty(this.xPendingReadyList, useFrameId, 'xPendingReadyList');
-                this.pxCurrentTCB = await this.getVarIfEmpty(this.pxCurrentTCB, useFrameId, 'pxCurrentTCB');
-                this.xSuspendedTaskList = await this.getVarIfEmpty(this.xSuspendedTaskList, useFrameId, 'xSuspendedTaskList', true);
-                this.xTasksWaitingTermination = await this.getVarIfEmpty(this.xTasksWaitingTermination, useFrameId, 'xTasksWaitingTermination', true);
-                this.ulTotalRunTime = await this.getVarIfEmpty(this.ulTotalRunTime, useFrameId, 'ulTotalRunTime', true);
+                this.uxCurrentNumberOfTasks = await this.getVarIfEmpty(this.uxCurrentNumberOfTasks, useFrameId, 'uxCurrentNumberOfTasks', false);
+                this.pxReadyTasksLists = await this.getVarIfEmpty(this.pxReadyTasksLists, useFrameId, 'pxReadyTasksLists', true);
+                this.xDelayedTaskList1 = await this.getVarIfEmpty(this.xDelayedTaskList1, useFrameId, 'xDelayedTaskList1', true);
+                this.xDelayedTaskList2 = await this.getVarIfEmpty(this.xDelayedTaskList2, useFrameId, 'xDelayedTaskList2', true);
+                this.xPendingReadyList = await this.getVarIfEmpty(this.xPendingReadyList, useFrameId, 'xPendingReadyList', true);
+                this.pxCurrentTCB = await this.getVarIfEmpty(this.pxCurrentTCB, useFrameId, 'pxCurrentTCB', false);
+                this.xSuspendedTaskList = await this.getVarIfEmpty(this.xSuspendedTaskList, useFrameId, 'xSuspendedTaskList', true, true);
+                this.xTasksWaitingTermination = await this.getVarIfEmpty(this.xTasksWaitingTermination, useFrameId, 'xTasksWaitingTermination', true, true);
+                this.ulTotalRunTime = await this.getVarIfEmpty(this.ulTotalRunTime, useFrameId, 'ulTotalRunTime', false, true);
                 this.status = 'initialized';
             }
             return this;
@@ -102,7 +105,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             const vars = await this.pxReadyTasksLists.getVarChildren(frameId);
                             const tmpArray = [];
                             for (const v of vars) {
-                                tmpArray.push(await this.getVarIfEmpty(undefined, frameId, v.evaluateName));
+                                tmpArray.push(await this.getVarIfEmpty(undefined, frameId, v.evaluateName, true));
                             }
                             this.pxReadyTasksListsItems = tmpArray;
                         }
@@ -183,8 +186,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                             'Status'        : (threadId === this.curThreadAddr) ? 'RUNNING' : state,
                             'Prio'          : thInfo['uxPriority-val'],
                             'Stack Beg'     : hexFormat(stackInfo.stackStart),
-                            'Stack Top'     : hexFormat(stackInfo.stackTopCurrent),
-                            'Stack Used'    : stackInfo.stackCurUsed.toString(),
+                            'Stack Top'     : hexFormat(stackInfo.stackTop),
                             'stackInfo'     : stackInfo
                         };
                         if (typeof th['ID'] !== 'string') {
@@ -193,14 +195,11 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         if (thInfo['uxBasePriority-val']) {
                             th['Prio'] += `,${thInfo['uxBasePriority-val']}`;
                         }
-                        if (stackInfo.stackSize) {
-                            th['Stack End']  = hexFormat(stackInfo.stackEnd);
-                            th['Stack Size'] = stackInfo.stackSize.toString();
-                            th['Stack Peak'] = stackInfo.stackPeakUsed ? stackInfo.stackPeakUsed.toString() : 'Read mem fail';
-                            th['Stack Free'] = stackInfo.stackFree.toString();
-                        } else {
-                            th['Stack End']  = '&lt;Unknown&gt;';
-                        }
+                        if (stackInfo.stackEnd)  { th['Stack End' ] = hexFormat(stackInfo.stackEnd);  }
+                        if (stackInfo.stackSize) { th['Stack Size'] = stackInfo.stackSize.toString(); }
+                        if (stackInfo.stackUsed) { th['Stack Used'] = stackInfo.stackUsed.toString(); }
+                        if (stackInfo.stackFree) { th['Stack Free'] = stackInfo.stackFree.toString(); }
+                        if (stackInfo.stackPeak) { th['Stack Peak'] = stackInfo.stackPeak.toString(); }
                         if (thInfo['ulRunTimeCounter-val'] && this.ulTotalRunTimeVal) {
                             const tmp = ((parseInt(thInfo['ulRunTimeCounter-val']) / this.ulTotalRunTimeVal) * 100).toFixed(2);
                             th['Runtime'] = tmp.padStart(5, '0') + '%';
@@ -225,46 +224,46 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         const pxEndOfStack = thInfo['pxEndOfStack-val'];
         const stackInfo: RTOSCommon.RTOSStackInfo = {
             stackStart: parseInt(pxStack),
-            stackTopCurrent: parseInt(pxTopOfStack),
-            stackCurUsed: 0
+            stackTop: parseInt(pxTopOfStack)
         };
-        const stackUsedCur = stackInfo.stackStart - stackInfo.stackTopCurrent;
-        stackInfo.stackCurUsed = Math.abs(stackUsedCur);
+        const stackDelta = Math.abs(stackInfo.stackTop - stackInfo.stackStart);
+        if (this.stackIncrements < 0) {
+            stackInfo.stackFree = stackDelta;
+        } else {
+            stackInfo.stackUsed = stackDelta;
+        }
 
         if (pxEndOfStack) {
             stackInfo.stackEnd = parseInt(pxEndOfStack);
-            stackInfo.stackSize = stackInfo.stackStart - stackInfo.stackEnd;
-            const incr = stackInfo.stackSize < 0 ? 1 : -1;
-            stackInfo.stackSize = Math.abs(stackInfo.stackSize);
-            stackInfo.stackFree = stackInfo.stackSize - stackInfo.stackCurUsed;
+            stackInfo.stackSize = Math.abs(stackInfo.stackStart - stackInfo.stackEnd);
+            if (this.stackIncrements < 0) {
+                stackInfo.stackUsed = stackInfo.stackSize - stackDelta;
+            } else {
+                stackInfo.stackFree = stackInfo.stackSize - stackDelta;
+            }
             const memArg: DebugProtocol.ReadMemoryArguments = {
-                memoryReference: (incr > 0) ? hexFormat(stackInfo.stackStart, 8) : hexFormat(stackInfo.stackEnd, 8),
+                memoryReference: hexFormat(Math.min(stackInfo.stackStart, stackInfo.stackEnd)),
                 count: stackInfo.stackSize
             };
             try {
-                const stackData: DebugProtocol.ReadMemoryResponse = await this.session.customRequest('readMemory', memArg);
-                const buf = Buffer.from(stackData.body?.data, 'base64');
+                const stackData = await this.session.customRequest('readMemory', memArg);
+                const buf = Buffer.from(stackData.data, 'base64');
                 stackInfo.bytes = new Uint8Array(buf);
-                if (incr < 0) { stackInfo.bytes.reverse(); }
-                let top = stackInfo.bytes.length;
-                while (top > 0) {
-                    if (stackInfo.bytes[top - 1] !== waterMark) {
+                let start = this.stackIncrements < 0 ? 0 : stackInfo.bytes.length - 1;
+                const end = this.stackIncrements < 0 ? stackInfo.bytes.length : -1;
+                let peak = 0;
+                while (start !== end) {
+                    if (stackInfo.bytes[start] !== waterMark) {
                         break;
                     }
-                    top--;
+                    start -= this.stackIncrements;
+                    peak++;
                 }
-                stackInfo.stackPeakUsed = top;
+                stackInfo.stackPeak = stackInfo.stackSize - peak;
             }
             catch (e) {
                 console.log(e);
             }
-        } else {
-            const incr = stackUsedCur < 0 ? 1 : -1;
-            const memArg: DebugProtocol.ReadMemoryArguments = {
-                memoryReference: (incr > 0) ? hexFormat(stackInfo.stackStart, 8) : hexFormat(stackInfo.stackTopCurrent, 8),
-                count: stackInfo.stackCurUsed
-            };
-            const stackData: DebugProtocol.ReadMemoryResponse = await this.session.customRequest('readMemory', memArg);
         }
         return stackInfo;
     }

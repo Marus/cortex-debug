@@ -1,6 +1,7 @@
 import { MINode } from './mi_parse';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { toStringDecHexOctBin } from '../common';
+import { hexFormat } from '../frontend/utils';
 
 export interface OurSourceBreakpoint extends DebugProtocol.SourceBreakpoint {
     file?: string;
@@ -134,6 +135,9 @@ export class VariableObject {
             },
             variablesReference: this.id
         };
+        if ((this.numchild > 0) && this.value.startsWith('0x')) {
+            res.memoryReference = hexFormat(parseInt(this.value));
+        }
 
         res.type = this.createToolTip(res.name, res.value);      // This ends up becoming a tool-tip
         return res;

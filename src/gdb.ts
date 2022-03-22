@@ -940,23 +940,33 @@ export class GDBDebugSession extends DebugSession {
     }
 
     protected readMemoryRequest(response: DebugProtocol.ReadMemoryResponse, args: DebugProtocol.ReadMemoryArguments, request?: DebugProtocol.Request): void {
-        const startAddress = args.memoryReference;
+        console.log(args);
+        const startAddress = parseInt(args.memoryReference);
         const length = args.count;
-        const offset = args.offset ? `-o ${args.offset}` : '';
-        const command = `data-read-memory-bytes ${offset} "${startAddress}" ${length}`;
+        const useAddr = hexFormat(startAddress + (args.offset || 0));
+        response.body = {
+            address: useAddr,
+            data: ''
+        };
+        if (length === 0) {
+            this.sendResponse(response);
+            return;
+        }
+        // const offset = args.offset ? `-o ${args.offset}` : '';
+        const command = `data-read-memory-bytes "${useAddr}" ${length}`;
         this.miDebugger.sendCommand(command).then((node) => {
             const results = parseReadMemResults(node);
             const numBytes = results.data.length / 2;
             const intAry = new Uint8Array(numBytes);
-            for (let ix = 0; ix < numBytes; ix++) {
-                intAry[ix] = parseInt(results.data.substring(ix * 2, 2), 16);
+            const data = results.data;
+            for (let ix = 0, dx = 0; ix < numBytes; ix++, dx += 2) {
+                // const tmp = results.data.substring(ix * 2, 2);
+                const tmp = data[dx] + data[dx + 1];
+                intAry[ix] = twoCharsToIntMap[tmp];
             }
             const buf = Buffer.from(intAry);
             const b64Data = buf.toString('base64');
-            response.body = {
-                address: results.startAddress,
-                data: b64Data
-            };
+            response.body.data = b64Data;
             this.sendResponse(response);
         }, (error) => {
             this.sendErrorResponse(response, 114, `Read memory error: ${error.toString()}`);
@@ -967,7 +977,14 @@ export class GDBDebugSession extends DebugSession {
     protected readMemoryRequestCustom(response: DebugProtocol.Response, startAddress: string, length: number) {
         this.miDebugger.sendCommand(`data-read-memory-bytes "${startAddress}" ${length}`).then((node) => {
             const results = parseReadMemResults(node);
-            const bytes = results.data.match(/[0-9a-f]{2}/g).map((b) => parseInt(b, 16));
+            // const bytes = results.data.match(/[0-9a-f]{2}/g).map((b) => parseInt(b, 16));
+            const bytes = [];
+            const numBytes = results.data.length / 2;
+            const data = results.data;
+            for (let ix = 0, dx = 0; ix < numBytes; ix++, dx += 2) {
+                const tmp = data[dx] + data[dx + 1];
+                bytes.push(twoCharsToIntMap[tmp]);
+            }
             response.body = {
                 startAddress: results.startAddress,
                 endAddress: results.endAddress,
@@ -3016,5 +3033,16 @@ function prettyStringArray(strings) {
     }
     else { return strings; }
 }
+
+function initTwoCharsToIntMap(): object {
+    const obj = {};
+    for (let i = 0; i < 256; i++) {
+        const key = i.toString(16).padStart(2, '0');
+        obj[key] = i;
+    }
+    return obj;
+}
+
+const twoCharsToIntMap = initTwoCharsToIntMap();
 
 DebugSession.run(GDBDebugSession);
