@@ -80,7 +80,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); }
         else if (config.runToMain) {
             config.runToEntryPoint = 'main';
-            vscode.window.showWarningMessage('launch.json: "runToMain" has been deprecated. Please use "runToEntryPoint" instead');
+            vscode.window.showWarningMessage(
+                'launch.json: "runToMain" has been deprecated and will not work in future versions of Cortex-Debug. Please use "runToEntryPoint" instead');
         }
 
         switch (type) {
