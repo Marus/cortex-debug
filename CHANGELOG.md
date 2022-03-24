@@ -1,6 +1,8 @@
 ChangeLog
 =========
 
+# V1.4.3
+* Bugfix: Mistake in the release. No significant change
 # V1.4.2
 
 * FreeRTOS View performance improvements

@@ -795,40 +795,45 @@ export class SymbolTable {
         return null;
     }
 
-    public loadSymbolsFromGdb(): Promise<boolean> {
-        return new Promise<boolean>(async (resolve) => {
-            const p = this.gdbSession.miDebugger.gdbVarsPromise;
-            if (!p) {
-                resolve(false);
-                return;
-            }
-            try {
-                const result = await p;
-                this.varsByFile = {};
-                const dbgInfo = result.result('symbols.debug');
-                for (const item of dbgInfo || []) {
-                    const fullname = getProp(item, 'fullname');
-                    const filename = getProp(item, 'fullname');
-                    const symbols = getProp(item, 'symbols');
-                    if (symbols && (symbols.length > 0) && (fullname || filename)) {
-                        const fInfo = new VariablesInFile(fullname || filename);
-                        for (const sym of symbols) {
-                            fInfo.add(sym);
-                        }
-                        this.varsByFile[fInfo.filename] = fInfo;
-                        if (fullname && (fullname !== fInfo.filename)) {
-                            this.varsByFile[fullname] = fInfo;
-                        }
-                        if (filename && (filename !== fInfo.filename)) {
-                            this.varsByFile[filename] = fInfo;
-                        }
-                    }
+    public loadSymbolsFromGdb(waitOn: Promise<void>): Promise<boolean> {
+        return new Promise<boolean>((resolve, reject) => {
+            waitOn.then(async () => {
+                if (!this.gdbSession.miDebugger.gdbVarsPromise) {
+                    resolve(false);
+                    return;
                 }
-                resolve(true);
-            }
-            catch (e) {
-                resolve(false);
-            }
+                try {
+                    const result = await this.gdbSession.miDebugger.gdbVarsPromise;
+                    nextTick(() => {
+                        this.varsByFile = {};
+                        const dbgInfo = result.result('symbols.debug');
+                        for (const item of dbgInfo || []) {
+                            const fullname = getProp(item, 'fullname');
+                            const filename = getProp(item, 'fullname');
+                            const symbols = getProp(item, 'symbols');
+                            if (symbols && (symbols.length > 0) && (fullname || filename)) {
+                                const fInfo = new VariablesInFile(fullname || filename);
+                                for (const sym of symbols) {
+                                    fInfo.add(sym);
+                                }
+                                this.varsByFile[fInfo.filename] = fInfo;
+                                if (fullname && (fullname !== fInfo.filename)) {
+                                    this.varsByFile[fullname] = fInfo;
+                                }
+                                if (filename && (filename !== fInfo.filename)) {
+                                    this.varsByFile[filename] = fInfo;
+                                }
+                            }
+                        }
+                    });
+                    resolve(true);
+                }
+                catch (e) {
+                    reject(e);
+                }
+            }, (e) => {
+                reject(e);
+            });
         });
     }
     
