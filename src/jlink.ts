@@ -197,7 +197,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     }
 
     public initMatch(): RegExp {
-        return /Waiting for GDB connection\.\.\./g;
+        return /Waiting for GDB connection/g;
     }
 
     public serverLaunchStarted(): void {}

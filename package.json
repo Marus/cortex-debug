@@ -1,5 +1,5 @@
 {
-    "version": "1.4.1",
+    "version": "1.4.2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -2544,11 +2544,12 @@
                 "configurationSnippets": [
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
+                            "cwd": "^\"\\${workspaceFolder}\"",
                             "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
+                            "name": "${6:Debug with JLink}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "device": "",
                             "runToEntryPoint": "main",
                             "showDevDebugOutput": "none",
                             "servertype": "jlink"
@@ -2560,21 +2561,23 @@
                         "body": {
                             "cwd": "^\"\\${workspaceRoot}\"",
                             "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
+                            "name": "${6:Debug with OpenOCD}",
                             "request": "launch",
                             "type": "cortex-debug",
+                            "servertype": "openocd",
+                            "configFiles": [],
+                            "searchDir": [],
                             "runToEntryPoint": "main",
-                            "showDevDebugOutput": "none",
-                            "servertype": "openocd"
+                            "showDevDebugOutput": "none"
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + OpenOCD",
                         "label": "Cortex Debug: OpenOCD"
                     },
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
+                            "cwd": "^\"\\${workspaceFolder}\"",
                             "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
+                            "name": "${6:Debug with ST-Util}",
                             "request": "launch",
                             "type": "cortex-debug",
                             "runToEntryPoint": "main",
@@ -2586,9 +2589,9 @@
                     },
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
+                            "cwd": "^\"\\${workspaceFolder}\"",
                             "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
+                            "name": "${6:Debug with ST-Link}",
                             "request": "launch",
                             "type": "cortex-debug",
                             "runToEntryPoint": "main",
@@ -2600,9 +2603,9 @@
                     },
                     {
                         "body": {
-                            "cwd": "^\"\\${workspaceRoot}\"",
+                            "cwd": "^\"\\${workspaceFolder}\"",
                             "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug Microcontroller}",
+                            "name": "${6:Debug with PyOCD}",
                             "request": "launch",
                             "type": "cortex-debug",
                             "runToEntryPoint": "main",
@@ -2616,7 +2619,7 @@
                 "initialConfigurations": [
                     {
                         "name": "Cortex Debug",
-                        "cwd": "${workspaceRoot}",
+                        "cwd": "${workspaceFolder}",
                         "executable": "./bin/executable.elf",
                         "request": "launch",
                         "type": "cortex-debug",

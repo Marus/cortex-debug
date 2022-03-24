@@ -150,12 +150,12 @@ export abstract class RTOSBase {
     //   * If optional, return null
     //   * If not optional, Throws an exception
     //
-    protected async getVarIfEmpty(prev: RTOSVarHelper, fId: number, expr: string, skipRefresh: boolean, opt?: boolean): Promise<RTOSVarHelper> {
+    protected async getVarIfEmpty(prev: RTOSVarHelper, fId: number, expr: string, opt?: boolean): Promise<RTOSVarHelper> {
         try {
             if ((prev !== undefined) || (this.progStatus !== 'stopped')) {
                 return prev;
             }
-            const tmp = new RTOSVarHelper(expr, this, skipRefresh);
+            const tmp = new RTOSVarHelper(expr, this);
             await tmp.tryInitOrUpdate(fId);
             if (isNullOrUndefined(tmp.value)) {
                 if (!opt) {
@@ -173,7 +173,7 @@ export abstract class RTOSBase {
     protected async getExprVal(expr: string, frameId: number): Promise<string> {
         let exprVar = this.exprValues.get(expr);
         if (!exprVar) {
-            exprVar = new RTOSVarHelper(expr, this, false);
+            exprVar = new RTOSVarHelper(expr, this);
         }
         return exprVar.getValue(frameId);
     }
@@ -181,7 +181,7 @@ export abstract class RTOSBase {
     protected async getExprValChildren(expr: string, frameId: number): Promise<DebugProtocol.Variable[]> {
         let exprVar = this.exprValues.get(expr);
         if (!exprVar) {
-            exprVar = new RTOSVarHelper(expr, this, false);
+            exprVar = new RTOSVarHelper(expr, this);
         }
         return exprVar.getVarChildren(frameId);
     }
@@ -245,11 +245,11 @@ export abstract class RTOSBase {
             for (const key of displayFidldNames) {
                 const v = th[key];
                 let txt = v;
-                const lkey = key.toLowerCase();
+                const lKey = key.toLowerCase();
                 if (key === 'StackStart') {
-                    txt = `<vscode-link class="threads-link-${lkey}" href="#">${v}</vscode-link>`;
+                    txt = `<vscode-link class="threads-link-${lKey}" href="#">${v}</vscode-link>`;
                 }
-                const cls = `class="${this.name}-cell threads-cell threads-cell-${lkey} ${running}"`;
+                const cls = `class="${this.name}-cell threads-cell threads-cell-${lKey} ${running}"`;
                 table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                 col++;
             }
@@ -270,16 +270,7 @@ export class RTOSVarHelper {
     public varReference: number;
     public value: string;
     
-    //
-    // skipRefresh can be true for global variable for struct or array or something that can
-    // never change over the life of the program. It should never be true for scalar values
-    // (yes even pointers because technically they themselves are scalar). When we ask gdb for
-    // children of a array/struct, we never have to update the gdb-variable itself, instead
-    // we just ask for the children of a previously created gdb-variable. For scalars, the
-    // gdb-variable itself has to be updated. This even applies to a pointer to a global variable
-    // like '&myGlobalVar.
-    //
-    constructor(public expression: string, public rtos: RTOSBase, public skipRefresh: boolean) {
+    constructor(public expression: string, public rtos: RTOSBase) {
     }
 
     public static varsToObj(vars: DebugProtocol.Variable[]) {
@@ -333,32 +324,26 @@ export class RTOSVarHelper {
 
     public getVarChildren(frameId: number): Promise<DebugProtocol.Variable[]> {
         return new Promise<DebugProtocol.Variable[]> ((resolve, reject) => {
-            const getChildren = () => {
-                const arg: DebugProtocol.VariablesArguments = {
-                    variablesReference: this.varReference
-                };
-                this.rtos.session.customRequest('variables', arg).then((result: any) => {
-                    if (!result || !result.variables || !result.variables.length) {
-                        reject(Error(`Failed to evaluate variable ${this.expression} ${arg.variablesReference}`));
-                    } else {
-                        resolve(result.variables);
-                    }
-                }, (e) => {
-                    reject(e);
-                });
-            };
-            
             if (this.rtos.progStatus !== 'stopped') {
                 return reject(new Error(`busy, failed on ${this.expression}`));
-            } else if (this.skipRefresh) {
-                getChildren();
             } else {
                 this.getValue(frameId).then((str) => {
                     if (!this.varReference || !str) {
                         reject(Error(`Failed to get variable reference for ${this.expression}`));
                         return;
                     }
-                    getChildren();
+                    const arg: DebugProtocol.VariablesArguments = {
+                        variablesReference: this.varReference
+                    };
+                    this.rtos.session.customRequest('variables', arg).then((result: any) => {
+                        if (!result || !result.variables || !result.variables.length) {
+                            reject(Error(`Failed to evaluate variable ${this.expression} ${arg.variablesReference}`));
+                        } else {
+                            resolve(result.variables);
+                        }
+                    }, (e) => {
+                        reject(e);
+                    });
                 }, (e) => {
                     reject(e);
                 });

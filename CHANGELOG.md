@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+# V1.4.2
+
+* FreeRTOS View performance improvements
+* FreeRTOS View now provides FW hints for missing information
+
 # V1.4.1
 ## New Features
 * Experimental: A memory view provided by VSCode can be launched by clicking on variables in the Variables Window. When available it is indicated by a small icon on the right edge.

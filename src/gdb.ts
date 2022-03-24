@@ -385,6 +385,7 @@ export class GDBDebugSession extends DebugSession {
         }
         const symbolsPromise = this.loadSymbols();      // This is totally async and in most cases, done while gdb is starting
         const gdbPromise = this.startGdb(response);
+        const gdbInfoVariables = this.symbolTable.loadSymbolsFromGdb();
         const usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
         this.getTCPPorts(usingParentServer).then(() => {
             const executable = usingParentServer ? null : this.serverController.serverExecutable();
@@ -451,14 +452,25 @@ export class GDBDebugSession extends DebugSession {
                     `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
                 ];
                 try {
-                    // This is where 4 things meet
+                    // This is where 4 things meet and they must all finish (in any order) before we can proceed
                     // 1. Gdb has been started
-                    // 2. We read the symbols for ourselves
-                    // 3,4. Found free TCP ports and launched gdb-server
+                    // 2. We read the symbols from gdb
+                    // 3. Found free TCP ports and launched gdb-server
+                    // 4. Finished reading symbols from objdump and nm
+                    const showTimes = this.args.showDevDebugOutput && this.args.showDevDebugTimestamps;
                     await gdbPromise;
-                    await this.symbolTable.loadSymbolsFromGdb();
-                    await symbolsPromise;
+                    if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Ready...\n'); }
+                                      
+                    await gdbInfoVariables;
+                    if (showTimes) { this.handleMsg('log', 'Debug Time: GDB info variables done...\n'); }
+
                     await this.serverController.serverLaunchCompleted();
+                    if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Server post start events done...\n'); }
+                      
+                    await symbolsPromise;
+                    if (showTimes) { this.handleMsg('log', 'Debug Time: objdump and nm done...\n'); }
+                    if (showTimes) { this.handleMsg('log', 'Debug Time: All pending items done, proceed to gdb connect...\n'); }
+
                     this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
 
                     if (!this.args.variableUseNaturalFormat) {

@@ -50,7 +50,6 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
     private uxCurrentNumberOfTasks: RTOSCommon.RTOSVarHelper;
     private uxCurrentNumberOfTasksVal: number;
     private pxReadyTasksLists: RTOSCommon.RTOSVarHelper;
-    private pxReadyTasksListsItems: RTOSCommon.RTOSVarHelper[];
     private xDelayedTaskList1: RTOSCommon.RTOSVarHelper;
     private xDelayedTaskList2: RTOSCommon.RTOSVarHelper;
     private xPendingReadyList: RTOSCommon.RTOSVarHelper;
@@ -66,6 +65,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
     private finalThreads: RTOSCommon.FreeRTOSThreadInfo[] = [];
     private timeInfo: string;
     private readonly maxThreads = 1024;
+    private helpHtml: string = undefined;
 
     // Need to do a TON of testing for stack growing the other direction
     private stackIncrements = -1;
@@ -82,15 +82,15 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 // and the caller may try again until we know that it definitely passed or failed. Note that while we
                 // re-try everything, we do remember what already had succeeded and don't waste time trying again. That
                 // is how this.getVarIfEmpty() works
-                this.uxCurrentNumberOfTasks = await this.getVarIfEmpty(this.uxCurrentNumberOfTasks, useFrameId, 'uxCurrentNumberOfTasks', false);
-                this.pxReadyTasksLists = await this.getVarIfEmpty(this.pxReadyTasksLists, useFrameId, 'pxReadyTasksLists', true);
-                this.xDelayedTaskList1 = await this.getVarIfEmpty(this.xDelayedTaskList1, useFrameId, 'xDelayedTaskList1', true);
-                this.xDelayedTaskList2 = await this.getVarIfEmpty(this.xDelayedTaskList2, useFrameId, 'xDelayedTaskList2', true);
-                this.xPendingReadyList = await this.getVarIfEmpty(this.xPendingReadyList, useFrameId, 'xPendingReadyList', true);
-                this.pxCurrentTCB = await this.getVarIfEmpty(this.pxCurrentTCB, useFrameId, 'pxCurrentTCB', false);
-                this.xSuspendedTaskList = await this.getVarIfEmpty(this.xSuspendedTaskList, useFrameId, 'xSuspendedTaskList', true, true);
-                this.xTasksWaitingTermination = await this.getVarIfEmpty(this.xTasksWaitingTermination, useFrameId, 'xTasksWaitingTermination', true, true);
-                this.ulTotalRunTime = await this.getVarIfEmpty(this.ulTotalRunTime, useFrameId, 'ulTotalRunTime', false, true);
+                this.uxCurrentNumberOfTasks = await this.getVarIfEmpty(this.uxCurrentNumberOfTasks, useFrameId, 'uxCurrentNumberOfTasks');
+                this.pxReadyTasksLists = await this.getVarIfEmpty(this.pxReadyTasksLists, useFrameId, 'pxReadyTasksLists');
+                this.xDelayedTaskList1 = await this.getVarIfEmpty(this.xDelayedTaskList1, useFrameId, 'xDelayedTaskList1');
+                this.xDelayedTaskList2 = await this.getVarIfEmpty(this.xDelayedTaskList2, useFrameId, 'xDelayedTaskList2');
+                this.xPendingReadyList = await this.getVarIfEmpty(this.xPendingReadyList, useFrameId, 'xPendingReadyList');
+                this.pxCurrentTCB = await this.getVarIfEmpty(this.pxCurrentTCB, useFrameId, 'pxCurrentTCB');
+                this.xSuspendedTaskList = await this.getVarIfEmpty(this.xSuspendedTaskList, useFrameId, 'xSuspendedTaskList', true);
+                this.xTasksWaitingTermination = await this.getVarIfEmpty(this.xTasksWaitingTermination, useFrameId, 'xTasksWaitingTermination', true);
+                this.ulTotalRunTime = await this.getVarIfEmpty(this.ulTotalRunTime, useFrameId, 'ulTotalRunTime', true);
                 this.status = 'initialized';
             }
             return this;
@@ -100,6 +100,74 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
             this.failedWhy = e;
             return this;
         }
+    }
+
+    protected createHmlHelp(th: RTOSCommon.FreeRTOSThreadInfo, thInfo: object) {
+        if (this.helpHtml === undefined) {
+            this.helpHtml = '';
+            try {
+                let ret: string = '';
+                function strong(s) {
+                    return `<strong>${s}</strong>`;
+                }
+                if (!thInfo['uxTCBNumber-val']) {
+                    ret += `Thread ID missing......: Enable macro ${strong('configUSE_TRACE_FACILITY')} in FW<br>`;
+                }
+                if (!th.stackInfo.stackEnd) {
+                    ret += `Stack End missing......: Enable macro ${strong('configRECORD_STACK_HIGH_ADDRESS')} in FW<br>`;
+                }
+                if ((thInfo['pcTaskName-val'] === '[0]') || (thInfo['pcTaskName-val'] === '[1]')) {
+                    ret += `Thread Name missing....: Set macro ${strong('configMAX_TASK_NAME_LEN')} to something greater than 1 in FW<br>`;
+                }
+
+                if (!this.ulTotalRunTime) {
+                    ret += /*html*/`<br>Missing Runtime stats..:<br>
+                    /* To get runtime stats, modify the following macro in FreeRTOSConfig.h */<br>
+                    #define ${strong('configGENERATE_RUN_TIME_STATS')}             1 /* 1: generate runtime statistics; 0: no runtime statistics */<br>
+                    /* Also, add the following two macros to provide a high speed counter -- something at least 10x faster than<br>
+                    ** your RTOS scheduler tick. One strategy could be to use a HW counter and sample its current value when needed<br>
+                    */<br>
+                    #define ${strong('portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()')} /* Define this to initialize your timer */<br>
+                    #define ${strong('portGET_RUN_TIME_COUNTER_VALUE()')}${'&nbsp'.repeat(9)}/* Define this to sample the counter */<br>
+                    `;
+                }
+                if (ret) {
+                    ret += '<br>Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
+                    ret = '<button class="help-button">Hints to get more out of the FreeRTOS viewer</button>\n' +
+                        `<div class="help"><p>\n${ret}\n</p></div>\n`;
+                    this.helpHtml = ret;
+                }
+            }
+            catch (e) {
+                console.log(e);
+            }
+        }
+    }
+
+    private updateCurrentThreadAddr(frameId: number): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.pxCurrentTCB.getValue(frameId).then((ret) => {
+                this.curThreadAddr = parseInt(ret);
+                resolve();
+            }, (e) => {
+                reject(e);
+            });
+        });
+    }
+
+    private updateTotalRuntime(frameId: number): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (!this.ulTotalRunTime) {
+                resolve();
+                return;
+            }
+            this.ulTotalRunTime.getValue(frameId).then((ret) => {
+                this.ulTotalRunTimeVal = parseInt(ret);
+                resolve();
+            }, (e) => {
+                reject(e);
+            });
+        });
     }
 
     public refresh(frameId: number): Promise<void> {
@@ -119,34 +187,33 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 try {
                     this.uxCurrentNumberOfTasksVal = str ? parseInt(str) : Number.MAX_SAFE_INTEGER;
                     if ((this.uxCurrentNumberOfTasksVal > 0) && (this.uxCurrentNumberOfTasksVal <= this.maxThreads)) {
-                        if (this.pxReadyTasksListsItems === undefined) {
-                            const vars = await this.pxReadyTasksLists.getVarChildren(frameId);
-                            const tmpArray = [];
-                            for (const v of vars) {
-                                tmpArray.push(await this.getVarIfEmpty(undefined, frameId, v.evaluateName, true));
+                        let promises = [];
+                        const ary = await this.pxReadyTasksLists.getVarChildren(frameId);
+                        for (const v of ary) {
+                            promises.push(this.getThreadInfo(v.variablesReference, 'READY', frameId));
+                        }
+                        promises.push(this.updateCurrentThreadAddr(frameId));
+                        promises.push(this.updateTotalRuntime(frameId));
+                        // Update in bulk, but broken up into three chunks, if the number of threads are already fullfilled, then
+                        // not much happens
+                        await Promise.all(promises);
+                        promises = [];
+                        promises.push(this.getThreadInfo(this.xDelayedTaskList1, 'BLOCKED', frameId));
+                        promises.push(this.getThreadInfo(this.xDelayedTaskList2, 'BLOCKED', frameId));
+                        promises.push(this.getThreadInfo(this.xPendingReadyList, 'PENDING', frameId));
+                        await Promise.all(promises);
+                        promises = [];
+                        promises.push(this.getThreadInfo(this.xSuspendedTaskList, 'SUSPENDED', frameId));
+                        promises.push(this.getThreadInfo(this.xTasksWaitingTermination, 'TERMINATED', frameId));
+                        await Promise.all(promises);
+                        promises = [];
+                        if (this.foundThreads.length > 0) {
+                            const th = this.foundThreads[0];
+                            if (th['ID'] !== '??') {
+                                this.foundThreads.sort((a, b) => parseInt(a.display['ID']) - parseInt(b.display['ID']));
+                            } else {
+                                this.foundThreads.sort((a, b) => parseInt(a.display['Address']) - parseInt(b.display['Address']));
                             }
-                            this.pxReadyTasksListsItems = tmpArray;
-                        }
-                        if (this.ulTotalRunTime) {
-                            const tmp = await this.ulTotalRunTime.getValue(frameId);
-                            this.ulTotalRunTimeVal = parseInt(tmp);
-                        }
-                        const cur = await this.pxCurrentTCB.getValue(frameId);
-                        this.curThreadAddr = parseInt(cur);
-                        let ix = 0;
-                        for (const item of this.pxReadyTasksListsItems) {
-                            await this.getThreadInfo(item, 'READY', frameId);
-                            ix++;
-                        }
-                        await this.getThreadInfo(this.xDelayedTaskList1, 'BLOCKED', frameId);
-                        await this.getThreadInfo(this.xDelayedTaskList2, 'BLOCKED', frameId);
-                        await this.getThreadInfo(this.xPendingReadyList, 'BLOCKED', frameId);
-                        await this.getThreadInfo(this.xSuspendedTaskList, 'SUSPENDED', frameId);
-                        await this.getThreadInfo(this.xTasksWaitingTermination, 'TERMINATED', frameId);
-                        if (this.foundThreads[0]['ID'] !== '??') {
-                            this.foundThreads.sort((a, b) => parseInt(a.display['ID']) - parseInt(b.display['ID']));
-                        } else {
-                            this.foundThreads.sort((a, b) => parseInt(a.display['Address']) - parseInt(b.display['Address']));
                         }
                         this.finalThreads = [...this.foundThreads];
                         // console.table(this.finalThreads);
@@ -168,9 +235,9 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         });
     }
 
-    private getThreadInfo(varRef: RTOSCommon.RTOSVarHelper, state: string, frameId: number): Promise<void> {
+    private getThreadInfo(varRef: RTOSCommon.RTOSVarHelper | number, state: string, frameId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            if (!varRef || !varRef.varReference || (this.foundThreads.length >= this.uxCurrentNumberOfTasksVal)) {
+            if (!varRef || ((typeof varRef !== 'number') && !varRef.varReference) || (this.foundThreads.length >= this.uxCurrentNumberOfTasksVal)) {
                 resolve();
                 return;
             }
@@ -178,7 +245,13 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 reject(new Error('Busy'));
                 return;
             }
-            varRef.getVarChildrenObj(frameId).then(async (obj) => {
+            let promise;
+            if (typeof varRef !== 'number') {
+                promise = varRef.getVarChildrenObj(frameId);
+            } else {
+                promise = this.getVarChildrenObj(varRef, 'task-list');
+            }
+            promise.then(async (obj) => {
                 const threadCount = parseInt(obj['uxNumberOfItems-val']);
                 const listEndRef = obj['xListEnd-ref'];
                 if ((threadCount <= 0) || !listEndRef) {
@@ -226,7 +299,11 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         } else {
                             mySetter(DisplayFields.Runtime, '??.??%');
                         }
-                        this.foundThreads.push({display: display, stackInfo: stackInfo});
+                        const thread: RTOSCommon.FreeRTOSThreadInfo = {
+                            display: display, stackInfo: stackInfo
+                        };
+                        this.foundThreads.push(thread);
+                        this.createHmlHelp(thread, thInfo);
                         curRef = element['pxPrevious-ref'];
                     }
                     resolve();
@@ -316,9 +393,9 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         }
 
         ret += this.getHTMLCommon(DisplayFieldNames, FreeRTOSItems, this.finalThreads, this.timeInfo);
-        // console.log(ret);
-        this.lastValidHtml = ret;
-        return ret;
+        this.lastValidHtml = ret + (this.helpHtml || '');
+        console.log(this.lastValidHtml);
+        return this.lastValidHtml;
     }
 }
 

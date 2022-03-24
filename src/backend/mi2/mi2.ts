@@ -90,7 +90,8 @@ export class MI2 extends EventEmitter implements IBackend {
 
             this.sendCommand('gdb-set target-async on', true).then(() => {
                 this.actuallyStarted = true;
-                this.sendCommand('gdb-version', false, true, true).then((v: MINode) => {
+                const swallOutput = this.debugOutput ? false : true;
+                this.sendCommand('gdb-version', false, true, swallOutput).then((v: MINode) => {
                     const str = v.output;
                     this.parseVersionInfo(str);
                     const promises = init.map((c) => this.sendCommand(c));
@@ -926,8 +927,8 @@ export class MI2 extends EventEmitter implements IBackend {
         }
     }
 
-    public sendRaw(raw: string) {
-        if (this.debugOutput || trace) {
+    public sendRaw(raw: string, doTrace = false) {
+        if (this.debugOutput || doTrace || trace) {
             this.log('log', raw);
         }
         this.process.stdin.write(raw + '\n');   // Sometimes, process is already null
@@ -937,6 +938,7 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.currentToken;
     }
 
+    private saveDebugOutput: ADAPTER_DEBUG_MODE = undefined;
     public sendCommand(command: string, suppressFailure = false, swallowStdout = false, forceNoDebug = false): Thenable<MINode> {
         const sel = this.currentToken++;
         return new Promise((resolve, reject) => {
@@ -953,6 +955,12 @@ export class MI2 extends EventEmitter implements IBackend {
             };
             if (swallowStdout) {
                 this.needOutput[sel] = '';
+            }
+            if (!this.saveDebugOutput && this.debugOutput) {
+                // Once debug is enable, we always output commands being sent and use this during the
+                // call to sendRaw() because the forceNoDebug can turn off commands being queued until
+                // that particular command returns.
+                this.saveDebugOutput = this.debugOutput;
             }
             const save = this.debugOutput;
             if (forceNoDebug && this.debugOutput) {
@@ -979,7 +987,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 this.lastContinueSeqId = sel;
             }
             try {
-                this.sendRaw(sel + '-' + command);
+                this.sendRaw(sel + '-' + command, !!this.saveDebugOutput);
             }
             catch (e) {
                 if (forceNoDebug) {

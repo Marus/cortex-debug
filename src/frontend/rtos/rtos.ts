@@ -449,7 +449,6 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
 				<title>RTOS Threads</title>
 			</head>
 			<body>
-                <!--vscode-button id="refresh-button" appearance="primary">Refresh</vscode-button-->
                 ${body}
                 <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
 				<script type="module" nonce="${nonce}" src="${scriptUri}"></script>

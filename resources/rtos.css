@@ -33,3 +33,39 @@ vscode-link {
   color: var(--vscode-symbolIcon-classForeground);
   font-weight:bold;
 }
+
+.help-button {
+  font-style: italic;
+  color: var(--vscode-textLink-activeForeground);
+  background-color: var(--vscode-textBlockQuote-background);
+  cursor: pointer;
+  padding: 4px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+.help-button:after {
+  content: '\002B';
+  font-weight: bold;
+  float: right;
+  margin-left: 5px;
+}
+
+.active:after {
+  content: "\2212";
+}
+
+.help {
+  padding: 0 18px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+
+  background-color: var(--vscode-textBlockQuote-background);
+  font-family: var(--vscode-editor-font-family);
+  font-weight: var(--vscode-editor-font-weight);
+  font-size: var(--vscode-editor-font-size);  
+}

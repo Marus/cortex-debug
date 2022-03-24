@@ -9,9 +9,30 @@ window.addEventListener("load", main);
 // Main function that gets executed once the webview DOM loads
 function main() {
   const refreshButton = document.getElementById("refresh-button");
-  refreshButton.addEventListener("click", refreshClicked);
+  if (refreshButton) {
+    refreshButton.addEventListener("click", refreshClicked);
+  }
 
   setVSCodeMessageListener();
+
+  setupHelpButton();
+}
+
+function setupHelpButton () {
+  var coll = document.getElementsByClassName("help-button");
+  var i;
+
+  for (i = 0; i < coll.length; i++) {
+    coll[i].addEventListener("click", function() {
+      this.classList.toggle("active");
+      var content = this.nextElementSibling;
+      if (content.style.maxHeight){
+        content.style.maxHeight = null;
+      } else {
+        content.style.maxHeight = content.scrollHeight + "px";
+      } 
+    });
+  }
 }
 
 function refreshClicked() {
