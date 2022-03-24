@@ -394,7 +394,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
 
         ret += this.getHTMLCommon(DisplayFieldNames, FreeRTOSItems, this.finalThreads, this.timeInfo);
         this.lastValidHtml = ret + (this.helpHtml || '');
-        console.log(this.lastValidHtml);
+        // console.log(this.lastValidHtml);
         return this.lastValidHtml;
     }
 }
