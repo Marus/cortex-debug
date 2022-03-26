@@ -1,6 +1,9 @@
 ChangeLog
 =========
 
+# V1.4.4
+* Bugfix: $619, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes
+  
 # V1.4.3
 * Bugfix: Mistake in the release. No significant change
 # V1.4.2
