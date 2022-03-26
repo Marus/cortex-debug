@@ -65,7 +65,7 @@ export class MI2 extends EventEmitter implements IBackend {
     public pid: number = -1;
     protected lastContinueSeqId = -1;
     protected actuallyStarted = false;
-    public gdbVarsPromise: Promise<MINode> = null;
+    // public gdbVarsPromise: Promise<MINode> = null;
 
     constructor(public application: string, public args: string[]) {
         super();
@@ -96,6 +96,8 @@ export class MI2 extends EventEmitter implements IBackend {
                     this.parseVersionInfo(str);
                     const promises = init.map((c) => this.sendCommand(c));
                     Promise.all(promises).then(() => {
+                        /*
+                        gdb crashes or runs out of memory with the following
                         if (this.gdbMajorVersion >= 9) {
                             this.gdbVarsPromise = new Promise((resolve) => {
                                 this.sendCommand('symbol-info-variables', false, false, true).then((x) => {
@@ -105,6 +107,7 @@ export class MI2 extends EventEmitter implements IBackend {
                                 });
                             });
                         }
+                        */
                         resolve();
                     }, reject);
                 }, () => {
@@ -927,8 +930,8 @@ export class MI2 extends EventEmitter implements IBackend {
         }
     }
 
-    public sendRaw(raw: string, doTrace = false) {
-        if (this.debugOutput || doTrace || trace) {
+    public sendRaw(raw: string) {
+        if (this.debugOutput || trace) {
             this.log('log', raw);
         }
         this.process.stdin.write(raw + '\n');   // Sometimes, process is already null
@@ -938,42 +941,37 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.currentToken;
     }
 
-    private saveDebugOutput: ADAPTER_DEBUG_MODE = undefined;
-    public sendCommand(command: string, suppressFailure = false, swallowStdout = false, forceNoDebug = false): Thenable<MINode> {
+    public isRunning(): boolean {
+        return !!this.process;
+    }
+
+    public sendOneCommand(args: SendCommaindIF): Thenable<MINode> {
         const sel = this.currentToken++;
         return new Promise((resolve, reject) => {
             const errReport = (arg: MINode | Error) => {
                 const nd = arg as MINode;
-                if (suppressFailure && nd) {
-                    this.log('stderr', `WARNING: Error executing command '${command}'`);
+                if (args.suppressFailure && nd) {
+                    this.log('stderr', `WARNING: Error executing command '${args.command}'`);
                     resolve(nd);
                 } else if (!nd) {
-                    reject(new MIError(arg ? arg.toString() : 'Unknown error', command));
+                    reject(new MIError(arg ? arg.toString() : 'Unknown error', args.command));
                 } else {
-                    reject(new MIError(nd.result('msg') || 'Internal error', command));
+                    reject(new MIError(nd.result('msg') || 'Internal error', args.command));
                 }
             };
-            if (swallowStdout) {
+            if (args.swallowStdout) {
                 this.needOutput[sel] = '';
             }
-            if (!this.saveDebugOutput && this.debugOutput) {
-                // Once debug is enable, we always output commands being sent and use this during the
-                // call to sendRaw() because the forceNoDebug can turn off commands being queued until
-                // that particular command returns.
-                this.saveDebugOutput = this.debugOutput;
-            }
             const save = this.debugOutput;
-            if (forceNoDebug && this.debugOutput) {
-                this.log('log', `Suppressing output for '${sel}-${command}'`);
+            if (args.forceNoDebug && this.debugOutput) {
+                this.log('log', `Suppressing output for '${sel}-${args.command}'`);
                 // We need to be more sophisticated than this. There could be other commands in flight
                 // We should do this how we do the swallowStdout
                 this.debugOutput = undefined;
             }
             this.handlers[sel] = (node: MINode) => {
-                if (forceNoDebug) {
-                    this.debugOutput = save;
-                }
-                if (swallowStdout) {
+                this.debugOutput = save;
+                if (args.swallowStdout) {
                     delete this.needOutput[sel];
                 }
                 if (node.resultRecords.resultClass === 'error') {
@@ -983,22 +981,56 @@ export class MI2 extends EventEmitter implements IBackend {
                     resolve(node);
                 }
             };
-            if (command.startsWith('exec-continue')) {
+            if (args.command.startsWith('exec-continue')) {
                 this.lastContinueSeqId = sel;
             }
             try {
-                this.sendRaw(sel + '-' + command, !!this.saveDebugOutput);
+                this.sendRaw(sel + '-' + args.command);
             }
             catch (e) {
-                if (forceNoDebug) {
-                    this.debugOutput = save;
-                }
+                this.debugOutput = save;
                 errReport(e);
             }
         });
     }
 
-    public isRunning(): boolean {
-        return !!this.process;
+    private commandQueue: SendCommaindIF[] = [];
+    private commandQueueBusy = false;
+    public sendCommand(command: string, suppressFailure = false, swallowStdout = false, forceNoDebug = false): Thenable<MINode> {
+        // We queue these requests as there can be a flood of them. Especially if you have two variables or same name back to back
+        // the second can fail because we are still in the process of creating that variable (update, fail, then create). Sources
+        // for requests are from RTOS viewers, watch windows and hover. Even a watch window can have duplicates.
+        return new Promise(async (resolve, reject) => {
+            const args: SendCommaindIF = {
+                command: command,
+                suppressFailure: suppressFailure,
+                swallowStdout: swallowStdout,
+                forceNoDebug: forceNoDebug,
+                resolve: resolve,
+                reject: reject
+            };
+            this.commandQueue.push(args);
+            while (!this.commandQueueBusy && (this.commandQueue.length > 0)) {
+                this.commandQueueBusy = true;
+                const obj = this.commandQueue.shift();
+                try {
+                    const result = await this.sendOneCommand(obj);
+                    obj.resolve(result);
+                }
+                catch (e) {
+                    obj.reject(e);
+                }
+                this.commandQueueBusy = false;
+            }
+        });
     }
+
+}
+
+interface SendCommaindIF {
+    command: string;
+    suppressFailure: boolean;
+    swallowStdout: boolean;
+    forceNoDebug: boolean;
+    resolve, reject: any;
 }

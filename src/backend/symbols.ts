@@ -805,6 +805,7 @@ export class SymbolTable {
                     resolve(true);
                     return;
                 }
+                /*
                 if (!this.gdbSession.miDebugger.gdbVarsPromise) {
                     resolve(false);
                     return;
@@ -838,6 +839,7 @@ export class SymbolTable {
                 catch (e) {
                     reject(e);
                 }
+                */
             }, (e) => {
                 reject(e);
             });
