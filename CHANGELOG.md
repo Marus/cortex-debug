@@ -2,7 +2,9 @@ ChangeLog
 =========
 
 # V1.4.4
-* Bugfix: $619, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes
+* Bugfix: $618, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes or runs out of memory
+* Bugfix: Implemented a workaround for VSCode issue with pause not working if neither `breakOnReset` or `runToEntryPoint` is set.
+* Bugfix: Workaround a gdb issue where it loses track of current thread when the current thread is deleted. This caused gdb `continue` to not work as expected. It may actually be a problem in the gdb-server as opposed to gdb itself as it reports a thread being delted after a breakpoint/pause.
   
 # V1.4.3
 * Bugfix: Mistake in the release. No significant change
