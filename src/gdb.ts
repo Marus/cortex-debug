@@ -707,10 +707,11 @@ export class GDBDebugSession extends DebugSession {
     private async sendContinue(wait: boolean = false) {
         this.continuing = true;
         try {
+            const cmd = 'exec-continue --all';
             if (wait) {
-                await this.miDebugger.sendCommand('exec-continue');
+                await this.miDebugger.sendCommand(cmd);
             } else {
-                this.miDebugger.sendCommand('exec-continue').then((done) => {
+                this.miDebugger.sendCommand(cmd).then((done) => {
                     // Nothing to do
                 }, (e) => {
                     throw e;
@@ -791,21 +792,32 @@ export class GDBDebugSession extends DebugSession {
                 if (this.args.noDebug || (shouldContinue && this.isMIStatusStopped())) {
                     if ((mode === SessionMode.LAUNCH) && !this.args.breakAfterReset) {
                         // This is a total hack. We should be able to continue but VSCode is confused at our state
-                        // unless we let it query the thread-id's at least once in the session. Or, even though the button
+                        // unless we let it query the thread-id's and stacktrace at least once in the session. Or, even though the button
                         // state is right we never get interrupt (pause) requests when user presses on it.
-                        const interval = 5;
-                        let tries = 250 / interval;
-                        this.threadIdsCalledHack = false;
+                        // Another thing is if we want to continue after a reset (no breakAfterReset or runToEntryPoint) and if there
+                        // is no source for the reset vector, it can trigger a disassembly. Preventing a stack trace also avoids that
+                        const interval = 10;
+                        this.stackTraceHack = true;
+                        this.disableSendStoppedEvents = false;
+                        this.notifyStopped(false);
+                        const start = Date.now();
+                        let nTries = 1;
                         const to = setInterval(() => {
-                            if ((tries-- <= 0) || this.threadIdsCalledHack) {
+                            const diff = Date.now() - start;
+                            if ((diff > 2000) || !this.stackTraceHack) {
                                 clearInterval(to);
+                                if (this.args.showDevDebugOutput) {
+                                    this.handleMsg('log', `Finished waiting for stacktrace request in ${diff} ms in ${nTries} tries\n`);
+                                }
+                                resolve(true);
                                 this.sendContinue();
                             }
+                            nTries++;
                         }, interval);
                     } else {
+                        resolve(true);
                         this.sendContinue();
                     }
-                    resolve(true);
                 } else {
                     resolve(false);
                 }
@@ -1319,8 +1331,8 @@ export class GDBDebugSession extends DebugSession {
     protected handleContinueFailed(info: MINode) {
         // Should we call exec-interrupt here? See #561
         // Once we get this, from here on, nothing really works with gdb.
-        const msg = 'Error: A serious error occured with gdb, unable to continue or interrupt We may not be able to recover ' +
-           'from this point. You can try continuing or ending sesson. Must address root cause though';
+        const msg = 'Error: A serious error occurred with gdb, unable to continue or interrupt We may not be able to recover ' +
+           'from this point. You can try continuing or ending session. Must address root cause though';
         this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
         this.handleMsg('stderr', msg + '\n');
         this.continuing = false;
@@ -1976,12 +1988,10 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
-    private threadIdsCalledHack = false;
     protected async threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
         response.body = { threads: [] };
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
             this.sendResponse(response);
-            this.threadIdsCalledHack = true;
             return;
         }
         try {
@@ -1992,7 +2002,6 @@ export class GDBDebugSession extends DebugSession {
             if (!threadIds || (threadIds.length === 0)) {
                 // Yes, this does happen at the very beginning of an RTOS session
                 this.sendResponse(response);
-                this.threadIdsCalledHack = true;
                 return;
             }
 
@@ -2066,10 +2075,8 @@ export class GDBDebugSession extends DebugSession {
                 threads: threads
             };
             this.sendResponse(response);
-            this.threadIdsCalledHack = true;
         }
         catch (e) {
-            this.threadIdsCalledHack = true;
             if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
                 this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
             } else {
@@ -2078,12 +2085,19 @@ export class GDBDebugSession extends DebugSession {
         }
     }
 
+    private stackTraceHack = false;
     protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
         response.body = {
             stackFrames: [],
             totalFrames: 0
         };
-        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
+        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing || this.stackTraceHack) {
+            if (this.stackTraceHack) {
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('log', 'VSCode stackTraceHack triggered\n');
+                }
+                this.stackTraceHack = false;
+            }
             this.sendResponse(response);
             return;
         }
@@ -2865,7 +2879,7 @@ export class GDBDebugSession extends DebugSession {
             this.evaluateQueue.push({response: response, args: args, resolve: resolve, reject: reject});
             while (!this.evaluateQueueBusy && (this.evaluateQueue.length > 0)) {
                 this.evaluateQueueBusy = true;
-                const obj = this.evaluateQueue.pop();
+                const obj = this.evaluateQueue.shift();
                 try {
                     await this.evaluateRequestOne(obj.response, obj.args);
                     obj.resolve();
