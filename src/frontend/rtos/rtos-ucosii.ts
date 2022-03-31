@@ -61,19 +61,19 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     private readonly maxThreads = 1024;
 
     private stackPattern = 0x00;
-    private stackIncrements = -1;
+    private stackIncrements = -1; // negative numbers => OS_STK_GROWTH = OS_STK_GROWTH_HI_TO_LO (1)
 
     private helpHtml: string = undefined;
 
     constructor(public session: vscode.DebugSession) {
         super(session, 'uC/OS-II');
 
-        if(session.configuration.rtosViewConfig) {
-            if(session.configuration.rtosViewConfig.stackPattern) {
+        if (session.configuration.rtosViewConfig) {
+            if (session.configuration.rtosViewConfig.stackPattern) {
                 this.stackPattern = parseInt(session.configuration.rtosViewConfig.stackPattern);
             }
 
-            if(session.configuration.rtosViewConfig.stackGrowth) {
+            if (session.configuration.rtosViewConfig.stackGrowth) {
                 this.stackIncrements = parseInt(session.configuration.rtosViewConfig.stackGrowth);
             }
         }
@@ -157,7 +157,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                         if ((this.OSTaskCtrVal > 0) && (this.OSTaskCtrVal <= this.maxThreads)) {
 
-                            if (this.stackEntrySize == 0) {
+                            if (this.stackEntrySize === 0) {
                                 /* Only get stack entry size once per session */
                                 const stackEntrySizeRef = await this.getExprVal('sizeof(OS_STK)', frameId);
                                 this.stackEntrySize = parseInt(stackEntrySizeRef);
@@ -219,19 +219,19 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     let threadCount = 1;
 
                     do {
-                        const threadId = curTaskObj["OSTCBId-val"];
+                        const threadId = curTaskObj['OSTCBId-val'];
 
-                        let thName = '???'
+                        let thName = '???';
                         if (curTaskObj['OSTCBTaskName-exp']) {
                             const tmpThName = await this.getExprVal('(char *)' + curTaskObj['OSTCBTaskName-exp'], frameId);
                             const matchName = tmpThName.match(/"([^*]*)"$/);
                             thName = matchName ? matchName[1] : tmpThName;
                         }
 
-                        const thState = mapTaskState(curTaskObj["OSTCBStat-val"]);
+                        const thState = mapTaskState(curTaskObj['OSTCBStat-val']);
 
-                        const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/)
-                        const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val']
+                        const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
+                        const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
 
                         const stackInfo = await this.getStackInfo(curTaskObj, this.stackPattern, frameId);
 
@@ -264,7 +264,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         this.createHmlHelp(thread, curTaskObj);
 
                         thAddress = parseInt(curTaskObj['OSTCBNext-val']);
-                        if (0 != thAddress) {
+                        if (0 !== thAddress) {
                             const nextThreadObj = await this.getVarChildrenObj(curTaskObj['OSTCBNext-ref'], 'OSTCBNext');
                             curTaskObj = nextThreadObj;
                             threadCount++;
@@ -275,7 +275,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             break;
                         }
 
-                    } while (0 != thAddress);
+                    } while (0 !== thAddress);
 
                     resolve();
                 }
@@ -360,7 +360,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
     public lastValidHtml: string = '';
     public getHTML(): string {
-        // WARNING: This stuff is super fragile. Once we know what we works, them we should refactor this
+        // WARNING: This stuff is super fragile. Once we know what this works, then we should refactor this
         let ret = '';
         if (this.status === 'none') {
             return '<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n';
@@ -401,10 +401,10 @@ function mapTaskState(state: number): string {
     let stateString = '';
 
     /* Ready to run */
-    if (state == 0x00) {
+    if (state === 0x00) {
         stateString = 'READY';
     }
-    else if ((state & 0x08) == 0x08) {
+    else if ((state & 0x08) === 0x08) {
         /* Task is suspended */
         stateString += 'SUSPENDED';
     }
@@ -414,27 +414,27 @@ function mapTaskState(state: number): string {
         /* Pending on multiple events doesn't need to be checked */
 
         /* Pending on semaphore */
-        if ((state & 0x01) == 0x01) {
+        if ((state & 0x01) === 0x01) {
             stateString += 'SEMAPHORE, ';
         }
 
         /* Pending on mailbox */
-        if ((state & 0x02) == 0x02) {
+        if ((state & 0x02) === 0x02) {
             stateString += 'MAILBOX, ';
         }
 
         /* Pending on queue */
-        if ((state & 0x04) == 0x04) {
+        if ((state & 0x04) === 0x04) {
             stateString += 'QUEUE, ';
         }
 
         /* Pending on mutual exclusion semaphore */
-        if ((state & 0x10) == 0x10) {
+        if ((state & 0x10) === 0x10) {
             stateString += 'MUTEX, ';
         }
 
         /* Pending on event flag group */
-        if ((state & 0x20) == 0x20) {
+        if ((state & 0x20) === 0x20) {
             stateString += 'FLAG_GROUP, ';
         }
 
@@ -443,8 +443,8 @@ function mapTaskState(state: number): string {
     }
 
     if (stateString === '') {
-        stateString = '???'
+        stateString = '???';
     }
 
-    return stateString
+    return stateString;
 }
