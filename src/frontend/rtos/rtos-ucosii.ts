@@ -157,22 +157,26 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                         if ((this.OSTaskCtrVal > 0) && (this.OSTaskCtrVal <= this.maxThreads)) {
 
-                            if (this.stackEntrySize === 0) {
-                                /* Only get stack entry size once per session */
-                                const stackEntrySizeRef = await this.getExprVal('sizeof(OS_STK)', frameId);
-                                this.stackEntrySize = parseInt(stackEntrySizeRef);
-                            }
+                            const OSTCBListVal = await this.OSTCBList.getValue(frameId);
+                            if (OSTCBListVal && (0 !== parseInt(OSTCBListVal))) {
 
-                            const tmpOSTCBCurVal = await this.OSTCBCur.getValue(frameId);
-                            this.OSTCBCurVal = tmpOSTCBCurVal ? parseInt(tmpOSTCBCurVal) : Number.MAX_SAFE_INTEGER;
+                                if (this.stackEntrySize === 0) {
+                                    /* Only get stack entry size once per session */
+                                    const stackEntrySizeRef = await this.getExprVal('sizeof(OS_STK)', frameId);
+                                    this.stackEntrySize = parseInt(stackEntrySizeRef);
+                                }
 
-                            await this.getThreadInfo(this.OSTCBList, frameId);
+                                const tmpOSTCBCurVal = await this.OSTCBCur.getValue(frameId);
+                                this.OSTCBCurVal = tmpOSTCBCurVal ? parseInt(tmpOSTCBCurVal) : Number.MAX_SAFE_INTEGER;
 
-                            if (this.foundThreads[0]['ID'] !== '???') {
-                                this.foundThreads.sort((a, b) => parseInt(a.display['ID']) - parseInt(b.display['ID']));
-                            }
-                            else {
-                                this.foundThreads.sort((a, b) => parseInt(a.display['Address']) - parseInt(b.display['Address']));
+                                await this.getThreadInfo(this.OSTCBList, frameId);
+
+                                if (this.foundThreads[0]['ID'] !== '???') {
+                                    this.foundThreads.sort((a, b) => parseInt(a.display['ID']) - parseInt(b.display['ID']));
+                                }
+                                else {
+                                    this.foundThreads.sort((a, b) => parseInt(a.display['Address']) - parseInt(b.display['Address']));
+                                }
                             }
                             this.finalThreads = [...this.foundThreads];
                         }
