@@ -4,7 +4,7 @@ import * as RTOSCommon from './rtos-common';
 import { hexFormat } from '../utils';
 import { HrTimer, toStringDecHexOctBin } from '../../common';
 
-// We will have two rows of headers for FreeRTOS and the table below describes
+// We will have two rows of headers for uC/OS-II and the table below describes
 // the columns headers for the two rows and the width of each column as a fraction
 // of the overall space.
 enum DisplayFields {
