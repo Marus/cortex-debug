@@ -65,6 +65,16 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
     constructor(public session: vscode.DebugSession) {
         super(session, 'uC/OS-II');
+
+        if(session.configuration.rtosViewConfig) {
+            if(session.configuration.rtosViewConfig.stackPattern) {
+                this.stackPattern = parseInt(session.configuration.rtosViewConfig.stackPattern);
+            }
+
+            if(session.configuration.rtosViewConfig.stackGrowth) {
+                this.stackIncrements = parseInt(session.configuration.rtosViewConfig.stackGrowth);
+            }
+        }
     }
 
     public async tryDetect(useFrameId: number): Promise<RTOSCommon.RTOSBase> {
