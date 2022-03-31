@@ -17,8 +17,8 @@ enum DisplayFields {
     StackTop,
     StackEnd,
     StackSize,
-    StackUsed,
     StackFree,
+    StackUsed,
     StackPeak
 }
 
