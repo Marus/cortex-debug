@@ -228,7 +228,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             thName = matchName ? matchName[1] : tmpThName;
                         }
 
-                        const thState = mapTaskState(curTaskObj['OSTCBStat-val']);
+                        const thState = mapTaskState(parseInt(curTaskObj['OSTCBStat-val']));
 
                         const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
                         const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
