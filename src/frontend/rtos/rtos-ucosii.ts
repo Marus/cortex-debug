@@ -63,6 +63,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     private stackPattern = 0x00;
     private stackIncrements = -1;
 
+    private helpHtml: string = undefined;
+
     constructor(public session: vscode.DebugSession) {
         super(session, 'uC/OS-II');
 
@@ -97,6 +99,35 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
             this.status = 'failed';
             this.failedWhy = e;
             return this;
+        }
+    }
+
+    protected createHmlHelp(th: RTOSCommon.FreeRTOSThreadInfo, thInfo: object) {
+        if (this.helpHtml === undefined) {
+            this.helpHtml = '';
+            try {
+                let ret: string = '';
+                function strong(s) {
+                    return `<strong>${s}</strong>`;
+                }
+
+                if (!thInfo['OSTCBTaskName-val']) {
+                    ret += `Thread ID missing......: Enable macro ${strong('OS_TASK_NAME_EN')} in FW<br>`;
+                }
+                if (!th.stackInfo.stackSize) {
+                    ret += `Stack Size missing.....: Enable macro ${strong('OS_TASK_CREATE_EXT_EN')} and use ${strong('OSTaskCreateExt')} in FW<br>`;
+                }
+
+                if (ret) {
+                    ret += '<br>Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
+                    ret = '<button class="help-button">Hints to get more out of the uc/OS-II viewer</button>\n' +
+                        `<div class="help"><p>\n${ret}\n</p></div>\n`;
+                    this.helpHtml = ret;
+                }
+            }
+            catch (e) {
+                console.log(e);
+            }
         }
     }
 
@@ -226,7 +257,11 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         mySetter(DisplayFields.StackFree, func(stackInfo.stackFree));
                         mySetter(DisplayFields.StackPeak, func(stackInfo.stackPeak));
 
-                        this.foundThreads.push({ display: display, stackInfo: stackInfo });
+                        const thread: RTOSCommon.FreeRTOSThreadInfo = {
+                            display: display, stackInfo: stackInfo
+                        };
+                        this.foundThreads.push(thread);
+                        this.createHmlHelp(thread, curTaskObj);
 
                         thAddress = parseInt(curTaskObj['OSTCBNext-val']);
                         if (0 != thAddress) {
@@ -356,9 +391,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         }
 
         ret += this.getHTMLCommon(DisplayFieldNames, RTOSUCOS2Items, this.finalThreads, this.timeInfo);
-
-        this.lastValidHtml = ret;
-        return ret;
+        this.lastValidHtml = ret + (this.helpHtml || '');
+        return this.lastValidHtml;
     }
 }
 
