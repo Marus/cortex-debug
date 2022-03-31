@@ -60,10 +60,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     private timeInfo: string;
     private readonly maxThreads = 1024;
 
-    private waterMark = 0xAA; // TODO Make watermark settable by user. Why does FreeRTOS use 0xA5?
-
-    // TODO Need to do a TON of testing for stack growing the other direction
-    private stackIncrements = -1; // uC/OS-II uses precompile switch OS_STK_GROWTH for that
+    private stackPattern = 0x00;
+    private stackIncrements = -1;
 
     constructor(public session: vscode.DebugSession) {
         super(session, 'uC/OS-II');
@@ -194,7 +192,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/)
                         const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val']
 
-                        const stackInfo = await this.getStackInfo(curTaskObj, this.waterMark, frameId);
+                        const stackInfo = await this.getStackInfo(curTaskObj, this.stackPattern, frameId);
 
                         const display: { [key: string]: string } = {};
 
@@ -245,7 +243,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         });
     }
 
-    protected async getStackInfo(thInfo: any, waterMark: number, frameId: number) {
+    protected async getStackInfo(thInfo: any, stackPattern: number, frameId: number) {
         const TopOfStack = thInfo['OSTCBStkPtr-val'];
 
         /* only available with OS_TASK_CREATE_EXT_EN (optional) */
@@ -299,7 +297,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 const end = this.stackIncrements < 0 ? stackInfo.bytes.length : -1;
                 let peak = 0;
                 while (start !== end) {
-                    if (stackInfo.bytes[start] !== waterMark) {
+                    if (stackInfo.bytes[start] !== stackPattern) {
                         break;
                     }
                     start -= this.stackIncrements;
