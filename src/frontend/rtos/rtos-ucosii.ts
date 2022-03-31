@@ -318,18 +318,18 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
             stackInfo.stackEnd = parseInt(EndOfStack);
             stackInfo.stackSize = parseInt(StackSize) * this.stackEntrySize;
 
-            /* without StackSize & EndOfStack (=> stackTop) delta doesn't make sense */
-            const stackDelta = Math.abs(stackInfo.stackTop - stackInfo.stackStart);
             if (this.stackIncrements < 0) {
+                const stackDelta = stackInfo.stackStart - stackInfo.stackTop;
+                stackInfo.stackFree = stackInfo.stackSize - stackDelta;
+                stackInfo.stackUsed = stackDelta;
+            }
+            else {
+                const stackDelta = stackInfo.stackTop - stackInfo.stackStart;
                 stackInfo.stackFree = stackDelta;
                 stackInfo.stackUsed = stackInfo.stackSize - stackDelta;
             }
-            else {
-                stackInfo.stackUsed = stackDelta;
-                stackInfo.stackFree = stackInfo.stackSize - stackDelta;
-            }
 
-            /* check stack peak */
+            /* check stack peak */ // TODO Maybe optimize this by only reading between stackTop and stackEnd ans size stackFree
             const memArg: DebugProtocol.ReadMemoryArguments = {
                 memoryReference: hexFormat(Math.min(stackInfo.stackStart, stackInfo.stackEnd)),
                 count: stackInfo.stackSize
