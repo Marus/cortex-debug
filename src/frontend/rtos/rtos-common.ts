@@ -201,11 +201,11 @@ export abstract class RTOSBase {
 
     // If there is a column named 'Status' and if it is set to 'RUNNING', that row becomes special
     protected getHTMLCommon(
-        displayFidldNames: string[],
+        displayFieldNames: string[],
         RTOSDisplayItems: {[key: string]: DisplayItem},
         allThreads: FreeRTOSThreadInfo[],
         timeInfo: string): string {
-        const colFormat = displayFidldNames.map((key) => `${RTOSDisplayItems[key].width}fr`).join(' ');
+        const colFormat = displayFieldNames.map((key) => `${RTOSDisplayItems[key].width}fr`).join(' ');
         let table = `<vscode-data-grid class="${this.name}-grid threads-grid" grid-template-columns="${colFormat}">\n`;
         let header = '';
         for (const thr of allThreads) {
@@ -217,7 +217,7 @@ export abstract class RTOSBase {
                 const commonHeaderCellPart = '    <vscode-data-grid-cell cell-type="columnheader" class="threads-header-cell" grid-column=';
                 if (true) {
                     header = commonHeaderRowPart;
-                    for (const key of displayFidldNames) {
+                    for (const key of displayFieldNames) {
                         const txt = RTOSDisplayItems[key].headerRow1;
                         header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
                         if (!have2ndRow) { have2ndRow = !!RTOSDisplayItems[key].headerRow2; }
@@ -229,7 +229,7 @@ export abstract class RTOSBase {
                 if (have2ndRow) {
                     col = 1;
                     header += commonHeaderRowPart;
-                    for (const key of displayFidldNames) {
+                    for (const key of displayFieldNames) {
                         const txt = RTOSDisplayItems[key].headerRow2;
                         header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
                         col++;
@@ -242,7 +242,7 @@ export abstract class RTOSBase {
             let col = 1;
             const running = (th['Status'] === 'RUNNING') ? 'running' : '';
             table += `  <vscode-data-grid-row class="${this.name}-row threads-row">\n`;
-            for (const key of displayFidldNames) {
+            for (const key of displayFieldNames) {
                 const v = th[key];
                 let txt = v;
                 const lKey = key.toLowerCase();
@@ -269,7 +269,7 @@ export abstract class RTOSBase {
 export class RTOSVarHelper {
     public varReference: number;
     public value: string;
-    
+
     constructor(public expression: string, public rtos: RTOSBase) {
     }
 
