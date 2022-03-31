@@ -32,8 +32,8 @@ RTOSUCOS2Items[DisplayFields[DisplayFields.StackStart]] = { width: 3, headerRow1
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackTop]] = { width: 3, headerRow1: 'Stack', headerRow2: 'Top' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackEnd]] = { width: 3, headerRow1: 'Stack', headerRow2: 'End' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackSize]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Size' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackUsed]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Used' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackFree]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Free' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.StackUsed]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Used' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeak]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Peak' };
 const DisplayFieldNames: string[] = Object.keys(RTOSUCOS2Items);
 
@@ -253,8 +253,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                         const func = (x) => x === undefined ? '???' : x.toString();
                         mySetter(DisplayFields.StackSize, func(stackInfo.stackSize));
-                        mySetter(DisplayFields.StackUsed, func(stackInfo.stackUsed));
                         mySetter(DisplayFields.StackFree, func(stackInfo.stackFree));
+                        mySetter(DisplayFields.StackUsed, func(stackInfo.stackUsed));
                         mySetter(DisplayFields.StackPeak, func(stackInfo.stackPeak));
 
                         const thread: RTOSCommon.FreeRTOSThreadInfo = {
