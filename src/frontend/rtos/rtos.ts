@@ -2,9 +2,11 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import * as vscode from 'vscode';
 import * as RTOSCommon from './rtos-common';
 import { RTOSFreeRTOS } from './rtos-freertos';
+import { RTOSUCOS2 } from './rtos-ucosii';
 
 const RTOS_TYPES = {
-    FreeRTOS: RTOSFreeRTOS
+    FreeRTOS: RTOSFreeRTOS,
+    'uC/OS-II': RTOSUCOS2
 };
 export class RTOSSession {
     public lastFrameId: number;
@@ -41,7 +43,7 @@ export class RTOSSession {
             if (this.rtos === undefined && this.allRTOSes.length > 0) {
                 // Let them all work in parallel. Since this will generate a ton of gdb traffic and traffic from other sources
                 // like variable, watch windows, things can fail. But our own backend queues things up so failures are unlikely
-                // With some other backend (if for instace we support cppdbg), not sure what happens. Worst case, try one OS
+                // With some other backend (if for instance we support cppdbg), not sure what happens. Worst case, try one OS
                 // at a time.
                 const promises = [];
                 for (const rtos of this.allRTOSes) {
@@ -335,7 +337,7 @@ export class RTOSTracker
                     ret += '<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
                 }
             } else {
-                const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' Detected.' + (!rtosHtml ? ' (No data available yet)' : '');
+                const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' detected.' + (!rtosHtml ? ' (No data available yet)' : '');
                 ret += /*html*/`<h4>${nameAndStatus}</h4>\n` + rtosHtml;
             }
         }
@@ -445,7 +447,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
 				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="${rtosStyle}" rel="stylesheet">
-				
+
 				<title>RTOS Threads</title>
 			</head>
 			<body>
