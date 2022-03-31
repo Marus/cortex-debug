@@ -79,7 +79,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 // is how this.getVarIfEmpty() works
                 this.OSRunning = await this.getVarIfEmpty(this.OSRunning, useFrameId, 'OSRunning', false);
                 this.OSTaskCtr = await this.getVarIfEmpty(this.OSTaskCtr, useFrameId, 'OSTaskCtr', false);
-                this.OSTCBList = await this.getVarIfEmpty(this.OSTCBList, useFrameId, 'OSTCBList', true);
+                this.OSTCBList = await this.getVarIfEmpty(this.OSTCBList, useFrameId, 'OSTCBList', false);
                 this.OSTCBCur = await this.getVarIfEmpty(this.OSTCBCur, useFrameId, 'OSTCBCur', false);
                 this.status = 'initialized';
             }
