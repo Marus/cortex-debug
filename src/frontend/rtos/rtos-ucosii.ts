@@ -195,14 +195,14 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 }
             }, (reason) => {
                 resolve();
-                console.error('RTOSUCOS2.refresh() failed: ', reason);
+                console.error('RTOSUCOS2.refresh() faled: ', reason);
             });
         });
     }
 
-    private getThreadInfo(varRef: RTOSCommon.RTOSVarHelper, frameId: number): Promise<void> {
+    private getThreadInfo(tcbListEntry: RTOSCommon.RTOSVarHelper, frameId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            if (!varRef || !varRef.varReference || (this.foundThreads.length >= this.OSTaskCtrVal)) {
+            if (!tcbListEntry || !tcbListEntry.varReference || (this.foundThreads.length >= this.OSTaskCtrVal)) {
                 resolve();
                 return;
             }
@@ -212,10 +212,10 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 return;
             }
 
-            varRef.getVarChildrenObj(frameId).then(async (obj) => {
+            tcbListEntry.getVarChildrenObj(frameId).then(async (obj) => {
                 try {
                     let curTaskObj = obj;
-                    let thAddress = parseInt(varRef.value);
+                    let thAddress = parseInt(tcbListEntry.value);
 
                     let threadCount = 1;
 
@@ -229,8 +229,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             thName = matchName ? matchName[1] : tmpThName;
                         }
 
-                        const thState = mapTaskState(parseInt(curTaskObj['OSTCBStat-val']));
                         const threadRunning = (thAddress === this.OSTCBCurVal);
+                        const thState = (await this.analyzeTaskState(curTaskObj, frameId)).describe();
 
                         const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
                         const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
@@ -295,6 +295,43 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 reject(e);
             });
         });
+    }
+
+    protected async getEventInfo(eventObject, frameId): Promise<EventInfo> {
+        const eventInfo: EventInfo = {eventType: parseInt(eventObject['OSEventType-val'])};
+
+        if (['OSEventName-exp']) {
+            const tmpThName = await this.getExprVal('(char *)' + eventObject['OSEventName-exp'], frameId);
+            const matchName = tmpThName.match(/"(.*)"$/);
+            eventInfo.name = matchName ? matchName[1] : tmpThName;
+        }
+
+        return eventInfo;
+    }
+
+    protected async analyzeTaskState(curTaskObj: object, frameId: number): Promise<TaskState> {
+        const state = parseInt(curTaskObj['OSTCBStat-val']);
+        switch (state) {
+            case OsTaskState.READY: return new TaskReady();
+            case OsTaskState.SUSPENDED: return new TaskSuspended();
+            default: {
+                const resultState = new TaskPending();
+                PendingTaskStates.forEach((candidateState) => {
+                    if ((state & candidateState) === candidateState) {
+                        resultState.addEventType(getEventTypeForTaskState(candidateState));
+                    }
+                });
+                const eventAddress = parseInt(curTaskObj['OSTCBEventPtr-val']);
+                if (eventAddress !== 0) {
+                    const event = await this.getVarChildrenObj(curTaskObj['OSTCBEventPtr-ref'], 'OSTCBEventPtr');
+                    const eventInfo = await this.getEventInfo(event, frameId);
+                    resultState.addEvent(eventInfo);
+                }
+                // TODO: Add support for flags
+                // TODO: Add support for pend multi
+                return resultState;
+            }
+        }
     }
 
     protected async getStackInfo(thInfo: any, stackPattern: number, frameId: number) {
@@ -409,55 +446,100 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     }
 }
 
-function mapTaskState(state: number): string {
+enum OsTaskState {
+    READY = 0x00,
+    SUSPENDED = 0x08,
+    PEND_SEMAPHORE = 0x01,
+    PEND_MAILBOX = 0x02,
+    PEND_QUEUE = 0x04,
+    PEND_MUTEX = 0x10,
+    PEND_FLAGGROUP = 0x20
+}
 
-    let stateString = '';
+const PendingTaskStates = [OsTaskState.PEND_SEMAPHORE,
+    OsTaskState.PEND_MAILBOX,
+    OsTaskState.PEND_QUEUE,
+    OsTaskState.PEND_MUTEX,
+    OsTaskState.PEND_FLAGGROUP] as const;
 
-    /* Ready to run */
-    if (state === 0x00) {
-        stateString = 'READY';
+enum OsEventType {
+    Mailbox = 1,
+    Queue = 2,
+    Semaphore = 3,
+    Mutex = 4,
+    Flag = 5
+}
+
+function getEventTypeForTaskState(state: OsTaskState): OsEventType {
+    switch (state) {
+        case OsTaskState.PEND_SEMAPHORE: return OsEventType.Semaphore;
+        case OsTaskState.PEND_MAILBOX: return OsEventType.Mailbox;
+        case OsTaskState.PEND_QUEUE: return OsEventType.Queue;
+        case OsTaskState.PEND_MUTEX: return OsEventType.Mutex;
+        case OsTaskState.PEND_FLAGGROUP: return OsEventType.Flag;
     }
-    else if ((state & 0x08) === 0x08) {
-        /* Task is suspended */
-        stateString += 'SUSPENDED';
+}
+
+abstract class TaskState {
+    public abstract describe(): string;
+}
+
+class TaskReady extends TaskState {
+    public describe(): string {
+        return 'READY';
     }
-    else {
-        stateString += 'PEND: ';
+}
 
-        /* Pending on multiple events doesn't need to be checked */
+class TaskSuspended extends TaskState{
+    public describe(): string {
+        return 'SUSPENDED';
+    }
+}
 
-        /* Pending on semaphore */
-        if ((state & 0x01) === 0x01) {
-            stateString += 'SEMAPHORE, ';
-        }
+class TaskPending extends TaskState {
+    private pendingInfo: Map<OsEventType, EventInfo[]>;
 
-        /* Pending on mailbox */
-        if ((state & 0x02) === 0x02) {
-            stateString += 'MAILBOX, ';
-        }
-
-        /* Pending on queue */
-        if ((state & 0x04) === 0x04) {
-            stateString += 'QUEUE, ';
-        }
-
-        /* Pending on mutual exclusion semaphore */
-        if ((state & 0x10) === 0x10) {
-            stateString += 'MUTEX, ';
-        }
-
-        /* Pending on event flag group */
-        if ((state & 0x20) === 0x20) {
-            stateString += 'FLAG_GROUP, ';
-        }
-
-        stateString = stateString.trim();
-        stateString = stateString.replace(/,+$/, '');
+    constructor() {
+        super();
+        this.pendingInfo = new Map();
     }
 
-    if (stateString === '') {
-        stateString = '???';
+    public addEvent(event: EventInfo) {
+        this.addEventType(event.eventType);
+        this.pendingInfo.get(event.eventType).push(event);
     }
 
-    return stateString;
+    public addEventType(eventType: OsEventType) {
+        if (!this.pendingInfo.has(eventType)) {
+            this.pendingInfo.set(eventType, []);
+        }
+    }
+
+    public describe(): string {
+        const eventTypes = [...this.pendingInfo.keys()];
+        eventTypes.sort();
+        const pendInfo = eventTypes.map((eventType) => {
+            const eventNames = this.pendingInfo.get(eventType).map((event) => {
+                if (event.name) {
+                    return `<dd>${event.name}</dd>`;
+                }
+                return '';
+            }).join('');
+
+            const eventTypeStr = OsEventType[eventType] ? OsEventType[eventType] : 'Unknown';
+
+            if (eventNames.length > 0) {
+                return `<dt style="text-align: center;"><b>${eventTypeStr}</b></dt> ${eventNames}`;
+            } else {
+                return `<dt style="text-align: center;">${eventTypeStr}</dt>`;
+            }
+        }).join('\n');
+
+        return `PEND:\n<dl>${pendInfo}</dl>`;
+    }
+}
+
+interface EventInfo {
+    name?: string;
+    eventType: OsEventType;
 }
