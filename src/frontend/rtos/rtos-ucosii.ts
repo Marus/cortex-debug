@@ -303,16 +303,30 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         });
     }
 
-    protected async getEventInfo(address: number, eventObject, frameId): Promise<EventInfo> {
-        const eventInfo: EventInfo = {address, eventType: parseInt(eventObject['OSEventType-val'])};
+    protected async getEventInfo(address: number, eventObject: object, frameId: number): Promise<EventInfo> {
+        const eventInfo: EventInfo = { address, eventType: parseInt(eventObject['OSEventType-val']) };
 
-        if (['OSEventName-exp']) {
-            const tmpThName = await this.getExprVal('(char *)' + eventObject['OSEventName-exp'], frameId);
-            const matchName = tmpThName.match(/"(.*)"$/);
-            eventInfo.name = matchName ? matchName[1] : tmpThName;
+        if (eventObject['OSEventName-val']) {
+            const value = eventObject['OSEventName-val'];
+            const matchName = value.match(/"(.*)"$/);
+            eventInfo.name = matchName ? matchName[1] : value;
         }
 
         return eventInfo;
+    }
+
+    protected async readEventArray(baseAddress: number, frameId: number): Promise<EventInfo[]> {
+        const result = [];
+        for (let eventIndex = 0; ; eventIndex++) {
+            const eventAddress = parseInt(await this.getExprVal(`((OS_EVENT**)(${baseAddress}))[${eventIndex}]`, frameId));
+            if (eventAddress === 0) {
+                break;
+            } else {
+                const eventObject = await this.getExprValChildrenObj(`(OS_EVENT*)(${eventAddress})`, frameId);
+                result.push(await this.getEventInfo(eventAddress, eventObject, frameId));
+            }
+        }
+        return result;
     }
 
     protected async analyzeTaskState(curTaskObj: object, flagPendMap: Map<number, FlagGroup[]>, frameId: number): Promise<TaskState> {
@@ -333,10 +347,18 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     const eventInfo = await this.getEventInfo(eventAddress, event, frameId);
                     resultState.addEvent(eventInfo);
                 }
+                if (curTaskObj['OSTCBEventMultiPtr-val']) {
+                    const eventMultiBaseAddress = parseInt(curTaskObj['OSTCBEventMultiPtr-val']);
+                    if (eventMultiBaseAddress !== 0) {
+                        (await this.readEventArray(eventMultiBaseAddress, frameId)).forEach(
+                            (eventInfo) => resultState.addEvent(eventInfo)
+                        );
+                    }
+                }
                 const threadId = parseInt(curTaskObj['OSTCBId-val']);
                 if (flagPendMap.has(threadId)) {
                     flagPendMap.get(threadId).forEach((flagGroup) =>
-                        resultState.addEvent({name: flagGroup.name, eventType: OsEventType.Flag, address: flagGroup.address})
+                        resultState.addEvent({ name: flagGroup.name, eventType: OsEventType.Flag, address: flagGroup.address })
                     );
                 }
                 // TODO: Add support for pend multi
@@ -355,9 +377,9 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 if (parseInt(osFlagGrp['OSFlagType-val']) === OsEventType.Flag) {
                     // TODO: Get flag group address as a fallback using &(evaluateName) expression value 
                     const groupAddr = parseInt(await this.getExprVal(`&(${flagGroupPtr.evaluateName})`, frameId));
-                    const flagGroup: FlagGroup = {address: groupAddr};
+                    const flagGroup: FlagGroup = { address: groupAddr };
                     const reprValue = osFlagGrp['OSFlagName-val'];
-                    if (reprValue)  {
+                    if (reprValue) {
                         const matchName = reprValue.match(/"(.*)"$/);
                         flagGroup.name = matchName ? matchName[1] : reprValue;
                     }
@@ -366,7 +388,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     let flagNode = await this.getExprValChildrenObj(`(OS_FLAG_NODE *)(${osFlagGrp['OSFlagWaitList-exp']})`, frameId);
                     while (flagNode) {
                         const waitingTcbAddr = parseInt(flagNode['OSFlagNodeTCB-val']);
-                        if (waitingTcbAddr === 0) {
+                        if (!waitingTcbAddr || waitingTcbAddr === 0) {
                             break;
                         }
                         const waitingTcb = await this.getExprValChildrenObj(`(OS_TCB *)(${waitingTcbAddr})`, frameId);
@@ -379,7 +401,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         result.get(waitingId).push(flagGroup);
 
                         const nextFlagNodeAddr = parseInt(flagNode['OSFlagNodeNext-val']);
-                        if (nextFlagNodeAddr === 0)  {
+                        if (nextFlagNodeAddr === 0) {
                             break;
                         } else {
                             // Need to cast here since the next pointer is declared as void *
@@ -515,10 +537,10 @@ enum OsTaskState {
 }
 
 const PendingTaskStates = [OsTaskState.PEND_SEMAPHORE,
-    OsTaskState.PEND_MAILBOX,
-    OsTaskState.PEND_QUEUE,
-    OsTaskState.PEND_MUTEX,
-    OsTaskState.PEND_FLAGGROUP] as const;
+OsTaskState.PEND_MAILBOX,
+OsTaskState.PEND_QUEUE,
+OsTaskState.PEND_MUTEX,
+OsTaskState.PEND_FLAGGROUP] as const;
 
 enum OsEventType {
     Mailbox = 1,
@@ -548,7 +570,7 @@ class TaskReady extends TaskState {
     }
 }
 
-class TaskSuspended extends TaskState{
+class TaskSuspended extends TaskState {
     public describe(): string {
         return 'SUSPENDED';
     }
