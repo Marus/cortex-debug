@@ -303,8 +303,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         });
     }
 
-    protected async getEventInfo(eventObject, frameId): Promise<EventInfo> {
-        const eventInfo: EventInfo = {eventType: parseInt(eventObject['OSEventType-val'])};
+    protected async getEventInfo(address: number, eventObject, frameId): Promise<EventInfo> {
+        const eventInfo: EventInfo = {address, eventType: parseInt(eventObject['OSEventType-val'])};
 
         if (['OSEventName-exp']) {
             const tmpThName = await this.getExprVal('(char *)' + eventObject['OSEventName-exp'], frameId);
@@ -330,14 +330,15 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 const eventAddress = parseInt(curTaskObj['OSTCBEventPtr-val']);
                 if (eventAddress !== 0) {
                     const event = await this.getVarChildrenObj(curTaskObj['OSTCBEventPtr-ref'], 'OSTCBEventPtr');
-                    const eventInfo = await this.getEventInfo(event, frameId);
+                    const eventInfo = await this.getEventInfo(eventAddress, event, frameId);
                     resultState.addEvent(eventInfo);
                 }
                 const threadId = parseInt(curTaskObj['OSTCBId-val']);
                 if (flagPendMap.has(threadId)) {
-                    flagPendMap.get(threadId).forEach((flagGroup) => resultState.addEvent({name: flagGroup.name, eventType: OsEventType.Flag}));
+                    flagPendMap.get(threadId).forEach((flagGroup) =>
+                        resultState.addEvent({name: flagGroup.name, eventType: OsEventType.Flag, address: flagGroup.address})
+                    );
                 }
-                // TODO: Support events and flags without names
                 // TODO: Add support for pend multi
                 return resultState;
             }
@@ -348,11 +349,13 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         // Builds a map from task IDs to flag groups that the tasks are pending on
         const result: Map<number, FlagGroup[]> = new Map();
         for (const flagGroupPtr of osFlagTable) {
-            if (flagGroupPtr.variablesReference > 0) {
+            if (flagGroupPtr.variablesReference > 0 && flagGroupPtr.evaluateName) {
                 const osFlagGrp = await this.getVarChildrenObj(flagGroupPtr.variablesReference, flagGroupPtr.name);
                 // Check if we are looking at an initialized flag group
                 if (parseInt(osFlagGrp['OSFlagType-val']) === OsEventType.Flag) {
-                    const flagGroup: FlagGroup = {};
+                    // TODO: Get flag group address as a fallback using &(evaluateName) expression value 
+                    const groupAddr = parseInt(await this.getExprVal(`&(${flagGroupPtr.evaluateName})`, frameId));
+                    const flagGroup: FlagGroup = {address: groupAddr};
                     const reprValue = osFlagGrp['OSFlagName-val'];
                     if (reprValue)  {
                         const matchName = reprValue.match(/"(.*)"$/);
@@ -575,10 +578,11 @@ class TaskPending extends TaskState {
         eventTypes.sort();
         const pendInfo = eventTypes.map((eventType) => {
             const eventNames = this.pendingInfo.get(eventType).map((event) => {
-                if (event.name) {
+                if (event.name && event.name !== '?') {
                     return `<dd>${event.name}</dd>`;
+                } else {
+                    return `<dd>0x${event.address.toString(16)}</dd>`;
                 }
-                return '';
             }).join('');
 
             const eventTypeStr = OsEventType[eventType] ? OsEventType[eventType] : 'Unknown';
@@ -596,9 +600,11 @@ class TaskPending extends TaskState {
 
 interface EventInfo {
     name?: string;
+    address: number;
     eventType: OsEventType;
 }
 
 interface FlagGroup {
     name?: string;
+    address: number;
 }
