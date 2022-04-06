@@ -51,6 +51,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     private OSTCBCur: RTOSCommon.RTOSVarHelper;
     private OSTCBCurVal: number;
 
+    private OSFlagTbl: RTOSCommon.RTOSVarHelper;
+
     private stale: boolean;
     private foundThreads: RTOSCommon.RTOSThreadInfo[] = [];
     private finalThreads: RTOSCommon.RTOSThreadInfo[] = [];
@@ -88,6 +90,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 this.OSTaskCtr = await this.getVarIfEmpty(this.OSTaskCtr, useFrameId, 'OSTaskCtr', false);
                 this.OSTCBList = await this.getVarIfEmpty(this.OSTCBList, useFrameId, 'OSTCBList', false);
                 this.OSTCBCur = await this.getVarIfEmpty(this.OSTCBCur, useFrameId, 'OSTCBCur', false);
+                this.OSFlagTbl = await this.getVarIfEmpty(this.OSFlagTbl, useFrameId, 'OSFlagTbl', false);
                 this.status = 'initialized';
             }
             return this;
@@ -163,10 +166,13 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                                     this.stackEntrySize = parseInt(stackEntrySizeRef);
                                 }
 
+                                const osFlagTblVal = await this.OSFlagTbl.getVarChildren(frameId);
+                                const flagPendMap = await this.getPendingFlagGroupsForTasks(osFlagTblVal, frameId);
+
                                 const tmpOSTCBCurVal = await this.OSTCBCur.getValue(frameId);
                                 this.OSTCBCurVal = tmpOSTCBCurVal ? parseInt(tmpOSTCBCurVal) : Number.MAX_SAFE_INTEGER;
 
-                                await this.getThreadInfo(this.OSTCBList, frameId);
+                                await this.getThreadInfo(this.OSTCBList, flagPendMap, frameId);
 
                                 if (this.foundThreads[0]['ID'] !== '???') {
                                     this.foundThreads.sort((a, b) => parseInt(a.display['ID'].text) - parseInt(b.display['ID'].text));
@@ -200,7 +206,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         });
     }
 
-    private getThreadInfo(tcbListEntry: RTOSCommon.RTOSVarHelper, frameId: number): Promise<void> {
+    private getThreadInfo(tcbListEntry: RTOSCommon.RTOSVarHelper, flagPendMap: Map<number, FlagGroup[]>, frameId: number): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             if (!tcbListEntry || !tcbListEntry.varReference || (this.foundThreads.length >= this.OSTaskCtrVal)) {
                 resolve();
@@ -230,7 +236,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         }
 
                         const threadRunning = (thAddress === this.OSTCBCurVal);
-                        const thState = (await this.analyzeTaskState(curTaskObj, frameId)).describe();
+                        const thState = (await this.analyzeTaskState(curTaskObj, flagPendMap, frameId)).describe();
 
                         const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
                         const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
@@ -309,7 +315,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         return eventInfo;
     }
 
-    protected async analyzeTaskState(curTaskObj: object, frameId: number): Promise<TaskState> {
+    protected async analyzeTaskState(curTaskObj: object, flagPendMap: Map<number, FlagGroup[]>, frameId: number): Promise<TaskState> {
         const state = parseInt(curTaskObj['OSTCBStat-val']);
         switch (state) {
             case OsTaskState.READY: return new TaskReady();
@@ -327,11 +333,60 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     const eventInfo = await this.getEventInfo(event, frameId);
                     resultState.addEvent(eventInfo);
                 }
-                // TODO: Add support for flags
+                const threadId = parseInt(curTaskObj['OSTCBId-val']);
+                if (flagPendMap.has(threadId)) {
+                    flagPendMap.get(threadId).forEach((flagGroup) => resultState.addEvent({name: flagGroup.name, eventType: OsEventType.Flag}));
+                }
+                // TODO: Support events and flags without names
                 // TODO: Add support for pend multi
                 return resultState;
             }
         }
+    }
+
+    protected async getPendingFlagGroupsForTasks(osFlagTable: DebugProtocol.Variable[], frameId: number): Promise<Map<number, FlagGroup[]>> {
+        // Builds a map from task IDs to flag groups that the tasks are pending on
+        const result: Map<number, FlagGroup[]> = new Map();
+        for (const flagGroupPtr of osFlagTable) {
+            if (flagGroupPtr.variablesReference > 0) {
+                const osFlagGrp = await this.getVarChildrenObj(flagGroupPtr.variablesReference, flagGroupPtr.name);
+                // Check if we are looking at an initialized flag group
+                if (parseInt(osFlagGrp['OSFlagType-val']) === OsEventType.Flag) {
+                    const flagGroup: FlagGroup = {};
+                    const reprValue = osFlagGrp['OSFlagName-val'];
+                    if (reprValue)  {
+                        const matchName = reprValue.match(/"(.*)"$/);
+                        flagGroup.name = matchName ? matchName[1] : reprValue;
+                    }
+
+                    // Follow the linked list of flag group nodes. The cast is safe here because we checked OSFlagType before
+                    let flagNode = await this.getExprValChildrenObj(`(OS_FLAG_NODE *)(${osFlagGrp['OSFlagWaitList-exp']})`, frameId);
+                    while (flagNode) {
+                        const waitingTcbAddr = parseInt(flagNode['OSFlagNodeTCB-val']);
+                        if (waitingTcbAddr === 0) {
+                            break;
+                        }
+                        const waitingTcb = await this.getExprValChildrenObj(`(OS_TCB *)(${waitingTcbAddr})`, frameId);
+                        const waitingId = parseInt(waitingTcb['OSTCBId-val']);
+
+                        if (!result.has(waitingId)) {
+                            result.set(waitingId, []);
+                        }
+                        // TODO: Add the pending bitmask here?
+                        result.get(waitingId).push(flagGroup);
+
+                        const nextFlagNodeAddr = parseInt(flagNode['OSFlagNodeNext-val']);
+                        if (nextFlagNodeAddr === 0)  {
+                            break;
+                        } else {
+                            // Need to cast here since the next pointer is declared as void *
+                            flagNode = await this.getExprValChildrenObj(`(OS_FLAG_NODE *) ${nextFlagNodeAddr}`, frameId);
+                        }
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     protected async getStackInfo(thInfo: any, stackPattern: number, frameId: number) {
@@ -542,4 +597,8 @@ class TaskPending extends TaskState {
 interface EventInfo {
     name?: string;
     eventType: OsEventType;
+}
+
+interface FlagGroup {
+    name?: string;
 }
