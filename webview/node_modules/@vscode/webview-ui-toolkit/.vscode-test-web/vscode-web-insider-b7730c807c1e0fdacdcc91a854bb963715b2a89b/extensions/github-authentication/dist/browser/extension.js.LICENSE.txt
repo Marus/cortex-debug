@@ -1,4 +1,0 @@
-/*!
- * Microsoft Dynamic Proto Utility, 1.1.4
- * Copyright (c) Microsoft and contributors. All rights reserved.
- */
