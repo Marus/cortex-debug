@@ -14,13 +14,6 @@ enum DisplayFields {
     Status,
     Priority,
     StackPercent,
-    StackStart,
-    StackTop,
-    StackEnd,
-    StackSize,
-    StackFree,
-    StackUsed,
-    StackPeak,
     StackPeakPercent
 }
 
@@ -31,21 +24,11 @@ RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: 
 RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
-    width: 2, headerRow1: 'Stack', headerRow2: '%',
+    width: 4, headerRow1: 'Stack Usage', headerRow2: '% ( Used / Size)',
     colType: RTOSCommon.colTypeEnum.colTypePercentage
 };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackStart]] = {
-    width: 3, headerRow1: 'Stack', headerRow2: 'Start',
-    colType: RTOSCommon.colTypeEnum.colTypeLink
-};
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackTop]] = { width: 3, headerRow1: 'Stack', headerRow2: 'Top' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackEnd]] = { width: 3, headerRow1: 'Stack', headerRow2: 'End' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackSize]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Size' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackFree]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Free' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackUsed]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Used' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeak]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Peak' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeakPercent]] = {
-    width: 2, headerRow1: 'Peak', headerRow2: '%',
+    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% ( Peak / Size)',
     colType: RTOSCommon.colTypeEnum.colTypePercentage
 };
 
@@ -265,26 +248,22 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         mySetter(DisplayFields.Status, threadRunning ? 'RUNNING' : thState);
                         mySetter(DisplayFields.Priority, parseInt(thPrio).toString());
 
-                        mySetter(DisplayFields.StackStart, hexFormat(stackInfo.stackStart));
-                        mySetter(DisplayFields.StackTop, hexFormat(stackInfo.stackTop));
-                        mySetter(DisplayFields.StackEnd, stackInfo.stackEnd ? hexFormat(stackInfo.stackEnd) : '0x????????');
-
-                        const func = (x: any) => x === undefined ? '???' : x.toString();
-                        mySetter(DisplayFields.StackSize, func(stackInfo.stackSize));
-                        mySetter(DisplayFields.StackFree, func(stackInfo.stackFree));
-                        mySetter(DisplayFields.StackUsed, func(stackInfo.stackUsed));
-                        mySetter(DisplayFields.StackPeak, func(stackInfo.stackPeak));
-
-                        const funcPercentage = (x: any) => x === undefined ? '???' : (x.toString() + ' %');
-
                         if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
-                            mySetter(DisplayFields.StackPercent, funcPercentage(stackPercentVal), stackPercentVal);
+                            const stackPercentText = `${stackPercentVal} % ( ${stackInfo.stackUsed} / ${stackInfo.stackSize} )`;
+                            mySetter(DisplayFields.StackPercent, stackPercentText, stackPercentVal);
+                        }
+                        else {
+                            mySetter(DisplayFields.StackPercent, '??? %');
                         }
 
                         if ((stackInfo.stackPeak !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPeakPercentVal = Math.round((stackInfo.stackPeak / stackInfo.stackSize) * 100);
-                            mySetter(DisplayFields.StackPeakPercent, funcPercentage(stackPeakPercentVal), stackPeakPercentVal);
+                            const stackPeakPercentText = `${stackPeakPercentVal} % ( ${stackInfo.stackPeak} / ${stackInfo.stackSize} )`;
+                            mySetter(DisplayFields.StackPeakPercent, stackPeakPercentText, stackPeakPercentVal);
+                        }
+                        else {
+                            mySetter(DisplayFields.StackPeakPercent, '??? %');
                         }
 
                         const thread: RTOSCommon.RTOSThreadInfo = {
