@@ -20,7 +20,8 @@ enum DisplayFields {
     StackSize,
     StackFree,
     StackUsed,
-    StackPeak
+    StackPeak,
+    StackPeakPercent
 }
 
 const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
@@ -43,6 +44,11 @@ RTOSUCOS2Items[DisplayFields[DisplayFields.StackSize]] = { width: 2, headerRow1:
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackFree]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Free' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackUsed]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Used' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeak]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Peak' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeakPercent]] = {
+    width: 2, headerRow1: 'Peak', headerRow2: '%',
+    colType: RTOSCommon.colTypeEnum.colTypePercentage
+};
+
 const DisplayFieldNames: string[] = Object.keys(RTOSUCOS2Items);
 
 export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
@@ -274,6 +280,11 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
                             mySetter(DisplayFields.StackPercent, funcPercentage(stackPercentVal), stackPercentVal);
+                        }
+
+                        if ((stackInfo.stackPeak !== undefined) && (stackInfo.stackSize !== undefined)) {
+                            const stackPeakPercentVal = Math.round((stackInfo.stackPeak / stackInfo.stackSize) * 100);
+                            mySetter(DisplayFields.StackPeakPercent, funcPercentage(stackPeakPercentVal), stackPeakPercentVal);
                         }
 
                         const thread: RTOSCommon.RTOSThreadInfo = {
