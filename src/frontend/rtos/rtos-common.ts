@@ -13,26 +13,43 @@ export interface RTOSStackInfo {
     bytes?: Uint8Array;
 }
 
-export interface DisplayItem {
+export enum colTypeEnum {
+    colTypeNormal = 0,
+    colTypePercentage,
+    colTypeLink,
+    colTypeState
+}
+
+export interface DisplayColumnItem {
     width: number;
     headerRow1: string;
     headerRow2: string;
     fieldName?: string;
+    colType?: colTypeEnum;
 }
-export interface FreeRTOSThreadInfo {
-    display: {[key: string]: string};       // Each key is the string of the enum value
+
+export interface DisplayRowItem {
+    text: string;
+    value?: any;
+}
+
+export interface RTOSThreadInfo {
+    display: { [key: string]: DisplayRowItem }; // Each key is the string of the enum value
     stackInfo: RTOSStackInfo;
+    running?: boolean;
 }
 
 export abstract class RTOSBase {
     public progStatus: 'started' | 'stopped' | 'running' | 'exited';
     public status: 'failed' | 'initialized' | 'none';
+    public className: string;
     protected exprValues: Map<string, RTOSVarHelper> = new Map<string, RTOSVarHelper>();
-    protected failedWhy: any;   // For debug
+    protected failedWhy: any; // For debug
 
     protected constructor(public session: vscode.DebugSession, public readonly name) {
         this.status = 'none';
         this.progStatus = 'started';
+        this.className = this.name.replace(new RegExp('[^_a-zA-Z0-9-]', 'g'), ''); // Remove invalid CSS chars from name
     }
 
     //
@@ -60,9 +77,9 @@ export abstract class RTOSBase {
     // Refresh the RTOS structures
     public abstract refresh(frameId: number): Promise<void>;
 
-    // Return a string that represents the RTOS state. Ideally, it should return a grid/table that is
-    // hosted in an upper level structure
-    public abstract getHTML(): string;
+    // Return a string tuple (html + style element content) that represents the RTOS state.
+    // Ideally, it should return a grid/table that is hosted in an upper level structure
+    public abstract getHTML(): [string, string];
 
     // UTILITY functions for all RTOSes
     protected async evalForVarRef(
@@ -202,12 +219,14 @@ export abstract class RTOSBase {
     // If there is a column named 'Status' and if it is set to 'RUNNING', that row becomes special
     protected getHTMLCommon(
         displayFieldNames: string[],
-        RTOSDisplayItems: {[key: string]: DisplayItem},
-        allThreads: FreeRTOSThreadInfo[],
-        timeInfo: string): string {
-        const colFormat = displayFieldNames.map((key) => `${RTOSDisplayItems[key].width}fr`).join(' ');
-        let table = `<vscode-data-grid class="${this.name}-grid threads-grid" grid-template-columns="${colFormat}">\n`;
+        RTOSDisplayColumn: { [key: string]: DisplayColumnItem },
+        allThreads: RTOSThreadInfo[],
+        timeInfo: string): [string, string] {
+        const colFormat = displayFieldNames.map((key) => `${RTOSDisplayColumn[key].width}fr`).join(' ');
+        let table = `<vscode-data-grid class="${this.className}-grid threads-grid" grid-template-columns="${colFormat}">\n`;
         let header = '';
+        let style = '';
+        let row = 1;
         for (const thr of allThreads) {
             const th = thr.display;
             if (!header) {
@@ -218,9 +237,9 @@ export abstract class RTOSBase {
                 if (true) {
                     header = commonHeaderRowPart;
                     for (const key of displayFieldNames) {
-                        const txt = RTOSDisplayItems[key].headerRow1;
+                        const txt = RTOSDisplayColumn[key].headerRow1;
                         header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
-                        if (!have2ndRow) { have2ndRow = !!RTOSDisplayItems[key].headerRow2; }
+                        if (!have2ndRow) { have2ndRow = !!RTOSDisplayColumn[key].headerRow2; }
                         col++;
                     }
                     header += '  </vscode-data-grid-row>\n';
@@ -230,7 +249,7 @@ export abstract class RTOSBase {
                     col = 1;
                     header += commonHeaderRowPart;
                     for (const key of displayFieldNames) {
-                        const txt = RTOSDisplayItems[key].headerRow2;
+                        const txt = RTOSDisplayColumn[key].headerRow2;
                         header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
                         col++;
                     }
@@ -240,20 +259,35 @@ export abstract class RTOSBase {
             }
 
             let col = 1;
-            const running = (th['Status'] === 'RUNNING') ? 'running' : '';
-            table += `  <vscode-data-grid-row class="${this.name}-row threads-row">\n`;
+            const running = (thr.running === true) ? ' running' : '';
+            const rowClass = `thread-row-${row}`;
+            table += `  <vscode-data-grid-row class="${this.className}-row threads-row ${rowClass}">\n`;
             for (const key of displayFieldNames) {
                 const v = th[key];
-                let txt = v;
+                let txt = v.text;
                 const lKey = key.toLowerCase();
-                if (key === 'StackStart') {
+                let additionalClasses = running;
+
+                if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypeLink) {
                     txt = `<vscode-link class="threads-link-${lKey}" href="#">${v}</vscode-link>`;
                 }
-                const cls = `class="${this.name}-cell threads-cell threads-cell-${lKey} ${running}"`;
+
+                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) && (v.value !== undefined)) {
+                    const rowValueNumber = parseFloat(v.value);
+                    if (!isNaN(rowValueNumber)) {
+                        const activeValueStr = Math.floor(rowValueNumber).toString();
+                        additionalClasses += ' backgroundPercent';
+                        style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
+                            `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
+                    }
+                }
+
+                const cls = `class="${this.className}-cell threads-cell threads-cell-${lKey}${additionalClasses}"`;
                 table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                 col++;
             }
             table += '  </vscode-data-grid-row>\n';
+            row++;
         }
 
         let ret = table;
@@ -262,7 +296,7 @@ export abstract class RTOSBase {
             ret += `<p>Data collected at ${timeInfo}</p>\n`;
         }
 
-        return ret;
+        return [ret, style];
     }
 }
 

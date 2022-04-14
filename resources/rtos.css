@@ -1,6 +1,6 @@
 .threads-grid {
   gap: 0;
-  text-align: right;
+  text-align: center;
 }
 
 .threads-header-row {
@@ -20,18 +20,24 @@
   padding: 0px;
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size); 
+  font-size: var(--vscode-editor-font-size);
 }
 
 vscode-link {
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);  
+  font-size: var(--vscode-editor-font-size);
 }
 
 .running {
   color: var(--vscode-symbolIcon-classForeground);
-  font-weight:bold;
+  font-weight: bold;
+}
+
+.backgroundPercent {
+  background: linear-gradient(to right, var(--vscode-charts-green) 0% var(--rtosview-percentage-active, 0%), rgba(0, 0, 0, 0) var(--rtosview-percentage-active, 0%) 100%);
+  background-clip: padding-box;
+  mix-blend-mode: difference;
 }
 
 .help-button {
@@ -67,5 +73,5 @@ vscode-link {
   background-color: var(--vscode-textBlockQuote-background);
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);  
+  font-size: var(--vscode-editor-font-size);
 }

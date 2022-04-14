@@ -13,6 +13,7 @@ enum DisplayFields {
     TaskName,
     Status,
     Priority,
+    StackPercent,
     StackStart,
     StackTop,
     StackEnd,
@@ -22,13 +23,20 @@ enum DisplayFields {
     StackPeak
 }
 
-const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayItem } = {};
+const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
 RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 3, headerRow1: 'Thread', headerRow2: 'Address' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Task Name' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.StackStart]] = { width: 3, headerRow1: 'Stack', headerRow2: 'Start' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
+    width: 2, headerRow1: 'Stack', headerRow2: '%',
+    colType: RTOSCommon.colTypeEnum.colTypePercentage
+};
+RTOSUCOS2Items[DisplayFields[DisplayFields.StackStart]] = {
+    width: 3, headerRow1: 'Stack', headerRow2: 'Start',
+    colType: RTOSCommon.colTypeEnum.colTypeLink
+};
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackTop]] = { width: 3, headerRow1: 'Stack', headerRow2: 'Top' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackEnd]] = { width: 3, headerRow1: 'Stack', headerRow2: 'End' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackSize]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Size' };
@@ -55,8 +63,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     private OSTCBCurVal: number;
 
     private stale: boolean;
-    private foundThreads: RTOSCommon.FreeRTOSThreadInfo[] = [];
-    private finalThreads: RTOSCommon.FreeRTOSThreadInfo[] = [];
+    private foundThreads: RTOSCommon.RTOSThreadInfo[] = [];
+    private finalThreads: RTOSCommon.RTOSThreadInfo[] = [];
     private timeInfo: string;
     private readonly maxThreads = 1024;
 
@@ -172,10 +180,10 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                                 await this.getThreadInfo(this.OSTCBList, frameId);
 
                                 if (this.foundThreads[0]['ID'] !== '???') {
-                                    this.foundThreads.sort((a, b) => parseInt(a.display['ID']) - parseInt(b.display['ID']));
+                                    this.foundThreads.sort((a, b) => parseInt(a.display['ID'].text) - parseInt(b.display['ID'].text));
                                 }
                                 else {
-                                    this.foundThreads.sort((a, b) => parseInt(a.display['Address']) - parseInt(b.display['Address']));
+                                    this.foundThreads.sort((a, b) => parseInt(a.display['Address'].text) - parseInt(b.display['Address'].text));
                                 }
                             }
                             this.finalThreads = [...this.foundThreads];
@@ -233,36 +241,43 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         }
 
                         const thState = mapTaskState(parseInt(curTaskObj['OSTCBStat-val']));
+                        const threadRunning = (thAddress === this.OSTCBCurVal);
 
                         const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
                         const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
 
                         const stackInfo = await this.getStackInfo(curTaskObj, this.stackPattern, frameId);
 
-                        const display: { [key: string]: string } = {};
-
-                        const mySetter = (x: DisplayFields, v: string) => {
-                            display[DisplayFieldNames[x]] = v;
+                        const display: { [key: string]: RTOSCommon.DisplayRowItem } = {};
+                        const mySetter = (x: DisplayFields, text: string, value?: any) => {
+                            display[DisplayFieldNames[x]] = { text, value };
                         };
 
-                        mySetter(DisplayFields.ID, threadId ? parseInt(threadId).toString() : '???');
+                        mySetter(DisplayFields.ID, (threadId ? parseInt(threadId).toString() : '???'));
                         mySetter(DisplayFields.Address, hexFormat(thAddress));
                         mySetter(DisplayFields.TaskName, thName);
-                        mySetter(DisplayFields.Status, (thAddress === this.OSTCBCurVal) ? 'RUNNING' : thState);
+                        mySetter(DisplayFields.Status, threadRunning ? 'RUNNING' : thState);
                         mySetter(DisplayFields.Priority, parseInt(thPrio).toString());
 
                         mySetter(DisplayFields.StackStart, hexFormat(stackInfo.stackStart));
                         mySetter(DisplayFields.StackTop, hexFormat(stackInfo.stackTop));
                         mySetter(DisplayFields.StackEnd, stackInfo.stackEnd ? hexFormat(stackInfo.stackEnd) : '0x????????');
 
-                        const func = (x) => x === undefined ? '???' : x.toString();
+                        const func = (x: any) => x === undefined ? '???' : x.toString();
                         mySetter(DisplayFields.StackSize, func(stackInfo.stackSize));
                         mySetter(DisplayFields.StackFree, func(stackInfo.stackFree));
                         mySetter(DisplayFields.StackUsed, func(stackInfo.stackUsed));
                         mySetter(DisplayFields.StackPeak, func(stackInfo.stackPeak));
 
-                        const thread: RTOSCommon.FreeRTOSThreadInfo = {
-                            display: display, stackInfo: stackInfo
+                        const funcPercentage = (x: any) => x === undefined ? '???' : (x.toString() + ' %');
+
+                        if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
+                            const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
+                            mySetter(DisplayFields.StackPercent, funcPercentage(stackPercentVal), stackPercentVal);
+                        }
+
+                        const thread: RTOSCommon.RTOSThreadInfo = {
+                            display: display, stackInfo: stackInfo, running: threadRunning
                         };
                         this.foundThreads.push(thread);
                         this.createHmlHelp(thread, curTaskObj);
@@ -363,40 +378,44 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     }
 
     public lastValidHtml: string = '';
-    public getHTML(): string {
-        // WARNING: This stuff is super fragile. Once we know what this works, then we should refactor this
-        let ret = '';
+    public lastValidCSS: string = '';
+    public getHTML(): [string, string] {
+        // WARNING: This stuff is super fragile. Once we know how this works, then we should refactor this
+        let msg = '';
         if (this.status === 'none') {
-            return '<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n';
+            return ['<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n', ''];
         }
         else if (this.stale) {
-            let msg = '';
             let lastHtml = this.lastValidHtml;
+            let lastCSS = this.lastValidCSS;
 
             if (this.OSTaskCtrVal === Number.MAX_SAFE_INTEGER) {
                 msg = 'Count not read "OSTaskCtr". Perhaps program is busy or did not stop long enough';
                 lastHtml = '';
+                lastCSS = '';
             }
             else if (this.OSTaskCtrVal > this.maxThreads) {
                 msg = `uc/OS-II variable OSTaskCtr = ${this.OSTaskCtrVal} seems invalid`;
                 lastHtml = '';
+                lastCSS = '';
             }
             else if (lastHtml) {
                 msg = ' Following info from last query may be stale.';
             }
 
-            return `<p>Unable to collect full RTOS information. ${msg}</p>\n` + lastHtml;
+            return [(`<p>Unable to collect full RTOS information. ${msg}</p>\n` + lastHtml), lastCSS];
         }
         else if ((this.OSTaskCtrVal !== Number.MAX_SAFE_INTEGER) && (this.finalThreads.length !== this.OSTaskCtrVal)) {
-            ret += `<p>Expecting ${this.OSTaskCtrVal} threads, found ${this.finalThreads.length}. Thread data may be unreliable<p>\n`;
+            msg += `<p>Expecting ${this.OSTaskCtrVal} threads, found ${this.finalThreads.length}. Thread data may be unreliable<p>\n`;
         }
         else if (this.finalThreads.length === 0) {
-            return `<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`;
+            return [(`<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`), ''];
         }
 
-        ret += this.getHTMLCommon(DisplayFieldNames, RTOSUCOS2Items, this.finalThreads, this.timeInfo);
-        this.lastValidHtml = ret + (this.helpHtml || '');
-        return this.lastValidHtml;
+        const ret = this.getHTMLCommon(DisplayFieldNames, RTOSUCOS2Items, this.finalThreads, this.timeInfo);
+        this.lastValidHtml = msg + ret[0] + (this.helpHtml || '');
+        this.lastValidCSS = ret[1];
+        return [this.lastValidHtml, this.lastValidCSS];
     }
 }
 
