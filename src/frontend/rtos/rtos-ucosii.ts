@@ -110,7 +110,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         }
     }
 
-    protected createHmlHelp(th: RTOSCommon.FreeRTOSThreadInfo, thInfo: object) {
+    protected createHmlHelp(th: RTOSCommon.RTOSThreadInfo, thInfo: object) {
         if (this.helpHtml === undefined) {
             this.helpHtml = '';
             try {
