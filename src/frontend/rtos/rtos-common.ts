@@ -124,7 +124,7 @@ export abstract class RTOSBase {
     }
 
     protected getVarChildren(varRef: number, dbg: string): Promise<DebugProtocol.Variable[]> {
-        return new Promise<DebugProtocol.Variable[]> ((resolve, reject) => {
+        return new Promise<DebugProtocol.Variable[]>((resolve, reject) => {
             if (this.progStatus !== 'stopped') {
                 return reject(new Error(`busy, failed to evaluate ${dbg}`));
             } else {
@@ -339,7 +339,7 @@ export class RTOSVarHelper {
     }
 
     public getValue(frameId: number): Promise<string> {
-        return new Promise<string | undefined> (async (resolve, reject) => {
+        return new Promise<string | undefined>(async (resolve, reject) => {
             if (this.rtos.progStatus !== 'stopped') {
                 return reject(new Error(`busy, failed on ${this.expression}`));
             } else {
@@ -357,7 +357,7 @@ export class RTOSVarHelper {
     }
 
     public getVarChildren(frameId: number): Promise<DebugProtocol.Variable[]> {
-        return new Promise<DebugProtocol.Variable[]> ((resolve, reject) => {
+        return new Promise<DebugProtocol.Variable[]>((resolve, reject) => {
             if (this.rtos.progStatus !== 'stopped') {
                 return reject(new Error(`busy, failed on ${this.expression}`));
             } else {
@@ -386,7 +386,7 @@ export class RTOSVarHelper {
     }
 
     public getVarChildrenObj(useFrameId: number): Promise<object> {
-        return new Promise<object> ((resolve, reject) => {
+        return new Promise<object>((resolve, reject) => {
             this.getVarChildren(useFrameId).then((vars) => {
                 const obj = RTOSVarHelper.varsToObj(vars);
                 resolve(obj);

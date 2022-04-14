@@ -197,7 +197,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         }
                         promises.push(this.updateCurrentThreadAddr(frameId));
                         promises.push(this.updateTotalRuntime(frameId));
-                        // Update in bulk, but broken up into three chunks, if the number of threads are already fullfilled, then
+                        // Update in bulk, but broken up into three chunks, if the number of threads are already fulfilled, then
                         // not much happens
                         await Promise.all(promises);
                         promises = [];
@@ -264,7 +264,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 try {
                     const listEndObj = await this.getVarChildrenObj(listEndRef, 'xListEnd');
                     let curRef = listEndObj['pxPrevious-ref'];
-                    for (let thIx = 0; thIx < threadCount; thIx++ ) {
+                    for (let thIx = 0; thIx < threadCount; thIx++) {
                         const element = await this.getVarChildrenObj(curRef, 'pxPrevious');
                         const threadId = parseInt(element['pvOwner-val']);
                         const thInfo = await this.getExprValChildrenObj(`((TCB_t*)${hexFormat(threadId)})`, frameId);
