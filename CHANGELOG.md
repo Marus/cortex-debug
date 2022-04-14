@@ -5,9 +5,10 @@ ChangeLog
 * Bugfix: #618, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes or runs out of memory
 * Bugfix: Implemented a workaround for VSCode issue with pause not working if neither `breakOnReset` or `runToEntryPoint` is set.
 * Bugfix: Workaround a gdb issue where it loses track of current thread when the current thread is deleted. This caused gdb `continue` to not work as expected. It may actually be a problem in the gdb-server as it reports a thread being deleted after a breakpoint/pause -- ie, program status changes while paused which is not expected.
-  
+
 # V1.4.3
 * Bugfix: Mistake in the release. No significant change
+
 # V1.4.2
 
 * FreeRTOS View performance improvements
@@ -25,7 +26,7 @@ ChangeLog
 # V1.4.0
 ## New Features
 * Hover is now much more powerful. You can expand arrays, objects, etc.
-* RTOS View is now available. It is experimental and there is only support for FreeRTOS. **With your help, we can add support for more RTOSes**. You can enable this feature using the extension setting `"cortex-debug.showRTOS": true` via the interactive Setting dialog or adding it to User/Workspace/Folder settings.json. You can also use Command Palette  `Cortex-Debug: Toggle RTOS Panel` command. See [#605](https://github.com/Marus/cortex-debug/issues/605) and here is a screnshot ![screenshot](https://user-images.githubusercontent.com/41269583/159186076-e13db666-c7f7-405f-a75d-c9dd523577d4.png)<br>
+* RTOS View is now available. It is experimental and there is only support for FreeRTOS. **With your help, we can add support for more RTOSes**. You can enable this feature using the extension setting `"cortex-debug.showRTOS": true` via the interactive Setting dialog or adding it to User/Workspace/Folder settings.json. You can also use Command Palette  `Cortex-Debug: Toggle RTOS Panel` command. See [#605](https://github.com/Marus/cortex-debug/issues/605) and here is a screenshot ![screenshot](https://user-images.githubusercontent.com/41269583/159186076-e13db666-c7f7-405f-a75d-c9dd523577d4.png)<br>
   Some notes
   * It can take a bit of time to update the RTOS info as it requires many tiny queries from GDB. This only occurs if the RTOS panel is visible. You can hide (expose/focus some other panel like `DEBUG CONSOLE` or `TERMINAL`). This will prevent any GDB traffic/updates and won't interfere with fast single stepping or waste your CPU resources. When when exposed it will immediately update itself and continue to do so as long as it is visible
   * If you are not using an RTOS, there is near zero overhead even if the RTOS panel is visible. The lack of an RTOS is quickly detected using one tiny GDB query and all activity ceases thereafter
@@ -53,7 +54,7 @@ ChangeLog
 
 # V1.3.3
 * Bigfix: Regression since introducing chained configurations a month ago. We were not waiting for the gdb-server to open a TCP port and launching gdb far ahead or time. Most times, this worked okay but this is wrong. Reverting back to old/proper behavior.
-  
+
 # V1.3.2
 * Major change: We now require both `objdump` and `nm` for extract the source-file, type, address and size of symbols from the executable elf file. `objdump` gives us better (not perfect) symbol information and its types but bad file information. `nm` gives good file information but is wrong in classifying symbols types (function vs data). Gdb does not give us size information, hard to correlate and very version dependent. We need everything addresses, sizes, names and origin (files). Without this, we have trouble giving a proper experience wrt Statics, Globals and other things like disassembly.<br><br>
   There is no special setting for this. We modify the path to `objdump` and expect to find `nm` there. If not, we will continue with the debug session but experience will not be as good (you will see a warning in the Debug Console)
@@ -62,7 +63,7 @@ ChangeLog
 * Minor improvement in disassembly.
 * Issue #592: We were not properly detecting used TCP ports causing failures in gdb-server starts. On some systems
 * Issue #585: RTT Terminals were not being re-cycled. Instead, new ones were being created requiring manual cleanup.
-  
+
 # V1.3.1 (preview release for 1.4.0)
 * Improved startup code for `launch` and `attach`. Quite a bit of old unneeded code removed following VSCode's current APIs. We were doing a few things inefficiently and thew updated VSCode APIs helped. We have a few too many options for startup like `runToEntryPoint`, `breakAfterReset`, etc. along with user defined overrides/pre/post commands. These are consolidated. This will also reduce the number of updated that happen to the various windows. We tested best we could but this is yet another major change.
 * Also the reset/restart processing uses virtually the same code as startup.
@@ -112,6 +113,7 @@ This is a rather large release. Contains many enhancements, new features and bug
   * Platform specific settings for `objdumpPath`
   * On a restart, now the debugger will stop at your `runToEntryPoint` setting or `breakAfterReset` or just continue execution if neither is enabled.
   * File extensions `.S` and `.s` are recognized as valid assembly source code for breakpoint setting
+
 # Bug fixes:
 * STLink restart and attach were broken
 * With the new release of STM32 software, SWO was broken. Should be working now
@@ -121,7 +123,7 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Issue #539: Using GDB to get some symbol information for locals and globals. Hopefully, gives better performance for large executables. Most information still comes from objdump though.
 # Others
 * The `Adapter Output` window in the `OUTPUT` tab is no more. We have had a deprecation notice for months now and have been using the `gdb-server` tab in the `TERMINALS` tab.
- 
+
 # V1.1.10
 * Bugfix: Unable to delete instruction breakpoint
 
@@ -134,7 +136,7 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Some improvements in disassembly
 * Maintenance: We were using very old API definitions from VSCode. We switched to the newest APIs for all types of breakpoint (function, file/line, data, instruction). Fingers crossed!
 * Bugfix: Double clicking in the disassembly window will now take you to the corresponding source file/line if any
-* There have been many other bug fixes for diassembly and a few enhancements. Improved performance, be able to see
+* There have been many other bug fixes for disassembly and a few enhancements. Improved performance, be able to see
 * more than one line of source (max of 3) -- note that gdb does not provide more than one line in the API
 * If you do use disassembly, there is some extra debugging output in the Debug Console to be able to track things
 * `showDevDebugOutput` is going through a change so we can better debug this extension and users can provide better bug reports. It is now a set of choices.
@@ -171,12 +173,12 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Bugfix: There was a bug dealing with large integers (bigger than 32 bits) in tooltip generation. May have caused Register values to be not displayed at all.
 
 # V1.1.2
-* Multi-core debug: Syncronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**. The top level configuration has to be a `Launch` session but others can be `Launch` or `Attach`. Same will be available with `Attach` at the root of the chain -- `Attach` requires all the configuration to be duplicated, so we wanted to wait for a bit more maturity.
+* Multi-core debug: Synchronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**. The top level configuration has to be a `Launch` session but others can be `Launch` or `Attach`. Same will be available with `Attach` at the root of the chain -- `Attach` requires all the configuration to be duplicated, so we wanted to wait for a bit more maturity.
 * Included with multi-core is multi-session where you can have multiple gdb-servers running at the same time. This is required for JLink where you may have one JLinkGDBServerCLExe connected to one core where as with OpenOCD and others, you will see the same GDB server shared for all the cores.
 * With the above changes, you may see multiple `Debug Consoles`, `gdb-server` Terminals, multiple programs in the `Call Stack` window, multiple `Registers` and multiple `Peripherals`.
 * DEPRECATION NOTICE: We are moving the registers window to the VARIABLES Panel (new category with Locals, Statics, Globals). As much as we liked having a separate panel for Registers, it was not possible (due to a VSCode limitation) for it to track the current Thread/Frame in the CALL STACK window. As such, you may have seen in accurate display. In the VARIABLES Panel, all values are in sync. with the CALL STACK window and it is also more efficient.
-* SWO: The method of configuring SWO has changed. There is a new GDB-script that we encourage users to customize. Frequently, vendors are using non-standard addresses for ARM debug components (CoreSight) and hence it is not possibe for to detect or keep track. You can now customize the script yourself. See https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init. Currently, only OpenOCD uses this script while the others are still using the old scripts that were not easily modifiable. Feedback, improvements welcome.
-* OpenOCD requires additional configuration that is now done in a TCL script (config file in OpenOCD lingo). This is also user customizable as vendors are using non recommended ways of defining SWO/TPIU configuration. This is user configuratble. See https://github.com/Marus/cortex-debug/blob/master/support/openocd-helpers.tcl. This file also has what is required to configure for an RTOS as the previous hard-coded method does not work well for multi-core systems and for those who do not follow OpenOCD recommended naming conventions.
+* SWO: The method of configuring SWO has changed. There is a new GDB-script that we encourage users to customize. Frequently, vendors are using non-standard addresses for ARM debug components (CoreSight) and hence it is not possible for to detect or keep track. You can now customize the script yourself. See https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init. Currently, only OpenOCD uses this script while the others are still using the old scripts that were not easily modifiable. Feedback, improvements welcome.
+* OpenOCD requires additional configuration that is now done in a TCL script (config file in OpenOCD lingo). This is also user customizable as vendors are using non recommended ways of defining SWO/TPIU configuration. This is user configurable. See https://github.com/Marus/cortex-debug/blob/master/support/openocd-helpers.tcl. This file also has what is required to configure for an RTOS as the previous hard-coded method does not work well for multi-core systems and for those who do not follow OpenOCD recommended naming conventions.
 
 # V1.1.1
 * For STLink Gdb-server and Cube-Programmer, set `LD_LIBRARY_PATH` on Linux and equivalent `DYLD_FALLBACK_LIBRARY_PATH` on MacOS
@@ -187,7 +189,7 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Bug fix: When using arm tools version 9+, some global variables were not being displayed
 
 # V1.1.0
-* Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering schem. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions
+* Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering scheme. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions
   This will be the first pre-release coming to you direct from the marketplace.
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
 * `launch.json` option `demangle` is removed. We always demangle. Its default value was true for quite some time. There is quite a bit of C++ now coming in and Rust as well. It appears there is no harm in always enabling it.
@@ -204,7 +206,7 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Preliminary support for data watchpoints
 * SVD now can allow no merge of consecutive addresses with a -1 specified for `svdAddrGapThreshold`. This will make peripheral updates very slow but certain devices may need this option.
 * You can now save the output of a gdb-server into a text file by specifying `cortex-debug.dbgServerLogfile` in User/Workspace/Folder settings. This will save output from the servers from all sessions (not just the recent ones). This is primarily for debugging and for users when submitting issues.
-* Pathnames for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
+* Path names for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
 * SWO output can now be logged (saved) to a file just like RTT output
 * Issues #524 and #525
 * Improved handling of J-Link RTOS option (file extension), added NuttX
