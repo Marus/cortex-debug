@@ -1,6 +1,10 @@
 ChangeLog
 =========
 
+# V1.4.x
+
+* RTOS View for uC/OS-II. Added by @PhilippHaefele & @mayjs
+
 # V1.4.4
 * Bugfix: #618, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes or runs out of memory
 * Bugfix: Implemented a workaround for VSCode issue with pause not working if neither `breakOnReset` or `runToEntryPoint` is set.
