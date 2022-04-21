@@ -96,10 +96,6 @@ export class RTOSSession {
         this.rtos = undefined;
     }
 
-    public getHTML(): string {
-        return this.html;
-    }
-
     public refresh(): Promise<void> {
         if (this.lastFrameId !== undefined) {
             return this.onStopped(this.lastFrameId);
