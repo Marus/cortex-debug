@@ -24,11 +24,11 @@ RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: 
 RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
-    width: 4, headerRow1: 'Stack Usage', headerRow2: '% ( Used / Size)',
+    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)',
     colType: RTOSCommon.colTypeEnum.colTypePercentage
 };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeakPercent]] = {
-    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% ( Peak / Size)',
+    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)',
     colType: RTOSCommon.colTypeEnum.colTypePercentage
 };
 
@@ -250,7 +250,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                         if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
-                            const stackPercentText = `${stackPercentVal} % ( ${stackInfo.stackUsed} / ${stackInfo.stackSize} )`;
+                            const stackPercentText = `${stackPercentVal} % (${stackInfo.stackUsed} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPercent, stackPercentText, stackPercentVal);
                         }
                         else {
@@ -259,7 +259,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                         if ((stackInfo.stackPeak !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPeakPercentVal = Math.round((stackInfo.stackPeak / stackInfo.stackSize) * 100);
-                            const stackPeakPercentText = `${stackPeakPercentVal} % ( ${stackInfo.stackPeak} / ${stackInfo.stackSize} )`;
+                            const stackPeakPercentText = `${stackPeakPercentVal} % (${stackInfo.stackPeak} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPeakPercent, stackPeakPercentText, stackPeakPercentVal);
                         }
                         else {
