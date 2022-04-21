@@ -3,6 +3,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import * as RTOSCommon from './rtos-common';
 import { hexFormat } from '../utils';
 import { HrTimer, toStringDecHexOctBin } from '../../common';
+import { Event } from 'vscode-jsonrpc';
 
 // We will have two rows of headers for uC/OS-II and the table below describes
 // the columns headers for the two rows and the width of each column as a fraction
@@ -236,7 +237,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         }
 
                         const threadRunning = (thAddress === this.OSTCBCurVal);
-                        const thState = (await this.analyzeTaskState(curTaskObj, flagPendMap, frameId)).describe();
+                        const thStateObject = (await this.analyzeTaskState(curTaskObj, flagPendMap, frameId));
+                        const thState = thStateObject.describe();
 
                         const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
                         const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
@@ -251,7 +253,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         mySetter(DisplayFields.ID, (threadId ? parseInt(threadId).toString() : '???'));
                         mySetter(DisplayFields.Address, hexFormat(thAddress));
                         mySetter(DisplayFields.TaskName, thName);
-                        mySetter(DisplayFields.Status, threadRunning ? 'RUNNING' : thState);
+                        mySetter(DisplayFields.Status, threadRunning ? 'RUNNING' : thState, thStateObject.fullData());
                         mySetter(DisplayFields.Priority, parseInt(thPrio).toString());
 
                         if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
@@ -562,17 +564,26 @@ function getEventTypeForTaskState(state: OsTaskState): OsEventType {
 
 abstract class TaskState {
     public abstract describe(): string;
+    public abstract fullData(): any;
 }
 
 class TaskReady extends TaskState {
     public describe(): string {
         return 'READY';
     }
+
+    public fullData(): any {
+        return null;
+    }
 }
 
 class TaskSuspended extends TaskState {
     public describe(): string {
         return 'SUSPENDED';
+    }
+
+    public fullData(): any {
+        return null;
     }
 }
 
@@ -596,27 +607,42 @@ class TaskPending extends TaskState {
     }
 
     public describe(): string {
+        // Converting to an array here is inefficient, but JS has no builtin iterator map/reduce feature
+        const eventCount = [...this.pendingInfo.values()].reduce((acc, events) => acc + events.length, 0);
+
+        if (eventCount <= 1) {
+            let event: EventInfo = null;
+            for (const events of this.pendingInfo.values()) {
+                if (events.length > 0) {
+                    event = events[0];
+                }
+            }
+
+            if (event) {
+                const eventTypeStr = OsEventType[event.eventType] ? OsEventType[event.eventType] : 'Unknown';
+                return `PEND ${eventTypeStr}: ${describeEvent(event)}`;
+            } else {
+                // This should not happen, but we still keep it as a fallback
+                return 'PEND Unknown';
+            }
+        } else {
+            return 'PEND MULTI';
+        }
+    }
+
+    public fullData() {
+        // Build an object containing mapping event types to event descriptions
+        const result =  {};
         const eventTypes = [...this.pendingInfo.keys()];
         eventTypes.sort();
-        const pendInfo = eventTypes.map((eventType) => {
-            const eventNames = this.pendingInfo.get(eventType).map((event) => {
-                if (event.name && event.name !== '?') {
-                    return `<dd>${event.name}</dd>`;
-                } else {
-                    return `<dd>0x${event.address.toString(16)}</dd>`;
-                }
-            }).join('');
-
-            const eventTypeStr = OsEventType[eventType] ? OsEventType[eventType] : 'Unknown';
-
-            if (eventNames.length > 0) {
-                return `<dt style="text-align: center;"><b>${eventTypeStr}</b></dt> ${eventNames}`;
-            } else {
-                return `<dt style="text-align: center;">${eventTypeStr}</dt>`;
+        for (const eventType of eventTypes) {
+            result[OsEventType[eventType]] = [];
+            for (const event of this.pendingInfo.get(eventType)) {
+                result[OsEventType[eventType]].push(describeEvent(event));
             }
-        }).join('\n');
+        }
 
-        return `PEND:\n<dl>${pendInfo}</dl>`;
+        return result;
     }
 }
 
@@ -624,6 +650,15 @@ interface EventInfo {
     name?: string;
     address: number;
     eventType: OsEventType;
+}
+
+function describeEvent(event: EventInfo): string {
+
+    if (event.name && event.name !== '?') {
+        return event.name;
+    } else {
+        return `0x${event.address.toString(16)}`;
+    }
 }
 
 interface FlagGroup {
