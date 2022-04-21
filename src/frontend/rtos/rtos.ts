@@ -31,12 +31,13 @@ export class RTOSSession {
                 if (this.rtos) {
                     this.html = '<p>Failed to get RTOS information. Please report an issue if RTOS is actually running</p>\n';
                     this.rtos.onStopped(frameId).then(() => {
-                        this.html = this.rtos.getHTML();
+                        [this.html, this.style] = this.rtos.getHTML();
                         resolve();
                     });
                 } else {
                     this.triedAndFailed = true;
                     this.html = '';
+                    this.style = '';
                     resolve();
                 }
             };
@@ -70,6 +71,7 @@ export class RTOSSession {
                     if (this.allRTOSes.length > 0) {
                         // Some RTOSes have not finished detection
                         this.html = '<p>RTOS detection in progress...</p>\n';
+                        this.style = '';
                         resolve();
                     }
                 });
