@@ -35,9 +35,8 @@ vscode-link {
 }
 
 .backgroundPercent {
-  background: linear-gradient(to right, var(--vscode-charts-green) 0% var(--rtosview-percentage-active, 0%), rgba(0, 0, 0, 0) var(--rtosview-percentage-active, 0%) 100%);
+  background: linear-gradient(to right, var(--vscode-charts-blue) 0% var(--rtosview-percentage-active, 0%), rgba(0, 0, 0, 0) var(--rtosview-percentage-active, 0%) 100%);
   background-clip: padding-box;
-  mix-blend-mode: difference;
 }
 
 .help-button {
