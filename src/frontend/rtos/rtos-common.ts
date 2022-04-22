@@ -282,6 +282,14 @@ export abstract class RTOSBase {
                     }
                 }
 
+                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypeState) && (v.value)) {
+                    const length = Object.values(v.value).reduce((acc: number, cur: string[]) => acc + cur.length, 0);
+                    if (length > 1) {
+                        const descriptions = Object.keys(v.value).map((key) => `${key}: ${v.value[key].join(', ')}`).join('<br>');
+                        txt = `<button class="help-button">${v.text}</button><div class="help">${descriptions}</div>`;
+                    }
+                }
+
                 const cls = `class="${this.className}-cell threads-cell threads-cell-${lKey}${additionalClasses}"`;
                 table += `    <vscode-data-grid-cell ${cls} grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                 col++;

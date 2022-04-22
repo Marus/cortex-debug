@@ -22,7 +22,7 @@ const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
 RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 3, headerRow1: 'Thread', headerRow2: 'Address' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Task Name' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeState};
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
     width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)',
