@@ -109,15 +109,15 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 }
 
                 if (!thInfo['OSTCBTaskName-val']) {
-                    ret += `Thread ID missing......: Enable macro ${strong('OS_TASK_NAME_EN')} in FW<br>`;
+                    ret += `Thread name missing: Enable macro ${strong('OS_TASK_NAME_EN')} in FW<br>`;
                 }
                 if (!th.stackInfo.stackSize) {
-                    ret += `Stack Size missing.....: Enable macro ${strong('OS_TASK_CREATE_EXT_EN')} and use ${strong('OSTaskCreateExt')} in FW<br>`;
+                    ret += `Stack Size missing: Enable macro ${strong('OS_TASK_CREATE_EXT_EN')} and use ${strong('OSTaskCreateExt')} in FW<br>`;
                 }
 
                 if (ret) {
                     ret += '<br>Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
-                    ret = '<button class="help-button">Hints to get more out of the uc/OS-II viewer</button>\n' +
+                    ret = '<button class="help-button">Hints to get more out of the uC/OS-II viewer</button>\n' +
                         `<div class="help"><p>\n${ret}\n</p></div>\n`;
                     this.helpHtml = ret;
                 }
@@ -385,7 +385,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 lastCSS = '';
             }
             else if (this.OSTaskCtrVal > this.maxThreads) {
-                msg = `uc/OS-II variable OSTaskCtr = ${this.OSTaskCtrVal} seems invalid`;
+                msg = `uC/OS-II variable OSTaskCtr = ${this.OSTaskCtrVal} seems invalid`;
                 lastHtml = '';
                 lastCSS = '';
             }
