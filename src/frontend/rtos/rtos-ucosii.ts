@@ -2,8 +2,7 @@ import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import * as RTOSCommon from './rtos-common';
 import { hexFormat } from '../utils';
-import { HrTimer, toStringDecHexOctBin } from '../../common';
-import { Event } from 'vscode-jsonrpc';
+import { HrTimer } from '../../common';
 
 // We will have two rows of headers for uC/OS-II and the table below describes
 // the columns headers for the two rows and the width of each column as a fraction
@@ -22,7 +21,7 @@ const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
 RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 3, headerRow1: 'Thread', headerRow2: 'Address' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Task Name' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeState};
+RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeState };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
     width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)',
@@ -91,7 +90,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 this.OSTaskCtr = await this.getVarIfEmpty(this.OSTaskCtr, useFrameId, 'OSTaskCtr', false);
                 this.OSTCBList = await this.getVarIfEmpty(this.OSTCBList, useFrameId, 'OSTCBList', false);
                 this.OSTCBCur = await this.getVarIfEmpty(this.OSTCBCur, useFrameId, 'OSTCBCur', false);
-                this.OSFlagTbl = await this.getVarIfEmpty(this.OSFlagTbl, useFrameId, 'OSFlagTbl', false);
+                this.OSFlagTbl = await this.getVarIfEmpty(this.OSFlagTbl, useFrameId, 'OSFlagTbl', true);
                 this.status = 'initialized';
             }
             return this;
@@ -108,8 +107,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
             this.helpHtml = '';
             try {
                 let ret: string = '';
-                function strong(s) {
-                    return `<strong>${s}</strong>`;
+                function strong(text: string) {
+                    return `<strong>${text}</strong>`;
                 }
 
                 if (!thInfo['OSTCBTaskName-val']) {
@@ -167,7 +166,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                                     this.stackEntrySize = parseInt(stackEntrySizeRef);
                                 }
 
-                                const osFlagTblVal = await this.OSFlagTbl.getVarChildren(frameId);
+                                const osFlagTblVal = this.OSFlagTbl ? await this.OSFlagTbl.getVarChildren(frameId) : [];
                                 const flagPendMap = await this.getPendingFlagGroupsForTasks(osFlagTblVal, frameId);
 
                                 const tmpOSTCBCurVal = await this.OSTCBCur.getValue(frameId);
@@ -202,7 +201,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 }
             }, (reason) => {
                 resolve();
-                console.error('RTOSUCOS2.refresh() faled: ', reason);
+                console.error('RTOSUCOS2.refresh() failed: ', reason);
             });
         });
     }
@@ -237,11 +236,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         }
 
                         const threadRunning = (thAddress === this.OSTCBCurVal);
-                        const thStateObject = (await this.analyzeTaskState(curTaskObj, flagPendMap, frameId));
+                        const thStateObject = (await this.analyzeTaskState(thAddress, curTaskObj, flagPendMap, frameId));
                         const thState = thStateObject.describe();
-
-                        const matchPrio = curTaskObj['OSTCBPrio-val'].match(/([\w]*.?\s+).?\'/);
-                        const thPrio = matchPrio ? matchPrio[1].trim() : curTaskObj['OSTCBPrio-val'];
 
                         const stackInfo = await this.getStackInfo(curTaskObj, this.stackPattern, frameId);
 
@@ -254,7 +250,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         mySetter(DisplayFields.Address, hexFormat(thAddress));
                         mySetter(DisplayFields.TaskName, thName);
                         mySetter(DisplayFields.Status, threadRunning ? 'RUNNING' : thState, thStateObject.fullData());
-                        mySetter(DisplayFields.Priority, parseInt(thPrio).toString());
+                        mySetter(DisplayFields.Priority, parseInt(curTaskObj['OSTCBPrio-val']).toString());
 
                         if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
@@ -331,7 +327,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         return result;
     }
 
-    protected async analyzeTaskState(curTaskObj: object, flagPendMap: Map<number, FlagGroup[]>, frameId: number): Promise<TaskState> {
+    protected async analyzeTaskState(threadAddr: number, curTaskObj: object, flagPendMap: Map<number, FlagGroup[]>, frameId: number): Promise<TaskState> {
         const state = parseInt(curTaskObj['OSTCBStat-val']);
         switch (state) {
             case OsTaskState.READY: return new TaskReady();
@@ -343,11 +339,13 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         resultState.addEventType(getEventTypeForTaskState(candidateState));
                     }
                 });
-                const eventAddress = parseInt(curTaskObj['OSTCBEventPtr-val']);
-                if (eventAddress !== 0) {
-                    const event = await this.getVarChildrenObj(curTaskObj['OSTCBEventPtr-ref'], 'OSTCBEventPtr');
-                    const eventInfo = await this.getEventInfo(eventAddress, event, frameId);
-                    resultState.addEvent(eventInfo);
+                if (curTaskObj['OSTCBEventPtr-val']) {
+                    const eventAddress = parseInt(curTaskObj['OSTCBEventPtr-val']);
+                    if (eventAddress !== 0) {
+                        const event = await this.getVarChildrenObj(curTaskObj['OSTCBEventPtr-ref'], 'OSTCBEventPtr');
+                        const eventInfo = await this.getEventInfo(eventAddress, event, frameId);
+                        resultState.addEvent(eventInfo);
+                    }
                 }
                 if (curTaskObj['OSTCBEventMultiPtr-val']) {
                     const eventMultiBaseAddress = parseInt(curTaskObj['OSTCBEventMultiPtr-val']);
@@ -357,13 +355,11 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         );
                     }
                 }
-                const threadId = parseInt(curTaskObj['OSTCBId-val']);
-                if (flagPendMap.has(threadId)) {
-                    flagPendMap.get(threadId).forEach((flagGroup) =>
+                if (flagPendMap.has(threadAddr)) {
+                    flagPendMap.get(threadAddr).forEach((flagGroup) =>
                         resultState.addEvent({ name: flagGroup.name, eventType: OsEventType.Flag, address: flagGroup.address })
                     );
                 }
-                // TODO: Add support for pend multi
                 return resultState;
             }
         }
@@ -377,7 +373,6 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 const osFlagGrp = await this.getVarChildrenObj(flagGroupPtr.variablesReference, flagGroupPtr.name);
                 // Check if we are looking at an initialized flag group
                 if (parseInt(osFlagGrp['OSFlagType-val']) === OsEventType.Flag) {
-                    // TODO: Get flag group address as a fallback using &(evaluateName) expression value 
                     const groupAddr = parseInt(await this.getExprVal(`&(${flagGroupPtr.evaluateName})`, frameId));
                     const flagGroup: FlagGroup = { address: groupAddr };
                     const reprValue = osFlagGrp['OSFlagName-val'];
@@ -393,14 +388,11 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         if (!waitingTcbAddr || waitingTcbAddr === 0) {
                             break;
                         }
-                        const waitingTcb = await this.getExprValChildrenObj(`(OS_TCB *)(${waitingTcbAddr})`, frameId);
-                        const waitingId = parseInt(waitingTcb['OSTCBId-val']);
 
-                        if (!result.has(waitingId)) {
-                            result.set(waitingId, []);
+                        if (!result.has(waitingTcbAddr)) {
+                            result.set(waitingTcbAddr, []);
                         }
-                        // TODO: Add the pending bitmask here?
-                        result.get(waitingId).push(flagGroup);
+                        result.get(waitingTcbAddr).push(flagGroup);
 
                         const nextFlagNodeAddr = parseInt(flagNode['OSFlagNodeNext-val']);
                         if (nextFlagNodeAddr === 0) {
@@ -457,10 +449,10 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 stackInfo.stackUsed = stackInfo.stackSize - stackDelta;
             }
 
-            /* check stack peak */ // TODO Maybe optimize this by only reading between stackTop and stackEnd ans size stackFree
+            /* check stack peak */
             const memArg: DebugProtocol.ReadMemoryArguments = {
-                memoryReference: hexFormat(Math.min(stackInfo.stackStart, stackInfo.stackEnd)),
-                count: stackInfo.stackSize
+                memoryReference: hexFormat(Math.min(stackInfo.stackTop, stackInfo.stackEnd)),
+                count: stackInfo.stackFree
             };
             try {
                 const stackData = await this.session.customRequest('readMemory', memArg);
