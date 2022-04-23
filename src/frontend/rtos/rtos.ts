@@ -415,16 +415,17 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             return '';
         }
         if (!this.parent.enabled) {
-            return '<!DOCTYPE html>\n' +
-            '<html lang="en">\n' +
-            '<head>\n' +
-            '    <meta charset="UTF-8">\n' +
-            '    <title>RTOS Threads</title>\n' +
-            '</head>\n' +
-            '<body>\n' +
-            '    <p>Currently disabled. Enable setting "cortex-debug.showRTOS" or use Command "Cortex Debug: Toggle RTOS Panel" to see any RTOS info</p>\n' +
-            '</body>\n' +
-            '</html>';
+            return /*html*/`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>RTOS Threads</title>
+                </head>
+                <body>
+                    <p>Currently disabled. Enable setting "cortex-debug.showRTOS" or use Command "Cortex Debug: Toggle RTOS Panel" to see any RTOS info</p>
+                </body>
+                </html>`;
         }
         const toolkitUri = getUri(webview, this.extensionUri, [
             'webview',
@@ -444,33 +445,34 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         };
 
         const [body, style] = this.parent.getHtml();
-        const bodyIndented = indentString(body, 4);
-        const styleIndented = indentString(style, 8);
+        const bodyIndented = indentString(body, 12);
+        const styleIndented = indentString(style, 12);
         // Use a nonce to only allow a specific script to be run.
         const nonce = getNonce();
-        return '<!DOCTYPE html>\n' +
-               '<html lang="en">\n' +
-               '<head>\n' +
-               '    <meta charset="UTF-8">\n' +
-               '    <!--\n' +
-               '        Use a content security policy to only allow loading images from https or from our extension directory,\n' +
-               '        and only allow scripts that have a specific nonce.\n' +
-               '    -->\n' +
-               '    <meta http-equiv="Content-Security-Policy" content="default-src \'none\';' +
-               `style-src 'nonce-${nonce}' ${webview.cspSource}; script-src 'nonce-${nonce}';">\n` +
-               '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-               `    <link href="${rtosStyle}" rel="stylesheet">\n` +
-               `    <style nonce="${nonce}">\n` +
-               `${styleIndented}\n` +
-               '    </style>\n' +
-               '    <title>RTOS Threads</title>\n' +
-               '</head>\n' +
-               '<body>\n' +
-               `${bodyIndented}\n` +
-               `    <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>\n` +
-               `    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>\n` +
-               '</body>\n' +
-               '</html>';
+        return /*html*/`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <!--
+                    Use a content security policy to only allow loading images from https or from our extension directory,
+                    and only allow scripts that have a specific nonce.
+                -->
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none';
+                style-src 'nonce-${nonce}' ${webview.cspSource}; script-src 'nonce-${nonce}';">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link href="${rtosStyle}" rel="stylesheet">
+                <style nonce="${nonce}">
+            ${styleIndented}
+                </style>
+                <title>RTOS Threads</title>
+            </head>
+            <body>
+            ${bodyIndented}
+               <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
+               <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+            </body>
+            </html>`;
     }
 }
 
