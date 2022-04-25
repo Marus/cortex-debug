@@ -39,6 +39,11 @@ export interface RTOSThreadInfo {
     running?: boolean;
 }
 
+export interface HtmlInfo {
+    html: string;
+    css: string;
+}
+
 export abstract class RTOSBase {
     public progStatus: 'started' | 'stopped' | 'running' | 'exited';
     public status: 'failed' | 'initialized' | 'none';
@@ -77,9 +82,9 @@ export abstract class RTOSBase {
     // Refresh the RTOS structures
     public abstract refresh(frameId: number): Promise<void>;
 
-    // Return a string tuple (html + style element content) that represents the RTOS state.
+    // Return Html Info (html + style element content) that represents the RTOS state.
     // Ideally, it should return a grid/table that is hosted in an upper level structure
-    public abstract getHTML(): [string, string];
+    public abstract getHTML(): HtmlInfo;
 
     // UTILITY functions for all RTOSes
     protected async evalForVarRef(
@@ -216,12 +221,11 @@ export abstract class RTOSBase {
         });
     }
 
-    // If there is a column named 'Status' and if it is set to 'RUNNING', that row becomes special
     protected getHTMLCommon(
         displayFieldNames: string[],
         RTOSDisplayColumn: { [key: string]: DisplayColumnItem },
         allThreads: RTOSThreadInfo[],
-        timeInfo: string): [string, string] {
+        timeInfo: string): HtmlInfo {
         const colFormat = displayFieldNames.map((key) => `${RTOSDisplayColumn[key].width}fr`).join(' ');
         let table = `<vscode-data-grid class="${this.className}-grid threads-grid" grid-template-columns="${colFormat}">\n`;
         let header = '';
@@ -298,13 +302,18 @@ export abstract class RTOSBase {
             row++;
         }
 
+        table += '</vscode-data-grid>\n';
+
         let ret = table;
-        ret += '</vscode-data-grid>\n';
         if (timeInfo) {
             ret += `<p>Data collected at ${timeInfo}</p>\n`;
         }
 
-        return [ret, style];
+        const htmlContent: HtmlInfo = {
+            html: ret, css: style
+        };
+
+        return htmlContent;
     }
 }
 

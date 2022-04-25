@@ -478,45 +478,47 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         return stackInfo;
     }
 
-    public lastValidHtml: string = '';
-    public lastValidCSS: string = '';
-    public getHTML(): [string, string] {
+    public lastValidHtmlContent: RTOSCommon.HtmlInfo = {html: '', css: ''};
+    public getHTML(): RTOSCommon.HtmlInfo {
+        const htmlContent: RTOSCommon.HtmlInfo = {
+            html: '', css: ''
+        };
         // WARNING: This stuff is super fragile. Once we know how this works, then we should refactor this
         let msg = '';
         if (this.status === 'none') {
-            return ['<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n', ''];
-        }
-        else if (this.stale) {
-            let lastHtml = this.lastValidHtml;
-            let lastCSS = this.lastValidCSS;
-
+            htmlContent.html = '<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n';
+            return htmlContent;
+        } else if (this.stale) {
+            const lastHtmlInfo = this.lastValidHtmlContent;
             if (this.OSTaskCtrVal === Number.MAX_SAFE_INTEGER) {
-                msg = 'Count not read "OSTaskCtr". Perhaps program is busy or did not stop long enough';
-                lastHtml = '';
-                lastCSS = '';
-            }
-            else if (this.OSTaskCtrVal > this.maxThreads) {
-                msg = `uC/OS-II variable OSTaskCtr = ${this.OSTaskCtrVal} seems invalid`;
-                lastHtml = '';
-                lastCSS = '';
-            }
-            else if (lastHtml) {
+                msg = ' Could not read "OSTaskCtr". Perhaps program is busy or did not stop long enough';
+                lastHtmlInfo.html = '';
+                lastHtmlInfo.css = '';
+            } else if (this.OSTaskCtrVal > this.maxThreads) {
+                msg = ` uC/OS-II variable OSTaskCtr = ${this.OSTaskCtrVal} seems invalid`;
+                lastHtmlInfo.html = '';
+                lastHtmlInfo.css = '';
+            } else if (lastHtmlInfo.html) { // TODO check if this check is ok
                 msg = ' Following info from last query may be stale.';
             }
 
-            return [(`<p>Unable to collect full RTOS information. ${msg}</p>\n` + lastHtml), lastCSS];
-        }
-        else if ((this.OSTaskCtrVal !== Number.MAX_SAFE_INTEGER) && (this.finalThreads.length !== this.OSTaskCtrVal)) {
+            htmlContent.html = `<p>Unable to collect full RTOS information.${msg}</p>\n` + lastHtmlInfo.html;
+            htmlContent.css = lastHtmlInfo.css;
+            return htmlContent;
+        } else if ((this.OSTaskCtrVal !== Number.MAX_SAFE_INTEGER) && (this.finalThreads.length !== this.OSTaskCtrVal)) {
             msg += `<p>Expecting ${this.OSTaskCtrVal} threads, found ${this.finalThreads.length}. Thread data may be unreliable<p>\n`;
-        }
-        else if (this.finalThreads.length === 0) {
-            return [(`<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`), ''];
+        } else if (this.finalThreads.length === 0) {
+            htmlContent.html = `<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`;
+            return htmlContent;
         }
 
         const ret = this.getHTMLCommon(DisplayFieldNames, RTOSUCOS2Items, this.finalThreads, this.timeInfo);
-        this.lastValidHtml = msg + ret[0] + (this.helpHtml || '');
-        this.lastValidCSS = ret[1];
-        return [this.lastValidHtml, this.lastValidCSS];
+        htmlContent.html = msg + ret.html + (this.helpHtml || '');
+        htmlContent.css = ret.css;
+
+        this.lastValidHtmlContent = htmlContent; // TODO Shouldn't the html part without the msg?
+        // console.log(this.lastValidHtmlContent.html);
+        return this.lastValidHtmlContent;
     }
 }
 

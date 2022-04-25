@@ -371,42 +371,46 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         return stackInfo;
     }
 
-    public lastValidHtml: string = '';
-    public lastValidCSS: string = '';
-    public getHTML(): [string, string] {
+    public lastValidHtmlContent: RTOSCommon.HtmlInfo = {html: '', css: ''};
+    public getHTML(): RTOSCommon.HtmlInfo {
+        const htmlContent: RTOSCommon.HtmlInfo = {
+            html: '', css: ''
+        };
         // WARNING: This stuff is super fragile. Once we know how this works, then we should refactor this
         let msg = '';
         if (this.status === 'none') {
-            return ['<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n', ''];
+            htmlContent.html = '<p>RTOS not yet fully initialized. Will occur next time program pauses</p>\n';
+            return htmlContent;
         } else if (this.stale) {
-            let lastHtml = this.lastValidHtml;
-            let lastCSS = this.lastValidCSS;
+            const lastHtmlInfo = this.lastValidHtmlContent;
             if (this.uxCurrentNumberOfTasksVal === Number.MAX_SAFE_INTEGER) {
-                msg = 'Count not read "uxCurrentNumberOfTasks". Perhaps program is busy or did not stop long enough';
-                lastHtml = '';
-                lastCSS = '';
+                msg = ' Could not read "uxCurrentNumberOfTasks". Perhaps program is busy or did not stop long enough';
+                lastHtmlInfo.html = '';
+                lastHtmlInfo.css = '';
             } else if (this.uxCurrentNumberOfTasksVal > this.maxThreads) {
-                msg = `FreeRTOS variable uxCurrentNumberOfTasks = ${this.uxCurrentNumberOfTasksVal} seems invalid`;
-                lastHtml = '';
-                lastCSS = '';
-            } else if (lastHtml) {
+                msg = ` FreeRTOS variable uxCurrentNumberOfTasks = ${this.uxCurrentNumberOfTasksVal} seems invalid`;
+                lastHtmlInfo.html = '';
+                lastHtmlInfo.css = '';
+            } else if (lastHtmlInfo.html) { // TODO check if this check is ok
                 msg = ' Following info from last query may be stale.';
             }
-            return [(`<p>Unable to collect full RTOS information. ${msg}</p>\n` + lastHtml), lastCSS];
+
+            htmlContent.html = `<p>Unable to collect full RTOS information.${msg}</p>\n` + lastHtmlInfo.html;
+            htmlContent.css = lastHtmlInfo.css;
+            return htmlContent;
         } else if ((this.uxCurrentNumberOfTasksVal !== Number.MAX_SAFE_INTEGER) && (this.finalThreads.length !== this.uxCurrentNumberOfTasksVal)) {
             msg += `<p>Expecting ${this.uxCurrentNumberOfTasksVal} threads, found ${this.finalThreads.length}. Thread data may be unreliable<p>\n`;
         } else if (this.finalThreads.length === 0) {
-            return [(`<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`), ''];
+            htmlContent.html = `<p>No ${this.name} threads detected, perhaps RTOS not yet initialized or tasks yet to be created!</p>\n`;
+            return htmlContent;
         }
 
         const ret = this.getHTMLCommon(DisplayFieldNames, FreeRTOSItems, this.finalThreads, this.timeInfo);
-        this.lastValidHtml = msg + ret[0] + (this.helpHtml || '');
-        this.lastValidCSS = ret[1];
-        // console.log(this.lastValidHtml);
-        return [this.lastValidHtml, this.lastValidCSS];
-    }
-}
+        htmlContent.html = msg + ret.html + (this.helpHtml || '');
+        htmlContent.css = ret.css;
 
-function makeOneWord(s: string): string {
-    return s.toLowerCase().replace(/\s+/g, '-');
+        this.lastValidHtmlContent = htmlContent; // TODO Shouldn't the html part without the msg?
+        // console.log(this.lastValidHtmlContent.html);
+        return this.lastValidHtmlContent;
+    }
 }
