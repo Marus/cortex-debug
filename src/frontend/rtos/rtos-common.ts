@@ -1,6 +1,7 @@
 
 import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
+import { inherits } from 'util';
 
 export interface RTOSStackInfo {
     stackStart: number;
@@ -22,6 +23,12 @@ export interface DisplayItem {
 export interface FreeRTOSThreadInfo {
     display: {[key: string]: string};       // Each key is the string of the enum value
     stackInfo: RTOSStackInfo;
+}
+
+export class ShouldRetry extends Error {
+    constructor(str: string) {
+        super('Busy or Error for expr ' + str);
+    }
 }
 
 export abstract class RTOSBase {
@@ -150,13 +157,19 @@ export abstract class RTOSBase {
     //   * If optional, return null
     //   * If not optional, Throws an exception
     //
+    // This function may have to be adjusted for other debuggers, for when there is an error. We know what our
+    // behavior is not not sure what cppdbg does
     protected async getVarIfEmpty(prev: RTOSVarHelper, fId: number, expr: string, opt?: boolean): Promise<RTOSVarHelper> {
         try {
             if ((prev !== undefined) || (this.progStatus !== 'stopped')) {
                 return prev;
             }
             const tmp = new RTOSVarHelper(expr, this);
-            await tmp.tryInitOrUpdate(fId);
+            const success = await tmp.tryInitOrUpdate(fId);
+            if (!success || (isNullOrUndefined(tmp.value) && (this.progStatus !== 'stopped'))) {
+                // It is most likely busy .... try again. Program status can change while we are querying
+                throw new ShouldRetry(expr);
+            }
             if (isNullOrUndefined(tmp.value)) {
                 if (!opt) {
                     throw Error(`${expr} not found`);
@@ -294,9 +307,10 @@ export class RTOSVarHelper {
                 context: 'hover'
             };
             this.value = undefined;
+            // We have to see what a debugger like cppdbg returns for failures or when busy. And, is hover the right thing to use
             const result = await this.rtos.session.customRequest('evaluate', arg);
-            this.value = result?.result;
-            this.varReference = result?.variablesReference;
+            this.value = result.result;
+            this.varReference = result.variablesReference;
             return true;
         }
         catch (e) {
