@@ -439,14 +439,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'resources', 'rtos.js'));
         const rtosStyle = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'resources', 'rtos.css'));
 
-        const indentString = (str: string, count: number, indent = ' ') => {
-            indent = indent.repeat(count);
-            return str.replace(/^/gm, indent);
-        };
-
         const htmlInfo = this.parent.getHtml();
-        const bodyIndented = indentString(htmlInfo.html, 16);
-        const styleIndented = indentString(htmlInfo.css, 16);
         // Use a nonce to only allow a specific script to be run.
         const nonce = getNonce();
         return /*html*/`
@@ -463,14 +456,14 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="${rtosStyle}" rel="stylesheet">
                 <style nonce="${nonce}">
-${styleIndented}
+                ${htmlInfo.css}
                 </style>
                 <title>RTOS Threads</title>
             </head>
             <body>
-${bodyIndented}
-               <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
-               <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+                ${htmlInfo.html}
+                <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
+                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
             </body>
             </html>`;
     }
