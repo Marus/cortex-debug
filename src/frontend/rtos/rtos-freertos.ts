@@ -99,8 +99,12 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
             return this;
         }
         catch (e) {
-            this.status = 'failed';
-            this.failedWhy = e;
+            if (e instanceof RTOSCommon.ShouldRetry) {
+                console.error(e.message);
+            } else {
+                this.status = 'failed';
+                this.failedWhy = e;
+            }
             return this;
         }
     }
