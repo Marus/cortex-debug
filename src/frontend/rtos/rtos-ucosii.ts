@@ -96,9 +96,12 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
             return this;
         }
         catch (e) {
-            this.status = 'failed';
-            this.failedWhy = e;
-            return this;
+            if (e instanceof RTOSCommon.ShouldRetry) {
+                console.error(e.message);
+            } else {
+                this.status = 'failed';
+                this.failedWhy = e;
+            }
         }
     }
 
