@@ -1,5 +1,5 @@
 {
-    "version": "1.4.4",
+    "version": "1.5.0-pre1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -346,11 +346,6 @@
                     "default": true,
                     "description": "Enable Telemetry for the Cortex-Debug Extension. Reporting will also respect the global telemetry.enableTelemetry setting."
                 },
-                "cortex-debug.flattenAnonymous": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "If true, anonymous unions/structs are flattened in their parent data structure"
-                },
                 "cortex-debug.registerUseNaturalFormat": {
                     "type": "boolean",
                     "default": true,
@@ -379,10 +374,11 @@
                         "none",
                         "parsed",
                         "raw",
-                        "both"
+                        "both",
+                        "vscode"
                     ],
                     "default": "none",
-                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
+                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
                     "type": "string"
                 }
             }
@@ -717,7 +713,7 @@
                                 "description": "Applies to Restart/Reset, halt debugger after a reset. Ignored for `Attach` or if `runToEntryPoint` is used."
                             },
                             "runToEntryPoint": {
-                                "description": "Applies to Restart/Reset. If enabled the debugger will run until the start of the given function. There is a 5 second timeout",
+                                "description": "Applies to Restart/Reset. If enabled the debugger will run until the start of the given function.",
                                 "type": "string",
                                 "default": "main"
                             },
@@ -981,10 +977,11 @@
                                     "none",
                                     "parsed",
                                     "raw",
-                                    "both"
+                                    "both",
+                                    "vscode"
                                 ],
                                 "default": "none",
-                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
                                 "type": "string"
                             },
                             "showDevDebugTimestamps": {
@@ -1703,7 +1700,7 @@
                                 "description": "Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` or if `runToEntryPoint` is used."
                             },
                             "runToEntryPoint": {
-                                "description": "If enabled the debugger will run until the start of the given function. There is a 5 second timeout",
+                                "description": "If enabled the debugger will run until the start of the given function.",
                                 "type": "string",
                                 "default": "main"
                             },
@@ -1967,10 +1964,11 @@
                                     "none",
                                     "parsed",
                                     "raw",
-                                    "both"
+                                    "both",
+                                    "vscode"
                                 ],
                                 "default": "none",
-                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
                                 "type": "string"
                             },
                             "showDevDebugTimestamps": {

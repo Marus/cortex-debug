@@ -114,6 +114,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
            // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
+            'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
         return commands;

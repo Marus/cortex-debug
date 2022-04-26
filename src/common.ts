@@ -14,7 +14,8 @@ export enum ADAPTER_DEBUG_MODE {
     NONE = 'none',
     PARSED = 'parsed',
     BOTH = 'both',
-    RAW = 'raw'
+    RAW = 'raw',
+    VSCODE = 'vscode'
 }
 
 export enum CortexDebugKeys {
@@ -252,7 +253,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     targetId: string | number;
     runToMain: boolean;         // Deprecated: kept here for backwards compatibility
     runToEntryPoint: string;
-    flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
     variableUseNaturalFormat: boolean;
     chainedConfigurations: ChainedConfigurations;
@@ -658,9 +658,9 @@ export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean 
     if ((val === false) || (val === 'false') || (val === '') || (val === 'none')) {
         delete config.showDevDebugOutput;
     } else if ((val === true) || (val === 'true)')) {
-        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.PARSED;
+        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
     } else if (modes.indexOf(val) < 0) {
-        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.BOTH;
+        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.VSCODE;
         return false;       // Meaning, needed adjustment
     }
     return true;

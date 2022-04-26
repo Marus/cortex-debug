@@ -148,7 +148,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.
         }
 
-        config.flattenAnonymous = configuration.flattenAnonymous;
         config.registerUseNaturalFormat = configuration.get(CortexDebugKeys.REGISTER_DISPLAY_MODE, true);
         config.variableUseNaturalFormat = configuration.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true);
 
@@ -160,13 +159,53 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         return config;
     }
 
+    protected validateELFHeader(exe: string): boolean {
+        try {
+            if (!fs.existsSync(exe)) {
+                vscode.window.showErrorMessage(`File not found "executable": "${exe}"`);
+                return false;
+            }
+            const fd = fs.openSync(exe, 'r');
+            const buffer = Buffer.alloc(16);
+            const n = fs.readSync(fd, buffer, 0, 16, 0);
+            if (n !== 16) {
+                vscode.window.showErrorMessage(`Could not read 16 bytes from "executable": "${exe}"`);
+                return false;
+            }
+            // First four chars are 0x7f, 'E', 'L', 'F'
+            if ((buffer[0] !== 0x7f) || (buffer[1] !== 0x45) || (buffer[2] !== 0x4c) || (buffer[3] !== 0x46)) {
+                vscode.window.showInformationMessage(`Not a valid ELF file "executable": "${exe}". Many debug functions may not work`);
+                return true;
+            }
+            return true;
+        }
+        catch (e) {
+            vscode.window.showErrorMessage(`Could not read file "executable": "${exe}"`);
+            return false;
+        }
+    }
+
     public resolveDebugConfigurationWithSubstitutedVariables(
         folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
-        let validationResponse: string = null;
+        // Right now, we don't consider a bad executable as fatal. Technically, you don't need an executable but
+        // users will get a horrible debug experience ... so many things don't work.
+        let exe = config.executable;
+        if (!exe) {
+            vscode.window.showErrorMessage('No "executable" specified. It must be a valid ELF file');
+        } else {
+            const cwd = config.cwd || folder;
+            config.cwd = cwd;
+            if (!path.isAbsolute(exe)) {
+                exe = path.join(cwd, exe);
+                config.executable = exe;
+            }
+            this.validateELFHeader(exe);
+        }
 
+        let validationResponse: string = null;
         switch (config.servertype) {
             case 'jlink':
                 validationResponse = this.verifyJLinkConfigurationAfterSubstitution(folder, config);

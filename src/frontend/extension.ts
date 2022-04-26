@@ -695,7 +695,7 @@ export class CortexDebugExtension {
                 }
                 delay += Math.max(launch.delayMs || 0, 0);
                 const child = new CDebugChainedSessionItem(cDbgParent, launch, childOptions);
-                const folder = this.getWsFolder(launch.folder, e.session.workspaceFolder);
+                const folder = this.getWsFolder(launch.folder, e.session.workspaceFolder, launch.name);
                 setTimeout(() => {
                     vscode.debug.startDebugging(folder, launch.name, childOptions).then((success) => {
                         if (!success) {
@@ -761,14 +761,28 @@ export class CortexDebugExtension {
         }
     }
 
-    private getWsFolder(folder: string, def: vscode.WorkspaceFolder): vscode.WorkspaceFolder {
+    private getWsFolder(folder: string, def: vscode.WorkspaceFolder, childName): vscode.WorkspaceFolder {
         if (folder) {
-            folder = path.normalize(folder);
+            const orig = folder;
+            const normalize = (fsPath: string) => {
+                fsPath = path.normalize(fsPath).replace('\\', '/');
+                fsPath = (fsPath === '/') ? fsPath : fsPath.replace(/\/+$/, '');
+                if (process.platform === 'win32') {
+                    fsPath = fsPath.toLowerCase();
+                }
+                return fsPath;
+            };
+            // Folder is always a full path name
+            folder = normalize(folder);
             for (const f of vscode.workspace.workspaceFolders) {
-                if ((f.uri.path === folder) || (f.uri.fsPath === folder) || (f.name === folder)) {
+                const tmp = normalize(f.uri.fsPath);
+                if ((f.uri.fsPath === folder) || (f.name === folder) || (tmp === folder)) {
                     return f;
                 }
             }
+            vscode.window.showInformationMessage(
+                `Chained configuration for '${childName}' specified folder is '${orig}' normalized path is '${folder}'` +
+                ' did not match any workspace folders. Using parents folder.');
         }
         return def;
     }
