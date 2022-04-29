@@ -1365,6 +1365,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendEvent(event);
     }
 
+    // TODO: We should add more features here. type could be a message for error, warning, info and we auto prepend
+    //   the tag for it. For consistency. Also make type an enum
     public handleMsg(type: string, msg: string) {
         if (this.suppressRadixMsgs && (type === 'console') && /radix/.test(msg)) {
             // Filter out unnecessary radix change messages

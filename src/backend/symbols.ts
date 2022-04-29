@@ -2,7 +2,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { SpawnLineReader } from '../common';
+import { SpawnLineReader, validateELFHeader } from '../common';
 import { IntervalTree, Interval } from 'node-interval-tree';
 import JsonStreamStringify from 'json-stream-stringify';
 const StreamArray = require('stream-json/streamers/StreamArray');
@@ -275,6 +275,11 @@ export class SymbolTable {
      * We avoid splitting the output(s) into lines and then parse line at a time.
      */
     public loadSymbols(useObjdumpFname: string = '', useNmFname: string = ''): Promise<void> {
+        if (!validateELFHeader(this.executable)) {
+            this.gdbSession.handleMsg('log',
+                `Warn: ${this.executable} is not an ELF file format. Some features won't work -- Globals, Locals, disassembly, etc.`);
+            return Promise.resolve();
+        }
         return new Promise(async (resolve) => {
             const total = 'Total running objdump & nm';
             console.time(total);

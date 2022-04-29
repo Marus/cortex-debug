@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments } from '../common';
-import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
+import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments, validateELFHeader } from '../common';
+import { CDebugChainedSessionItem } from './cortex_debug_session';
 import * as path from 'path';
 
 const OPENOCD_VALID_RTOS: string[] = ['ChibiOS', 'eCos', 'embKernel', 'FreeRTOS', 'mqx', 'nuttx', 'ThreadX', 'uCOS-III', 'auto'];
@@ -159,32 +159,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         return config;
     }
 
-    protected validateELFHeader(exe: string): boolean {
-        try {
-            if (!fs.existsSync(exe)) {
-                vscode.window.showErrorMessage(`File not found "executable": "${exe}"`);
-                return false;
-            }
-            const fd = fs.openSync(exe, 'r');
-            const buffer = Buffer.alloc(16);
-            const n = fs.readSync(fd, buffer, 0, 16, 0);
-            if (n !== 16) {
-                vscode.window.showErrorMessage(`Could not read 16 bytes from "executable": "${exe}"`);
-                return false;
-            }
-            // First four chars are 0x7f, 'E', 'L', 'F'
-            if ((buffer[0] !== 0x7f) || (buffer[1] !== 0x45) || (buffer[2] !== 0x4c) || (buffer[3] !== 0x46)) {
-                vscode.window.showInformationMessage(`Not a valid ELF file "executable": "${exe}". Many debug functions may not work`);
-                return true;
-            }
-            return true;
-        }
-        catch (e) {
-            vscode.window.showErrorMessage(`Could not read file "executable": "${exe}"`);
-            return false;
-        }
-    }
-
     public resolveDebugConfigurationWithSubstitutedVariables(
         folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
@@ -202,7 +176,13 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 exe = path.join(cwd, exe);
                 config.executable = exe;
             }
-            this.validateELFHeader(exe);
+            validateELFHeader(exe, (str: string, fatal: boolean) => {
+                if (fatal) {
+                    vscode.window.showErrorMessage(str);
+                } else {
+                    vscode.window.showInformationMessage(str);
+                }
+            });
         }
 
         let validationResponse: string = null;
