@@ -282,7 +282,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         const mySetter = (x: DisplayFields, text: string, value?: any) => {
                             display[DisplayFieldNames[x]] = {text, value};
                         };
-                        const myGetter = (x: DisplayFields) => display[DisplayFieldNames[x]];
+
                         mySetter(DisplayFields.ID, thInfo['uxTCBNumber-val'] || '??');
                         mySetter(DisplayFields.Address, hexFormat(threadId));
                         mySetter(DisplayFields.TaskName, thName);
@@ -291,9 +291,11 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         mySetter(DisplayFields.StackTop, hexFormat(stackInfo.stackTop));
                         mySetter(DisplayFields.StackEnd, stackInfo.stackEnd ? hexFormat(stackInfo.stackEnd) : '0x????????');
 
-                        mySetter(DisplayFields.Priority, thInfo['uxPriority-val']);
                         if (thInfo['uxBasePriority-val']) {
-                            mySetter(DisplayFields.Priority, myGetter(DisplayFields.Priority) + `,${thInfo['uxBasePriority-val']}`);
+                            mySetter(DisplayFields.Priority, `${thInfo['uxPriority-val']},${thInfo['uxBasePriority-val']}`);
+                        }
+                        else {
+                            mySetter(DisplayFields.Priority, `${thInfo['uxPriority-val']}`);
                         }
 
                         const func = (x: any) => x === undefined ? '???' : x.toString();
