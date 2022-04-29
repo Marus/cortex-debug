@@ -39,6 +39,36 @@ vscode-link {
   background-clip: padding-box;
 }
 
+.collapse-button {
+  color: var(--vscode-textLink-activeForeground);
+  background-color: rgba(0, 0, 0, 0);
+  cursor: pointer;
+  padding: 0;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+}
+
+.collapse-button:after {
+  content: '\002B';
+  font-weight: bold;
+  float: right;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.collapse-button.active:after {
+  content: "\2212";
+}
+
+.collapse {
+  padding: 0 18px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+
 .help-button {
   font-style: italic;
   color: var(--vscode-textLink-activeForeground);
@@ -59,7 +89,7 @@ vscode-link {
   margin-left: 5px;
 }
 
-.active:after {
+.help-button.active:after {
   content: "\2212";
 }
 

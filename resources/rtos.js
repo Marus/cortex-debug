@@ -15,7 +15,25 @@ function main() {
 
   setVSCodeMessageListener();
 
+  setupFoldButtons();
   setupHelpButton();
+}
+
+function setupFoldButtons() {
+  var coll = document.getElementsByClassName("collapse-button");
+  var i;
+
+  for (i = 0; i < coll.length; i++) {
+    coll[i].addEventListener("click", function () {
+      this.classList.toggle("active");
+      var content = this.nextElementSibling;
+      if (content.style.maxHeight) {
+        content.style.maxHeight = null;
+      } else {
+        content.style.maxHeight = "None";
+      }
+    });
+  }
 }
 
 function setupHelpButton() {
@@ -23,7 +41,7 @@ function setupHelpButton() {
   var i;
 
   for (i = 0; i < coll.length; i++) {
-    coll[i].addEventListener("click", function() {
+    coll[i].addEventListener("click", function () {
       this.classList.toggle("active");
       var content = this.nextElementSibling;
       if (content.style.maxHeight) {

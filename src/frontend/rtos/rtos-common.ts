@@ -18,7 +18,7 @@ export enum colTypeEnum {
     colTypeNormal = 0,
     colTypePercentage,
     colTypeLink,
-    colTypeState
+    colTypeCollapse
 }
 
 export interface DisplayColumnItem {
@@ -299,11 +299,11 @@ export abstract class RTOSBase {
                     }
                 }
 
-                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypeState) && (v.value)) {
+                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypeCollapse) && (v.value)) {
                     const length = Object.values(v.value).reduce((acc: number, cur: string[]) => acc + cur.length, 0);
                     if (length > 1) {
                         const descriptions = Object.keys(v.value).map((key) => `${key}: ${v.value[key].join(', ')}`).join('<br>');
-                        txt = `<button class="help-button">${v.text}</button><div class="help">${descriptions}</div>`;
+                        txt = `<button class="collapse-button">${v.text}</button><div class="collapse">${descriptions}</div>`;
                     }
                 }
 
