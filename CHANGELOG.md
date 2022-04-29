@@ -8,7 +8,7 @@ Issues
 * [#636](https://github.com/Marus/cortex-debug/issues/636): Fixed "Chained configurations: 'folder' option is no longer working". Was an issue only on Windows
 * [#635](https://github.com/Marus/cortex-debug/issues/635): Fixed "Debugging hangs until relaunch". Let us know if it is still happening for your use case
 * [#643](https://github.com/Marus/cortex-debug/issues/643): Maybe fixed: "ECONNRESET by J-Link GDB when removing "runToMain": true". Revamped the way VSCode handles the startup sequence. It is VSCode that is confused because of the sequence of events.
-* General: There was a mis-understanding in how we interpreted the VSCode API (we took it literally). This caused some issues with synchronization with Cortex-Debug and VSCode. This caused hard to reproduce issues and perhaps it is addressed now.
+* General: There was a mis-understanding in how we interpreted the VSCode API (we took it literally). This caused some issues with synchronization with Cortex-Debug and VSCode. This caused hard to reproduce issues and perhaps it is addressed now. There is an issue here with JLink as well with creating and deleting threads while program is paused -- this should not happen, but it confused gdb thoroughly. Happens at startup and maybe it masked now.
 
 # V1.4.4
 * Bugfix: #618, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes or runs out of memory
