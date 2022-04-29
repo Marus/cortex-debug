@@ -14,6 +14,9 @@
 .threads-header-cell {
   padding: 0px;
   color: var(--vscode-symbolIcon-constructorForeground);
+  font-family: var(--vscode-editor-font-family);
+  font-weight: var(--vscode-editor-font-weight);
+  font-size: var(--vscode-editor-font-size);
 }
 
 .threads-cell {
@@ -21,6 +24,10 @@
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
   font-size: var(--vscode-editor-font-size);
+}
+
+.whitespacePreserve {
+  white-space: pre-wrap
 }
 
 vscode-link {

@@ -27,6 +27,7 @@ export interface DisplayColumnItem {
     headerRow2: string;
     fieldName?: string;
     colType?: colTypeEnum;
+    colSpaceFillTheshold?: number;
 }
 
 export interface DisplayRowItem {
@@ -254,11 +255,14 @@ export abstract class RTOSBase {
                 if (true) {
                     header = commonHeaderRowPart;
                     for (const key of displayFieldNames) {
+                        let txt = RTOSDisplayColumn[key].headerRow1;
                         let additionalClasses = '';
+                        if ((RTOSDisplayColumn[key].colSpaceFillTheshold !== undefined) && (txt.length > 0)) {
+                            txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
+                        }
                         if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) {
                             additionalClasses += ' centerAlign';
                         }
-                        const txt = RTOSDisplayColumn[key].headerRow1;
                         header += `${commonHeaderCellPart}${additionalClasses}" grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                         if (!have2ndRow) { have2ndRow = !!RTOSDisplayColumn[key].headerRow2; }
                         col++;
@@ -270,11 +274,14 @@ export abstract class RTOSBase {
                     col = 1;
                     header += commonHeaderRowPart;
                     for (const key of displayFieldNames) {
+                        let txt = RTOSDisplayColumn[key].headerRow2;
                         let additionalClasses = '';
+                        if ((RTOSDisplayColumn[key].colSpaceFillTheshold !== undefined) && (txt.length > 0)) {
+                            txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
+                        }
                         if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) {
                             additionalClasses += ' centerAlign';
                         }
-                        const txt = RTOSDisplayColumn[key].headerRow2;
                         header += `${commonHeaderCellPart}${additionalClasses}" grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                         col++;
                     }
@@ -293,8 +300,8 @@ export abstract class RTOSBase {
                 const lKey = key.toLowerCase();
                 let additionalClasses = running;
 
-                if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypeLink) {
-                    txt = `<vscode-link class="threads-link-${lKey}" href="#">${v}</vscode-link>`;
+                if ((RTOSDisplayColumn[key].colSpaceFillTheshold !== undefined) && (txt.length > 0)) {
+                    txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
                 }
 
                 if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) && (v.value !== undefined)) {
@@ -305,9 +312,9 @@ export abstract class RTOSBase {
                         style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
                             `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
                     }
-                }
-
-                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypeCollapse) && (v.value)) {
+                } else if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypeLink) {
+                    txt = `<vscode-link class="threads-link-${lKey}" href="#">${v.text}</vscode-link>`;
+                } else if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypeCollapse) && (v.value)) {
                     const length = Object.values(v.value).reduce((acc: number, cur: string[]) => acc + cur.length, 0);
                     if (length > 1) {
                         const descriptions = Object.keys(v.value).map((key) => `${key}: ${v.value[key].join(', ')}`).join('<br>');

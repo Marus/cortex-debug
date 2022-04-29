@@ -18,19 +18,16 @@ enum DisplayFields {
 }
 
 const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
-RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colSpaceFillTheshold: 5 };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 2, headerRow1: '', headerRow2: 'Address' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: 'Thread', headerRow2: 'Task Name' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = {width: 4, headerRow1: 'Thread', headerRow2: 'Task Name'};
 RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 4, headerRow1: '', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeCollapse };
-RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = { width: 1, headerRow1: 'Prio', headerRow2: 'rity' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = {
+    width: 1, headerRow1: 'Prio', headerRow2: 'rity', colSpaceFillTheshold: 4 }; // 3 are enough but 4 aligns better with header text
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
-    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)',
-    colType: RTOSCommon.colTypeEnum.colTypePercentage
-};
+    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeakPercent]] = {
-    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)',
-    colType: RTOSCommon.colTypeEnum.colTypePercentage
-};
+    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage };
 
 const DisplayFieldNames: string[] = Object.keys(RTOSUCOS2Items);
 
@@ -266,7 +263,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                         if ((stackInfo.stackPeak !== undefined) && (stackInfo.stackSize !== undefined)) {
                             const stackPeakPercentVal = Math.round((stackInfo.stackPeak / stackInfo.stackSize) * 100);
-                            const stackPeakPercentText = `${stackPeakPercentVal} % (${stackInfo.stackPeak} / ${stackInfo.stackSize})`;
+                            const stackPeakPercentText = `${stackPeakPercentVal.toString().padStart(3)} % (${stackInfo.stackPeak} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPeakPercent, stackPeakPercentText, stackPeakPercentVal);
                         }
                         else {
