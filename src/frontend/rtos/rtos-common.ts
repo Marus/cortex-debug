@@ -250,12 +250,16 @@ export abstract class RTOSBase {
                 let col = 1;
                 let have2ndRow = false;
                 const commonHeaderRowPart = '  <vscode-data-grid-row row-type="header" class="threads-header-row">\n';
-                const commonHeaderCellPart = '    <vscode-data-grid-cell cell-type="columnheader" class="threads-header-cell" grid-column=';
+                const commonHeaderCellPart = '    <vscode-data-grid-cell cell-type="columnheader" class="threads-header-cell';
                 if (true) {
                     header = commonHeaderRowPart;
                     for (const key of displayFieldNames) {
+                        let additionalClasses = '';
+                        if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) {
+                            additionalClasses += ' centerAlign';
+                        }
                         const txt = RTOSDisplayColumn[key].headerRow1;
-                        header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
+                        header += `${commonHeaderCellPart}${additionalClasses}" grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                         if (!have2ndRow) { have2ndRow = !!RTOSDisplayColumn[key].headerRow2; }
                         col++;
                     }
@@ -266,8 +270,12 @@ export abstract class RTOSBase {
                     col = 1;
                     header += commonHeaderRowPart;
                     for (const key of displayFieldNames) {
+                        let additionalClasses = '';
+                        if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) {
+                            additionalClasses += ' centerAlign';
+                        }
                         const txt = RTOSDisplayColumn[key].headerRow2;
-                        header += `${commonHeaderCellPart}"${col}">${txt}</vscode-data-grid-cell>\n`;
+                        header += `${commonHeaderCellPart}${additionalClasses}" grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                         col++;
                     }
                     header += '  </vscode-data-grid-row>\n';
@@ -293,7 +301,7 @@ export abstract class RTOSBase {
                     const rowValueNumber = parseFloat(v.value);
                     if (!isNaN(rowValueNumber)) {
                         const activeValueStr = Math.floor(rowValueNumber).toString();
-                        additionalClasses += ' backgroundPercent';
+                        additionalClasses += ' backgroundPercent centerAlign';
                         style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
                             `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
                     }
