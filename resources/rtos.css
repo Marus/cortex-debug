@@ -51,6 +51,9 @@ vscode-link {
   width: 100%;
   border: none;
   text-align: left;
+  font-family: var(--vscode-editor-font-family);
+  font-weight: var(--vscode-editor-font-weight);
+  font-size: var(--vscode-editor-font-size);
   outline: none;
 }
 
