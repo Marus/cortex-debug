@@ -24,11 +24,11 @@ enum DisplayFields {
 }
 
 const FreeRTOSItems: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
-FreeRTOSItems[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID' };
+FreeRTOSItems[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colSpaceFillTheshold: 3 }; // UBaseType_t => most likely 32-bit
 FreeRTOSItems[DisplayFields[DisplayFields.Address]] = { width: 3, headerRow1: 'Thread', headerRow2: 'Address' };
 FreeRTOSItems[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Task Name' };
 FreeRTOSItems[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status' };
-FreeRTOSItems[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' };
+FreeRTOSItems[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' }; // UBaseType_t => most likely 32-bit
 FreeRTOSItems[DisplayFields[DisplayFields.StackStart]] = {
     width: 3, headerRow1: 'Stack', headerRow2: 'Start',
     colType: RTOSCommon.colTypeEnum.colTypeLink
