@@ -531,16 +531,11 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                     // For now, we unconditionally suppress events because we will recover after we run the post start commands
                     this.disableSendStoppedEvents = true;
-                    this.sendDummyStackTrace = !!this.args.runToEntryPoint || !this.args.breakAfterReset;
+                    this.sendDummyStackTrace = !attach && (!!this.args.runToEntryPoint || !this.args.breakAfterReset);
                     this.miDebugger.connect(commands).then(async () => {
                         const mode = attach ? SessionMode.ATTACH : SessionMode.LAUNCH;
                         this.started = true;
                         this.serverController.debuggerLaunchCompleted();
-                        /*
-                        await this.finishStartSequence(attach ? SessionMode.ATTACH : SessionMode.LAUNCH);
-                        this.sendResponse(response);
-                        doResolve();
-                        */
 
                         this.sendEvent(new InitializedEvent());     // This is when we tell that the debugger has really started
                         // After the above, VSCode will set various kinds of breakpoints, watchpoints, etc. When all those things
@@ -548,14 +543,20 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
 
                         this.onInternalEvents.once('config-done', async () => {
+                            // Let the gdb server settle down. They are sometimes still creating/delteting threads
+                            await new Promise<void>((r) => setTimeout(() => {this.startComplete(mode), r()}, 100));
                             // We wait for all other initialization to complete so we don't create race conditions.
-                            this.onInternalEvents.once('stack-trace-request', () => {
-                                // Now, we wait for VSCode to query the stack trace. This is an issue with VSCode that if we don't allow it
-                                // to collect some thread/stack information, and we issue a continue, the pause button will never work.
-                                this.sendDummyStackTrace = false;
-                                this.finishStartSequence(mode);
-                            });
-                            this.startComplete(mode);
+                            if (this.sendDummyStackTrace) {
+                                this.onInternalEvents.once('stack-trace-request', () => {
+                                    // Now, we wait for VSCode to query the stack trace. This is an issue with VSCode that if we don't allow it
+                                    // to collect some thread/stack information, and we issue a continue, the pause button will never work.
+                                    this.sendDummyStackTrace = false;
+                                    this.finishStartSequence(mode);
+                                });
+                            } else {
+                                // Let VSCode finish its queries from the stop we sent in startComplete()
+                                setTimeout(() => this.finishStartSequence(mode), 100);
+                            }
                         });
                         this.sendResponse(response);
                         doResolve();
@@ -682,11 +683,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                     if (mode === SessionMode.LAUNCH) {
                         this.args.runToEntryPoint = '';     // Don't try again. It will likely to fail
                     }
-                    this.startCompleteForReset(mode);
+                    this.startComplete(mode);               // Call this again to return actual stack tracce
                     resolve();
                 });
             } else {
-                // this.startComplete(mode);
                 this.runPostStartSessionCommands(mode).then((didContinue) => {
                     this.startCompleteForReset(mode, !didContinue);
                     resolve();
@@ -868,7 +868,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             return retFunc();
         }
 
-        const isBusy = !this.stopped || this.continuing || (this.miDebugger.status === 'running');
+        const isBusy = !this.stopped || this.continuing || !this.isMIStatusStopped();
         switch (command) {
             case 'set-force-disassembly':
                 response.body = { success: true };
@@ -911,7 +911,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.setGdbOutputRadix();
                 break;
             case 'read-registers':
-                if (isBusy) { return retFunc(); }
+                if (isBusy || this.sendDummyStackTrace) { return retFunc(); }
                 this.args.registerUseNaturalFormat = (args && args.hex) ? false : true;
                 this.readRegistersRequest(response);
                 break;
@@ -1289,16 +1289,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
                 commands.push(...restartCommands);
                 commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
-                let finishCalled = false;
 
-                if (!this.args.runToEntryPoint) {
-                    this.sendDummyStackTrace = true;
-                    this.onInternalEvents.once('stack-trace-request', () => {
-                        finishCalled = true;
-                        this.sendDummyStackTrace = false;
-                        this.finishStartSequence(mode);
-                    });
-                }
+                this.sendDummyStackTrace = true;
+                this.onInternalEvents.once('stack-trace-request', () => {
+                    this.sendDummyStackTrace = false;
+                    this.finishStartSequence(mode);
+                });
 
                 this.miDebugger.restart(commands).then(async (done) => {
                     if (this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
@@ -1306,17 +1302,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                             this.serverConsoleLog(`Begin ${mode} children`);
                             this.sendEvent(new GenericCustomEvent(`session-${mode}`, args));
                         }, 250);
-                    }
-                    if (this.args.runToEntryPoint) {
-                        this.finishStartSequence(mode);
-                    } else {
-                        // Some gdb servers take a while to notify that the program is stopped. And,
-                        // some never do. If there was no stack trace request from gdb, it means that we never
-                        // will and so we fake it, if our status is already stopped and there was no timeout
-                        await new Promise((resolve) => setTimeout(resolve, 250));
-                        if (this.isMIStatusStopped() && !finishCalled) {
-                            this.notifyStopped(false);
-                        }
                     }
                     resolve();
                 }, (msg) => {
@@ -2070,6 +2055,15 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
         response.body = { threads: [] };
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
+            this.sendResponse(response);
+            return Promise.resolve();
+        }
+
+        if (this.sendDummyStackTrace) {
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('log', 'Returning dummy thread-id to workaround VSCode issue with pause button not working');
+            }
+            response.body.threads = [new Thread(1, "cortex-debug-dummy-thread")];
             this.sendResponse(response);
             return Promise.resolve();
         }
