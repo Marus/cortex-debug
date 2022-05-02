@@ -688,7 +688,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                 });
             } else {
                 this.runPostStartSessionCommands(mode).then((didContinue) => {
-                    this.startCompleteForReset(mode, !didContinue);
+                    if (!didContinue) {
+                        this.startCompleteForReset(mode, true);
+                    }
                     resolve();
                 }, (e) => {
                     // Should never happen
@@ -832,7 +834,16 @@ export class GDBDebugSession extends LoggingDebugSession {
         return new Promise<boolean>((resolve, reject) => {
             const doResolve = async () => {
                 if (this.args.noDebug || (shouldContinue && this.isMIStatusStopped())) {
-                    this.sendContinue();
+                    if ((mode === SessionMode.RESET) || (mode === SessionMode.RESTART)) {
+                        this.sendDummyStackTrace = true;
+                        this.onInternalEvents.once('stack-trace-request', () => {
+                            this.sendDummyStackTrace = false;
+                            this.sendContinue();
+                        });
+                        this.startComplete(mode);
+                    } else {
+                        this.sendContinue();
+                    }
                     resolve(true);
                 } else {
                     resolve(!this.isMIStatusStopped());
@@ -1290,10 +1301,20 @@ export class GDBDebugSession extends LoggingDebugSession {
                 commands.push(...restartCommands);
                 commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
 
-                this.sendDummyStackTrace = true;
+                let finishCalled = false;
+                const callFinish = () => {
+                    if (!finishCalled) {
+                        finishCalled = true;
+                        this.sendDummyStackTrace = false;
+                        this.finishStartSequence(mode);
+                    }
+                };
+
+                // When we restart/reset, some startup sequences will produce a stopped event and some don't. In case such
+                // an event is called, consume and return a dummy stacktrace (prevents unnecessary disassembly, multiple requests from VSCode, etc.)
+                this.sendDummyStackTrace = true;    // Return dummies until we finish the start sequence
                 this.onInternalEvents.once('stack-trace-request', () => {
-                    this.sendDummyStackTrace = false;
-                    this.finishStartSequence(mode);
+                    callFinish();
                 });
 
                 this.miDebugger.restart(commands).then(async (done) => {
@@ -1302,6 +1323,13 @@ export class GDBDebugSession extends LoggingDebugSession {
                             this.serverConsoleLog(`Begin ${mode} children`);
                             this.sendEvent(new GenericCustomEvent(`session-${mode}`, args));
                         }, 250);
+                    }
+
+                    if (!finishCalled) {
+                        // gdb-server never produced any stopped events, so wait a bit to let things settle down
+                        // Sometimes gdb sends delayed responses for program status (running, stopped, etc.) changes
+                        await new Promise((resolve) => setTimeout(resolve, 100));
+                        callFinish();
                     }
                     resolve();
                 }, (msg) => {
@@ -1531,22 +1559,15 @@ export class GDBDebugSession extends LoggingDebugSession {
         // When a thread group exits for whaever reason (especially for a re-start) cleanup
         // and notify VSCode or it will be in a bad state. This can be distinct from a quitEvent
         // A crash, hd/tcp disconnect in the gdb-server can also cause this event.
+        this.clearAllThreads();
+    }
+
+    private clearAllThreads() {
         this.currentThreadId = 0;
         for (const thId of this.activeThreadIds.values()) {
             this.sendEvent(new ThreadEvent('exited', thId));
         }
         this.activeThreadIds.clear();
-        /*
-        if (this.started) {
-            // If this is happening after the session has started, it means that gdb probably lost connection
-            // with the server, but keeps running
-            if (this.miDebugger.isRunning() && !this.quit) {
-                // Server quit before gdb quit. Maybe it crashed. Gdb is still running so stop it
-                // which will in turn notify VSCode via `quitEvent()`
-                this.miDebugger.stop();
-            }
-        }
-        */
     }
 
     protected stopEvent(info: MINode, reason: string = 'exception') {
@@ -2061,9 +2082,10 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         if (this.sendDummyStackTrace) {
             if (this.args.showDevDebugOutput) {
-                this.handleMsg('log', 'Returning dummy thread-id to workaround VSCode issue with pause button not working');
+                this.handleMsg('log', 'Returning dummy thread-id to workaround VSCode issue with pause button not working\n');
             }
-            response.body.threads = [new Thread(1, "cortex-debug-dummy-thread")];
+            const useThread = this.currentThreadId || (this.activeThreadIds.size ? this.activeThreadIds.values[0] : 1);
+            response.body.threads = [new Thread(useThread, "cortex-debug-dummy-thread")];
             this.sendResponse(response);
             return Promise.resolve();
         }
@@ -2181,7 +2203,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             // This also prevents disassembly getting requested while we are still in the middle of starting up and the PC can
             // temporarily be in la la land.
             if (this.args.showDevDebugOutput) {
-                this.handleMsg('log', `Returning dummy stack frame to workaround VSCode issue with pause button not working: ${JSON.stringify(args)}`);
+                this.handleMsg('log', `Returning dummy stack frame to workaround VSCode issue with pause button not working: ${JSON.stringify(args)}\n`);
             }
             response.body.stackFrames = [new StackFrame(GDBDebugSession.encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
             response.body.totalFrames = 1;
@@ -2999,7 +3021,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (args.context !== 'repl') {
                 if (isBusy) {
                     if (this.args.showDevDebugOutput) {
-                        this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(args)}`);
+                        this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(args)}\n`);
                     }
                     this.sendErrorResponse(response, 8, 'Busy', undefined, ErrorDestination.Telemetry);
                     resolve();
