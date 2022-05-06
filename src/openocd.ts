@@ -26,10 +26,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
-
-        // We get/reserve the ports here because it is an async. operation and it wll be done
-        // way before a server has even started. Hopefully
-        this.rttHelper.allocateRTTPorts(args.rttConfig);
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -94,10 +90,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands = [];
         if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
             const cfg = this.args.rttConfig;
-            if (this.rttHelper.rttPortsPending > 0) {
-                // If we are getting here, we will need some serious re-factoring
-                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
-            }
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
                 // and RTT ends up outputting garbage. Or, the server could read garbage and
@@ -167,7 +159,8 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         }
     }
 
-    public serverArguments(): string[] {
+    public async serverArguments(): Promise<string[]> {
+        await this.rttHelper.allocateRTTPorts(this.args.rttConfig);
         let serverargs = [];
 
         // Regardless of the target processor, we will only supply the processor '0's port#

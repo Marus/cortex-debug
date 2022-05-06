@@ -4,7 +4,7 @@ import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
 import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments, validateELFHeader } from '../common';
-import { CDebugChainedSessionItem } from './cortex_debug_session';
+import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
 
 const OPENOCD_VALID_RTOS: string[] = ['ChibiOS', 'eCos', 'embKernel', 'FreeRTOS', 'mqx', 'nuttx', 'ThreadX', 'uCOS-III', 'auto'];
@@ -23,6 +23,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return undefined;
         }
         config.gdbServerConsolePort = GDBServerConsole.BackendPort;
+        config.pvtAvoidPorts = CDebugSession.getAllUsedPorts();
 
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {

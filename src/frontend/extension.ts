@@ -32,6 +32,15 @@ interface SVDInfo {
     path: string;
 }
 
+class ServerStartedPromise {
+    constructor(
+        public readonly name: string,
+        public readonly promise: Promise<vscode.DebugSessionCustomEvent>,
+        public readonly resolve: any,
+        public readonly reject: any) {
+    }
+}
+
 export class CortexDebugExtension {
     private rttTerminals: RTTTerminal[] = [];
 
@@ -46,6 +55,7 @@ export class CortexDebugExtension {
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
+    private serverStartedEvent: ServerStartedPromise;
 
     constructor(private context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('cortex-debug');
@@ -638,6 +648,7 @@ export class CortexDebugExtension {
                 vscode.commands.executeCommand('editor.debug.action.openDisassemblyView');
                 break;
             case 'custom-event-post-start-server':
+                this.signalPortsAllocated(e);
                 this.startChainedConfigs(e, ChainedEvents.POSTSTART);
                 break;
             case 'custom-event-post-start-gdb':
@@ -667,43 +678,94 @@ export class CortexDebugExtension {
                         break;
                 }
                 break;
+            case 'custom-event-ports-allocated':
+                const s = CDebugSession.FindSession(e.session);
+                if (!s || (s.status === 'none')) {
+                    this.signalPortsAllocated(e);
+                }
+                this.registerPortsAsUsed(e);
+                break;
             default:
                 break;
         }
     }
 
-    private startChainedConfigs(e: vscode.DebugSessionCustomEvent, evType: ChainedEvents) {
+    private signalPortsAllocated(e: vscode.DebugSessionCustomEvent) {
+        if (this.serverStartedEvent) {
+            this.serverStartedEvent.resolve(e);
+            this.serverStartedEvent = undefined;
+        }
+    }
+
+    private registerPortsAsUsed(e: vscode.DebugSessionCustomEvent) {
+        // We can get this event before the session starts
+        const mySession = CDebugSession.GetSession(e.session);
+        mySession.addUsedPorts(e.body?.info || []);
+    }
+
+    private async startChainedConfigs(e: vscode.DebugSessionCustomEvent, evType: ChainedEvents) {
         const adapterArgs = e?.body?.info as ConfigurationArguments;
-        if (!adapterArgs || !adapterArgs.chainedConfigurations?.enabled) { return; }
         const cDbgParent = CDebugSession.GetSession(e.session, adapterArgs);
+        if (!adapterArgs || !adapterArgs.chainedConfigurations?.enabled) { return; }
         const unique = adapterArgs.chainedConfigurations.launches.filter((x, ix) => {
             return ix === adapterArgs.chainedConfigurations.launches.findIndex((v, ix) => v.name === x.name);
         });
+        const filtered = unique.filter((launch) => {
+            return (launch.enabled && (launch.waitOnEvent === evType) && launch.name);
+        });
+
         let delay = 0;
-        for (const launch of unique) {
-            if (launch.enabled && (launch.waitOnEvent === evType) && launch.name) {
-                const childOptions: vscode.DebugSessionOptions = {
-                    consoleMode              : vscode.DebugConsoleMode.Separate,
-                    noDebug                  : adapterArgs.noDebug,
-                    compact                  : false
-                };
-                if (launch.lifecycleManagedByParent) {
-                    // VSCode 'lifecycleManagedByParent' does not work as documented. The fact that there
-                    // is a parent means it is managed and 'lifecycleManagedByParent' if ignored.
-                    childOptions.lifecycleManagedByParent = true;
-                    childOptions.parentSession = e.session;
-                }
-                delay += Math.max(launch.delayMs || 0, 0);
-                const child = new CDebugChainedSessionItem(cDbgParent, launch, childOptions);
-                const folder = this.getWsFolder(launch.folder, e.session.workspaceFolder, launch.name);
-                setTimeout(() => {
-                    vscode.debug.startDebugging(folder, launch.name, childOptions).then((success) => {
-                        if (!success) {
-                            vscode.window.showErrorMessage('Failed to launch chained configuration ' + launch.name);
-                        }
-                        CDebugChainedSessionItem.RemoveItem(child);
+        let count = filtered.length;
+        for (const launch of filtered) {
+            count--;
+            const childOptions: vscode.DebugSessionOptions = {
+                consoleMode              : vscode.DebugConsoleMode.Separate,
+                noDebug                  : adapterArgs.noDebug,
+                compact                  : false
+            };
+            if (launch.lifecycleManagedByParent) {
+                // VSCode 'lifecycleManagedByParent' does not work as documented. The fact that there
+                // is a parent means it is managed and 'lifecycleManagedByParent' if ignored.
+                childOptions.lifecycleManagedByParent = true;
+                childOptions.parentSession = e.session;
+            }
+            delay += Math.max(launch.delayMs || 0, 0);
+            const child = new CDebugChainedSessionItem(cDbgParent, launch, childOptions);
+            const folder = this.getWsFolder(launch.folder, e.session.workspaceFolder, launch.name);
+            setTimeout(() => {
+                vscode.debug.startDebugging(folder, launch.name, childOptions).then((success) => {
+                    if (!success) {
+                        vscode.window.showErrorMessage('Failed to launch chained configuration ' + launch.name);
+                    }
+                    CDebugChainedSessionItem.RemoveItem(child);
+                });
+            }, delay);
+            if (launch && launch.detached && (count > 0)) {
+                try {
+                    // tslint:disable-next-line: one-variable-per-declaration
+                    let res: (value: vscode.DebugSessionCustomEvent) => void;
+                    let rej: (reason?: any) => void;
+                    const prevStartedPromise = new Promise<vscode.DebugSessionCustomEvent>((resolve, reject) => {
+                        res = resolve;
+                        rej = reject;
                     });
-                }, delay);
+                    this.serverStartedEvent = new ServerStartedPromise(launch.name, prevStartedPromise, res, rej);
+                    let to = setTimeout(() => {
+                        if (this.serverStartedEvent) {
+                            this.serverStartedEvent.reject(new Error(`Timeout starting chained session: ${launch.name}`));
+                            this.serverStartedEvent = undefined;
+                        }
+                        to = undefined;
+                    }, 5000);
+                    await prevStartedPromise;
+                    if (to) { clearTimeout(to); }
+                }
+                catch (e) {
+                    vscode.window.showErrorMessage(`Detached chained configuration launch failed? Aborting rest. Error: ${e}`);
+                    break;      // No more children after this error
+                }
+                delay = 0;
+            } else {
                 delay += 5;
             }
         }

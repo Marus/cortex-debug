@@ -170,9 +170,12 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected suppressRadixMsgs = false;
 
-    public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false, threadID: number = 1) {
+    public constructor(debuggerLinesStartAt1: boolean, public readonly isServer: boolean = false, threadID: number = 1) {
         super(undefined, debuggerLinesStartAt1, isServer);     // Use if deriving from LogDebugSession
         // super(debuggerLinesStartAt1, isServer);  // Use if deriving from DebugSession
+        TcpPortScanner.PortAllocated.on('allocated', (ports) => {
+            this.sendEvent(new GenericCustomEvent('ports-allocated', ports));
+        });
     }
 
     // tslint:disable-next-line: max-line-length
@@ -226,6 +229,16 @@ export class GDBDebugSession extends LoggingDebugSession {
             args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
         }
         this.args = this.normalizeArguments(args);
+
+        // When debugging this extension, we are in server mode serving multiple instances of a debugger.
+        // So make sure any old data is cleared, and we only rely on what the frontend tells us
+        TcpPortScanner.AvoidPorts.clear();
+        for (const p of args.pvtAvoidPorts || []) {
+            // Reserve it and neighboring ports
+            for (let count = 0; count < 4; count++) {
+                TcpPortScanner.AvoidPorts.add(p + count);
+            }
+        }
     }
 
     private dbgSymbolTable: SymbolTable = null;
@@ -341,7 +354,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     private getTCPPorts(useParent): Thenable<void> {
         return new Promise((resolve, reject) => {
-            let startPort = 50000;
+            const startPort = 50000;
             if (useParent) {
                 this.ports = this.args.pvtPorts = this.args.pvtParent.pvtPorts;
                 this.serverController.setPorts(this.ports);
@@ -349,11 +362,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.handleMsg('log', JSON.stringify({configFromParent: this.args.pvtMyConfigFromParent}, undefined, 4) + '\n');
                 }
                 return resolve();
-            } else if (this.args.pvtParent?.pvtPorts) {
-                // Avoid parents ports and give a gap of 10
-                for (const p of Object.values(this.args.pvtParent.pvtPorts)) {
-                    startPort = Math.max(startPort, p + 10);
-                }
             }
             const totalPortsNeeded = this.calculatePortsNeeded();
             const portFinderOpts = { min: startPort, max: 52000, retrieve: totalPortsNeeded, consecutive: true };
@@ -408,9 +416,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             const gdbPromise = this.startGdb(response);
             // const gdbInfoVariables = this.symbolTable.loadSymbolsFromGdb(gdbPromise);
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
-            this.getTCPPorts(this.usingParentServer).then(() => {
+            this.getTCPPorts(this.usingParentServer).then(async () => {
+                const args = this.usingParentServer ? [] : await this.serverController.serverArguments();
                 const executable = this.usingParentServer ? null : this.serverController.serverExecutable();
-                const args = this.usingParentServer ? [] : this.serverController.serverArguments();
                 const serverCwd = this.getServerCwd(executable);
 
                 if (executable) {
@@ -544,7 +552,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         this.onInternalEvents.once('config-done', async () => {
                             // Let the gdb server settle down. They are sometimes still creating/delteting threads
-                            await new Promise<void>((r) => setTimeout(() => {this.startComplete(mode), r()}, 100));
+                            await new Promise<void>((r) => setTimeout(() => { this.startComplete(mode), r(); }, 100));
                             // We wait for all other initialization to complete so we don't create race conditions.
                             if (this.sendDummyStackTrace) {
                                 this.onInternalEvents.once('stack-trace-request', () => {
@@ -683,7 +691,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     if (mode === SessionMode.LAUNCH) {
                         this.args.runToEntryPoint = '';     // Don't try again. It will likely to fail
                     }
-                    this.startComplete(mode);               // Call this again to return actual stack tracce
+                    this.startComplete(mode);               // Call this again to return actual stack trace
                     resolve();
                 });
             } else {
@@ -971,15 +979,15 @@ export class GDBDebugSession extends LoggingDebugSession {
             catch {}
         }
         if (this.stopped) {
-            // We area already stopped but this fakes a stop again which refreshes all debugger windows
-            // We don't have a way to only referesh portions. It is all or nothing, there is a bit
+            // We are already stopped but this fakes a stop again which refreshes all debugger windows
+            // We don't have a way to only refresh portions. It is all or nothing, there is a bit
             // of screen flashing and causes changes in GUI contexts (stack for instance)
             this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
         }
     }
 
     private formatRadixGdbCommand(forced: string | null = null): string[] {
-        // radix setting affects future inerpretations of values, so format it unambigiously with hex values
+        // radix setting affects future interpretations of values, so format it unambiguously with hex values
         const radix = forced || (this.args.variableUseNaturalFormat ? '0xa' : '0x10');
         // If we set just the output radix, it will affect setting values. Always leave input radix in decimal
         // Also, don't understand why setting the output-radix modifies the input radix as well
@@ -2085,7 +2093,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.handleMsg('log', 'Returning dummy thread-id to workaround VSCode issue with pause button not working\n');
             }
             const useThread = this.currentThreadId || (this.activeThreadIds.size ? this.activeThreadIds.values[0] : 1);
-            response.body.threads = [new Thread(useThread, "cortex-debug-dummy-thread")];
+            response.body.threads = [new Thread(useThread, 'cortex-debug-dummy-thread')];
             this.sendResponse(response);
             return Promise.resolve();
         }

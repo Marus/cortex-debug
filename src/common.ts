@@ -259,6 +259,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     pvtPorts: { [name: string]: number; };
     pvtParent: ConfigurationArguments;
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
+    pvtAvoidPorts: number[];
 
     numberOfProcessors: number;
     targetProcessor: number;
@@ -318,7 +319,7 @@ export interface GDBServerController extends EventEmitter {
     restartCommands(): string[];
     swoAndRTTCommands(): string[];
     serverExecutable(): string;
-    serverArguments(): string[];
+    serverArguments(): Promise<string[]> | string[];
     initMatch(): RegExp;
     serverLaunchStarted(): void;
     serverLaunchCompleted(): Promise<void> | void;
@@ -347,12 +348,11 @@ export class RTTServerHelper {
     public rttLocalPortMap: {[channel: number]: string} = {};
 
     // For openocd, you cannot have have duplicate ports and neither can
-    // a multple clients connect to the same channel. Perhaps in the future
+    // a multiple clients connect to the same channel. Perhaps in the future
     // it wil
-    public rttPortsPending: number = 0;
-    public allocateRTTPorts(cfg: RTTConfiguration, startPort: number = 60000) {
+    public allocateRTTPorts(cfg: RTTConfiguration, startPort: number = 60000): Promise<any> {
         if (!cfg || !cfg.enabled || !cfg.decoders || cfg.decoders.length === 0) {
-            return;
+            return Promise.resolve();
         }
 
         // Remember that you can have duplicate decoder ports. ie, multiple decoders looking at the same port
@@ -361,7 +361,6 @@ export class RTTServerHelper {
         const dummy = '??';
         for (const dec of cfg.decoders) {
             if (dec.ports && (dec.ports.length > 0)) {
-                this.rttPortsPending = this.rttPortsPending + dec.ports.length;
                 dec.tcpPorts = [];
                 for (const p of dec.ports) {
                     this.rttLocalPortMap[p] = dummy;
@@ -371,13 +370,11 @@ export class RTTServerHelper {
             }
         }
 
-        this.rttPortsPending = Object.keys(this.rttLocalPortMap).length;
-        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: this.rttPortsPending, consecutive: false };
-        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
-            this.rttPortsPending = 0;
+        const count = Object.keys(this.rttLocalPortMap).length;
+        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: count, consecutive: false };
+        return TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
             for (const dec of cfg.decoders) {
                 if (dec.ports && (dec.ports.length > 0)) {
-                    this.rttPortsPending = this.rttPortsPending + dec.ports.length;
                     dec.tcpPorts = [];
                     for (const p of dec.ports) {
                         let str = this.rttLocalPortMap[p];
@@ -446,8 +443,9 @@ export function getAnyFreePort(preferred: number): Promise<number> {
         }
         
         if (preferred > 0) {
-            TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST).then((inuse) => {
+            TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST, TcpPortScanner.AvoidPorts).then((inuse) => {
                 if (!inuse) {
+                    TcpPortScanner.EmitAllocated([preferred]);
                     resolve(preferred);
                 } else {
                     findFreePorts();
