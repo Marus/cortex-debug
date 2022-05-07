@@ -7,7 +7,6 @@ import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
-import { Socket } from 'dgram';
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
     public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort'];
@@ -86,10 +85,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public rttCommands(): string[] {
+    public async rttCommands(): Promise<string[]> {
         const commands = [];
         if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
             const cfg = this.args.rttConfig;
+            if (!this.rttHelper.allocDone) {
+                await this.rttHelper.allocateRTTPorts(cfg);
+            }
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
                 // and RTT ends up outputting garbage. Or, the server could read garbage and
@@ -115,13 +117,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public swoAndRTTCommands(): string[] {
+    public async swoAndRTTCommands(): Promise<string[]> {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-        return commands.concat(this.rttCommands());
+        return commands.concat(await this.rttCommands());
     }
 
     private SWOConfigurationCommands(): string[] {

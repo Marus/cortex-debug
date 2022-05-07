@@ -317,7 +317,7 @@ export interface GDBServerController extends EventEmitter {
     launchCommands(): string[];
     attachCommands(): string[];
     restartCommands(): string[];
-    swoAndRTTCommands(): string[];
+    swoAndRTTCommands(): Promise<string[]> | string[];
     serverExecutable(): string;
     serverArguments(): Promise<string[]> | string[];
     initMatch(): RegExp;
@@ -346,11 +346,13 @@ export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds:
 export class RTTServerHelper {
     // Channel numbers previously used on the localhost
     public rttLocalPortMap: {[channel: number]: string} = {};
+    public allocDone = false;
 
     // For openocd, you cannot have have duplicate ports and neither can
     // a multiple clients connect to the same channel. Perhaps in the future
     // it wil
     public allocateRTTPorts(cfg: RTTConfiguration, startPort: number = 60000): Promise<any> {
+        this.allocDone = true;
         if (!cfg || !cfg.enabled || !cfg.decoders || cfg.decoders.length === 0) {
             return Promise.resolve();
         }

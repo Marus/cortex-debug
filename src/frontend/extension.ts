@@ -648,7 +648,6 @@ export class CortexDebugExtension {
                 vscode.commands.executeCommand('editor.debug.action.openDisassemblyView');
                 break;
             case 'custom-event-post-start-server':
-                this.signalPortsAllocated(e);
                 this.startChainedConfigs(e, ChainedEvents.POSTSTART);
                 break;
             case 'custom-event-post-start-gdb':
@@ -679,11 +678,10 @@ export class CortexDebugExtension {
                 }
                 break;
             case 'custom-event-ports-allocated':
-                const s = CDebugSession.FindSession(e.session);
-                if (!s || (s.status === 'none')) {
-                    this.signalPortsAllocated(e);
-                }
                 this.registerPortsAsUsed(e);
+                break;
+            case 'custom-event-ports-done':
+                this.signalPortsAllocated(e);
                 break;
             default:
                 break;

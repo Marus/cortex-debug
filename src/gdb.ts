@@ -169,6 +169,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected configDone: boolean;
 
     protected suppressRadixMsgs = false;
+    private swoRttCommands: string[];
 
     public constructor(debuggerLinesStartAt1: boolean, public readonly isServer: boolean = false, threadID: number = 1) {
         super(undefined, debuggerLinesStartAt1, isServer);     // Use if deriving from LogDebugSession
@@ -417,8 +418,13 @@ export class GDBDebugSession extends LoggingDebugSession {
             // const gdbInfoVariables = this.symbolTable.loadSymbolsFromGdb(gdbPromise);
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
             this.getTCPPorts(this.usingParentServer).then(async () => {
-                const args = this.usingParentServer ? [] : await this.serverController.serverArguments();
                 const executable = this.usingParentServer ? null : this.serverController.serverExecutable();
+                // Following two may allocate more TCP ports. So, go ahead and call them now. This way, the chained configurations
+                // would have already seen ports that 
+                const args = this.usingParentServer ? [] : await this.serverController.serverArguments();
+                this.swoRttCommands = await this.serverController.swoAndRTTCommands();
+                this.sendEvent(new GenericCustomEvent('ports-done', undefined));
+
                 const serverCwd = this.getServerCwd(executable);
 
                 if (executable) {
@@ -458,7 +464,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     }
                 });
                 this.server.on('launcherror', (err) => {
-                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err.toString()}`);
+                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err}`);
                     doResolve();
                 });
 
@@ -665,8 +671,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         return new Promise<void>(async (resolve) => {
             try {
                 if ((mode === SessionMode.ATTACH) || (mode === SessionMode.LAUNCH)) {
-                    const commands = this.serverController.swoAndRTTCommands();
-                    for (const cmd of commands) {
+                    for (const cmd of this.swoRttCommands) {
                         await this.miDebugger.sendCommand(cmd);
                     }
                 }
