@@ -96,7 +96,7 @@ export interface RTTCommonDecoderOpts {
     tcpPort: string;  // [hostname:]port
     port: number;     // RTT Channel number
 
-    // Following two used for 'Advanced' catefory
+    // Following two used for 'Advanced' category
     tcpPorts: string[];
     ports: number[];
 }
@@ -240,7 +240,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     swoConfig: SWOConfiguration;
     graphConfig: any[];
     /// Triple slashes will cause the line to be ignored by the options-doc.py script
-    /// We dont expect the following to be in booleann form or have the valueof 'none' after
+    /// We dont expect the following to be in booleann form or have the value of 'none' after
     /// The config provider has done the conversion. If it exists, it means output 'something'
     showDevDebugOutput: ADAPTER_DEBUG_MODE;
     showDevDebugTimestamps: boolean;
