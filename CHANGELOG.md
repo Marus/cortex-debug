@@ -2,7 +2,10 @@ ChangeLog
 =========
 
 # V1.5.0-preN
-Issues
+## New features
+* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
+
+## Issues
 * [#643](https://github.com/Marus/cortex-debug/issues/643): Timeout for runToEntryPoint has been removed because it is never right for some use cases and don't need another setting. User can always use the pause button.
 * [#640](https://github.com/Marus/cortex-debug/issues/640): Fixed "Inaccurate showDevDebugOutput hint message"
 * [#636](https://github.com/Marus/cortex-debug/issues/636): Fixed "Chained configurations: 'folder' option is no longer working". Was an issue only on Windows

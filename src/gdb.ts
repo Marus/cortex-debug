@@ -8,7 +8,7 @@ import { MI2, parseReadMemResults } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
-    TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController,
+    TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
     createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
@@ -80,8 +80,6 @@ function COMMAND_MAP(c: string): string {
     }
     return c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c.replace(/"/g, '\\"')}"`;
 }
-
-// const COMMAND_MAP = (c) => c.startsWith('-') ? c.substring(1) : `interpreter-exec console "${c.replace(/"/g, '\\"')}"`;
 
 let dbgResumeStopCounter = 0;
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
@@ -248,7 +246,8 @@ export class GDBDebugSession extends LoggingDebugSession {
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
-            this.symbolTable = new SymbolTable(this, this.args.executable);
+            const execs: SymbolFile[] = this.args.symbolFiles || [{ file: this.args.executable }];
+            this.symbolTable = new SymbolTable(this, execs);
             this.symbolTable.loadSymbols().then(() => {
                 if (this.args.rttConfig.enabled) {
                     const symName = this.symbolTable.rttSymbolName;
@@ -282,9 +281,9 @@ export class GDBDebugSession extends LoggingDebugSession {
     private async dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
-            const tmpSymbols = new SymbolTable(this, elfFile);
+            const tmpSymbols = new SymbolTable(this, [{ file: elfFile }]);
             this.dbgSymbolTable = tmpSymbols;
-            await tmpSymbols.loadSymbols('/Users/hdm/Downloads/objdump.txt');
+            await tmpSymbols.loadSymbols();
             tmpSymbols.printToFile(elfFile + '.cd-dump');
             let sym = tmpSymbols.getFunctionByName(func, file);
             console.log(sym);
@@ -492,11 +491,11 @@ export class GDBDebugSession extends LoggingDebugSession {
                     try {
                         // This is where 4 things meet and they must all finish (in any order) before we can proceed
                         // 1. Gdb has been started
-                        // 2. We read the symbols from gdb
+                        // 2. No more: We read the symbols from gdb
                         // 3. Found free TCP ports and launched gdb-server
                         // 4. Finished reading symbols from objdump and nm
                         const showTimes = this.args.showDevDebugOutput && this.args.showDevDebugTimestamps;
-                        await gdbPromise; // Already waited on
+                        await gdbPromise;
                         if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Ready...\n'); }
                                           
                         // await gdbInfoVariables;
@@ -740,9 +739,14 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
-        let gdbargs = ['-q', '--interpreter=mi2'];
-        gdbargs = gdbargs.concat(this.args.debuggerArgs || []);
-        const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs, this.args.executable]) + '\n';
+        const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
+        if (!this.args.configFiles) {
+            if (!path.isAbsolute(this.args.executable)) {
+                this.args.executable = path.join(this.args.cwd, this.args.executable);
+            }
+            gdbargs.push(this.args.executable);
+        }
+        const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
             this.handleMsg('log', '    Set "showDevDebugOutput": "raw" in your "launch.json" to see verbose GDB transactions ' +
@@ -761,10 +765,17 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.quitEvent();
         });
         this.initDebugger();
-        const ret = this.miDebugger.start(this.args.cwd, this.args.executable, [
+        const initCmds = [
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"'
-        ]);
+        ];
+        if (this.args.symbolFiles) {
+            initCmds.push('interpreter-exec console "symbol-file"');   // Clear any existing symbols
+            for (const symF of this.args.symbolFiles) {
+                initCmds.push(`interpreter-exec console "add-symbol-file \\"${symF.file}\\" -o ${symF.offset || 0}"`);
+            }
+        }
+        const ret = this.miDebugger.start(this.args.cwd, initCmds);
         return ret;
     }
 
@@ -884,7 +895,8 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async customRequest(command: string, response: DebugProtocol.Response, args: any) {
         const retFunc = () => {
-            this.sendResponse(response);
+            this.sendErrorResponse(response, 110, `Custom request ${command} cannot be run now, because debugger is busy}`,
+                undefined, ErrorDestination.Telemetry);
             return;
         };
 
@@ -2538,14 +2550,14 @@ export class GDBDebugSession extends LoggingDebugSession {
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             let file = frame.file; // Prefer full path name first
-            let staticNames = await this.symbolTable.getStaticVariableNames(file);
+            let staticNames = file ? await this.symbolTable.getStaticVariableNames(file) : null;
             if (!staticNames) {
                 file = frame.fileName;
-                staticNames = await this.symbolTable.getStaticVariableNames(file) || [];
+                staticNames = file ? await this.symbolTable.getStaticVariableNames(file) : [];
             }
 
             const hasher = crypto.createHash('sha256');
-            hasher.update(file);
+            hasher.update(file || '');
             const fHash = hasher.digest('hex');
 
             for (const symName of staticNames) {

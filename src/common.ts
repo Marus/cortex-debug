@@ -206,6 +206,11 @@ export interface RTTConfiguration {
     decoders: RTTCommonDecoderOpts[];
 }
 
+export interface SymbolFile {
+    file: string;
+    offset?: number;
+}
+
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
     name: string;
     request: string;
@@ -220,6 +225,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     serverCwd: string;
     device: string;
     loadFiles: string[];
+    symbolFiles: SymbolFile[];
     debuggerArgs: string[];
     preLaunchCommands: string[];
     postLaunchCommands: string[];

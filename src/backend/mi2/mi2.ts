@@ -4,7 +4,6 @@ import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
 import { posix } from 'path';
-import * as nativePath from 'path';
 import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
@@ -71,14 +70,9 @@ export class MI2 extends EventEmitter implements IBackend {
         super();
     }
 
-    public start(cwd: string, executable: string, init: string[]): Promise<void> {
-        if (!nativePath.isAbsolute(executable)) {
-            executable = nativePath.join(cwd, executable);
-        }
-            
+    public start(cwd: string, init: string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            const args = [...this.args, executable];
-            this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
+            this.process = ChildProcess.spawn(this.application, this.args, { cwd: cwd, env: this.procEnv });
             this.pid = this.process.pid;
             this.process.stdout.on('data', this.stdout.bind(this));
             this.process.stderr.on('data', this.stderr.bind(this));

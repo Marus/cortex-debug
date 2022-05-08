@@ -1,5 +1,5 @@
 {
-    "version": "1.5.0-pre2",
+    "version": "1.5.0-pre3",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -699,8 +699,29 @@
                                 "items": "string"
                             },
                             "executable": {
-                                "description": "Path of executable",
+                                "description": "Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'",
                                 "type": "string"
+                            },
+                            "symbolFiles": {
+                                "description": "List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "file": {
+                                            "type": "string",
+                                            "description": "Pathname of an ELF file for symbols"
+                                        },
+                                        "offset": {
+                                            "type": ["number", "string"],
+                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                           
+                                        }
+                                    },
+                                    "required": [
+                                        "file"
+                                    ]
+                                },
+                                "default": null
                             },
                             "gdbTarget": {
                                 "default": null,
@@ -1675,13 +1696,34 @@
                                 "items": "string"
                             },
                             "executable": {
-                                "description": "Path of executable",
+                                "description": "Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'",
                                 "type": "string"
                             },
                             "loadFiles": {
-                                "desctiption": "List of files (hex/bin/elf files) to load/program instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "description": "List of files (hex/bin/elf files) to load/program instead of the executable files. Symbols are not loaded (see 'symbolFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
                                 "type": "array",
                                 "items": "string",
+                                "default": null
+                            },
+                            "symbolFiles": {
+                                "description": "List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "file": {
+                                            "type": "string",
+                                            "description": "Pathname of an ELF file for symbols"
+                                        },
+                                        "offset": {
+                                            "type": ["number", "string"],
+                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                            
+                                        }
+                                    },
+                                    "required": [
+                                        "file"
+                                    ]
+                                },
                                 "default": null
                             },
                             "gdbTarget": {
