@@ -1,6 +1,23 @@
 ChangeLog
 =========
 
+# V1.5.0
+## New features
+* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
+* You can now use `breakAfterReset` and `runToEntryPoint` for an `attach` type launch configuration as well but they will only be used on a reset/restart.
+
+## Issues
+* [#643](https://github.com/Marus/cortex-debug/issues/643): Timeout for runToEntryPoint has been removed because it is never right for some use cases and don't need another setting. User can always use the pause button.
+* [#640](https://github.com/Marus/cortex-debug/issues/640): Fixed "Inaccurate showDevDebugOutput hint message"
+* [#636](https://github.com/Marus/cortex-debug/issues/636): Fixed "Chained configurations: 'folder' option is no longer working". Was an issue only on Windows
+* [#635](https://github.com/Marus/cortex-debug/issues/635): Fixed "Debugging hangs until relaunch". Let us know if it is still happening for your use case
+* [#643](https://github.com/Marus/cortex-debug/issues/643): Maybe fixed: "ECONNRESET by J-Link GDB when removing "runToMain": true". Revamped the way VSCode handles the startup sequence. It is VSCode that is confused because of the sequence of events.
+* [[#645](https://github.com/Marus/cortex-debug/issues/646): Fixed "SWO support is not being fully enabled in pyOCD"
+* [[#647](https://github.com/Marus/cortex-debug/issues/647): Fixed "Serial SWO source with OpenOCD". It was not using the right swoConfig property to open the serial-port. The same problem existed with `external` type servers.
+General
+* There was a mis-understanding in how we interpreted the VSCode API (we took it literally). This caused some issues with synchronization with Cortex-Debug and VSCode. This caused hard to reproduce issues and perhaps it is addressed now. There is an issue here with JLink as well with creating and deleting threads while program is paused -- this should not happen, but it confused gdb thoroughly. Happens at startup and maybe it masked now.
+* Improves simultaneous 3+ core debug. There was an issue where if multiple debug sessions were going at the (near) same time, when we thought a TCP port was free, it truly wasn't because the gdb-server involved was too slow to claim the port. This is more evident in chained configurations, where things happen rapidly but it was more of an issue with JLink because of how that server works.
+
 # V1.4.4
 * Bugfix: #618, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes or runs out of memory
 * Bugfix: Implemented a workaround for VSCode issue with pause not working if neither `breakOnReset` or `runToEntryPoint` is set.

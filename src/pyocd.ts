@@ -132,6 +132,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
                 const cpuF = this.args.swoConfig.cpuFrequency;
                 const swoF = this.args.swoConfig.swoFrequency || '1';
                 const args = [
+                    '-O', 'enable_swv=1',
                     '-O', 'swv_raw_enable=true',
                     '-O', `swv_raw_port=${swoPort}`,
                     '-O', `swv_system_clock=${cpuF}`,

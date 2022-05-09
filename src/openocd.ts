@@ -7,7 +7,6 @@ import * as os from 'os';
 import * as tmp from 'tmp';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
-import { Socket } from 'dgram';
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
     public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort'];
@@ -26,10 +25,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
-
-        // We get/reserve the ports here because it is an async. operation and it wll be done
-        // way before a server has even started. Hopefully
-        this.rttHelper.allocateRTTPorts(args.rttConfig);
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -90,13 +85,12 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public rttCommands(): string[] {
+    public async rttCommands(): Promise<string[]> {
         const commands = [];
         if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
             const cfg = this.args.rttConfig;
-            if (this.rttHelper.rttPortsPending > 0) {
-                // If we are getting here, we will need some serious re-factoring
-                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
+            if (!this.rttHelper.allocDone) {
+                await this.rttHelper.allocateRTTPorts(cfg);
             }
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
@@ -123,13 +117,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public swoAndRTTCommands(): string[] {
+    public async swoAndRTTCommands(): Promise<string[]> {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-        return commands.concat(this.rttCommands());
+        return commands.concat(await this.rttCommands());
     }
 
     private SWOConfigurationCommands(): string[] {
@@ -167,7 +161,8 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         }
     }
 
-    public serverArguments(): string[] {
+    public async serverArguments(): Promise<string[]> {
+        await this.rttHelper.allocateRTTPorts(this.args.rttConfig);
         let serverargs = [];
 
         // Regardless of the target processor, we will only supply the processor '0's port#
@@ -221,12 +216,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public initMatch(): RegExp {
-        /*
-        // Following will work with or without the -d flag to openocd or using the tcl
-        // command `debug_level 3`; and we are looking specifically for gdb port(s) opening up
-        // When debug is enabled, you get too many matches looking for the cpu. This message
-        // has been there atleast since 2016-12-19
-        */
         return /Info\s:[^\n]*Listening on port \d+ for gdb connection/i;
     }
 
@@ -247,7 +236,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
                     args: this.args,
-                    device: this.args.swoConfig.source,
+                    device: this.args.swoConfig.swoPath,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));
             }

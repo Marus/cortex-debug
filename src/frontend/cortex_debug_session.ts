@@ -19,6 +19,7 @@ export class CDebugSession {
     protected children: CDebugSession[] = [];
     private static ROOT = new CDebugSession(null, null);     // Dummy node for all sessions trees
     public static CurrentSessions: CDebugSession[] = [];     // This may stuff that never fully got created
+    public usedPorts: Set<number> = new Set<number>();
 
     constructor(public session: vscode.DebugSession, public config: ConfigurationArguments | vscode.DebugConfiguration) {
         if (session) {
@@ -98,7 +99,10 @@ export class CDebugSession {
     }
     public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments | undefined): CDebugSession {
         const prev = CDebugSession.FindSessionById(session.id);
-        if (prev) { return prev; }
+        if (prev) {
+            prev.config = config || prev.config;
+            return prev;
+        }
         return new CDebugSession(session, config || session.configuration);
     }
 
@@ -118,6 +122,24 @@ export class CDebugSession {
             CDebugSession.ROOT.add(newSession);
         }
         return newSession;
+    }
+
+    public static getAllUsedPorts(): number[] {
+        const ports = new Set<number>();
+        for (const s of CDebugSession.CurrentSessions) {
+            if ((s.status === 'started') || (s.status === 'stopped') || (s.status === 'running')) {
+                for (const p of s.usedPorts.values()) {
+                    ports.add(p);
+                }
+            }
+        }
+        return Array.from(ports.values());
+    }
+
+    public addUsedPorts(ports: number[]) {
+        for (const p of ports) {
+            this.usedPorts.add(p);
+        }
     }
 }
 

@@ -6,15 +6,14 @@ import { GDBServer } from './backend/server';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as stream from 'stream';
-import { resolve } from 'dns';
-import { rejects } from 'assert';
 const readline = require('readline');
 
 export enum ADAPTER_DEBUG_MODE {
     NONE = 'none',
     PARSED = 'parsed',
     BOTH = 'both',
-    RAW = 'raw'
+    RAW = 'raw',
+    VSCODE = 'vscode'
 }
 
 export enum CortexDebugKeys {
@@ -97,7 +96,7 @@ export interface RTTCommonDecoderOpts {
     tcpPort: string;  // [hostname:]port
     port: number;     // RTT Channel number
 
-    // Following two used for 'Advanced' catefory
+    // Following two used for 'Advanced' category
     tcpPorts: string[];
     ports: number[];
 }
@@ -207,6 +206,11 @@ export interface RTTConfiguration {
     decoders: RTTCommonDecoderOpts[];
 }
 
+export interface SymbolFile {
+    file: string;
+    offset?: number;
+}
+
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
     name: string;
     request: string;
@@ -221,6 +225,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     serverCwd: string;
     device: string;
     loadFiles: string[];
+    symbolFiles: SymbolFile[];
     debuggerArgs: string[];
     preLaunchCommands: string[];
     postLaunchCommands: string[];
@@ -241,7 +246,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     swoConfig: SWOConfiguration;
     graphConfig: any[];
     /// Triple slashes will cause the line to be ignored by the options-doc.py script
-    /// We dont expect the following to be in booleann form or have the valueof 'none' after
+    /// We dont expect the following to be in booleann form or have the value of 'none' after
     /// The config provider has done the conversion. If it exists, it means output 'something'
     showDevDebugOutput: ADAPTER_DEBUG_MODE;
     showDevDebugTimestamps: boolean;
@@ -252,7 +257,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     targetId: string | number;
     runToMain: boolean;         // Deprecated: kept here for backwards compatibility
     runToEntryPoint: string;
-    flattenAnonymous: boolean;
     registerUseNaturalFormat: boolean;
     variableUseNaturalFormat: boolean;
     chainedConfigurations: ChainedConfigurations;
@@ -261,6 +265,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     pvtPorts: { [name: string]: number; };
     pvtParent: ConfigurationArguments;
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
+    pvtAvoidPorts: number[];
 
     numberOfProcessors: number;
     targetProcessor: number;
@@ -318,9 +323,9 @@ export interface GDBServerController extends EventEmitter {
     launchCommands(): string[];
     attachCommands(): string[];
     restartCommands(): string[];
-    swoAndRTTCommands(): string[];
+    swoAndRTTCommands(): Promise<string[]> | string[];
     serverExecutable(): string;
-    serverArguments(): string[];
+    serverArguments(): Promise<string[]> | string[];
     initMatch(): RegExp;
     serverLaunchStarted(): void;
     serverLaunchCompleted(): Promise<void> | void;
@@ -347,14 +352,15 @@ export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds:
 export class RTTServerHelper {
     // Channel numbers previously used on the localhost
     public rttLocalPortMap: {[channel: number]: string} = {};
+    public allocDone = false;
 
     // For openocd, you cannot have have duplicate ports and neither can
-    // a multple clients connect to the same channel. Perhaps in the future
+    // a multiple clients connect to the same channel. Perhaps in the future
     // it wil
-    public rttPortsPending: number = 0;
-    public allocateRTTPorts(cfg: RTTConfiguration, startPort: number = 60000) {
+    public allocateRTTPorts(cfg: RTTConfiguration, startPort: number = 60000): Promise<any> {
+        this.allocDone = true;
         if (!cfg || !cfg.enabled || !cfg.decoders || cfg.decoders.length === 0) {
-            return;
+            return Promise.resolve();
         }
 
         // Remember that you can have duplicate decoder ports. ie, multiple decoders looking at the same port
@@ -363,7 +369,6 @@ export class RTTServerHelper {
         const dummy = '??';
         for (const dec of cfg.decoders) {
             if (dec.ports && (dec.ports.length > 0)) {
-                this.rttPortsPending = this.rttPortsPending + dec.ports.length;
                 dec.tcpPorts = [];
                 for (const p of dec.ports) {
                     this.rttLocalPortMap[p] = dummy;
@@ -373,13 +378,11 @@ export class RTTServerHelper {
             }
         }
 
-        this.rttPortsPending = Object.keys(this.rttLocalPortMap).length;
-        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: this.rttPortsPending, consecutive: false };
-        TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
-            this.rttPortsPending = 0;
+        const count = Object.keys(this.rttLocalPortMap).length;
+        const portFinderOpts = { min: startPort, max: startPort + 2000, retrieve: count, consecutive: false };
+        return TcpPortScanner.findFreePorts(portFinderOpts, GDBServer.LOCALHOST).then((ports) => {
             for (const dec of cfg.decoders) {
                 if (dec.ports && (dec.ports.length > 0)) {
-                    this.rttPortsPending = this.rttPortsPending + dec.ports.length;
                     dec.tcpPorts = [];
                     for (const p of dec.ports) {
                         let str = this.rttLocalPortMap[p];
@@ -448,8 +451,9 @@ export function getAnyFreePort(preferred: number): Promise<number> {
         }
         
         if (preferred > 0) {
-            TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST).then((inuse) => {
+            TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST, TcpPortScanner.AvoidPorts).then((inuse) => {
                 if (!inuse) {
+                    TcpPortScanner.EmitAllocated([preferred]);
                     resolve(preferred);
                 } else {
                     findFreePorts();
@@ -658,12 +662,53 @@ export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean 
     if ((val === false) || (val === 'false') || (val === '') || (val === 'none')) {
         delete config.showDevDebugOutput;
     } else if ((val === true) || (val === 'true)')) {
-        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.PARSED;
+        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
     } else if (modes.indexOf(val) < 0) {
-        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.BOTH;
+        config.showDevDebugOutput = ADAPTER_DEBUG_MODE.VSCODE;
         return false;       // Meaning, needed adjustment
     }
     return true;
+}
+
+//
+// For callback `cb`, fatal = false when file exists but header does not match. fatal = true means
+// we could not even read the file. Use `cb` to print what ever messages you want. It is optional.
+//
+// Returns true if the ELF header match the elf magic number, false in all other cases
+//
+export function validateELFHeader(exe: string, cb?: (str: string, fatal: boolean) => void): boolean {
+    try {
+        if (!fs.existsSync(exe)) {
+            if (cb) {
+                cb(`File not found "executable": "${exe}"`, true);
+            }
+            return false;
+        }
+        const buffer = Buffer.alloc(16);
+        const fd = fs.openSync(exe, 'r');
+        const n = fs.readSync(fd, buffer, 0, 16, 0);
+        fs.closeSync(fd);
+        if (n !== 16) {
+            if (cb) {
+                cb(`Could not read 16 bytes from "executable": "${exe}"`, true);
+            }
+            return false;
+        }
+        // First four chars are 0x7f, 'E', 'L', 'F'
+        if ((buffer[0] !== 0x7f) || (buffer[1] !== 0x45) || (buffer[2] !== 0x4c) || (buffer[3] !== 0x46)) {
+            if (cb) {
+                cb(`Not a valid ELF file "executable": "${exe}". Many debug functions may not work`, false);
+            }
+            return false;
+        }
+        return true;
+    }
+    catch (e) {
+        if (cb) {
+            cb(`Could not read file "executable": "${exe}" ${e ? e.toString() : ''}`, true);
+        }
+        return false;
+    }
 }
 
 //

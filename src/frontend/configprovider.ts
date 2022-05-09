@@ -3,9 +3,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments } from '../common';
-import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
+import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments, validateELFHeader, SymbolFile } from '../common';
+import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
+import { parseInteger } from './utils';
+import { off } from 'process';
 
 const OPENOCD_VALID_RTOS: string[] = ['ChibiOS', 'eCos', 'embKernel', 'FreeRTOS', 'mqx', 'nuttx', 'ThreadX', 'uCOS-III', 'auto'];
 const JLINK_VALID_RTOS: string[] = ['Azure', 'ChibiOS', 'embOS', 'FreeRTOS', 'NuttX', 'Zephyr'];
@@ -23,6 +25,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return undefined;
         }
         config.gdbServerConsolePort = GDBServerConsole.BackendPort;
+        config.pvtAvoidPorts = CDebugSession.getAllUsedPorts();
 
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
@@ -148,7 +151,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.extensionPath = config.extensionPath.replace(/\\/g, '/'); // GDB doesn't interpret the path correctly with backslashes.
         }
 
-        config.flattenAnonymous = configuration.flattenAnonymous;
         config.registerUseNaturalFormat = configuration.get(CortexDebugKeys.REGISTER_DISPLAY_MODE, true);
         config.variableUseNaturalFormat = configuration.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true);
 
@@ -165,8 +167,55 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
-        let validationResponse: string = null;
+        // Right now, we don't consider a bad executable as fatal. Technically, you don't need an executable but
+        // users will get a horrible debug experience ... so many things don't work.
+        const def: SymbolFile = {
+            file: config.executable
+        };
+        const symFiles: SymbolFile[] = config.symbolFiles || [def];
+        if (!symFiles || (symFiles.length === 0)) {
+            vscode.window.showWarningMessage('No "executable" or "symbolFiles" specified. We will try to run program without symbols');
+        } else {
+            for (const symF of symFiles) {
+                let exe = symF.file;
+                const cwd = config.cwd || folder;
+                config.cwd = cwd;
+                exe = path.isAbsolute(exe) ? exe : path.join(cwd, exe);
+                exe = path.normalize(exe).replace('\\', '/');
+                if (!config.symbolFiles) {
+                    config.executable = exe;
+                } else {
+                    symF.file = exe;
+                }
+                let offset: any = symF.offset;
+                if (offset) {
+                    let isIntString = false;
+                    if (typeof offset === 'string') {
+                        offset = (offset as string).trim();
+                        isIntString = (offset.match(/^0[x][0-9a-f]+/i) || offset.match(/^[0-9]+/));
+                    }
+                    if (isIntString) {
+                        symF.offset = parseInt(offset);
+                    } else if (typeof symF.offset !== 'number') {
+                        vscode.window.showErrorMessage(`Invalid offset ${offset} for file ${exe}. Must be a number or a string." +
+                            " Use a string starting with "0x" for a hexadecimal number`);
+                        delete symF.offset;
+                    }
+                }
+                validateELFHeader(exe, (str: string, fatal: boolean) => {
+                    if (fatal) {
+                        vscode.window.showErrorMessage(str);
+                    } else {
+                        vscode.window.showInformationMessage(str);
+                    }
+                });
+            }
+            if (config.symbolFiles) {
+                config.symbolFiles = symFiles;
+            }
+        }
 
+        let validationResponse: string = null;
         switch (config.servertype) {
             case 'jlink':
                 validationResponse = this.verifyJLinkConfigurationAfterSubstitution(folder, config);

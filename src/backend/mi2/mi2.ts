@@ -4,7 +4,6 @@ import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
 import { posix } from 'path';
-import * as nativePath from 'path';
 import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
@@ -71,14 +70,9 @@ export class MI2 extends EventEmitter implements IBackend {
         super();
     }
 
-    public start(cwd: string, executable: string, init: string[]): Promise<void> {
-        if (!nativePath.isAbsolute(executable)) {
-            executable = nativePath.join(cwd, executable);
-        }
-            
+    public start(cwd: string, init: string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            const args = [...this.args, executable];
-            this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
+            this.process = ChildProcess.spawn(this.application, this.args, { cwd: cwd, env: this.procEnv });
             this.pid = this.process.pid;
             this.process.stdout.on('data', this.stdout.bind(this));
             this.process.stderr.on('data', this.stderr.bind(this));
@@ -872,18 +866,21 @@ export class MI2 extends EventEmitter implements IBackend {
         return this.sendCommand(`var-evaluate-expression ${name}`);
     }
 
-    public async varListChildren(parent: number, name: string, flattenAnonymous: boolean): Promise<VariableObject[]> {
+    public async varListChildren(parent: number, name: string): Promise<VariableObject[]> {
         if (trace) {
             this.log('stderr', 'varListChildren');
         }
         // TODO: add `from` and `to` arguments
         const res = await this.sendCommand(`var-list-children --all-values ${name}`);
+        const keywords = ['private', 'protected', 'public'];
         const children = res.result('children') || [];
         const omg: VariableObject[] = [];
         for (const item of children) {
             const child = new VariableObject(parent, item[1]);
-            if (flattenAnonymous && child.exp.startsWith('<anonymous ')) {
-                omg.push(... await this.varListChildren(parent, child.name, flattenAnonymous));
+            if (child.exp.startsWith('<anonymous ')) {
+                omg.push(... await this.varListChildren(parent, child.name));
+            } else if (keywords.find((x) => x === child.exp)) {
+                omg.push(... await this.varListChildren(parent, child.name));
             } else {
                 omg.push(child);
             }
@@ -1032,5 +1029,6 @@ interface SendCommaindIF {
     suppressFailure: boolean;
     swallowStdout: boolean;
     forceNoDebug: boolean;
-    resolve, reject: any;
+    resolve: any;
+    reject: any;
 }

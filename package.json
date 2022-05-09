@@ -1,5 +1,5 @@
 {
-    "version": "1.4.4",
+    "version": "1.5.0",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -346,11 +346,6 @@
                     "default": true,
                     "description": "Enable Telemetry for the Cortex-Debug Extension. Reporting will also respect the global telemetry.enableTelemetry setting."
                 },
-                "cortex-debug.flattenAnonymous": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "If true, anonymous unions/structs are flattened in their parent data structure"
-                },
                 "cortex-debug.registerUseNaturalFormat": {
                     "type": "boolean",
                     "default": true,
@@ -379,10 +374,11 @@
                         "none",
                         "parsed",
                         "raw",
-                        "both"
+                        "both",
+                        "vscode"
                     ],
                     "default": "none",
-                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
+                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
                     "type": "string"
                 }
             }
@@ -703,8 +699,29 @@
                                 "items": "string"
                             },
                             "executable": {
-                                "description": "Path of executable",
+                                "description": "Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'",
                                 "type": "string"
+                            },
+                            "symbolFiles": {
+                                "description": "List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "file": {
+                                            "type": "string",
+                                            "description": "Pathname of an ELF file for symbols"
+                                        },
+                                        "offset": {
+                                            "type": ["number", "string"],
+                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                           
+                                        }
+                                    },
+                                    "required": [
+                                        "file"
+                                    ]
+                                },
+                                "default": null
                             },
                             "gdbTarget": {
                                 "default": null,
@@ -714,10 +731,10 @@
                             "breakAfterReset": {
                                 "default": false,
                                 "type": "boolean",
-                                "description": "Applies to Restart/Reset, halt debugger after a reset. Ignored for `Attach` or if `runToEntryPoint` is used."
+                                "description": "Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored if `runToEntryPoint` is used."
                             },
                             "runToEntryPoint": {
-                                "description": "Applies to Restart/Reset. If enabled the debugger will run until the start of the given function. There is a 5 second timeout",
+                                "description": "Applies to Launch/Restart/Reset, ignored for Attach. If enabled the debugger will run until the start of the given function.",
                                 "type": "string",
                                 "default": "main"
                             },
@@ -981,10 +998,11 @@
                                     "none",
                                     "parsed",
                                     "raw",
-                                    "both"
+                                    "both",
+                                    "vscode"
                                 ],
                                 "default": "none",
-                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
                                 "type": "string"
                             },
                             "showDevDebugTimestamps": {
@@ -1254,7 +1272,7 @@
                                     "swoPath": {
                                         "type": "string",
                                         "default": "",
-                                        "description": "Path name when source != \"socket\". Typically a file-name or a serial-port-name"
+                                        "description": "Path name when source is \"file\" or \"serial\". Typically a /path-name or a serial-port-name"
                                     },
                                     "swoPort": {
                                         "type": "string",
@@ -1470,6 +1488,11 @@
                                     "cjtag"
                                 ]
                             },
+                            "jlinkscript": {
+                                "default": null,
+                                "description": "J-Link script file - optional input file for customizing J-Link actions.",
+                                "type": "string"
+                            },
                             "openOCDLaunchCommands": {
                                 "default": [],
                                 "description": "OpenOCD command(s) after configuration files are loaded (-c options)",
@@ -1505,6 +1528,16 @@
                                 "default": false,
                                 "description": "For st-util only. Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used.",
                                 "type": "boolean"
+                            },
+                            "stlinkPath": {
+                                "default": null,
+                                "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path.",
+                                "type": "string"
+                            },
+                            "stm32cubeprogrammer": {
+                                "default": null,
+                                "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here.",
+                                "type": "string"
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
@@ -1678,13 +1711,34 @@
                                 "items": "string"
                             },
                             "executable": {
-                                "description": "Path of executable",
+                                "description": "Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'",
                                 "type": "string"
                             },
                             "loadFiles": {
-                                "desctiption": "List of files (hex/bin/elf files) to load/program instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "description": "List of files (hex/bin/elf files) to load/program instead of the executable files. Symbols are not loaded (see 'symbolFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
                                 "type": "array",
                                 "items": "string",
+                                "default": null
+                            },
+                            "symbolFiles": {
+                                "description": "List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "file": {
+                                            "type": "string",
+                                            "description": "Pathname of an ELF file for symbols"
+                                        },
+                                        "offset": {
+                                            "type": ["number", "string"],
+                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                            
+                                        }
+                                    },
+                                    "required": [
+                                        "file"
+                                    ]
+                                },
                                 "default": null
                             },
                             "gdbTarget": {
@@ -1700,10 +1754,10 @@
                             "breakAfterReset": {
                                 "default": false,
                                 "type": "boolean",
-                                "description": "Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` or if `runToEntryPoint` is used."
+                                "description": "Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored if `runToEntryPoint` is used."
                             },
                             "runToEntryPoint": {
-                                "description": "If enabled the debugger will run until the start of the given function. There is a 5 second timeout",
+                                "description": "Applies to Launch/Restart/Reset, ignored for Attach. If enabled the debugger will run until the start of the given function.",
                                 "type": "string",
                                 "default": "main"
                             },
@@ -1967,10 +2021,11 @@
                                     "none",
                                     "parsed",
                                     "raw",
-                                    "both"
+                                    "both",
+                                    "vscode"
                                 ],
                                 "default": "none",
-                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both",
+                                "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
                                 "type": "string"
                             },
                             "showDevDebugTimestamps": {
@@ -2240,7 +2295,7 @@
                                     "swoPath": {
                                         "type": "string",
                                         "default": "",
-                                        "description": "Path name when source != \"socket\". Typically a file-name or a serial-port-name"
+                                        "description": "Path name when source is \"file\" or \"serial\". Typically a /path-name or a serial-port-name"
                                     },
                                     "swoPort": {
                                         "type": "string",
