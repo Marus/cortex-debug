@@ -236,7 +236,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
                     args: this.args,
-                    device: this.args.swoConfig.source,
+                    device: this.args.swoConfig.swoPath,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));
             }

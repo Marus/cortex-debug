@@ -123,7 +123,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
                     args: this.args,
-                    device: this.args.swoConfig.source,
+                    device: this.args.swoConfig.swoPath,
                     baudRate: this.args.swoConfig.swoFrequency
                 }));
             }

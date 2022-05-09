@@ -1,15 +1,15 @@
 | Attribute | Applies To | Description |
 | --------- | ---------- | ----------- |
-| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored for `Launch` or if `runToEntryPoint` is used.
+| breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored if `runToEntryPoint` is used.
 | chainedConfigurations | Common | (unknown)
 | cwd | Common | Directory to run commands from
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
 | device | Common | Target Device Identifier
-| executable | Common | Path of executable
+| executable | Common | Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'
 | gdbPath | Common | This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available.
 | graphConfig | Common | (unknown)
 | interface | Common | Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes.
-| loadFiles | Common | (unknown)
+| loadFiles | Common | List of files (hex/bin/elf files) to load/program instead of the executable files. Symbols are not loaded (see 'symbolFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device
 | name | Common | ????
 | numberOfProcessors | Common | Number of processors/cores in the target device.
 | objdumpPath | Common | This setting can be used to override the objdump (used to find globals/statics) path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available. The program 'nm' is also expected alongside
@@ -25,6 +25,7 @@
 | preAttachCommands | Common | Additional GDB Commands to be executed at the start of the main attach sequence (immediately after attaching to target).
 | preLaunchCommands | Common | Additional GDB Commands to be executed at the start of the main launch sequence (immediately after attaching to target).
 | preRestartCommands | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution).
+| pvtAvoidPorts | Common | ????
 | pvtMyConfigFromParent | Common | ????
 | pvtParent | Common | ????
 | pvtPorts | Common | ????
@@ -32,7 +33,7 @@
 | request | Common | ????
 | rtos | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be ChibiOS, eCos, embKernel, FreeRTOS, mqx, nuttx, ThreadX, uCOS-III, or auto.
 | rttConfig | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future
-| runToEntryPoint | Common | If enabled the debugger will run until the start of the given function.
+| runToEntryPoint | Common | Applies to Launch/Restart/Reset, ignored for Attach. If enabled the debugger will run until the start of the given function.
 | runToMain | Common | Deprecated: please use 'runToEntryPoint' instead.
 | serverArgs | Common | Additional arguments to pass to GDB Server command line
 | serverCwd | Common | ????
@@ -43,6 +44,7 @@
 | svdAddrGapThreshold | Common | If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device. -1 means never combine registers and is very slow
 | svdFile | Common | Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.
 | swoConfig | Common | (unknown)
+| symbolFiles | Common | List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device
 | targetId | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)
 | targetProcessor | Common | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors'
 | toolchainPrefix | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration.
