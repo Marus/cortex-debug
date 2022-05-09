@@ -740,7 +740,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
-        if (!this.args.configFiles) {
+        if (!this.args.symbolFiles) {
             if (!path.isAbsolute(this.args.executable)) {
                 this.args.executable = path.join(this.args.cwd, this.args.executable);
             }
