@@ -308,6 +308,14 @@ export class SymbolTable {
     private rttSymbol;
     public readonly rttSymbolName = '_SEGGER_RTT';
     private addSymbol(sym: SymbolInformation) {
+        const oldSym = this.symbolsByAddress.get(sym.address);
+        if (oldSym) {
+            // Probably should take the new one. Dups can come from multiple symbol (elf) files
+            // Not sure `symbolsAsIntervalTree` can handle duplicates and we have to do a linear search
+            // in allSymbols. This shouldn't really happen unless user loads duplicate symbol files
+            return;
+        }
+
         if (!this.rttSymbol && (sym.name === this.rttSymbolName) && (sym.type === SymbolType.Object) && (sym.length > 0)) {
             this.rttSymbol = sym;
         }
@@ -323,7 +331,7 @@ export class SymbolTable {
     private objdumpReader: SpawnLineReader;
     private currentObjDumpFile: string = null;
 
-    private readObjdumpHeaderLine(line: string, offset: number, err: any): boolean {
+    private readObjdumpHeaderLine(offset: number, line: string, err: any): boolean {
         if (!line) {
             return line === '' ? true : false;
         }
@@ -358,7 +366,7 @@ export class SymbolTable {
         return true;
     }
 
-    private readObjdumpSymbolLine(line: string, offset: number, err: any): boolean {
+    private readObjdumpSymbolLine(offset: number, line: string, err: any): boolean {
         if (!line) {
             return line === '' ? true : false;
         }
@@ -546,7 +554,7 @@ export class SymbolTable {
     }
 
     private addressToFile: Map<number, string> = new Map<number, string>();;
-    private readNmSymbolLine(line: string, offset: number, err: any): boolean {
+    private readNmSymbolLine(offset: number, line: string, err: any): boolean {
         const match = line && line.match(NM_SYMBOL_RE);
         if (match) {
             const address = parseInt(match[1], 16) + offset;
