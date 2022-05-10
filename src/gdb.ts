@@ -36,6 +36,7 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { all } from '@microsoft/fast-foundation';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -769,11 +770,24 @@ export class GDBDebugSession extends LoggingDebugSession {
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"'
         ];
+        const alsoLoad = [];
         if (this.args.symbolFiles) {
             initCmds.push('interpreter-exec console "symbol-file"');   // Clear any existing symbols
             for (const symF of this.args.symbolFiles) {
-                initCmds.push(`interpreter-exec console "add-symbol-file \\"${symF.file}\\" -o ${symF.offset || 0}"`);
+                if (symF.load !== 'program') {
+                    initCmds.push(`interpreter-exec console "add-symbol-file \\"${symF.file}\\" -o ${symF.offset || 0}"`);
+                }
+                if (symF.load !== 'symbols') {
+                    alsoLoad.push(symF.file);
+                }
             }
+            if (initCmds.length === 1) {
+                const msg = 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n';
+                this.handleMsg('log', msg + '\n');
+            }
+        }
+        if (alsoLoad.length && (this.args.request === 'launch')) {
+            this.args.loadFiles = (this.args.loadFiles || []).concat(alsoLoad);
         }
         const ret = this.miDebugger.start(this.args.cwd, initCmds);
         return ret;
@@ -1209,7 +1223,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             // * the parent has already asked us to quit and in the process, we sent a TerminatedEvent to VSCode
             // * VSCode in turn asks to disconnect. all is good, we were quitting anyways. Not sure exactly what else we could do
             this.serverConsoleLog('Got disconnect request while we are already disconnecting');
-            await this.disconnectRequest;
+            await this.disconnectingPromise;
             this.sendResponse(response);
             return Promise.resolve();
         } else {
@@ -1278,7 +1292,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             this.handleMsg('log', 'GDB never responded to an interrupt request. Trying to end session anyways\n');
                             doDisconnectProcessing();
                         }
-                    }, 250);
+                    }, 2000);
                     this.miDebugger.once('generic-stopped', () => {
                         if (to) {
                             clearTimeout(to);

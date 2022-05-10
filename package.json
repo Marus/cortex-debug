@@ -1,5 +1,5 @@
 {
-    "version": "1.5.0",
+    "version": "1.5.1-pre1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -703,7 +703,7 @@
                                 "type": "string"
                             },
                             "symbolFiles": {
-                                "description": "List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "description": "List of ELF files to load symbols (and optionally program) from instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used for program and symbols",
                                 "type": "array",
                                 "items": {
                                     "type": "object",
@@ -715,6 +715,16 @@
                                         "offset": {
                                             "type": ["number", "string"],
                                             "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                           
+                                        },
+                                        "load": {
+                                            "type": "string",
+                                            "enum": [
+                                                "symbols",
+                                                "program",
+                                                "both"
+                                            ],
+                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program",
+                                            "default": "symbols"
                                         }
                                     },
                                     "required": [
@@ -1721,7 +1731,7 @@
                                 "default": null
                             },
                             "symbolFiles": {
-                                "description": "List of ELF files to load symbols from instead of the executable files. No program info. is used (see 'loadFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "description": "List of ELF files to load symbols (and optionally program) from instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used for program and symbols",
                                 "type": "array",
                                 "items": {
                                     "type": "object",
@@ -1732,7 +1742,17 @@
                                         },
                                         "offset": {
                                             "type": ["number", "string"],
-                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                            
+                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                           
+                                        },
+                                        "load": {
+                                            "type": "string",
+                                            "enum": [
+                                                "symbols",
+                                                "program",
+                                                "both"
+                                            ],
+                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program",
+                                            "default": "symbols"
                                         }
                                     },
                                     "required": [

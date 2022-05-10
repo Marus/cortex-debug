@@ -414,6 +414,9 @@ export class SymbolTable {
             let rejected = false;
             const objdumpPromises: ExecPromise[] = [];
             for (const symbolFile of this.executables) {
+                if (symbolFile.load === 'program') {
+                    continue;
+                }
                 const executable = symbolFile.file;
                 if (!validateELFHeader(executable)) {
                     this.gdbSession.handleMsg('log',

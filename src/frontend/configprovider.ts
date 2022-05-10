@@ -167,6 +167,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
+        let cwd = config.cwd || process.cwd();
+        if (!path.isAbsolute(cwd)) {
+            cwd = path.join(process.cwd(), cwd);
+        }
+        config.cwd = cwd;
         // Right now, we don't consider a bad executable as fatal. Technically, you don't need an executable but
         // users will get a horrible debug experience ... so many things don't work.
         const def: SymbolFile = {
@@ -177,9 +182,16 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             vscode.window.showWarningMessage('No "executable" or "symbolFiles" specified. We will try to run program without symbols');
         } else {
             for (const symF of symFiles) {
+                const validLoads = ['symbols', 'program', 'both'];
+                if (!symF.load) {
+                    symF.load = 'symbols';
+                } else if (!validLoads.find((s) => s === symF.load)) {
+                    const err = `Invalid load type for file ${symF.file}. Must be one of ${JSON.stringify(validLoads)}. Setting to 'symbols'`;
+                    vscode.window.showErrorMessage(err);
+                    symF.load = 'symbols';
+                }
+
                 let exe = symF.file;
-                const cwd = config.cwd || folder;
-                config.cwd = cwd;
                 exe = path.isAbsolute(exe) ? exe : path.join(cwd, exe);
                 exe = path.normalize(exe).replace('\\', '/');
                 if (!config.symbolFiles) {
@@ -205,13 +217,22 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 validateELFHeader(exe, (str: string, fatal: boolean) => {
                     if (fatal) {
                         vscode.window.showErrorMessage(str);
-                    } else {
+                    } else if ((symF.load === 'both') || (symF.load === 'program')) {
                         vscode.window.showInformationMessage(str);
                     }
                 });
             }
             if (config.symbolFiles) {
                 config.symbolFiles = symFiles;
+            }
+        }
+
+        if (config.loadFiles) {
+            for (let ix = 0; ix < config.loadFiles.length; ix++ ) {
+                let fName = config.loadFiles[ix];
+                fName = path.isAbsolute(fName) ? fName : path.join(cwd, fName);
+                fName = path.normalize(fName).replace('\\', '/');
+                config.loadFiles[ix] = fName;
             }
         }
 
