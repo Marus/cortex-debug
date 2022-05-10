@@ -721,9 +721,10 @@
                                             "enum": [
                                                 "symbols",
                                                 "program",
-                                                "both"
+                                                "both",
+                                                "none"
                                             ],
-                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program",
+                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program, \"none\" --> ignore completely",
                                             "default": "symbols"
                                         }
                                     },
@@ -1749,9 +1750,10 @@
                                             "enum": [
                                                 "symbols",
                                                 "program",
-                                                "both"
+                                                "both",
+                                                "none"
                                             ],
-                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program",
+                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program, \"none\" --> ignore completely",
                                             "default": "symbols"
                                         }
                                     },

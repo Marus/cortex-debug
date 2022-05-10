@@ -209,7 +209,7 @@ export interface RTTConfiguration {
 export interface SymbolFile {
     file: string;
     offset?: number;
-    load?: 'symbols' | 'program' | 'both';
+    load?: 'symbols' | 'program' | 'both' | 'none';
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
