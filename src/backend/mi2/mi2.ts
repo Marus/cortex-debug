@@ -82,7 +82,9 @@ export class MI2 extends EventEmitter implements IBackend {
                 ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
             });
 
-            this.sendCommand('gdb-set target-async on', true).then(() => {
+            const asyncCmd = 'gdb-set target-async on';
+            // const asyncCmd = 'gdb-set mi-async on';  TODO: In July, switch to this mode and edit parseVersionInfo)_
+            this.sendCommand(asyncCmd, true).then(() => {
                 this.actuallyStarted = true;
                 const swallOutput = this.debugOutput ? false : true;
                 this.sendCommand('gdb-version', false, true, swallOutput).then((v: MINode) => {

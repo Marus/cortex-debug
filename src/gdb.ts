@@ -97,6 +97,65 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+class PendingContinue {
+    constructor(public shouldContinue: boolean, public haveMore?: () => boolean) {}
+}
+class VSCodeRequest<RespType, ArgsType> {
+    constructor(
+        public functor: (response: RespType, args: ArgsType, pendedContinue?: PendingContinue) => Promise<void>,
+        public response: RespType,
+        public args: ArgsType,
+        public resolve: any,
+        public reject: any
+    ) {}
+}
+
+/*
+** There are some requests (setFunctionBreakpoints) where VSCode sends duplicate requests if the target is already running
+** and the second one comes in while the first one is running (still un-resolved) and ruins the sequence in many ways. To avoid this, we can
+** queue all such requests and guaranteed to execute the request one at a time.
+**
+** There is another request (evaluateRequest) that can also be messed up by back to back requests, which messes up in other
+** ways. You can also have duplicates here because the user created such dups.
+**
+**
+** For requests where gdb needs to be temporarily interrupted for the operation to succeed, use setFunctionBreakpoints as a template (carefully)
+** andfor others, use evaluateRequest as a template
+*/
+class RequestQueue<RespType, ArgsType> {
+    private queue: Array<VSCodeRequest<RespType, ArgsType>> = [];
+    private queueBusy = false;
+    public pendedContinue = new PendingContinue(false, this.haveMore.bind(this));
+    constructor(private alwaysResolve = true) {}
+    public add(
+        functor: (response: RespType, args: ArgsType, pendContinue?: PendingContinue) => Promise<void>,
+        response: RespType, args: ArgsType): Promise<void> {
+        return new Promise<void>(async (resolve, reject) => {
+            this.queue.push(new VSCodeRequest<RespType, ArgsType>(functor, response, args, resolve, reject));
+            while (!this.queueBusy && (this.queue.length > 0)) {
+                this.queueBusy = true;
+                const obj = this.queue.shift();
+                try {
+                    await obj.functor(obj.response, obj.args, this.pendedContinue);
+                    obj.resolve();
+                }
+                catch (e) {
+                    if (this.alwaysResolve) {
+                        obj.resolve();
+                    } else {
+                        obj.reject(e);
+                    }
+                }
+                this.queueBusy = false;
+            }
+        });
+    }
+
+    public haveMore(): boolean {
+        return this.queue.length > 0;
+    }
+}
+
 class CustomContinuedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
         threadID: number;
@@ -1700,86 +1759,98 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
+    private functionBreakPointsQ = new RequestQueue<DebugProtocol.SetFunctionBreakpointsResponse, DebugProtocol.SetFunctionBreakpointsArguments>();
     protected setFunctionBreakPointsRequest(
-        response: DebugProtocol.SetFunctionBreakpointsResponse,
-        args: DebugProtocol.SetFunctionBreakpointsArguments
-    ): Promise<void> {
-        return new Promise(async (resolve) => {
-            if ((args.breakpoints.length === 0) && (this.functionBreakpoints.length === 0)) {
-                this.sendResponse(response);
-                resolve();
-                return;
-            }
-            const savedFlag = this.disableSendStoppedEvents;
-            const createBreakpoints = async (shouldContinue) => {
-                try {
-                    this.disableSendStoppedEvents = savedFlag;
-                    await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
-                    this.functionBreakpoints = [];
-
-                    const all = new Array<Promise<OurSourceBreakpoint | MIError>>();
-                    args.breakpoints.forEach((brk) => {
-                        const arg: OurSourceBreakpoint = {
-                            ...brk,
-                            raw: brk.name,
-                            file: undefined,
-                            line: undefined
-                        };
-                        all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
-                    });
-
-                    const breakpoints = await Promise.all(all);
-                    const finalBrks: DebugProtocol.Breakpoint[] = breakpoints.map(
-                        (brkp) => {
-                            if (brkp instanceof MIError) {
-                                /* Failed breakpoints should be reported with
-                                 * verified: false, so they can be greyed out
-                                 * in the UI.
-                                 */
-                                return {
-                                    verified: false,
-                                    message: brkp.message
-                                };
-                            }
-
-                            this.functionBreakpoints.push(brkp.number);
-
-                            return {
-                                source: {
-                                    path: brkp.file,
-                                    name: brkp.raw
-                                },
-                                line: brkp.line,
-                                instructionReference: brkp.address,
-                                id: brkp.number,
-                                verified: true
-                            } as DebugProtocol.Breakpoint;
-                        }
-                    );
-
-                    response.body = {
-                        breakpoints: finalBrks
-                    };
+        r: DebugProtocol.SetFunctionBreakpointsResponse,
+        a: DebugProtocol.SetFunctionBreakpointsArguments): Promise<void> {
+        const doit = (
+            response: DebugProtocol.SetFunctionBreakpointsResponse,
+            args: DebugProtocol.SetFunctionBreakpointsArguments,
+            pendContinue: PendingContinue
+        ): Promise<void> => {
+            return new Promise(async (resolve) => {
+                if ((args.breakpoints.length === 0) && (this.functionBreakpoints.length === 0)) {
                     this.sendResponse(response);
+                    resolve();
+                    return;
                 }
-                catch (msg) {
-                    this.sendErrorResponse(response, 10, msg.toString());
-                }
-                resolve();
-                if (shouldContinue) {
-                    this.sendContinue();
-                }
-            };
+                const createBreakpoints = async () => {
+                    try {
+                        await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
+                        this.functionBreakpoints = [];
 
-            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
-                await createBreakpoints(false);
-            }
-            else {
-                this.disableSendStoppedEvents = true;
-                this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
-                this.miDebugger.sendCommand('exec-interrupt');
-            }
-        });
+                        const all = new Array<Promise<OurSourceBreakpoint | MIError>>();
+                        args.breakpoints.forEach((brk) => {
+                            const arg: OurSourceBreakpoint = {
+                                ...brk,
+                                raw: brk.name,
+                                file: undefined,
+                                line: undefined
+                            };
+                            all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
+                        });
+
+                        const breakpoints = await Promise.all(all);
+                        const finalBrks: DebugProtocol.Breakpoint[] = breakpoints.map(
+                            (brkp) => {
+                                if (brkp instanceof MIError) {
+                                    /* Failed breakpoints should be reported with
+                                     * verified: false, so they can be greyed out
+                                     * in the UI.
+                                     */
+                                    return {
+                                        verified: false,
+                                        message: brkp.message
+                                    };
+                                }
+
+                                this.functionBreakpoints.push(brkp.number);
+
+                                return {
+                                    source: {
+                                        path: brkp.file,
+                                        name: brkp.raw
+                                    },
+                                    line: brkp.line,
+                                    instructionReference: brkp.address,
+                                    id: brkp.number,
+                                    verified: true
+                                } as DebugProtocol.Breakpoint;
+                            }
+                        );
+
+                        response.body = {
+                            breakpoints: finalBrks
+                        };
+                        this.sendResponse(response);
+                    }
+                    catch (msg) {
+                        this.sendErrorResponse(response, 10, msg.toString());
+                    }
+
+                    if (pendContinue.haveMore()) {
+                        // do not sendContinue even if we were supposed to
+                        console.log('Yup got another request while we are processing one. VSCode issue\n');
+                    } else if (pendContinue.shouldContinue) {
+                        this.disableSendStoppedEvents = false;
+                        pendContinue.shouldContinue = false;
+                        this.sendContinue();
+                    }
+                    resolve();
+                };
+
+                if (this.miDebugger.status !== 'running') {         // May not even have started just yet
+                    await createBreakpoints();
+                } else {
+                    this.disableSendStoppedEvents = true;
+                    pendContinue.shouldContinue = true;
+                    this.miDebugger.once('generic-stopped', () => { createBreakpoints(); });
+                    this.miDebugger.sendCommand('exec-interrupt');
+                }
+            });
+        };
+
+        return this.functionBreakPointsQ.add(doit, r, a);
     }
 
     protected pendingBkptResponse = false;
@@ -3030,167 +3101,151 @@ export class GDBDebugSession extends LoggingDebugSession {
         return ret;
     }
 
-    private evaluateQueue = [];
-    private evaluateQueueBusy = false;
-    protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-        // We queue these requests as there can be a flood of them. Especially if you have two variables or same name back to back
-        // the second can fail because we are still in the process of creating that variable (update, fail, then create). Sources
-        // for requests are from RTOS viewers, watch windows and hover. Even a watch window can have duplicates.
-        return new Promise(async (resolve) => {
-            this.evaluateQueue.push({response: response, args: args, resolve: resolve, reject: undefined});
-            while (!this.evaluateQueueBusy && (this.evaluateQueue.length > 0)) {
-                this.evaluateQueueBusy = true;
-                const obj = this.evaluateQueue.shift();
-                try {
-                    await this.evaluateRequestOne(obj.response, obj.args);
-                    obj.resolve();
-                }
-                catch (e) {
-                    obj.resolve();
-                    // obj.reject(e);
-                }
-                this.evaluateQueueBusy = false;
-            }
-        });
-    }
+    private evaluateQ = new RequestQueue<DebugProtocol.EvaluateResponse, DebugProtocol.EvaluateArguments>();
+    protected evaluateRequest(r: DebugProtocol.EvaluateResponse, a: DebugProtocol.EvaluateArguments): Promise<void> {
+        const isBusy = () => {
+            return !this.stopped || this.continuing || (this.miDebugger.status === 'running') || this.sendDummyStackTrace;
+        };
 
-    protected evaluateRequestOne(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-        return new Promise<void>(async (resolve) => {
-            const isBusy = !this.stopped || this.continuing || (this.miDebugger.status === 'running') || this.sendDummyStackTrace;
-            if (args.context !== 'repl') {
-                if (isBusy) {
-                    if (this.args.showDevDebugOutput) {
-                        this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(args)}\n`);
+        if (a.context !== 'repl') {
+            if (isBusy()) {
+                if (this.args.showDevDebugOutput) {
+                    this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(a)}\n`);
+                }
+                this.sendErrorResponse(r, 8, 'Busy', undefined, ErrorDestination.Telemetry);
+                return Promise.resolve();
+            }
+        }
+
+        const doit = (response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) => {
+            return new Promise<void>(async (resolve) => {
+                const createVariable = (arg, options?) => {
+                    if (options) {
+                        return this.variableHandles.create(new ExtendedVariable(arg, options));
                     }
-                    this.sendErrorResponse(response, 8, 'Busy', undefined, ErrorDestination.Telemetry);
-                    resolve();
-                    return;
-                }
-            }
-            const createVariable = (arg, options?) => {
-                if (options) {
-                    return this.variableHandles.create(new ExtendedVariable(arg, options));
-                }
-                else {
-                    return this.variableHandles.create(arg);
-                }
-            };
+                    else {
+                        return this.variableHandles.create(arg);
+                    }
+                };
 
-            const findOrCreateVariable = (varObj: VariableObject): number => {
-                let id: number;
-                if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
-                    id = this.variableHandlesReverse[varObj.name];
-                }
-                else {
-                    id = createVariable(varObj);
-                    this.variableHandlesReverse[varObj.name] = id;
-                }
-                return varObj.isCompound() ? id : 0;
-            };
+                const findOrCreateVariable = (varObj: VariableObject): number => {
+                    let id: number;
+                    if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
+                        id = this.variableHandlesReverse[varObj.name];
+                    }
+                    else {
+                        id = createVariable(varObj);
+                        this.variableHandlesReverse[varObj.name] = id;
+                    }
+                    return varObj.isCompound() ? id : 0;
+                };
 
-            // Spec says if 'frameId' is specified, evaluate in the scope specified or in the global scope. Well,
-            // we don't have a way to specify global scope ... use current thread then.
-            let threadId = this.currentThreadId;
-            let frameId = 0;
-            if (args.frameId) {     // Should always be valid
-                [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
-                if (traceThreads) {
-                    this.handleMsg('log', `**** evaluateRequest: ${args.context} '${args.expression}' in thread#${threadId} frame#${frameId}\n`);
+                // Spec says if 'frameId' is specified, evaluate in the scope specified or in the global scope. Well,
+                // we don't have a way to specify global scope ... use current thread then.
+                let threadId = this.currentThreadId;
+                let frameId = 0;
+                if (args.frameId) {     // Should always be valid
+                    [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
+                    if (traceThreads) {
+                        this.handleMsg('log', `**** evaluateRequest: ${args.context} '${args.expression}' in thread#${threadId} frame#${frameId}\n`);
+                    }
+                } else if (!isBusy()) {
+                    // In practice, never seen this unless it comes from a custom request
+                    this.handleMsg('log', `Thread Warning: ${args.context}: eval. expression '${args.expression}' with no thread context. Using default\n`);
                 }
-            } else if (!isBusy) {
-                // In practice, never seen this unless it comes from a custom request
-                this.handleMsg('log', `Thread Warning: ${args.context}: eval. expression '${args.expression}' with no thread context. Using default\n`);
-            }
 
-            if (args.context !== 'repl') {
-                try {
-                    const exp = args.expression;
-                    const hasher = crypto.createHash('sha256');
-                    hasher.update(exp);
-                    const exprName = hasher.digest('hex');
-                    const varObjName = `${args.context}_${exprName}`;
-                    let varObj: VariableObject;
+                if (args.context !== 'repl') {
                     try {
-                        const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
-                        const changelist = changes.result('changelist');
-                        changelist.forEach((change) => {
-                            const name = MINode.valueOf(change, 'name');
-                            const vId = this.variableHandlesReverse[name];
-                            const v = this.variableHandles.get(vId) as any;
-                            v.applyChanges(change);
-                        });
-                        const varId = this.variableHandlesReverse[varObjName];
-                        varObj = this.variableHandles.get(varId) as any;
+                        const exp = args.expression;
+                        const hasher = crypto.createHash('sha256');
+                        hasher.update(exp);
+                        const exprName = hasher.digest('hex');
+                        const varObjName = `${args.context}_${exprName}`;
+                        let varObj: VariableObject;
+                        try {
+                            const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
+                            const changelist = changes.result('changelist');
+                            changelist.forEach((change) => {
+                                const name = MINode.valueOf(change, 'name');
+                                const vId = this.variableHandlesReverse[name];
+                                const v = this.variableHandles.get(vId) as any;
+                                v.applyChanges(change);
+                            });
+                            const varId = this.variableHandlesReverse[varObjName];
+                            varObj = this.variableHandles.get(varId) as any;
+                        }
+                        catch (err) {
+                            if (err instanceof MIError && err.message === 'Variable object not found') {
+                                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                                const varId = findOrCreateVariable(varObj);
+                                varObj.exp = exp;
+                                varObj.id = varId;
+                            }
+                            else {
+                                throw err;
+                            }
+                        }
+
+                        response.body = {
+                            result: varObj.value,
+                            type: varObj.type,
+                            presentationHint: {
+                                kind: varObj.displayhint
+                            },
+                            variablesReference: varObj.id
+                        };
+                        this.sendResponse(response);
                     }
                     catch (err) {
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
-                            const varId = findOrCreateVariable(varObj);
-                            varObj.exp = exp;
-                            varObj.id = varId;
-                        }
-                        else {
-                            throw err;
-                        }
-                    }
-
-                    response.body = {
-                        result: varObj.value,
-                        type: varObj.type,
-                        presentationHint: {
-                            kind: varObj.displayhint
-                        },
-                        variablesReference: varObj.id
-                    };
-                    this.sendResponse(response);
-                }
-                catch (err) {
-                    response.body = {
-                        result: (args.context === 'hover') ? null : `<${err.toString()}>`,
-                        variablesReference: 0
-                    };
-                    this.sendResponse(response);
-                    if (this.args.showDevDebugOutput) {
-                        this.handleMsg('stderr', args.context + ' ' + err.toString());
-                    }
-                    // this.sendErrorResponse(response, 7, err.toString());
-                }
-                finally {
-                    resolve();
-                }
-            } else {
-                // REPL: Set the proper thread/frame context before sending command to gdb. We don't know
-                // what the command is but it needs to be run in the proper context.
-                try {
-                    if (!isBusy && args.frameId) {
-                        await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
-                    }
-                    this.miDebugger.sendUserInput(args.expression).then((output) => {
-                        if (typeof output === 'undefined') {
-                            response.body = {
-                                result: '',
-                                variablesReference: 0
-                            };
-                        }
-                        else {
-                            response.body = {
-                                result: JSON.stringify(output),
-                                variablesReference: 0
-                            };
-                        }
+                        response.body = {
+                            result: (args.context === 'hover') ? null : `<${err.toString()}>`,
+                            variablesReference: 0
+                        };
                         this.sendResponse(response);
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', args.context + ' ' + err.toString());
+                        }
+                        // this.sendErrorResponse(response, 7, err.toString());
+                    }
+                    finally {
                         resolve();
-                    }, (msg) => {
-                        this.sendErrorResponse(response, 8, msg.toString());
+                    }
+                } else {
+                    // REPL: Set the proper thread/frame context before sending command to gdb. We don't know
+                    // what the command is but it needs to be run in the proper context.
+                    try {
+                        if (!isBusy() && args.frameId) {
+                            await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
+                        }
+                        this.miDebugger.sendUserInput(args.expression).then((output) => {
+                            if (typeof output === 'undefined') {
+                                response.body = {
+                                    result: '',
+                                    variablesReference: 0
+                                };
+                            }
+                            else {
+                                response.body = {
+                                    result: JSON.stringify(output),
+                                    variablesReference: 0
+                                };
+                            }
+                            this.sendResponse(response);
+                            resolve();
+                        }, (msg) => {
+                            this.sendErrorResponse(response, 8, msg.toString());
+                            resolve();
+                        });
+                    }
+                    catch (e) {
+                        this.sendErrorResponse(response, 8, e.toString());
                         resolve();
-                    });
+                    }
                 }
-                catch (e) {
-                    this.sendErrorResponse(response, 8, e.toString());
-                    resolve();
-                }
-            }
-        });
+            });
+        };
+
+        return this.evaluateQ.add(doit, r, a);
     }
 
     protected async gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): Promise<void> {
