@@ -1,6 +1,17 @@
 'use strict';
 
 const path = require('path');
+const child_process = require('child_process');
+const webpack = require('webpack'); //to access built-in plugins
+
+const gitStatus = child_process
+  .execSync('git status --short')
+  .toString()
+  .trim();
+const commitHash = child_process
+  .execSync('git rev-parse --short HEAD')
+  .toString()
+  .trim() + (gitStatus === '' ? '' : '+dirty');
 
 const extensionConfig = {
   target: 'node',
@@ -63,7 +74,12 @@ const adapterConfig = {
         ]
       }
     ]
-  }
+  },
+  plugins: [
+    new webpack.DefinePlugin({
+      __COMMIT_HASH__: JSON.stringify(commitHash)
+    })
+  ]
 }
 
 const grapherConfig = {
