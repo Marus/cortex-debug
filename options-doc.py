@@ -42,7 +42,7 @@ category_name = ''
 category_list = []
 for line in config_args.splitlines():
     line = line.strip()
-    if len(line) == 0 or line.startswith('///'):
+    if len(line) == 0 or line.startswith('///') or line.startswith('pvt'):
         continue
     if line.startswith('// '):
         categories[category_name] = category_list
@@ -60,6 +60,10 @@ MISSING_ATTRIBUTES = ['extensionPath', 'registerUseNaturalFormat', 'variableUseN
 all_properties = {**attach_properties, **launch_properties}
 
 with open('debug_attributes.md', 'w') as f:
+    f.write('The following attributes (properties) can be used in your launch.json to control various aspects of debugging.\n')
+    f.write('Besides these attributes, you can also have `cortex-debug` User/Workspace settings that can apply to all cortex-debug sessions.\n')
+    f.write('Use VSCode Settings to manage the User/Workspace Cortex-Debug extension settings.\n')
+    f.write('Also using IntelliSense while editing launch.json in VSCode can be quite helpful.\n')
     f.write('| Attribute | Applies To | Description |\n')
     f.write('| --------- | ---------- | ----------- |\n')
     for category in sorted(categories.keys()):
