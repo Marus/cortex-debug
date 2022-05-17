@@ -393,6 +393,7 @@ export class MI2 extends EventEmitter implements IBackend {
             // program is in paused state
             try {
                 await this.sendCommand('target-disconnect');
+                await new Promise(f => setTimeout(f, 250));
                 this.sendRaw('-gdb-exit');
             }
             catch (e) {
