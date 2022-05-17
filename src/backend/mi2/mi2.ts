@@ -82,33 +82,27 @@ export class MI2 extends EventEmitter implements IBackend {
                 ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
             });
 
-            const asyncCmd = 'gdb-set target-async on';
-            // const asyncCmd = 'gdb-set mi-async on';  TODO: In July, switch to this mode and edit parseVersionInfo)_
-            this.sendCommand(asyncCmd, true).then(() => {
+            const swallOutput = this.debugOutput ? false : true;
+            this.sendCommand('gdb-version', false, true, swallOutput).then((v: MINode) => {
                 this.actuallyStarted = true;
-                const swallOutput = this.debugOutput ? false : true;
-                this.sendCommand('gdb-version', false, true, swallOutput).then((v: MINode) => {
-                    const str = v.output;
-                    this.parseVersionInfo(str);
-                    const promises = init.map((c) => this.sendCommand(c));
-                    Promise.all(promises).then(() => {
-                        /*
-                        gdb crashes or runs out of memory with the following
-                        if (this.gdbMajorVersion >= 9) {
-                            this.gdbVarsPromise = new Promise((resolve) => {
-                                this.sendCommand('symbol-info-variables', false, false, true).then((x) => {
-                                    resolve(x);
-                                }, (e) => {
-                                    reject(e);
-                                });
+                this.parseVersionInfo(v.output);
+                const asyncCmd = this.gdbMajorVersion >= 8 ? 'gdb-set mi-async on' : 'gdb-set target-async on';
+                const promises = [asyncCmd, ...init].map((c) => this.sendCommand(c));
+                Promise.all(promises).then(() => {
+                    /*
+                    gdb crashes or runs out of memory with the following
+                    if (this.gdbMajorVersion >= 9) {
+                        this.gdbVarsPromise = new Promise((resolve) => {
+                            this.sendCommand('symbol-info-variables', false, false, true).then((x) => {
+                                resolve(x);
+                            }, (e) => {
+                                reject(e);
                             });
-                        }
-                        */
-                        resolve();
-                    }, reject);
-                }, () => {
-                    reject();
-                });
+                        });
+                    }
+                    */
+                    resolve();
+                }, reject);
             }, () => {
                 reject();
             });
@@ -387,17 +381,51 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'stop');
         }
         if (!this.exited) {
-            const to = setTimeout(() => { this.tryKill(); }, 500);
-            this.process.on('exit', (code) => { clearTimeout(to); });
+            // With JLink all of these catches, timeouts occur one time or the other. Two back to back runs don't produce
+            // the same program flow. Sometimes, we get all the way to a proper gdb-exit without any timers expiring and
+            // everything working. Very next run totally erratic
+            let timer;
+            const startKillTimeout = (ms: number) => {
+                if (timer) { clearTimeout(timer); }
+                timer = setTimeout(() => {
+                    if (timer && !this.exited) {
+                        ServerConsoleLog('GDB Kill timer expired for a disconnect+exit, so forcing a kill', this.pid);
+                        this.tryKill();
+                    }
+                    timer = undefined;
+                }, ms);
+            };
+            const destroyTimer = () => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = undefined;
+                }
+            }
+            this.process.on('exit', (code) => { destroyTimer(); });
             // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
             // program is in paused state
             try {
-                await this.sendCommand('target-disconnect');
-                this.sendRaw('-gdb-exit');
+                startKillTimeout(500);
+                await new Promise((res) => setTimeout(res, 100));       // For some people delay was needed. Doesn't hurt I guess
+                await this.sendCommand('target-disconnect');            // Yes, this can fail
             }
             catch (e) {
-                ServerConsoleLog('target-stop failed with exception:' + e, this.pid);
+                if (this.exited) {
+                    ServerConsoleLog('GDB already exited during a target-disconnect', this.pid);
+                    destroyTimer();
+                    return;
+                }
+                ServerConsoleLog(`target-disconnect failed with exception: ${e}. Proceeding to gdb-exit` + e, this.pid);
             }
+
+            startKillTimeout(350);                                  // Reset timer for a smaller timeout
+            await new Promise((res) => setTimeout(res, 250));       // For some people delay was needed. Doesn't hurt I guess
+            if (this.exited) {
+                // This occurs sometimes after a successful disconnect.
+                ServerConsoleLog('gdb already exited before an exit was requested', this.pid);
+                return;
+            }
+            this.sendRaw('-gdb-exit');
         }
     }
 
@@ -411,7 +439,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 to = null;
                 this.stop();
             }
-        }, 10);
+        }, 100);
 
         // Following can hang if no response, or fail because the target is still running. Yes,
         // we sometimes detach when target is still running. This also causes unhandled rejection
@@ -930,6 +958,10 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public sendRaw(raw: string) {
+        if (!this.process.stdin) {
+            // Already closed, should we throw an exception?
+            return;
+        }
         if (this.debugOutput || trace) {
             this.log('log', raw);
         }
@@ -955,7 +987,14 @@ export class MI2 extends EventEmitter implements IBackend {
                 } else if (!nd) {
                     reject(new MIError(arg ? arg.toString() : 'Unknown error', args.command));
                 } else {
-                    reject(new MIError(nd.result('msg') || 'Internal error', args.command));
+                    try {
+                        const msg = nd.result('msg');
+                        reject(new MIError(msg || 'Internal error', args.command));
+                    }
+                    catch (e) {
+                        console.log(`Huh? ${e}`);
+                        reject(new MIError(e.toString(), args.command));
+                    }
                 }
             };
             if (args.swallowStdout) {
