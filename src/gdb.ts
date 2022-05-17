@@ -9,7 +9,7 @@ import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
-    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE
+    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -36,7 +36,6 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
-import { all } from '@microsoft/fast-foundation';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -227,7 +226,6 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected configDone: boolean;
 
     protected suppressRadixMsgs = false;
-    private swoRttCommands: string[];
 
     public constructor(debuggerLinesStartAt1: boolean, public readonly isServer: boolean = false, threadID: number = 1) {
         super(undefined, debuggerLinesStartAt1, isServer);     // Use if deriving from LogDebugSession
@@ -281,13 +279,24 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    private origShowDevDebugOutput: ADAPTER_DEBUG_MODE;
+    private setupLogger(enable: boolean, args: ConfigurationArguments) {
+        const level = enable && (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop;
+        const showTimes = (enable && (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE)) && args.showDevDebugTimestamps;
+        logger.setup(level, false, showTimes);
+    }
     private launchAttachInit(args: ConfigurationArguments) {
         // make sure to 'Stop' the buffered logging if 'trace' is not set
-        logger.setup(args.showDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop, false, true);
+        this.origShowDevDebugOutput = args.showDevDebugOutput;
+        this.setupLogger(true, args);
         if (args.showDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
         }
+
         this.args = this.normalizeArguments(args);
+        this.handleMsg('stdout',
+            `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). ` +
+            'Usaage info: https://github.com/Marus/cortex-debug#usage');
 
         // When debugging this extension, we are in server mode serving multiple instances of a debugger.
         // So make sure any old data is cleared, and we only rely on what the frontend tells us
@@ -306,7 +315,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/XXX-01.elf', 'main', null);
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/bme680-driver-design_585.out', 'setup_bme680', './src/bme680_test_app.c');
             // this.dbgSymbolStuff(args, '/Users/hdm/Downloads/test.out', 'BSP_Delay', 'C:/Development/GitRepos/Firmware/phoenix/STM32F4/usb_bsp.c');
-            const execs: SymbolFile[] = this.args.symbolFiles || [{ file: this.args.executable }];
+            const execs: SymbolFile[] = this.args.symbolFiles || [defSymbolFile(this.args.executable)];
             this.symbolTable = new SymbolTable(this, execs);
             this.symbolTable.loadSymbols().then(() => {
                 if (this.args.rttConfig.enabled) {
@@ -323,7 +332,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 'Make sure you compile/link with debug ON or you can specify your own RTT address\n');
                         } else {
                             const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
-                            this.args.rttConfig.address = '0x' + rttSym.address.toString(16);
+                            this.args.rttConfig.address = hexFormat(rttSym.address);
                             this.args.rttConfig.searchSize = Math.max(this.args.rttConfig.searchSize || 0, searchStr.length);
                             this.args.rttConfig.searchId = searchStr;
                             this.args.rttConfig.clearSearch = (this.args.rttConfig.clearSearch === undefined) ? true : this.args.rttConfig.clearSearch;
@@ -341,7 +350,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     private async dbgSymbolStuff(args: ConfigurationArguments, elfFile: string, func: string, file: string) {
         if (os.userInfo().username === 'hdm') {
             this.handleMsg('log', `Reading symbols from ${elfFile}\n`);
-            const tmpSymbols = new SymbolTable(this, [{ file: elfFile }]);
+            const tmpSymbols = new SymbolTable(this, [defSymbolFile(elfFile)]);
             this.dbgSymbolTable = tmpSymbols;
             await tmpSymbols.loadSymbols();
             tmpSymbols.printToFile(elfFile + '.cd-dump');
@@ -477,19 +486,16 @@ export class GDBDebugSession extends LoggingDebugSession {
             // const gdbInfoVariables = this.symbolTable.loadSymbolsFromGdb(gdbPromise);
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
             this.getTCPPorts(this.usingParentServer).then(async () => {
+                await this.serverController.allocateRTTPorts();     // Must be done before serverArguments()
                 const executable = this.usingParentServer ? null : this.serverController.serverExecutable();
-                // Following two may allocate more TCP ports. So, go ahead and call them now. This way, the chained configurations
-                // would have already seen ports that 
-                const args = this.usingParentServer ? [] : await this.serverController.serverArguments();
-                this.swoRttCommands = await this.serverController.swoAndRTTCommands();
-                this.sendEvent(new GenericCustomEvent('ports-done', undefined));
+                const args = this.usingParentServer ? [] : this.serverController.serverArguments();
+                this.sendEvent(new GenericCustomEvent('ports-done', undefined));        // Should be no more TCP ports allocation
 
                 const serverCwd = this.getServerCwd(executable);
 
                 if (executable) {
-                    const dbgMsg = 'Launching gdb-server: ' + quoteShellCmdLine([executable, ...args]) + '\n';
-                    this.handleMsg('log', dbgMsg);
-                    this.handleMsg('log', `    Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
+                    this.handleMsg('log', 'Launching gdb-server: ' + quoteShellCmdLine([executable, ...args]) + '\n');
+                    this.handleMsg('stdout', `    Please check TERMINAL tab (gdb-server) for output from ${executable}` + '\n');
                 }
 
                 const consolePort = (this.args as any).gdbServerConsolePort;
@@ -568,6 +574,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         if (showTimes) { this.handleMsg('log', 'Debug Time: objdump and nm done...\n'); }
                         if (showTimes) { this.handleMsg('log', 'Debug Time: All pending items done, proceed to gdb connect...\n'); }
 
+                        // This is the last of the place where ports are allocated
                         this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
 
                         if (!this.args.variableUseNaturalFormat) {
@@ -730,7 +737,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         return new Promise<void>(async (resolve) => {
             try {
                 if ((mode === SessionMode.ATTACH) || (mode === SessionMode.LAUNCH)) {
-                    for (const cmd of this.swoRttCommands) {
+                    const swoRttCommands = this.serverController.swoAndRTTCommands();
+                    for (const cmd of swoRttCommands) {
                         await this.miDebugger.sendCommand(cmd);
                     }
                 }
@@ -809,8 +817,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
-            this.handleMsg('log', '    Set "showDevDebugOutput": "raw" in your "launch.json" to see verbose GDB transactions ' +
-                'here. Helpful to debug issues or report problems\n');
+            this.handleMsg('stdout', '    IMPORTANT: Set "showDevDebugOutput": "raw" in "launch.json" to see verbose GDB transactions ' +
+                'here. Very helpful to debug issues or report problems\n');
         }
         if (this.args.showDevDebugOutput && this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
             const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
@@ -829,24 +837,19 @@ export class GDBDebugSession extends LoggingDebugSession {
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"'
         ];
-        const alsoLoad = [];
         if (this.args.symbolFiles) {
-            initCmds.push('interpreter-exec console "symbol-file"');   // Clear any existing symbols
             for (const symF of this.args.symbolFiles) {
-                if (symF.load !== 'program') {
-                    initCmds.push(`interpreter-exec console "add-symbol-file \\"${symF.file}\\" -o ${symF.offset || 0}"`);
+                let cmd = `interpreter-exec console "add-symbol-file \\"${symF.file}\\""`;
+                cmd += symF.offset ? ` -o ${hexFormat(symF.offset)}"` : '';
+                cmd += (typeof symF.textaddress === 'number') ? ` ${hexFormat(symF.textaddress)}"` : '';
+                for (const section of symF.sections) {
+                    cmd += ` -s ${section.name} ${section.address}`;
                 }
-                if (symF.load !== 'symbols') {
-                    alsoLoad.push(symF.file);
-                }
+                initCmds.push(cmd);
             }
-            if (initCmds.length === 1) {
-                const msg = 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n';
-                this.handleMsg('log', msg + '\n');
+            if (initCmds.length === 0) {
+                this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
             }
-        }
-        if (alsoLoad.length && (this.args.request === 'launch')) {
-            this.args.loadFiles = (this.args.loadFiles || []).concat(alsoLoad);
         }
         const ret = this.miDebugger.start(this.args.cwd, initCmds);
         return ret;
@@ -1486,11 +1489,11 @@ export class GDBDebugSession extends LoggingDebugSession {
         if (type === 'target') { type = 'stdout'; }
         if (type === 'log') { type = 'stderr'; }
         msg = this.wrapTimeStamp(msg);
-        if (this.args.showDevDebugOutput) {
+        if (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             // Suppress output prevents so it does not flood the Debug Console with duplicate stuff.
-            logger.setup(Logger.LogLevel.Stop, false, true);
+            this.setupLogger(false, this.args);
             this.sendEvent(new OutputEvent(msg, type));
-            logger.setup(Logger.LogLevel.Verbose, false, true);
+            this.setupLogger(true, this.args);
         } else {
             this.sendEvent(new OutputEvent(msg, type));
         }

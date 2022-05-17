@@ -65,23 +65,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         return commands;
     }
 
-    public readonly defaultRttPort = 19021;
-    private async initRttPorts(): Promise<any> {
-        // JLink only support one TCP port and that too for channel 0 only. The config provider
-        // makes sure that the rttConfig conforms.
-        if (this.args.rttConfig && this.args.rttConfig.enabled && (!this.args.rttConfig.decoders || (this.args.rttConfig.decoders.length === 0))) {
-            // We do the RTT setup and pass the right args to JLink but not actually use the TCP Port ourselves. Decided
-            // Not to allocate a free port in this case either.
-
-            // getAnyFreePort(this.defaultRttPort).then((p) => {
-            //     this.defaultRttPort = p;
-            // });
-            return null;
-        } else {
-            return this.rttHelper.allocateRTTPorts(this.args.rttConfig, this.defaultRttPort);
-        }
-    }
-
     public rttCommands(): string[] {
         const commands = [];
         if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
@@ -143,15 +126,26 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             }
         }
     }
+
+    public readonly defaultRttPort = 19021;
+    public allocateRTTPorts(): Promise<void> {
+        // JLink only support one TCP port and that too for channel 0 only. The config provider
+        // makes sure that the rttConfig conforms.
+        if (this.args.rttConfig && this.args.rttConfig.enabled && (!this.args.rttConfig.decoders || (this.args.rttConfig.decoders.length === 0))) {
+            return Promise.resolve();
+        } else {
+            return this.rttHelper.allocateRTTPorts(this.args.rttConfig, this.defaultRttPort);
+        }
+    }
     
-    public async serverArguments(): Promise<string[]> {
+    public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const swoport = this.ports['swoPort'];
         const consoleport = this.ports['consolePort'];
 
         let cmdargs = [
             '-singlerun',   // -strict -timeout 0 
-            '-nogui',       // removed at users request 
+            '-nogui',       // removed at users request, don't ever remove this line
             '-if', this.args.interface,
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),
@@ -160,7 +154,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         ];
 
         if (this.args.rttConfig.enabled) {
-            await this.initRttPorts();
             const keys = Object.keys(this.rttHelper.rttLocalPortMap);
             let tcpPort = this.defaultRttPort.toString();
             if (keys && (keys.length > 0)) {

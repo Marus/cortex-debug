@@ -75,7 +75,9 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
             return 'qemu-system-arm';
         }
     }
-    
+    public allocateRTTPorts(): Promise<void> {
+        return Promise.resolve();
+    }
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 

@@ -99,7 +99,9 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const ret = this.args.serverpath ? this.args.serverpath : exeName;
         return ret;
     }
-
+    public allocateRTTPorts(): Promise<void> {
+        return Promise.resolve();
+    }
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const telnetport = this.ports['consolePort'];

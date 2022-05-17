@@ -85,13 +85,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public async rttCommands(): Promise<string[]> {
+    public rttCommands(): string[] {
         const commands = [];
         if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
             const cfg = this.args.rttConfig;
-            if (!this.rttHelper.allocDone) {
-                await this.rttHelper.allocateRTTPorts(cfg);
-            }
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
                 // and RTT ends up outputting garbage. Or, the server could read garbage and
@@ -117,13 +114,13 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public async swoAndRTTCommands(): Promise<string[]> {
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
         }
-        return commands.concat(await this.rttCommands());
+        return commands.concat(this.rttCommands());
     }
 
     private SWOConfigurationCommands(): string[] {
@@ -161,8 +158,11 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         }
     }
 
-    public async serverArguments(): Promise<string[]> {
-        await this.rttHelper.allocateRTTPorts(this.args.rttConfig);
+    public allocateRTTPorts(): Promise<void> {
+        return this.rttHelper.allocateRTTPorts(this.args.rttConfig);
+    }
+
+    public serverArguments(): string[] {
         let serverargs = [];
 
         // Regardless of the target processor, we will only supply the processor '0's port#

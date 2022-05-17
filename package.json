@@ -1,5 +1,5 @@
 {
-    "version": "1.5.1-pre2",
+    "version": "1.5.1-pre3",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -699,11 +699,11 @@
                                 "items": "string"
                             },
                             "executable": {
-                                "description": "Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'",
+                                "description": "Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles`",
                                 "type": "string"
                             },
                             "symbolFiles": {
-                                "description": "List of ELF files to load symbols (and optionally program) from instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used for program and symbols",
+                                "description": "List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
                                 "items": {
                                     "type": "object",
@@ -713,19 +713,41 @@
                                             "description": "Pathname of an ELF file for symbols"
                                         },
                                         "offset": {
-                                            "type": ["number", "string"],
-                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                           
-                                        },
-                                        "load": {
-                                            "type": "string",
-                                            "enum": [
-                                                "symbols",
-                                                "program",
-                                                "both",
-                                                "none"
+                                            "type": [
+                                                "number",
+                                                "string"
                                             ],
-                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program, \"none\" --> ignore completely",
-                                            "default": "symbols"
+                                            "description": "Optional offset to apply to all sections of the ELF file. Use a string strarting with '0x' for a hexadecimal number"
+                                        },
+                                        "textaddress": {
+                                            "type": [
+                                                "number",
+                                                "string"
+                                            ],
+                                            "description": "Optional: Load the TEXT section at the specified 'textaddress'. Use a string strarting with '0x' for a hexadecimal number"
+                                        },
+                                        "sections": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "name": {
+                                                        "type": "string",
+                                                        "description": "Section name"
+                                                    },
+                                                    "address": {
+                                                        "type": [
+                                                            "number",
+                                                            "string"
+                                                        ],
+                                                        "description": "Base address for section. Use a string strarting with '0x' for a hexadecimal number"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "name",
+                                                    "address"
+                                                ]
+                                            }
                                         }
                                     },
                                     "required": [
@@ -1722,17 +1744,17 @@
                                 "items": "string"
                             },
                             "executable": {
-                                "description": "Path of executable for symbols and program information. See also 'loadFiles', 'symbolFiles'",
+                                "description": "Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles`",
                                 "type": "string"
                             },
                             "loadFiles": {
-                                "description": "List of files (hex/bin/elf files) to load/program instead of the executable files. Symbols are not loaded (see 'symbolFiles'). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
+                                "description": "List of files (hex/bin/elf files) to load/program instead of the executable file. Symbols are not loaded (see `symbolFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device",
                                 "type": "array",
                                 "items": "string",
                                 "default": null
                             },
                             "symbolFiles": {
-                                "description": "List of ELF files to load symbols (and optionally program) from instead of the executable files. Can be an empty list to specify none. If this property does not exist, then the executable is used for program and symbols",
+                                "description": "List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
                                 "items": {
                                     "type": "object",
@@ -1742,19 +1764,41 @@
                                             "description": "Pathname of an ELF file for symbols"
                                         },
                                         "offset": {
-                                            "type": ["number", "string"],
-                                            "description": "Optional offset to apply to symbols. Use a string strarting with '0x' for a hexadecimal number"                                           
-                                        },
-                                        "load": {
-                                            "type": "string",
-                                            "enum": [
-                                                "symbols",
-                                                "program",
-                                                "both",
-                                                "none"
+                                            "type": [
+                                                "number",
+                                                "string"
                                             ],
-                                            "description": "\"symbols\" -> Only load symbols, \"program\" -> Only load program, \"both\" -> use for symbols and program, \"none\" --> ignore completely",
-                                            "default": "symbols"
+                                            "description": "Optional offset to apply to all sections of the ELF file. Use a string strarting with '0x' for a hexadecimal number"
+                                        },
+                                        "textaddress": {
+                                            "type": [
+                                                "number",
+                                                "string"
+                                            ],
+                                            "description": "Optional: Load the TEXT section at the specified 'textaddress'. Use a string strarting with '0x' for a hexadecimal number"
+                                        },
+                                        "sections": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "name": {
+                                                        "type": "string",
+                                                        "description": "Section name"
+                                                    },
+                                                    "address": {
+                                                        "type": [
+                                                            "number",
+                                                            "string"
+                                                        ],
+                                                        "description": "Base address for section. Use a string strarting with '0x' for a hexadecimal number"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "name",
+                                                    "address"
+                                                ]
+                                            }
                                         }
                                     },
                                     "required": [
@@ -2654,20 +2698,6 @@
                         "body": {
                             "cwd": "^\"\\${workspaceFolder}\"",
                             "executable": "${1:./bin/executable.elf}",
-                            "name": "${6:Debug with ST-Util}",
-                            "request": "launch",
-                            "type": "cortex-debug",
-                            "runToEntryPoint": "main",
-                            "showDevDebugOutput": "none",
-                            "servertype": "stutil"
-                        },
-                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB Server (https://github.com/texane/stlink)",
-                        "label": "Cortex Debug: ST-Util"
-                    },
-                    {
-                        "body": {
-                            "cwd": "^\"\\${workspaceFolder}\"",
-                            "executable": "${1:./bin/executable.elf}",
                             "name": "${6:Debug with ST-Link}",
                             "request": "launch",
                             "type": "cortex-debug",
@@ -2691,6 +2721,20 @@
                         },
                         "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + PyOCD",
                         "label": "Cortex Debug: PyOCD"
+                    },
+                    {
+                        "body": {
+                            "cwd": "^\"\\${workspaceFolder}\"",
+                            "executable": "${1:./bin/executable.elf}",
+                            "name": "${6:Debug with ST-Util}",
+                            "request": "launch",
+                            "type": "cortex-debug",
+                            "runToEntryPoint": "main",
+                            "showDevDebugOutput": "none",
+                            "servertype": "stutil"
+                        },
+                        "description": "Debugs an embedded ARM Cortex-M microcontroller using GDB + Texane's st-util GDB Server (https://github.com/texane/stlink)",
+                        "label": "Cortex Debug: ST-Util"
                     }
                 ],
                 "initialConfigurations": [

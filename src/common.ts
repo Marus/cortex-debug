@@ -206,10 +206,27 @@ export interface RTTConfiguration {
     decoders: RTTCommonDecoderOpts[];
 }
 
+export interface ElfSection {
+    name: string;
+    address: number;            // New base address
+    addressOrig: number;        // original base address in Elf file
+}
 export interface SymbolFile {
     file: string;
     offset?: number;
-    load?: 'symbols' | 'program' | 'both' | 'none';
+    textaddress?: number;
+    sections: ElfSection[];
+    sectionMap: {[name: string]: ElfSection};
+}
+
+// Helper function to create a symbolFile object properly with required elements
+export function defSymbolFile(file: string): SymbolFile {
+    const ret: SymbolFile = {
+        file: file,
+        sections: [],
+        sectionMap: {}
+    }
+    return ret;
 }
 
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
@@ -267,6 +284,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     pvtParent: ConfigurationArguments;
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
     pvtAvoidPorts: number[];
+    pvtVersion: string;                       // Version from package.json
 
     numberOfProcessors: number;
     targetProcessor: number;
@@ -324,9 +342,10 @@ export interface GDBServerController extends EventEmitter {
     launchCommands(): string[];
     attachCommands(): string[];
     restartCommands(): string[];
-    swoAndRTTCommands(): Promise<string[]> | string[];
+    allocateRTTPorts(): Promise<void>;
+    swoAndRTTCommands(): string[];
     serverExecutable(): string;
-    serverArguments(): Promise<string[]> | string[];
+    serverArguments(): string[];
     initMatch(): RegExp;
     serverLaunchStarted(): void;
     serverLaunchCompleted(): Promise<void> | void;
