@@ -12,8 +12,6 @@ import { SymbolType, SymbolScope, SymbolInformation as SymbolInformation } from 
 import { GDBDebugSession } from '../gdb';
 import { hexFormat } from '../frontend/utils';
 import { MINode } from './mi_parse';
-import { nextTick } from 'process';
-import { resolve } from 'dns';
 
 const OBJDUMP_SYMBOL_RE = RegExp(/^([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\t([0-9a-f]+)\s(.*)$/);
 const NM_SYMBOL_RE = RegExp(/^([0-9a-f]+).*\t(.+):[0-9]+/);     // For now, we only need two things
@@ -44,6 +42,7 @@ interface IMemoryRegion {
     name: string;
     size: number;
     vmaStart: number;   // Virtual memory address
+    vmaStartOrig: number;
     lmaStart: number;   // Load memory address
     attrs: string[];
 }
@@ -54,6 +53,7 @@ export class MemoryRegion implements IMemoryRegion {
     public size: number;
     public vmaStart: number;
     public lmaStart: number;
+    public vmaStartOrig: number;
     public attrs: string[];
     constructor(obj: IMemoryRegion) {
         Object.assign(this, obj);
@@ -122,6 +122,7 @@ export class SymbolTable {
     private fileMap: {[key: string]: string[]} = {};                    // Potential list of file aliases we found
     public symbolsAsIntervalTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
     public symbolsByAddress: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
+    public symbolsByAddressOrig: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
     private varsByFile: {[path: string]: VariablesInFile} = null;
     private nmPromises: ExecPromise[] = [];
 
@@ -326,12 +327,13 @@ export class SymbolTable {
             this.symbolsAsIntervalTree.insert(treeSym);
         }
         this.symbolsByAddress.set(sym.address, sym);
+        this.symbolsByAddressOrig.set(sym.addressOrig, sym);
     }
 
     private objdumpReader: SpawnLineReader;
     private currentObjDumpFile: string = null;
 
-    private readObjdumpHeaderLine(offset: number, line: string, err: any): boolean {
+    private readObjdumpHeaderLine(symF: SymbolFile, line: string, err: any): boolean {
         if (!line) {
             return line === '' ? true : false;
         }
@@ -349,10 +351,31 @@ export class SymbolTable {
                 // Technically we only need regions marked for code but lets get all non-debug, non-comment stuff
                 return true;
             }
+            const name = match[1];
+            const offset = symF.offset || 0;
+            const vmaOrig = parseInt(match[3], 16);
+            let vmaStart = vmaOrig + offset;
+            const section = symF.sectionMap[name];
+            if ((name === '.text') && (typeof symF.textaddress === 'number')) {
+                vmaStart = symF.textaddress;
+                if (!section) {
+                    symF.sections.push({
+                        address: vmaStart,
+                        addressOrig: vmaOrig,
+                        name: name
+                    });
+                    symF.sectionMap[name] = symF.sections[symF.sections.length - 1];
+                }
+            }
+            if (section) {
+                section.addressOrig = vmaStart;
+                vmaStart = section.address;
+            }
             const region = new MemoryRegion({
-                name: match[1],
+                name: name,
                 size: parseInt(match[2], 16),               // size
-                vmaStart: parseInt(match[3], 16) + offset,  // vma
+                vmaStart: vmaStart,                         // vma
+                vmaStartOrig: vmaOrig,
                 lmaStart: parseInt(match[4], 16),           // lma
                 attrs: attrs
             });
@@ -360,13 +383,13 @@ export class SymbolTable {
         } else {
             const memRegionsEnd = RegExp(/^SYMBOL TABLE:/);
             if (memRegionsEnd.test(line)) {
-                this.objdumpReader.callback = this.readObjdumpSymbolLine.bind(this, offset);
+                this.objdumpReader.callback = this.readObjdumpSymbolLine.bind(this, symF);
             }
         }
         return true;
     }
 
-    private readObjdumpSymbolLine(offset: number, line: string, err: any): boolean {
+    private readObjdumpSymbolLine(symF: SymbolFile, line: string, err: any): boolean {
         if (!line) {
             return line === '' ? true : false;
         }
@@ -392,8 +415,14 @@ export class SymbolTable {
                 hidden = true;
             }
 
+            const secName = match[9].trim();
+            const offset = symF.offset || 0;
+            const addr = parseInt(match[1], 16);
+            const section = symF.sectionMap[secName];
+            const newaddr = addr + (section ? addr - section.addressOrig : offset);
             const sym: SymbolInformation = {
-                address: parseInt(match[1], 16) + offset,
+                addressOrig: addr,
+                address: newaddr,
                 name: name,
                 file: this.currentObjDumpFile,
                 type: type,
@@ -414,16 +443,12 @@ export class SymbolTable {
             let rejected = false;
             const objdumpPromises: ExecPromise[] = [];
             for (const symbolFile of this.executables) {
-                if (symbolFile.load === 'program') {
-                    continue;
-                }
                 const executable = symbolFile.file;
                 if (!validateELFHeader(executable)) {
                     this.gdbSession.handleMsg('log',
                         `Warn: ${executable} is not an ELF file format. Some features won't work -- Globals, Locals, disassembly, etc.`);
                     continue;
                 }
-                const offset = symbolFile.offset || 0;
                 try {
                     const spawnOpts = {cwd: this.gdbSession.args.cwd};
                     const objdumpStart = Date.now();
@@ -456,7 +481,8 @@ export class SymbolTable {
                     }
                     objdumpPromises.push({
                         args: [this.objdumpPath, ...objDumpArgs],
-                        promise: this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this, offset))
+                        // tslint:disable-next-line: max-line-length
+                        promise: this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this, symbolFile))
                     });
                     
                     const nmStart = Date.now();
@@ -491,7 +517,7 @@ export class SymbolTable {
                     }
                     this.nmPromises.push({
                         args: [nmProg, ...nmArgs],
-                        promise: nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this, offset))
+                        promise: nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this, symbolFile))
                     });
                 }
                 catch (e) {
@@ -536,8 +562,8 @@ export class SymbolTable {
             try {
                 await this.waitOnProgs(this.nmPromises);
                 // This part needs to run after both of the above finished
-                for (const item of this.addressToFile) {
-                    const sym = this.symbolsByAddress.get(item[0]);
+                for (const item of this.addressToFileOrig) {
+                    const sym = this.symbolsByAddressOrig.get(item[0]);
                     if (sym) {
                         sym.file = item[1];
                     } else {
@@ -549,20 +575,21 @@ export class SymbolTable {
                 // console.log('???');
             }
             finally {
-                this.addressToFile.clear();
+                this.addressToFileOrig.clear();
                 this.nmPromises = [];
             }
         });
         return this.finishNmSymbolsPromise;
     }
 
-    private addressToFile: Map<number, string> = new Map<number, string>();;
-    private readNmSymbolLine(offset: number, line: string, err: any): boolean {
+    private addressToFileOrig: Map<number, string> = new Map<number, string>(); // These are addresses used before re-mapped via symbol-files
+    private readNmSymbolLine(symF: SymbolFile, line: string, err: any): boolean {
         const match = line && line.match(NM_SYMBOL_RE);
         if (match) {
+            const offset = symF.offset || 0;
             const address = parseInt(match[1], 16) + offset;
             const file = SymbolTable.NormalizePath(match[2]);
-            this.addressToFile.set(address, file);
+            this.addressToFileOrig.set(address, file);
             this.addPathVariations(file);
         }
         return true;
