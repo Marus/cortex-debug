@@ -376,14 +376,18 @@ export class MI2 extends EventEmitter implements IBackend {
         }
     }
     
+    // stop() can get called twice ... once by the disconnect sequence and once by the server existing because
+    // we called disconnect. And the sleeps don't help that cause
+    private exiting = false;
     public async stop() {
         if (trace) {
             this.log('stderr', 'stop');
         }
-        if (!this.exited) {
+        if (!this.exited && !this.exiting) {
+            this.exiting = true;            // We won't unset this
             // With JLink all of these catches, timeouts occur one time or the other. Two back to back runs don't produce
             // the same program flow. Sometimes, we get all the way to a proper gdb-exit without any timers expiring and
-            // everything working. Very next run totally erratic
+            // everything working. Very next run totally erratic. Openocd has its own issues
             let timer;
             const startKillTimeout = (ms: number) => {
                 if (timer) { clearTimeout(timer); }
