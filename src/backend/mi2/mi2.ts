@@ -962,7 +962,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public sendRaw(raw: string) {
-        if (!this.process.stdin) {
+        if (!this.process?.stdin) {
             // Already closed, should we throw an exception?
             return;
         }
