@@ -42,7 +42,7 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
 
         const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
         item.contextValue = 'cluster';
-        item.tooltip = this.description;
+        item.tooltip = this.description || undefined;
         
         return item;
     }

@@ -57,7 +57,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         const label = `${this.name} @ ${hexFormat(this.baseAddress)}`;
         const item = new TreeItem(label, this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed);
         item.contextValue = this.pinned ? 'peripheral.pinned' : 'peripheral';
-        item.tooltip = this.description;
+        item.tooltip = this.description || undefined;
         if (this.pinned) {
             item.iconPath = new ThemeIcon('pinned');
         }

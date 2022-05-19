@@ -111,7 +111,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         if (this.loaded) {
             return element ? element.getChildren() : this.peripherials;
         } else if (!this.loaded) {
-            return [new MessageNode(this.errMessage, null)];
+            return [new MessageNode(this.errMessage)];
         } else {
             return this.peripherials;
         }
@@ -235,8 +235,9 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
                 }, (e) => {
                     this._onDidChangeTreeData.fire(undefined);
                 });
+            } else {
+                this._onDidChangeTreeData.fire(undefined);
             }
-            this._onDidChangeTreeData.fire(undefined);
         });
     }
 

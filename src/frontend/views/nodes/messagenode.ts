@@ -1,11 +1,11 @@
 import { PeripheralBaseNode, BaseNode } from './basenode';
-import { TreeItem, TreeItemCollapsibleState } from 'vscode';
+import { MarkdownString, TreeItem, TreeItemCollapsibleState } from 'vscode';
 import { AddrRange } from '../../addrranges';
 import { NodeSetting } from '../../../common';
 
 export class MessageNode extends PeripheralBaseNode {
     
-    constructor(public message: string, public tooltip?: string) {
+    constructor(public message: string, public tooltip?: string | MarkdownString) {
         super(null);
     }
 
@@ -15,7 +15,9 @@ export class MessageNode extends PeripheralBaseNode {
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const ti = new TreeItem(this.message, TreeItemCollapsibleState.None);
-        ti.tooltip = this.tooltip;
+        if (this.tooltip) { // A null crashes VSCode Tree renderer
+            ti.tooltip = this.tooltip;
+        }
         return ti;
     }
 
