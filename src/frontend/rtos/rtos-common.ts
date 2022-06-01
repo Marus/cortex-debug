@@ -304,13 +304,16 @@ export abstract class RTOSBase {
                     txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
                 }
 
-                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) && (v.value !== undefined)) {
-                    const rowValueNumber = parseFloat(v.value);
-                    if (!isNaN(rowValueNumber)) {
-                        const activeValueStr = Math.floor(rowValueNumber).toString();
-                        additionalClasses += ' backgroundPercent centerAlign';
-                        style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
-                            `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
+                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage)) {
+                    additionalClasses += ' centerAlign';
+                    if (v.value !== undefined) {
+                        const rowValueNumber = parseFloat(v.value);
+                        if (!isNaN(rowValueNumber)) {
+                            const activeValueStr = Math.floor(rowValueNumber).toString();
+                            additionalClasses += ' backgroundPercent';
+                            style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
+                                `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
+                        }
                     }
                 } else if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypeLink) {
                     txt = `<vscode-link class="threads-link-${lKey}" href="#">${v.text}</vscode-link>`;
