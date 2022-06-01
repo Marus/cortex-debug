@@ -20,14 +20,17 @@ enum DisplayFields {
 const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
 RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colSpaceFillTheshold: 5 };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 2, headerRow1: '', headerRow2: 'Address' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = {width: 4, headerRow1: 'Thread', headerRow2: 'Task Name'};
-RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 4, headerRow1: '', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeCollapse };
+RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Name' };
+RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 4, headerRow1: 'Thread', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeCollapse };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = {
-    width: 1, headerRow1: 'Prio', headerRow2: 'rity', colSpaceFillTheshold: 4 }; // 3 are enough but 4 aligns better with header text
+    width: 1, headerRow1: '', headerRow2: 'Prio', colSpaceFillTheshold: 4
+}; // 3 are enough but 4 aligns better with header text
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
-    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage };
+    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage
+};
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeakPercent]] = {
-    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage };
+    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage
+};
 
 const DisplayFieldNames: string[] = Object.keys(RTOSUCOS2Items);
 
@@ -258,7 +261,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             mySetter(DisplayFields.StackPercent, stackPercentText, stackPercentVal);
                         }
                         else {
-                            mySetter(DisplayFields.StackPercent, '??? %');
+                            mySetter(DisplayFields.StackPercent, '?? %');
                         }
 
                         if ((stackInfo.stackPeak !== undefined) && (stackInfo.stackSize !== undefined)) {
@@ -267,7 +270,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             mySetter(DisplayFields.StackPeakPercent, stackPeakPercentText, stackPeakPercentVal);
                         }
                         else {
-                            mySetter(DisplayFields.StackPeakPercent, '??? %');
+                            mySetter(DisplayFields.StackPeakPercent, '?? %');
                         }
 
                         const thread: RTOSCommon.RTOSThreadInfo = {
