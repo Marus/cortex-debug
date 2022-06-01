@@ -115,17 +115,17 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 }
 
                 if (!thInfo['OSTCBTaskName-val']) {
-                    ret += `Thread name missing: Enable macro ${strong('OS_TASK_NAME_EN')} in FW<br>`;
+                    ret += `Thread name missing: Enable macro ${strong('OS_TASK_NAME_EN')} and use ${strong('OSTaskNameSet')} in FW<br><br>`;
                 }
-                if (!th.stackInfo.stackSize) {
-                    ret += `Stack Size missing: Enable macro ${strong('OS_TASK_CREATE_EXT_EN')} and use ${strong('OSTaskCreateExt')} in FW<br>`;
+                if (!thInfo['OSTCBId-val'] || !th.stackInfo.stackSize) {
+                    ret += `Thread ID & Stack Size & Peak missing: Enable macro ${strong('OS_TASK_CREATE_EXT_EN')} and`
+                        + `use ${strong('OSTaskCreateExt')} in FW<br><br>`;
                 }
 
                 if (ret) {
-                    ret += '<br>Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
-                    ret = '<button class="help-button">Hints to get more out of the uC/OS-II viewer</button>\n' +
+                    ret += 'Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
+                    this.helpHtml = '<button class="help-button">Hints to get more out of the uC/OS-II RTOS View</button>\n' +
                         `<div class="help"><p>\n${ret}\n</p></div>\n`;
-                    this.helpHtml = ret;
                 }
             }
             catch (e) {
@@ -481,7 +481,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         return stackInfo;
     }
 
-    public lastValidHtmlContent: RTOSCommon.HtmlInfo = {html: '', css: ''};
+    public lastValidHtmlContent: RTOSCommon.HtmlInfo = { html: '', css: '' };
     public getHTML(): RTOSCommon.HtmlInfo {
         const htmlContent: RTOSCommon.HtmlInfo = {
             html: '', css: ''
@@ -629,7 +629,7 @@ class TaskPending extends TaskState {
 
     public fullData() {
         // Build an object containing mapping event types to event descriptions
-        const result =  {};
+        const result = {};
         const eventTypes = [...this.pendingInfo.keys()];
         eventTypes.sort();
         for (const eventType of eventTypes) {
