@@ -262,7 +262,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
     }
 
-    private handleChainedInherits(config: vscode.DebugConfiguration, parent: any, props: any) {
+    private handleChainedInherits(config: vscode.DebugConfiguration, parent: any, props: string[]) {
         if (!props) {
             return;
         }
@@ -273,13 +273,17 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             'chainedConfigurations'
         ];
 
-        for (const propName of Object.keys(props)) {
+        for (const propName of props) {
             if (blackList.includes(propName) || propName.startsWith('pvt')) {
+                vscode.window.showWarningMessage(`Cannot inherit property '${propName}' for configuration '${config.name}' because it is reserved`);
                 continue;
             }
             const val = parent[propName];
             if (val !== undefined) {
                 config[propName] = val;
+            } else {
+                // tslint:disable-next-line: max-line-length
+                vscode.window.showWarningMessage(`Cannot inherit property '${propName}' for configuration '${config.name}' because it does not exist in parent configuration`);
             }
         }
     }
@@ -313,6 +317,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (isChained) {
             config.pvtParent = isChained.parent.config;
             config.pvtMyConfigFromParent = isChained.config;
+            this.handleChainedInherits(config, config.pvtParent, isChained.config.inherits);
+            this.handleChainedOverrides(config, isChained.config.overrides);
         }
 
         // See if we gave children and sanitize them
@@ -348,13 +354,18 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             if ((launch.lifecycleManagedByParent === undefined) || (launch.lifecycleManagedByParent === null)) {
                 launch.lifecycleManagedByParent = chained.lifecycleManagedByParent;
             }
-            const inherits = {};
-            (chained.inherits || []).concat(launch.inherits || []).forEach((x) => { inherits[x] = true; });
-            this.handleChainedInherits(config, config.pvtParent, inherits);
+            const inherits = (launch.inherits || []).concat(chained.inherits || []);
+            if (inherits.length > 0) {
+                launch.inherits = inherits;
+            } else {
+                delete launch.inherits;
+            }
 
             const tmp = launch.overrides || {};
             if ((Object.keys(overrides).length > 0) || (Object.keys(tmp).length > 0)) {
-                this.handleChainedOverrides(config, Object.assign(overrides, tmp));
+                launch.overrides = Object.assign(overrides, tmp);
+            } else {
+                delete launch.overrides;
             }
         }
     }

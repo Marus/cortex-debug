@@ -5,6 +5,7 @@ ChangeLog
 ## New features
 * Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
 * You can now use `breakAfterReset` and `runToEntryPoint` for an `attach` type launch configuration as well but they will only be used on a reset/restart.
+* For chained configuration, the parent can override properties of children and/or allow children to inherit from itself using `overrides` and `inherits`.
 
 ## Issues
 * [#643](https://github.com/Marus/cortex-debug/issues/643): Timeout for runToEntryPoint has been removed because it is never right for some use cases and don't need another setting. User can always use the pause button.
