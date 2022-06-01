@@ -114,6 +114,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
            // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
+            'interpreter-exec console "monitor halt"',
             'enable-pretty-printing'
         ];
         return commands;
@@ -145,7 +146,9 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME);
         }
     }
-
+    public allocateRTTPorts(): Promise<void> {
+        return Promise.resolve();
+    }
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 

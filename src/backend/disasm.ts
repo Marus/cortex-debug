@@ -309,6 +309,7 @@ export class GdbDisassembler {
                         size: nHighAddr - nlowAddr,      // size
                         vmaStart: nlowAddr,  // vma
                         lmaStart: nlowAddr,  // lma
+                        vmaStartOrig: nlowAddr,
                         attrs: attrs
                     }));
                 }

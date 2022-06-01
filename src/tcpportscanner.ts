@@ -2,6 +2,7 @@ import os = require('os');
 import net = require('net');
 import child_process = require('child_process');
 import command_exists = require('command-exists');
+import { EventEmitter } from 'events';
 
 let logEnable = false;
 function ConsoleLog(...args: any) {
@@ -30,6 +31,20 @@ export class TcpPortScanner {
 
     public static ForceClientMethod = false;
     public static readonly DefaultHost = '0.0.0.0';
+
+    public static PortAllocated: EventEmitter = new EventEmitter();
+    // Anything allocated using findFreePorts() is added into this set. Never cleared but clients can feel free to clear
+    // findFreePorts() will avoid these ports
+    public static AvoidPorts: Set<number> = new Set<number>();
+
+    public static EmitAllocated(ports: number[]) {
+        if (ports && ports.length) {
+            for (const p of ports) {
+                TcpPortScanner.AvoidPorts.add(p);
+            }
+            TcpPortScanner.PortAllocated.emit('allocated', ports);
+        }
+    }
 
     /**
      * Checks to see if the port is in use by creating a server on that port. You should use the function
@@ -84,13 +99,17 @@ export class TcpPortScanner {
      * @param host host ip address to use. Ignored. All loopback addresses are checked
      */
     private static SeqNumber = 0;
-    public static isPortInUseEx(port: number, host: string): Promise<boolean> {
+    public static isPortInUseEx(port: number, host: string, avoid: Set<number>): Promise<boolean> {
         const seq = TcpPortScanner.SeqNumber++;
         const tries = TcpPortScanner.getLocalHostAliases();
-        // We could have launced all tests at once and waited on a Promise.all but that fails on Linux
+        // We could have launched all tests at once and waited on a Promise.all but that fails on Linux
         // Have seen cases where it steps on itself. In the same try, it will give an EADDRINUSE and a listen
         // will succeed. Doing one at a time avoids that but that Linux behavior is strange indeed
         return new Promise<boolean> (async (resolve) => {
+            if (avoid && avoid.has(port)) {
+                resolve(true);
+                return;
+            }
             for (const host of tries) {
                 try {
                     const inUse = await TcpPortScanner.isPortInUse(port, host, seq);
@@ -135,14 +154,18 @@ export class TcpPortScanner {
         const busyPorts = [];           // Mostly for debug
         const needed = retrieve;
         return new Promise((resolve, reject) => {
+            const doResolve = (ports) => {
+                TcpPortScanner.EmitAllocated(ports);
+                resolve(ports);
+            };
             if (needed <= 0) {
-                resolve(freePorts);
+                doResolve(freePorts);
                 return;
             }
             function next(port: number, host: string) {
                 ConsoleLog(`findFreePorts: ******** Next ${port}`);
                 const startTine = process.hrtime();
-                TcpPortScanner.isPortInUseEx(port, host).then((inUse) => {
+                TcpPortScanner.isPortInUseEx(port, host, TcpPortScanner.AvoidPorts).then((inUse) => {
                     const endTime = process.hrtime(startTine);
                     if (inUse) {
                         busyPorts.push(port);
@@ -163,7 +186,7 @@ export class TcpPortScanner {
                             (inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ${t}`);
                     }
                     if (freePorts.length === needed) {
-                        resolve(freePorts);
+                        doResolve(freePorts);
                     } else if (port < max) {
                         next(port + 1, host);
                     } else {
@@ -175,76 +198,6 @@ export class TcpPortScanner {
             }
             next(min, host);		// Start the hunt
         });
-    }
-
-    /**
-     * @deprecated This a synchronous version of `findFreePorts()`. Use it instead. This function
-     * maybe slightly faster but will not play nice in a truely async. system.
-     */
-    public static async findFreePortsSync(
-        { min, max, retrieve = 1, consecutive = false, doLog = false }:
-            {
-                min: number;			// Starting port number
-                max: number;			// Ending port number (inclusive)
-                retrieve?: number;		// Number of ports needed
-                consecutive?: boolean;
-                doLog?: boolean;
-            },
-        host = TcpPortScanner.DefaultHost, cb = null): Promise<number[]> {
-        let freePorts = [];
-        const busyPorts = [];
-        const needed = retrieve;
-        let error = null;
-        logEnable = logEnable || doLog;
-        if (needed <= 0) {
-            return new Promise((resolve) => { resolve(freePorts); });
-        }
-        for (let port = min; port <= max; port++) {
-            if (needed <= 0) {
-                return;
-            }
-            const startTime = process.hrtime();
-            await TcpPortScanner.isPortInUseEx(port, host)
-                .then((inUse) => {
-                    const endTime = process.hrtime(startTime);
-                    if (inUse) {
-                        busyPorts.push(port);
-                    } else {
-                        if (consecutive && (freePorts.length > 0) &&
-                            (port !== (1 + freePorts[freePorts.length - 1]))) {
-                            ConsoleLog('TcpPortHelper.finnd: Oops, reset for consecutive requirement');
-                            freePorts = [];
-                        }
-                        freePorts.push(port);
-                    }
-                    if (logEnable) {
-                        const ms = (endTime[1] / 1e6).toFixed(2);
-                        const t = `${endTime[0]}s ${ms}ms`;
-                        ConsoleLog(`TcpPortHelper.find Port ${host}:${port} ` +
-                            (inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ` + t);
-                    }
-                }, (err) => {
-                    ConsoleLog('Error on check:', err.message);
-                    error = err;
-                });
-            if (error || (freePorts.length === needed)) {
-                break;
-            }
-        }
-        if (!cb) {
-            return new Promise((resolve, reject) => {
-                if (!error && (freePorts.length === needed)) {
-                    resolve(freePorts);
-                } else {
-                    reject(error ? error : `Only found ${freePorts.length} of ${needed} ports`);
-                }
-            });
-        } else {
-            if (!error && (freePorts.length === needed)) {
-                cb(freePorts);
-            }
-            return null;
-        }
     }
 
     protected static OSNetProbeCmd = '';
@@ -353,7 +306,7 @@ export class TcpPortScanner {
         opts.startTimeMs = Date.now();
         const functor = opts.checkLocalHostAliases ? TcpPortScanner.isPortInUseEx : TcpPortScanner.isPortInUse;
         return new Promise(function tryAgain(resolve, reject) {
-            functor(opts.port, opts.host)
+            functor(opts.port, opts.host, null)
                 .then((inUse) => {
                     // ConsoleLog(`${functor.name} returned ${inUse}`)
                     if (inUse === opts.desiredStatus) {	// status match

@@ -28,6 +28,8 @@ export function ServerConsoleLog(str: string, usePid?: number) {
         console.log(e.toString());
     }
 }
+
+let currentServers: GDBServer[] = [];
 export class GDBServer extends EventEmitter {
     private process: ChildProcess.ChildProcess;
     private outBuffer: string = '';
@@ -37,6 +39,7 @@ export class GDBServer extends EventEmitter {
     private initReject: (error: any) => void;
     public static readonly SERVER_TIMEOUT = 10000;
     public static readonly LOCALHOST = '0.0.0.0';
+    public pid: number = -1;
 
     constructor(
         private cwd: string, private application: string, private args: string[],
@@ -57,6 +60,8 @@ export class GDBServer extends EventEmitter {
                     reject(e);
                 }
                 this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd });
+                currentServers.push(this);
+                this.pid = this.process.pid;
                 this.process.stdout.on('data', this.onStdout.bind(this));
                 this.process.stderr.on('data', this.onStderr.bind(this));
                 this.process.on('exit', this.onExit.bind(this));
@@ -103,18 +108,19 @@ export class GDBServer extends EventEmitter {
     public exit(): void {
         if (this.process && !this.killInProgress) {
             try {
-                ServerConsoleLog('GDBServer: forcing an exit with kill()');
+                ServerConsoleLog(`GDBServer(${this.pid}): forcing an exit with kill()`);
                 this.killInProgress = true;
                 this.process.kill();
             }
             catch (e) {
-                ServerConsoleLog(`Trying to force and exit failed ${e}`);
+                ServerConsoleLog(`GDBServer(${this.pid}): Trying to force and exit failed ${e}`);
             }
         }
     }
 
     private onExit(code, signal) {
-        ServerConsoleLog(`GDBServer: exited ${code} ${signal}`);
+        ServerConsoleLog(`GDBServer(${this.pid}): exited code=${code} signal=${signal}`);
+        currentServers = currentServers.filter((p) => p !== this);
         this.process = null;
         if (this.exitTimeout) {
             clearTimeout(this.exitTimeout);
@@ -235,3 +241,17 @@ export class GDBServer extends EventEmitter {
         catch (e) {}
     }
 }
+
+// When we have child configurations, VSCode kills this instance of the adapter before we even finish.
+// It appears that when a child terminates, it considers the parent also terminated. However, when we
+// are in server mode (as in when in debug) it does not do that because we are always running.
+//
+// See GDBDebugSession.disconnectRequest()
+process.on('exit', (code, signal) => {
+    if (currentServers.length > 0) {
+        ServerConsoleLog(`Debug Adapter killed by VSCode? code=${code} signal=${signal}`);
+        for (const p of [...currentServers]) {
+            p.exit();
+        }
+    }
+});

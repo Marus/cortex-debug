@@ -99,7 +99,9 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const ret = this.args.serverpath ? this.args.serverpath : exeName;
         return ret;
     }
-
+    public allocateRTTPorts(): Promise<void> {
+        return Promise.resolve();
+    }
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const telnetport = this.ports['consolePort'];
@@ -132,6 +134,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
                 const cpuF = this.args.swoConfig.cpuFrequency;
                 const swoF = this.args.swoConfig.swoFrequency || '1';
                 const args = [
+                    '-O', 'enable_swv=1',
                     '-O', 'swv_raw_enable=true',
                     '-O', `swv_raw_port=${swoPort}`,
                     '-O', `swv_system_clock=${cpuF}`,

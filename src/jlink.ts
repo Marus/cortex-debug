@@ -23,22 +23,8 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         this.ports = ports;
     }
 
-    public readonly defaultRttPort = 19021;
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
-
-        // JLink only support one TCP port and that too for channel 0 only. The config provider
-        // makes sure that the rttConfig conforms.
-        if (args.rttConfig && args.rttConfig.enabled && (!args.rttConfig.decoders || (args.rttConfig.decoders.length === 0))) {
-            // We do the RTT setup and pass the right args to JLink but not actually use the TCP Port ourselves. Decided
-            // Not to allocate a free port in this case either.
-
-            // getAnyFreePort(this.defaultRttPort).then((p) => {
-            //     this.defaultRttPort = p;
-            // });
-        } else {
-            this.rttHelper.allocateRTTPorts(args.rttConfig, this.defaultRttPort);
-        }
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -83,10 +69,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const commands = [];
         if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
             const cfg = this.args.rttConfig;
-            if (this.rttHelper.rttPortsPending > 0) {
-                // If we are getting here, we will need some serious re-factoring
-                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time');
-            }
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
                 // and RTT ends up outputting garbage. Or, the server could read garbage and
@@ -144,6 +126,17 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             }
         }
     }
+
+    public readonly defaultRttPort = 19021;
+    public allocateRTTPorts(): Promise<void> {
+        // JLink only support one TCP port and that too for channel 0 only. The config provider
+        // makes sure that the rttConfig conforms.
+        if (this.args.rttConfig && this.args.rttConfig.enabled && (!this.args.rttConfig.decoders || (this.args.rttConfig.decoders.length === 0))) {
+            return Promise.resolve();
+        } else {
+            return this.rttHelper.allocateRTTPorts(this.args.rttConfig, this.defaultRttPort);
+        }
+    }
     
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
@@ -152,7 +145,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
         let cmdargs = [
             '-singlerun',   // -strict -timeout 0 
-            '-nogui',       // removed at users request 
+            '-nogui',       // removed at users request, don't ever remove this line
             '-if', this.args.interface,
             '-port', gdbport.toString(),
             '-swoport', swoport.toString(),
@@ -161,10 +154,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         ];
 
         if (this.args.rttConfig.enabled) {
-            if (this.rttHelper.rttPortsPending > 0) {
-                // If we are getting here, we will need some serious re-factoring
-                throw new Error('Asynchronous timing error. Could not allocate all the ports needed in time.');
-            }
             const keys = Object.keys(this.rttHelper.rttLocalPortMap);
             let tcpPort = this.defaultRttPort.toString();
             if (keys && (keys.length > 0)) {

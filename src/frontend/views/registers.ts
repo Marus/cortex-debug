@@ -54,7 +54,7 @@ export class RegisterTreeForSession extends BaseNode {
             this.session.customRequest('read-register-list').then((data) => {
                 this.createRegisters(data);
                 this._refreshRegisterValues();
-            });
+            }, (e) => {});
         } else {
             this._refreshRegisterValues();
         }
@@ -71,6 +71,8 @@ export class RegisterTreeForSession extends BaseNode {
                 if (regNode) { regNode.setValue(reg.value); }
             });
             this.fireCb();
+        }, (e) => {
+            // Probably is continued/busy
         });
     }
 

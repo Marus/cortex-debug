@@ -94,7 +94,6 @@ export class PeripheralFieldNode extends PeripheralBaseNode {
         
         item.contextValue = context;
         item.tooltip = this.generateTooltipMarkdown(isReserved);
-        // item.description = this.getFormattedValue(this.getFormat());
 
         return item;
     }

@@ -15,6 +15,7 @@ export enum SymbolScope {
 }
 
 export interface SymbolInformation {
+    addressOrig: number;
     address: number;
     length: number;
     name: string;

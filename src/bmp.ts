@@ -120,6 +120,10 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         return null;
     }
 
+    public allocateRTTPorts(): Promise<void> {
+        return Promise.resolve();
+    }
+
     public serverArguments(): string[] {
         return [];
     }

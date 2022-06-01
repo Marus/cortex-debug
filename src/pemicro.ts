@@ -81,6 +81,10 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         }
     }
 
+    public allocateRTTPorts(): Promise<void> {
+        return Promise.resolve();
+    }
+        
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 

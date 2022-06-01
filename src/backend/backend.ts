@@ -37,7 +37,7 @@ export interface Variable {
 }
 
 export interface IBackend {
-    start(cwd: string, executable: string, init: string[]): Thenable<any>;
+    start(cwd: string, init: string[]): Thenable<any>;
     connect(target: string[]): Thenable<any>;
     stop();
     detach();

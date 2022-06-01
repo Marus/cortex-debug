@@ -93,7 +93,6 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         const item = new TreeItem(labelItem, collapseState);
         item.contextValue = this.accessType === AccessType.ReadWrite ? 'registerRW' : (this.accessType === AccessType.ReadOnly ? 'registerRO' : 'registerWO');
         item.tooltip = this.generateTooltipMarkdown();
-        // item.description = this.getFormattedValue(this.getFormat());
 
         return item;
     }
