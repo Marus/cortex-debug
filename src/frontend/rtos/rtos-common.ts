@@ -52,12 +52,6 @@ export class ShouldRetry extends Error {
     }
 }
 
-export class ShouldRetry extends Error {
-    constructor(str: string) {
-        super('Busy or Error for expr ' + str);
-    }
-}
-
 export abstract class RTOSBase {
     public progStatus: 'started' | 'stopped' | 'running' | 'exited';
     public status: 'failed' | 'initialized' | 'none';
