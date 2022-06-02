@@ -2,15 +2,13 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import * as vscode from 'vscode';
 import * as RTOSCommon from './rtos-common';
 import { RTOSFreeRTOS } from './rtos-freertos';
-import { RTOSUCOS2 } from './rtos-ucosii';
 
 const RTOS_TYPES = {
-    'FreeRTOS': RTOSFreeRTOS,
-    'uC/OS-II': RTOSUCOS2
+    FreeRTOS: RTOSFreeRTOS
 };
 export class RTOSSession {
     public lastFrameId: number;
-    public htmlContent: RTOSCommon.HtmlInfo = { html: '', css: '' };
+    public html: string = '';
     public rtos: RTOSCommon.RTOSBase; // The final RTOS
     private allRTOSes: RTOSCommon.RTOSBase[] = [];
     public triedAndFailed = false;
@@ -28,16 +26,14 @@ export class RTOSSession {
             this.lastFrameId = frameId;
             const doRefresh = () => {
                 if (this.rtos) {
-                    this.htmlContent.html = '<p>Failed to get RTOS information. Please report an issue if RTOS is actually running</p>\n';
-                    this.htmlContent.css = '';
+                    this.html = '<p>Failed to get RTOS information. Please report an issue if RTOS is actually running</p>\n';
                     this.rtos.onStopped(frameId).then(() => {
-                        this.htmlContent = this.rtos.getHTML();
+                        this.html = this.rtos.getHTML();
                         resolve();
                     });
                 } else {
                     this.triedAndFailed = true;
-                    this.htmlContent.html = '';
-                    this.htmlContent.css = '';
+                    this.html = '';
                     resolve();
                 }
             };
@@ -45,7 +41,7 @@ export class RTOSSession {
             if (this.rtos === undefined && this.allRTOSes.length > 0) {
                 // Let them all work in parallel. Since this will generate a ton of gdb traffic and traffic from other sources
                 // like variable, watch windows, things can fail. But our own backend queues things up so failures are unlikely
-                // With some other backend (if for instance we support cppdbg), not sure what happens. Worst case, try one OS
+                // With some other backend (if for instace we support cppdbg), not sure what happens. Worst case, try one OS
                 // at a time.
                 const promises = [];
                 for (const rtos of this.allRTOSes) {
@@ -70,8 +66,7 @@ export class RTOSSession {
                     }
                     if (this.allRTOSes.length > 0) {
                         // Some RTOSes have not finished detection
-                        this.htmlContent.html = '<p>RTOS detection in progress...</p>\n';
-                        this.htmlContent.css = '';
+                        this.html = '<p>RTOS detection in progress...</p>\n';
                         resolve();
                     }
                 });
@@ -94,6 +89,10 @@ export class RTOSSession {
         }
         this.lastFrameId = undefined;
         this.rtos = undefined;
+    }
+
+    public getHTML(): string {
+        return this.html;
     }
 
     public refresh(): Promise<void> {
@@ -135,7 +134,7 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
             case 'response': {
                 const rsp: DebugProtocol.Response = message as DebugProtocol.Response;
                 if (rsp) {
-                    // We don't actually do anything when the session is paused. We wait until someone (VSCode) makes
+                    // We don;t actually do anything when the session is paused. We wait until someone (VSCode) makes
                     // a stack trace request and we get the frameId from there. Any one will do. Either this or we
                     // have to make our requests for threads, scopes, stackTrace, etc. Unnecessary traffic and work
                     // for the adapter. Downside is if no stackTrace is requested by someone else, then we don't do anything
@@ -287,18 +286,18 @@ export class RTOSTracker
             try {
                 await this.update();
             }
-            catch { }
+            catch {}
         }
     }
 
     // Updates RTOS state and the Panel HTML
-    private busyHtml: RTOSCommon.HtmlInfo;
+    private busyHtml: string;
     public update(): Promise<void> {
         return new Promise<void>((resolve) => {
             if (!this.enabled || !this.visible || !this.sessionMap.size) {
                 resolve();
             }
-            this.busyHtml = { html: /*html*/'<h4>Busy updating...</h4>\n', css: '' };
+            this.busyHtml = '<h4>Busy updating...</h4>\n';
             this.provider.updateHtml();
             this.updateRTOSInfo().then(() => {
                 this.busyHtml = undefined;
@@ -312,43 +311,35 @@ export class RTOSTracker
         });
     }
 
-    private lastGoodHtmlContent: RTOSCommon.HtmlInfo;
-    public getHtml(): RTOSCommon.HtmlInfo {
-        const ret: RTOSCommon.HtmlInfo = { html: '', css: '' };
-
+    private lastGoodHtml: string;
+    public getHtml() {
         if (this.busyHtml) {
             return this.busyHtml;
         } else if (this.sessionMap.size === 0) {
-            if (this.lastGoodHtmlContent) {
-                return this.lastGoodHtmlContent;
-            } else {
-                ret.html = '<p>No active/compatible debug sessions running.</p>\n';
-                return ret;
-            }
+            return this.lastGoodHtml || '<p>No active/compatible debug sessions running.</p>\n';
         } else if (!this.visible || !this.enabled) {
-            ret.html = '<p>Contents are not visible, so no html generated</p>\n';
-            return ret;
+            return '<p>Contents are not visible, so no html generated</p>\n';
         }
-
+        let ret = '';
         for (const rtosSession of this.sessionMap.values()) {
+            const rtosHtml = rtosSession.html;
             const name = `Session Name: "${rtosSession.session.name}"`;
             if (!rtosSession.rtos) {
                 const nameAndStatus = name + ' -- No RTOS detected';
-                ret.html += /*html*/`<h4>${nameAndStatus}</h4>\n`;
+                ret += /*html*/`<h4>${nameAndStatus}</h4>\n`;
                 if (rtosSession.triedAndFailed) {
                     const supported = Object.keys(RTOS_TYPES).join(', ');
-                    ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
+                    ret += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
                         'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
                 } else {
-                    ret.html += /*html*/`<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n`;
+                    ret += '<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
                 }
             } else {
-                const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' detected.' + (!rtosSession.htmlContent ? ' (No data available yet)' : '');
-                ret.html += /*html*/`<h4>${nameAndStatus}</h4>\n` + rtosSession.htmlContent.html;
-                ret.css = rtosSession.htmlContent.css;
+                const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' Detected.' + (!rtosHtml ? ' (No data available yet)' : '');
+                ret += /*html*/`<h4>${nameAndStatus}</h4>\n` + rtosHtml;
             }
         }
-        this.lastGoodHtmlContent = ret;
+        this.lastGoodHtml = ret;
         return ret;
     }
 }
@@ -415,17 +406,16 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             return '';
         }
         if (!this.parent.enabled) {
-            return /*html*/`
-                <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>RTOS Threads</title>
-                </head>
-                <body>
-                    <p>Currently disabled. Enable setting "cortex-debug.showRTOS" or use Command "Cortex Debug: Toggle RTOS Panel" to see any RTOS info</p>
-                </body>
-                </html>`;
+            return `<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<title>RTOS Threads</title>
+			</head>
+			<body>
+                '<p>Currently disabled. Enable setting "cortex-debug.showRTOS" or use Command "Cortex Debug: Toggle RTOS Panel" to see any RTOS info</p>\n'
+			</body>
+			</html>`;
         }
         const toolkitUri = getUri(webview, this.extensionUri, [
             'webview',
@@ -439,33 +429,31 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'resources', 'rtos.js'));
         const rtosStyle = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'resources', 'rtos.css'));
 
-        const htmlInfo = this.parent.getHtml();
+        const body = this.parent.getHtml();
+
         // Use a nonce to only allow a specific script to be run.
         const nonce = getNonce();
         return /*html*/`
             <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <!--
-                    Use a content security policy to only allow loading images from https or from our extension directory,
-                    and only allow scripts that have a specific nonce.
-                -->
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none';
-                style-src 'nonce-${nonce}' ${webview.cspSource}; script-src 'nonce-${nonce}';">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<!--
+					Use a content security policy to only allow loading images from https or from our extension directory,
+					and only allow scripts that have a specific nonce.
+				-->
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link href="${rtosStyle}" rel="stylesheet">
-                <style nonce="${nonce}">
-                ${htmlInfo.css}
-                </style>
-                <title>RTOS Threads</title>
-            </head>
-            <body>
-                ${htmlInfo.html}
+				
+				<title>RTOS Threads</title>
+			</head>
+			<body>
+                ${body}
                 <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
-                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-            </body>
-            </html>`;
+				<script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+			</body>
+			</html>`;
     }
 }
 

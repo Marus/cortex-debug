@@ -1,6 +1,6 @@
 .threads-grid {
   gap: 0;
-  text-align: left;
+  text-align: right;
 }
 
 .threads-header-row {
@@ -14,73 +14,24 @@
 .threads-header-cell {
   padding: 0px;
   color: var(--vscode-symbolIcon-constructorForeground);
-  font-family: var(--vscode-editor-font-family);
-  font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);
 }
 
 .threads-cell {
   padding: 0px;
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);
-}
-
-.whitespacePreserve {
-  white-space: pre-wrap
+  font-size: var(--vscode-editor-font-size); 
 }
 
 vscode-link {
   font-family: var(--vscode-editor-font-family);
   font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);
+  font-size: var(--vscode-editor-font-size);  
 }
 
 .running {
   color: var(--vscode-symbolIcon-classForeground);
-  font-weight: bold;
-}
-
-.backgroundPercent {
-  background: linear-gradient(to right, var(--vscode-charts-blue) 0% var(--rtosview-percentage-active, 0%), rgba(0, 0, 0, 0) var(--rtosview-percentage-active, 0%) 100%);
-  background-clip: padding-box;
-}
-
-.centerAlign {
-  text-align: center;
-}
-
-.collapse-button {
-  color: var(--vscode-textLink-activeForeground);
-  background-color: rgba(0, 0, 0, 0);
-  cursor: pointer;
-  padding: 0;
-  width: 100%;
-  border: none;
-  text-align: left;
-  font-family: var(--vscode-editor-font-family);
-  font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);
-  outline: none;
-}
-
-.collapse-button:after {
-  content: '\002B';
-  font-weight: bold;
-  float: right;
-  margin-left: 5px;
-  margin-right: 5px;
-}
-
-.collapse-button.active:after {
-  content: "\2212";
-}
-
-.collapse {
-  padding: 0 18px;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.2s ease-out;
+  font-weight:bold;
 }
 
 .help-button {
@@ -93,9 +44,7 @@ vscode-link {
   border: none;
   text-align: left;
   outline: none;
-  font-family: var(--vscode-editor-font-family);
-  font-weight: var(--vscode-editor-font-weight);
-  font-size: var(--vscode-editor-font-size);
+  font-size: 15px;
 }
 
 .help-button:after {
@@ -105,7 +54,7 @@ vscode-link {
   margin-left: 5px;
 }
 
-.help-button.active:after {
+.active:after {
   content: "\2212";
 }
 
@@ -116,4 +65,7 @@ vscode-link {
   transition: max-height 0.2s ease-out;
 
   background-color: var(--vscode-textBlockQuote-background);
+  font-family: var(--vscode-editor-font-family);
+  font-weight: var(--vscode-editor-font-weight);
+  font-size: var(--vscode-editor-font-size);  
 }
