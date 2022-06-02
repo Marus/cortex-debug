@@ -13,7 +13,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Cortex Core Register Viewer (Integrated into Variables Window in V1.2+)
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
 * Peripheral Register Viewer (Defined through standard SVD file)
-* SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single percision floating point values)
+* SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single precision floating point values)
     * The registers that are part of the DWT, TPIU, and ITM debug components will automatically be configured and do not need to be set in firmware.
     * Firmware may still need to enable the SWO output pin - as this part of the setup is microcontroller dependant.
     * Decoding ETM data over the SWO pin is not currently supported.
@@ -79,4 +79,5 @@ Now, launch a debug session and you wil be able to use the primary VSCode window
 
 ## Acknowledgments
 
-Parts of this extension are based upon Jan Jurzitza's (WebFreak) code-debug extension (https://github.com/WebFreak001/code-debug). His project provided an excellent base for GDB MI parsing and interaction.
+Parts of this extension are based upon Jan Jurzitza's (WebFreak) code-debug extension (https://github.com/WebFreak001/code-debug).<br>
+His project provided an excellent base for GDB MI parsing and interaction.
