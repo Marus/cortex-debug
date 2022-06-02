@@ -14,7 +14,7 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
   * Performance is a bit worrisome. May need an option to turn off the feature completely. Didn't see an issue unless you start Disassembly and even after that but not sure on slower computers.
 * **Done**: Medium: Logpoints: See #542
 * Super Low: New memory window using MS Hex Editor
-  * They messed up the UX where it inteferes with a debug session repeately. They do not appear willing to revert back to the way they had it which was much nicer. We could fork or include it but it is way too much work.
+  * They messed up the UX where it interferes with a debug session repeatedly. They do not appear willing to revert back to the way they had it which was much nicer. We could fork or include it but it is way too much work.
 * **Done**: Low: Add registers to `Variables` Window
   * Chance to deprecate `Registers` window
   * Ability to setValue
@@ -23,7 +23,7 @@ Low, medium, high are importance/usefulness. But they sometimes represent *bang-
 
 # Other
 
-* Medium: RTOS plugins. There is a PR for FreeRTOS but we may want to thing of creaating a plugin mecheanism for various RTOSes. I don't want to hardcode all the different RTOS data structures but rather have one generic one driven by a JSON file or a custom ones.
+* **In Progress**: Medium: RTOS plugins. There is a PR for FreeRTOS but we may want to thing of creating a plugin mechanism for various RTOSes. I don't want to hardcode all the different RTOS data structures but rather have one generic one driven by a JSON file or a custom ones.
 * Medium: WSL: First class support. This includes Docker, WSL and perhaps 'ssh'. VSCode and WSL seem to be maturing. Still not there but...there may be enough.
   * This may not be needed anymore since there is an effort to support a USB proxy mechanism in WSL. If that works out, then there is no need for us to do anything.
 * Low: Live Debug: See if we can update program status without stopping the program. Not sure what will work and with which gdb-server
