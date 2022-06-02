@@ -298,6 +298,10 @@ export class GDBDebugSession extends LoggingDebugSession {
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). ` +
             'Usaage info: https://github.com/Marus/cortex-debug#usage');
 
+        if (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+            this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
+        }
+
         // When debugging this extension, we are in server mode serving multiple instances of a debugger.
         // So make sure any old data is cleared, and we only rely on what the frontend tells us
         TcpPortScanner.AvoidPorts.clear();
