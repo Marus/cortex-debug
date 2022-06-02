@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+#V1.5.2
+
+## New features
+* RTOS View for uC/OS-II. Added by @PhilippHaefele & @mayjs
+
 # V1.5.1
 ## New features
 * Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
