@@ -1,5 +1,5 @@
 {
-    "version": "1.5.1-pre5",
+    "version": "1.5.1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -827,8 +827,11 @@
                                     },
                                     "inherits": {
                                         "default": [],
-                                        "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
-                                        "type": "string"
+                                        "description": "List of properties to inherit from parent. This is processed before any overrides. Sorry, no IntelliSense",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
                                     },
                                     "launches": {
                                         "type": "array",
@@ -882,8 +885,11 @@
                                                 },
                                                 "inherits": {
                                                     "default": [],
-                                                    "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
-                                                    "type": "string"
+                                                    "description": "List of properties to inherit from parent. This is processed before any overrides. Sorry, no IntelliSense",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
                                                 }
                                             }
                                         }
@@ -1884,7 +1890,10 @@
                                     "inherits": {
                                         "default": [],
                                         "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
-                                        "type": "string"
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
                                     },
                                     "launches": {
                                         "type": "array",
@@ -1939,7 +1948,10 @@
                                                 "inherits": {
                                                     "default": [],
                                                     "description": "List of properties to inherit from parent. Sorry, no IntelliSense",
-                                                    "type": "string"
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
                                                 }
                                             }
                                         }
