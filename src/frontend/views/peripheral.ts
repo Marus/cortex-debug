@@ -120,7 +120,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         return undefined;
     }
 
-    public sessionStarted(SVDFile: string, thresh: any): Thenable<any> {
+    public sessionStarted(SVDFile: string, thresh: any): Thenable<any> {        // Never rejects
         this.svdFileName = SVDFile;
         if (!path.isAbsolute(this.svdFileName) && this.wsFolderPath) {
             const fullpath = path.normalize(path.join(this.wsFolderPath, this.svdFileName));
@@ -216,26 +216,32 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public debugSessionStarted(session: vscode.DebugSession, svdfile: string, thresh: any): Thenable<any> {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>(async (resolve, reject) => {
             if (!svdfile) {
                 resolve(undefined);
                 return;
             }
-            if (!this.sessionPeripheralsMap.get(session.id)) {
-                let state =  this.oldState.get(session.name);
-                if (state === undefined) {
-                    state = this.sessionPeripheralsMap.size === 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed;
-                }
-                const regs = new PeripheralTreeForSession(session, state, () => {
-                    this._onDidChangeTreeData.fire(undefined);
-                });
-                this.sessionPeripheralsMap.set(session.id, regs);
-                regs.sessionStarted(svdfile, thresh).then(() => {
-                    this._onDidChangeTreeData.fire(undefined);
-                }, (e) => {
-                    this._onDidChangeTreeData.fire(undefined);
-                });
-            } else {
+            if (this.sessionPeripheralsMap.get(session.id)) {
+                this._onDidChangeTreeData.fire(undefined);
+                vscode.window.showErrorMessage(`Internal Error: Session ${session.name} id=${session.id} already in the tree view?`);
+                resolve(undefined);
+                return;
+            }
+            let state = this.oldState.get(session.name);
+            if (state === undefined) {
+                state = this.sessionPeripheralsMap.size === 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed;
+            }
+            const regs = new PeripheralTreeForSession(session, state, () => {
+                this._onDidChangeTreeData.fire(undefined);
+            });
+            this.sessionPeripheralsMap.set(session.id, regs);
+            try {
+                await regs.sessionStarted(svdfile, thresh);     // Should never reject
+            }
+            catch (e) {
+                vscode.window.showErrorMessage(`Internal Error: Unexpected rejection of promise ${e}`);
+            }
+            finally {
                 this._onDidChangeTreeData.fire(undefined);
             }
         });

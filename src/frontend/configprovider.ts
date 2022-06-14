@@ -243,7 +243,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                     if (fatal) {
                         vscode.window.showErrorMessage(str);
                     } else {
-                        vscode.window.showWarningMessage(str);
+                        // vscode.window.showWarningMessage(str);
                     }
                 });
             }

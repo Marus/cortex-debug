@@ -527,13 +527,13 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.launchErrorResponse(
                             response,
                             103,
-                            `${this.serverController.name}: GDB Server Quit Unexpectedly. See gdb-server output for more details.`
+                            `${this.serverController?.name || this.args.servertype}: GDB Server Quit Unexpectedly. See gdb-server output for more details.`
                         );
                         doResolve();
                     }
                 });
                 this.server.on('launcherror', (err) => {
-                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${err}`);
+                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: ${err}`);
                     doResolve();
                 });
 
@@ -542,9 +542,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.sendEvent(new TelemetryEvent(
                         'Error',
                         'Launching Server',
-                        `Failed to launch ${this.serverController.name} GDB Server: Timeout.`
+                        `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: Timeout.`
                     ));
-                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: Timeout.`);
+                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: Timeout.`);
                     doResolve();
                 }, GDBServer.SERVER_TIMEOUT);
 
@@ -664,9 +664,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.sendEvent(new TelemetryEvent(
                         'Error',
                         'Launching Server',
-                        `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`
+                        `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: ${error.toString()}`
                     ));
-                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name} GDB Server: ${error.toString()}`);
+                    // tslint:disable-next-line: max-line-length
+                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: ${error.toString()}`);
                     doResolve();
                     this.server.exit();
                 });
@@ -3114,18 +3115,27 @@ export class GDBDebugSession extends LoggingDebugSession {
             return !this.stopped || this.continuing || (this.miDebugger.status === 'running') || this.sendDummyStackTrace;
         };
 
+        const busyError = (response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) => {
+            if (this.args.showDevDebugOutput) {
+                this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(args)}\n`);
+            }
+            this.sendErrorResponse(response, 8, 'Busy', undefined, ErrorDestination.Telemetry);
+        };
+
         if (a.context !== 'repl') {
             if (isBusy()) {
-                if (this.args.showDevDebugOutput) {
-                    this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(a)}\n`);
-                }
-                this.sendErrorResponse(r, 8, 'Busy', undefined, ErrorDestination.Telemetry);
+                busyError(r, a);
                 return Promise.resolve();
             }
         }
 
         const doit = (response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) => {
             return new Promise<void>(async (resolve) => {
+                if (isBusy()) {
+                    busyError(response, args);
+                    resolve();
+                    return;
+                }
                 const createVariable = (arg, options?) => {
                     if (options) {
                         return this.variableHandles.create(new ExtendedVariable(arg, options));
@@ -3182,7 +3192,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             varObj = this.variableHandles.get(varId) as any;
                         }
                         catch (err) {
-                            if (err instanceof MIError && err.message === 'Variable object not found') {
+                            if (!isBusy() && (err instanceof MIError && err.message === 'Variable object not found')) {
                                 varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
                                 const varId = findOrCreateVariable(varObj);
                                 varObj.exp = exp;
@@ -3204,13 +3214,17 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.sendResponse(response);
                     }
                     catch (err) {
-                        response.body = {
-                            result: (args.context === 'hover') ? null : `<${err.toString()}>`,
-                            variablesReference: 0
-                        };
-                        this.sendResponse(response);
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', args.context + ' ' + err.toString());
+                        if (isBusy()) {
+                            busyError(response, args);
+                        } else {
+                            response.body = {
+                                result: (args.context === 'hover') ? null : `<${err.toString()}>`,
+                                variablesReference: 0
+                            };
+                            this.sendResponse(response);
+                            if (this.args.showDevDebugOutput) {
+                                this.handleMsg('stderr', args.context + ' ' + err.toString());
+                            }
                         }
                         // this.sendErrorResponse(response, 7, err.toString());
                     }

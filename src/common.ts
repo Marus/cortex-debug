@@ -717,7 +717,7 @@ export function validateELFHeader(exe: string, cb?: (str: string, fatal: boolean
         // First four chars are 0x7f, 'E', 'L', 'F'
         if ((buffer[0] !== 0x7f) || (buffer[1] !== 0x45) || (buffer[2] !== 0x4c) || (buffer[3] !== 0x46)) {
             if (cb) {
-                cb(`Not a valid ELF file "executable": "${exe}". Many debug functions may not work`, false);
+                cb(`Not a valid ELF file "executable": "${exe}". Many debug functions can fail or not work properly`, false);
             }
             return false;
         }

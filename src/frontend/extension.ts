@@ -587,7 +587,8 @@ export class CortexDebugExtension {
             this.peripheralProvider.debugSessionStarted(session, (svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
             this.cleanupRTTTerminals();
         }, (error) => {
-            // TODO: Error handling for unable to get arguments
+            vscode.window.showErrorMessage(
+                `Internal Error: Could not get startup arguments. Many debug functions can fail. Please report this problem. Error: ${error}`)
         });
     }
 
@@ -597,9 +598,7 @@ export class CortexDebugExtension {
         try {
             Reporting.endSession(session.id);
 
-            if (this.isDebugging(session)) {
-                this.registerProvider.debugSessionTerminated(session);
-            }
+            this.registerProvider.debugSessionTerminated(session);
             this.peripheralProvider.debugSessionTerminated(session);
             if (mySession?.swo) {
                 mySession.swo.debugSessionTerminated();

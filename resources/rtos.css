@@ -50,6 +50,10 @@ vscode-link {
   text-align: center;
 }
 
+.rightAlign {
+  text-align: right;
+}
+
 .collapse-button {
   color: var(--vscode-textLink-activeForeground);
   background-color: rgba(0, 0, 0, 0);

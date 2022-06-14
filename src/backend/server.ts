@@ -2,6 +2,7 @@ import * as ChildProcess from 'child_process';
 import * as os from 'os';
 import * as net from 'net';
 import * as fs from 'fs';
+import * as path from 'path';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
 import { quoteShellCmdLine } from '../common';
@@ -9,6 +10,7 @@ import { greenFormat } from '../frontend/ansi-helpers';
 
 export let GdbPid = -1;
 export function ServerConsoleLog(str: string, usePid?: number) {
+    if (!str) { return; }
     try {
         const tmpDirName = os.tmpdir();
         const date = new Date();
@@ -21,11 +23,11 @@ export function ServerConsoleLog(str: string, usePid?: number) {
             if (!str.endsWith('\n')) {
                 str += '\n';
             }
-            fs.appendFileSync(`${tmpDirName}/cortex-debug-server-exiting.log`, str);
+            fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
         }
     }
     catch (e) {
-        console.log(e.toString());
+        console.log(e ? e.toString() : 'unknown exception?');
     }
 }
 

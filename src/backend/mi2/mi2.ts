@@ -103,8 +103,8 @@ export class MI2 extends EventEmitter implements IBackend {
                     */
                     resolve();
                 }, reject);
-            }, () => {
-                reject();
+            }, (e) => {
+                reject(e);
             });
         });
     }
@@ -141,9 +141,9 @@ export class MI2 extends EventEmitter implements IBackend {
 
     private onExit() {
         if (!this.actuallyStarted) {
+            this.log('log', 'Error: Unable to start GDB. Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
             if (os.platform() === 'linux') {
-                this.log('log', 'Error: Unable to start GDB. Make sure you can start gdb from the command-line and run\n' +
-                    '    any command like "echo hello". If you cannot, it is most likely because "libncurses5" is not installed.\n');
+                this.log('log', '    If you cannot, it is most likely because "libncurses5" is not installed.\n');
             }
         }
         ServerConsoleLog('GDB: exited', this.pid);
@@ -769,7 +769,7 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'getStackDepth');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand(`stack-info-depth --thread ${threadId} 10000`).then((result) => {
+            this.sendCommand(`stack-info-depth --thread ${threadId} 1000`).then((result) => {
                 const depth = result.result('depth');
                 const ret = parseInt(depth);
                 resolve(ret);
