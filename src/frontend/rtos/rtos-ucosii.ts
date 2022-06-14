@@ -18,18 +18,20 @@ enum DisplayFields {
 }
 
 const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
-RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colSpaceFillTheshold: 5 };
-RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 2, headerRow1: '', headerRow2: 'Address' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Name' };
-RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = { width: 4, headerRow1: 'Thread', headerRow2: 'Status', colType: RTOSCommon.colTypeEnum.colTypeCollapse };
+RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colType: RTOSCommon.ColTypeEnum.colTypeNumeric};
+RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 2, headerRow1: '', headerRow2: 'Address',  colGapBefore: 1 };
+RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Name', colGapBefore: 1 };
+RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = {
+    width: 4, headerRow1: 'Thread', headerRow2: 'Status', colType: RTOSCommon.ColTypeEnum.colTypeCollapse
+};
 RTOSUCOS2Items[DisplayFields[DisplayFields.Priority]] = {
-    width: 1, headerRow1: '', headerRow2: 'Prio', colSpaceFillTheshold: 4
+    width: 1, headerRow1: 'Prio', headerRow2: 'rity', colType: RTOSCommon.ColTypeEnum.colTypeNumeric, colGapAfter: 1
 }; // 3 are enough but 4 aligns better with header text
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPercent]] = {
-    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage
+    width: 4, headerRow1: 'Stack Usage', headerRow2: '% (Used B / Size B)', colType: RTOSCommon.ColTypeEnum.colTypePercentage
 };
 RTOSUCOS2Items[DisplayFields[DisplayFields.StackPeakPercent]] = {
-    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)', colType: RTOSCommon.colTypeEnum.colTypePercentage
+    width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)', colType: RTOSCommon.ColTypeEnum.colTypePercentage
 };
 
 const DisplayFieldNames: string[] = Object.keys(RTOSUCOS2Items);

@@ -23,23 +23,24 @@ enum DisplayFields {
     Runtime
 }
 
+const numType = RTOSCommon.ColTypeEnum.colTypeNumeric;
 const FreeRTOSItems: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
-FreeRTOSItems[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colSpaceFillTheshold: 3 }; // UBaseType_t => most likely 32-bit
-FreeRTOSItems[DisplayFields[DisplayFields.Address]] = { width: 3, headerRow1: 'Thread', headerRow2: 'Address' };
+FreeRTOSItems[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colType: numType };
+FreeRTOSItems[DisplayFields[DisplayFields.Address]] = { width: 3, headerRow1: 'Thread', headerRow2: 'Address', colGapBefore: 1 };
 FreeRTOSItems[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Task Name' };
 FreeRTOSItems[DisplayFields[DisplayFields.Status]] = { width: 3, headerRow1: '', headerRow2: 'Status' };
-FreeRTOSItems[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity' }; // UBaseType_t => most likely 32-bit
+FreeRTOSItems[DisplayFields[DisplayFields.Priority]] = { width: 1.5, headerRow1: 'Prio', headerRow2: 'rity', colType: numType };
 FreeRTOSItems[DisplayFields[DisplayFields.StackStart]] = {
     width: 3, headerRow1: 'Stack', headerRow2: 'Start',
-    colType: RTOSCommon.colTypeEnum.colTypeLink
+    colType: RTOSCommon.ColTypeEnum.colTypeLink, colGapBefore: 1
 };
 FreeRTOSItems[DisplayFields[DisplayFields.StackTop]] = { width: 3, headerRow1: 'Stack', headerRow2: 'Top' };
 FreeRTOSItems[DisplayFields[DisplayFields.StackEnd]] = { width: 3, headerRow1: 'Stack', headerRow2: 'End' };
-FreeRTOSItems[DisplayFields[DisplayFields.StackSize]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Size' };
-FreeRTOSItems[DisplayFields[DisplayFields.StackUsed]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Used' };
-FreeRTOSItems[DisplayFields[DisplayFields.StackFree]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Free' };
-FreeRTOSItems[DisplayFields[DisplayFields.StackPeak]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Peak' };
-FreeRTOSItems[DisplayFields[DisplayFields.Runtime]] = { width: 2, headerRow1: '', headerRow2: 'Runtime' };
+FreeRTOSItems[DisplayFields[DisplayFields.StackSize]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Size', colType: numType };
+FreeRTOSItems[DisplayFields[DisplayFields.StackUsed]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Used', colType: numType };
+FreeRTOSItems[DisplayFields[DisplayFields.StackFree]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Free', colType: numType };
+FreeRTOSItems[DisplayFields[DisplayFields.StackPeak]] = { width: 2, headerRow1: 'Stack', headerRow2: 'Peak', colType: numType };
+FreeRTOSItems[DisplayFields[DisplayFields.Runtime]] = { width: 2, headerRow1: '', headerRow2: 'Runtime', colType: numType };
 const DisplayFieldNames: string[] = Object.keys(FreeRTOSItems);
 
 function isNullOrUndefined(x) {

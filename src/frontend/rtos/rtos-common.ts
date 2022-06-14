@@ -14,11 +14,17 @@ export interface RTOSStackInfo {
     bytes?: Uint8Array;
 }
 
-export enum colTypeEnum {
-    colTypeNormal = 0,
-    colTypePercentage,
-    colTypeLink,
-    colTypeCollapse
+// It is a bitfield because Link and Collapse are oddballs and do not imply right/left/center justified
+// Please follow the conventions so that the look and feel is consistent across RTOSes contributed by
+// multiple folks
+// Note: The table we produce should still look good when expanding/shrinking in the horz direction.. Things
+// should not run into each other. Not easy, but do your best and test it
+export enum ColTypeEnum {
+    colTypeNormal      = 0,        // Will be left justified. Use for Text fields, fixed width hex values, etc.
+    colTypePercentage  = 1 << 0,   // Will be centered with a % bar
+    colTypeNumeric     = 1 << 1,   // Will be right justified
+    colTypeLink        = 1 << 2,   // TODO: mark it as a link to do something additional. Not totally functional
+    colTypeCollapse    = 1 << 3    // Items will be collapsible
 }
 
 export interface DisplayColumnItem {
@@ -26,8 +32,10 @@ export interface DisplayColumnItem {
     headerRow1: string;
     headerRow2: string;
     fieldName?: string;
-    colType?: colTypeEnum;
-    colSpaceFillTheshold?: number;
+    colType?: ColTypeEnum;
+    colSpaceFillThreshold?: number; // This makes it fixed width (padded with spaces) unless value width is larger
+    colGapBefore?: number;          // Use if the field is going to be left justified or fixed width
+    colGapAfter?: number;           // Use if the field is going to be right justified or fixed width
 }
 
 export interface DisplayRowItem {
@@ -240,6 +248,41 @@ export abstract class RTOSBase {
         RTOSDisplayColumn: { [key: string]: DisplayColumnItem },
         allThreads: RTOSThreadInfo[],
         timeInfo: string): HtmlInfo {
+
+        const getAlignClasses = (key: string) => {
+            const colType: ColTypeEnum = RTOSDisplayColumn[key].colType;
+            let ret = '';
+            if (colType & ColTypeEnum.colTypePercentage) {
+                ret += ' centerAlign';
+            }
+            if (colType & ColTypeEnum.colTypeNumeric) {
+                ret += ' rightAlign';
+            }
+            return ret;
+        };
+
+        const padText = (key: string, txt: string) => {
+            let needWSPreserve = false;
+            if ((RTOSDisplayColumn[key].colSpaceFillThreshold !== undefined) && (txt.length > 0)) {
+                txt = txt.padStart(RTOSDisplayColumn[key].colSpaceFillThreshold);
+                needWSPreserve = true;
+            }
+            const gapBefore = RTOSDisplayColumn[key]?.colGapBefore || 0;
+            if (gapBefore > 0) {
+                txt = ' '.repeat(gapBefore) + txt;
+                needWSPreserve = true;
+            }
+            const gapAfter = RTOSDisplayColumn[key]?.colGapAfter || 0;
+            if (gapAfter > 0) {
+                txt += ' '.repeat(gapAfter);
+                needWSPreserve = true;
+            }
+            if (needWSPreserve) {
+                txt = `<div class="whitespacePreserve">${txt}</div>`;
+            }
+            return txt;
+        };
+
         const colFormat = displayFieldNames.map((key) => `${RTOSDisplayColumn[key].width}fr`).join(' ');
         let table = `<vscode-data-grid class="${this.className}-grid threads-grid" grid-template-columns="${colFormat}">\n`;
         let header = '';
@@ -255,14 +298,8 @@ export abstract class RTOSBase {
                 if (true) {
                     header = commonHeaderRowPart;
                     for (const key of displayFieldNames) {
-                        let txt = RTOSDisplayColumn[key].headerRow1;
-                        let additionalClasses = '';
-                        if ((RTOSDisplayColumn[key].colSpaceFillTheshold !== undefined) && (txt.length > 0)) {
-                            txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
-                        }
-                        if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) {
-                            additionalClasses += ' centerAlign';
-                        }
+                        const txt = padText(key, RTOSDisplayColumn[key].headerRow1);
+                        const additionalClasses = getAlignClasses(key);
                         header += `${commonHeaderCellPart}${additionalClasses}" grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                         if (!have2ndRow) { have2ndRow = !!RTOSDisplayColumn[key].headerRow2; }
                         col++;
@@ -274,14 +311,8 @@ export abstract class RTOSBase {
                     col = 1;
                     header += commonHeaderRowPart;
                     for (const key of displayFieldNames) {
-                        let txt = RTOSDisplayColumn[key].headerRow2;
-                        let additionalClasses = '';
-                        if ((RTOSDisplayColumn[key].colSpaceFillTheshold !== undefined) && (txt.length > 0)) {
-                            txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
-                        }
-                        if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage) {
-                            additionalClasses += ' centerAlign';
-                        }
+                        const txt = padText(key, RTOSDisplayColumn[key].headerRow2);
+                        const additionalClasses = getAlignClasses(key);
                         header += `${commonHeaderCellPart}${additionalClasses}" grid-column="${col}">${txt}</vscode-data-grid-cell>\n`;
                         col++;
                     }
@@ -296,16 +327,10 @@ export abstract class RTOSBase {
             table += `  <vscode-data-grid-row class="${this.className}-row threads-row ${rowClass}">\n`;
             for (const key of displayFieldNames) {
                 const v = th[key];
-                let txt = v.text;
+                let txt = padText(key, v.text);
                 const lKey = key.toLowerCase();
-                let additionalClasses = running;
-
-                if ((RTOSDisplayColumn[key].colSpaceFillTheshold !== undefined) && (txt.length > 0)) {
-                    txt = `<div class="whitespacePreserve">${txt.padStart(RTOSDisplayColumn[key].colSpaceFillTheshold)}</div>`;
-                }
-
-                if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypePercentage)) {
-                    additionalClasses += ' centerAlign';
+                let additionalClasses = running + getAlignClasses(key);
+                if ((RTOSDisplayColumn[key].colType & ColTypeEnum.colTypePercentage)) {
                     if (v.value !== undefined) {
                         const rowValueNumber = parseFloat(v.value);
                         if (!isNaN(rowValueNumber)) {
@@ -315,9 +340,11 @@ export abstract class RTOSBase {
                                 `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
                         }
                     }
-                } else if (RTOSDisplayColumn[key].colType === colTypeEnum.colTypeLink) {
-                    txt = `<vscode-link class="threads-link-${lKey}" href="#">${v.text}</vscode-link>`;
-                } else if ((RTOSDisplayColumn[key].colType === colTypeEnum.colTypeCollapse) && (v.value)) {
+                } else if (RTOSDisplayColumn[key].colType & ColTypeEnum.colTypeLink) {
+                    // We lose any padding/justification information. Deal with this later when start doing memory windows
+                    // and try to preserve formatting. Disable for now
+                    // txt = `<vscode-link class="threads-link-${lKey}" href="#">${v.text}</vscode-link>`;
+                } else if ((RTOSDisplayColumn[key].colType & ColTypeEnum.colTypeCollapse) && (v.value)) {
                     const length = Object.values(v.value).reduce((acc: number, cur: string[]) => acc + cur.length, 0);
                     if (length > 1) {
                         const descriptions = Object.keys(v.value).map((key) => `${key}: ${v.value[key].join(', ')}`).join('<br>');
