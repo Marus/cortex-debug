@@ -31,12 +31,15 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * RTOS Support (J-Link, OpenOCD, pyOCD) - RTOS supported depends on GDB server support)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 
+### Release Versioning
+Cortex-Debug uses a [versioning system specified by Microsoft](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) that allows distribution of pre-releases via the marketplace. You can enable (or disable) pre-releases within VSCode for this extension and you will automatically get new pre-releases. By default, pre-releases are disabled. We use pre-releases as allow testing of bug fixes and new features. They allow you participate during the formation of a feature of how an issue gets addressed. [More info about pre-releases](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions). To summarize, extensions use [semantic versioning (SemVer)](https://semver.org/) system which in simple terms is `major.minor.patch`. With MS convention, if the `minor` version is `ODD`, then it is a pre-release.
 
 ### Planned Features
 
 * Additional Graphing Options
 * Enhanced SVD Auto-selection
 * Semihosting Support (this should be working now)
+* [Our TODO file](https://github.com/Marus/cortex-debug/blob/master/TODO.md) 
 
 ## Installation
 
