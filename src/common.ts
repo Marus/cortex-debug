@@ -225,7 +225,7 @@ export function defSymbolFile(file: string): SymbolFile {
         file: file,
         sections: [],
         sectionMap: {}
-    }
+    };
     return ret;
 }
 

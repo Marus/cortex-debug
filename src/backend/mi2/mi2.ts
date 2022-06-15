@@ -404,7 +404,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     clearTimeout(timer);
                     timer = undefined;
                 }
-            }
+            };
             this.process.on('exit', (code) => { destroyTimer(); });
             // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
             // program is in paused state
