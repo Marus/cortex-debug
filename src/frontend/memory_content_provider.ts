@@ -3,13 +3,55 @@ import { parseHexOrDecInt } from '../common';
 import { CortexDebugExtension } from './extension';
 import { hexFormat } from './utils';
 
+// We have to maintain our own list of what is changed because vscode.TextDocument.isClosed does not work as expected
+// We don't  understand the lifecycle of a textDoc because it lingers in the system even after it is closed
+interface MemDocStatus {
+    textDoc: vscode.TextDocument;       // For debug
+    isClosed: boolean;
+    uri: vscode.Uri;
+    lastText: string;
+}
+
 export class MemoryContentProvider implements vscode.TextDocumentContentProvider {
     // tslint:disable-next-line:variable-name
     private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
     public readonly onDidChange = this._onDidChange.event;
+    private allMemoryWindows: {[path: string]: MemDocStatus} = {};
+    
+    public Unregister(doc: vscode.TextDocument) {
+        const p = this.allMemoryWindows[doc.uri.path];
+        if (p) {
+            p.isClosed = true;
+            p.textDoc = undefined;
+        }
+    }
+
+    public PreRegister(uri: vscode.Uri) {
+        const docStatus: MemDocStatus = {
+            textDoc: undefined,     // Right now, we don't know what this is.
+            isClosed: false,
+            uri: uri,
+            lastText: ''
+        };
+        this.allMemoryWindows[uri.path] = docStatus;
+    }
+
+    public Register(doc: vscode.TextDocument) {
+        const docStatus: MemDocStatus = this.allMemoryWindows[doc.uri.path];
+        if (docStatus) {
+            docStatus.textDoc = doc;
+            docStatus.isClosed = false;
+        }
+    }
 
     public provideTextDocumentContent(uri: vscode.Uri): Thenable<string> {
         return new Promise((resolve, reject) => {
+            const docStatus: MemDocStatus = this.allMemoryWindows[uri.path];
+            if (docStatus && docStatus.isClosed) {
+                resolve(docStatus.lastText);
+                return;
+            }
+
             const highlightAt = -1;
             const query = this.parseQuery(uri.query);
             
@@ -59,6 +101,9 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                     output += '  ' + lineend;
                     output += '\n';
 
+                    if (docStatus) {
+                        docStatus.lastText = output;
+                    }
                     resolve(output);
                 }, (error) => {
                     const msg = error.message || '';

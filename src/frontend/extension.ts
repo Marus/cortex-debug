@@ -120,6 +120,7 @@ export class CortexDebugExtension {
             vscode.debug.onDidTerminateDebugSession(this.debugSessionTerminated.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.activeEditorChanged.bind(this)),
             vscode.window.onDidCloseTerminal(this.terminalClosed.bind(this)),
+            vscode.workspace.onDidCloseTextDocument(this.textDocsClosed.bind(this)),
             vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
                 if (e && e.textEditor.document.fileName.endsWith('.cdmem')) { this.memoryProvider.handleSelection(e); }
             }),
@@ -143,6 +144,12 @@ export class CortexDebugExtension {
                 e.element.expanded = false;
             })
         );
+    }
+
+    private textDocsClosed(e: vscode.TextDocument) {
+        if (e.fileName.endsWith('.cdmem')) {
+            this.memoryProvider.Unregister(e);
+        }
     }
 
     public static getActiveCDSession() {
@@ -418,8 +425,11 @@ export class CortexDebugExtension {
                         const timestamp = new Date().getTime();
                         const addrEnc = encodeURIComponent(`${address}`);
                         // tslint:disable-next-line:max-line-length
-                        vscode.workspace.openTextDocument(vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`))
+                        const uri =  vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`);
+                        this.memoryProvider.PreRegister(uri);
+                        vscode.workspace.openTextDocument(uri)
                             .then((doc) => {
+                                this.memoryProvider.Register(doc);
                                 vscode.window.showTextDocument(doc, { viewColumn: 2, preview: false });
                                 Reporting.sendEvent('Examine Memory', 'Used');
                             }, (error) => {
@@ -588,7 +598,7 @@ export class CortexDebugExtension {
             this.cleanupRTTTerminals();
         }, (error) => {
             vscode.window.showErrorMessage(
-                `Internal Error: Could not get startup arguments. Many debug functions can fail. Please report this problem. Error: ${error}`)
+                `Internal Error: Could not get startup arguments. Many debug functions can fail. Please report this problem. Error: ${error}`);
         });
     }
 
@@ -878,8 +888,11 @@ export class CortexDebugExtension {
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugStopped(e.session);
         }
-        vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem'))
-            .forEach((doc) => { this.memoryProvider.update(doc); });
+        vscode.workspace.textDocuments.filter((td) => td.fileName.endsWith('.cdmem')).forEach((doc) => {
+            if (!doc.isClosed) {
+                this.memoryProvider.update(doc);
+            }
+        });
         if (mySession.swo) { mySession.swo.debugStopped(); }
         if (mySession.rtt) { mySession.rtt.debugStopped(); }
     }
