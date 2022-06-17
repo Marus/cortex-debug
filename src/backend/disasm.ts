@@ -487,7 +487,7 @@ export class GdbDisassembler {
         }
         if (this.doTiming) {
             const total = srcCount + asmCount;
-            this.handleMsg('stdout', `Debug: ${cmd} => Found ${total} instrunctions. ${srcCount} with source code, ${asmCount} without\n`);
+            this.handleMsg('stdout', `Debug: ${cmd} => Found ${total} instructions. ${srcCount} with source code, ${asmCount} without\n`);
         }
         return new DisassemblyReturn(instructions, foundIx, false);
     }
