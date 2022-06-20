@@ -554,10 +554,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         clearTimeout(timeout);
                         timeout = null;
                     }
-                    const commands = [
-                        `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-                        `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
-                    ];
+                    const commands = [];
                     try {
                         // This is where 4 things meet and they must all finish (in any order) before we can proceed
                         // 1. Gdb has been started
@@ -817,7 +814,6 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (!path.isAbsolute(this.args.executable)) {
                 this.args.executable = path.join(this.args.cwd, this.args.executable);
             }
-            gdbargs.push(this.args.executable);
         }
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
         this.handleMsg('log', dbgMsg);
@@ -840,7 +836,10 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.initDebugger();
         const initCmds = [
             'interpreter-exec console "set print demangle on"',
-            'interpreter-exec console "set print asm-demangle on"'
+            'interpreter-exec console "set print asm-demangle on"',
+            'enable-pretty-printing',
+            `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
+            `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
         ];
         if (this.args.symbolFiles) {
             for (const symF of this.args.symbolFiles) {
@@ -855,6 +854,8 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (initCmds.length === 0) {
                 this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
             }
+        } else {
+            initCmds.push(`file-exec-and-symbols "${this.args.executable}"`);
         }
         const ret = this.miDebugger.start(this.args.cwd, initCmds);
         return ret;

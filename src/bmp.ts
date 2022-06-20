@@ -61,16 +61,13 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
     public launchCommands(): string[] {
         const commands = [
             ...genDownloadCommands(this.args, []),
-            'interpreter-exec console "SoftwareReset"',
-            'enable-pretty-printing'
+            'interpreter-exec console "SoftwareReset"'
         ];
         return commands;
     }
 
     public attachCommands(): string[] {
-        const commands = [
-            'enable-pretty-printing'
-        ];
+        const commands = [];
         return commands;
     }
 

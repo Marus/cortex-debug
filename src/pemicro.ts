@@ -39,8 +39,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     public launchCommands(): string[] {
         const commands = [
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor _reset"']),
-            'interpreter-exec console "monitor _reset"',
-            'enable-pretty-printing'
+            'interpreter-exec console "monitor _reset"'
         ];
 
         return commands;
@@ -48,8 +47,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
     public attachCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor halt"',
-            'enable-pretty-printing'
+            'interpreter-exec console "monitor halt"'
         ];
         
         return commands;

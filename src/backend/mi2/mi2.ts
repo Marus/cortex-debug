@@ -82,8 +82,17 @@ export class MI2 extends EventEmitter implements IBackend {
                 ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
             });
 
+            let timeout = setTimeout(() => {
+                this.gdbStartError();
+                reject(new Error('Could not start gdb, no response from gdb'));
+                timeout = undefined;
+            }, 2000);
+
             const swallOutput = this.debugOutput ? false : true;
             this.sendCommand('gdb-version', false, true, swallOutput).then((v: MINode) => {
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
                 this.actuallyStarted = true;
                 this.parseVersionInfo(v.output);
                 const asyncCmd = this.gdbMajorVersion >= 8 ? 'gdb-set mi-async on' : 'gdb-set target-async on';
@@ -140,17 +149,21 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private onExit() {
-        if (!this.actuallyStarted) {
-            this.log('log', 'Error: Unable to start GDB. Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
-            if (os.platform() === 'linux') {
-                this.log('log', '    If you cannot, it is most likely because "libncurses5" is not installed.\n');
-            }
-        }
+        this.gdbStartError();
         ServerConsoleLog('GDB: exited', this.pid);
         if (this.process) {
             this.process = null;
             this.exited = true;
             this.emit('quit');
+        }
+    }
+
+    private gdbStartError() {
+        if (!this.actuallyStarted) {
+            this.log('log', 'Error: Unable to start GDB. Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
+            if (os.platform() === 'linux') {
+                this.log('log', '    If you cannot, it is most likely because "libncurses5" is not installed.\n');
+            }
         }
     }
 

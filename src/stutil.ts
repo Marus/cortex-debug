@@ -38,16 +38,14 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
         const commands = [
             'interpreter-exec console "monitor halt"',
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
-            'interpreter-exec console "monitor reset"',
-            'enable-pretty-printing'
+            'interpreter-exec console "monitor reset"'
         ];
         return commands;
     }
 
     public attachCommands(): string[] {
         const commands = [
-            'interpreter-exec console "monitor halt"',
-            'enable-pretty-printing'
+            'interpreter-exec console "monitor halt"'
         ];
         return commands;
     }
