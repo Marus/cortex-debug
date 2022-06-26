@@ -4,9 +4,11 @@ import {
     calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands
 } from './common';
 import * as os from 'os';
-import * as tmp from 'tmp';
-import * as fs from 'fs';
+import * as net from 'net';
 import { EventEmitter } from 'events';
+import { MI2 } from './backend/mi2/mi2';
+import { nextTick } from 'process';
+
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
     public portsNeeded = ['gdbPort', 'tclPort', 'telnetPort', 'swoPort'];
@@ -108,6 +110,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             // We are starting way too early before the FW has a chance to initialize itself
             // but there is no other handshake mechanism
             commands.push('interpreter-exec console "monitor rtt start"');
+            if (this.args.rttConfig.rtt_start_retry === undefined) {
+                this.args.rttConfig.rtt_start_retry = 1000;
+            }
         }
         return commands;
     }
@@ -241,8 +246,166 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         }
     }
 
-    public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {
-        this.rttHelper.emitConfigures(this.args.rttConfig, this);
+    private debugger: MI2;
+    private MI2Leftover: string = '';
+    private rttStarted = false;
+    private rttAutoStartDetected = false;
+    private rttPollTimer: NodeJS.Timeout;
+    public debuggerLaunchStarted(obj: MI2): void {
+        this.debugger = obj;
     }
+    public debuggerLaunchCompleted(): void {
+        const hasRtt = this.rttHelper.emitConfigures(this.args.rttConfig, this);
+        if (hasRtt) {
+            this.startRttMonitor();
+        }
+    }
+
+    // This should not be called until the server is ready and accepting connections. Proper time to call is to have
+    // established an RTT TCP port already
+    public rttPoll(): void {
+        if (!this.rttStarted && (this.tclSocket === undefined) && (this.args.rttConfig.rtt_start_retry > 0) && !this.rttAutoStartDetected) {
+            this.rttPollStart();
+        }
+    }
+
+    private startRttMonitor() {
+        this.debugger.on('msg', (type, msg) => {
+            if (this.rttStarted) { return; }
+            msg = this.MI2Leftover + msg;
+            const lines = msg.split(/[\r]\n/);
+            if (!msg.endsWith('\n')) {
+                this.MI2Leftover = lines.pop();
+            } else {
+                this.MI2Leftover = '';
+            }
+            for (const line of lines) {
+                if (line.includes('Control block found at')) {
+                    this.rttStarted = true;
+                    if (this.rttPollTimer) {
+                        clearTimeout(this.rttPollTimer);
+                        this.rttPollTimer = undefined;
+                    }
+                    break;
+                } else if (/rtt:.*will retry/.test(line)) {
+                    this.rttAutoStartDetected = true;
+                }
+            }
+        });
+
+        this.debugger.on('stopped', async (info: any, reason: string) => {
+            if (reason === 'entry') { return; } // Should not happen
+            if (!this.rttStarted && this.tclSocket && !this.rttAutoStartDetected) {
+                const result = await this.tclCommand('rtt start');
+            }
+        });
+    }
+
+    private tclSocket: net.Socket = undefined;      // If null, it was opened once but then later closed due to error or the other end closed it
+    private tclSocketBuf = '';
+    private readonly tclDelimit = String.fromCharCode(0x1a);
+    private dbgPollCounter = 0;
+    private rttPollStart() {
+        this.rttPollTimer = setInterval(async () => {
+            if ((this.debugger.status === 'running') && !this.rttAutoStartDetected) {
+                try {
+                    this.dbgPollCounter++;
+                    const result = await this.tclCommand('capture "rtt start"');
+                    console.log(`${this.dbgPollCounter}-OpenOCD TCL output: '${result}'`);
+                }
+                catch (e) {
+                    console.error(`OpenOCD TCL error: ${e}`);
+                }
+            }
+        }, this.args.rttConfig.rtt_start_retry);
+    }
+
+    private tclCommandQueue: TclCommandQueue[] = [];
+    private tclCommand(cmd: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            this.tclStartSocket().then(() => {
+                const newCmd: TclCommandQueue = {
+                    cmd: cmd,
+                    resolve: resolve,
+                    reject: reject
+                };
+                this.tclCommandQueue.push(newCmd);
+                this.tclSendData(cmd);
+            }, (e) => {
+                reject(e);
+                return null;
+            });
+        });
+    }
+
+    public tclStartSocket(): Promise<void> {
+        if (this.tclSocket) {
+            return Promise.resolve();
+        }
+        return new Promise<void>(async (resolve, reject) => {
+            if (this.tclSocket === undefined) {
+                const tclPortName = createPortName(0, 'tclPort');
+                const tclPortNum = this.ports[tclPortName];
+                const obj = {
+                    host: 'localhost',
+                    port: tclPortNum
+                };
+                this.tclSocket = net.createConnection(obj, () => {
+                    nextTick(() => {
+                        this.tclCommand('tcl_notifications on');
+                    });
+                    resolve();
+                });
+                this.tclSocket.on('data', this.tclRecvTclData.bind(this));
+                this.tclSocket.on('end', () => {
+                    this.tclSocket = null;
+                });
+                this.tclSocket.on('close', () => {
+                    this.tclSocket = null;
+                });
+                this.tclSocket.on('error', (e) => {
+                    if (this.tclSocket) {
+                        this.tclSocket = null;
+                        reject(e);
+                    }
+                });
+            } else {
+                reject(new Error('OpenOCD tcl socket already closed'));
+            }
+        });
+    }
+
+    private tclRecvTclData(buffer: Buffer) {
+        const str = this.tclSocketBuf + buffer.toString('utf8');
+        const packets = str.split(this.tclDelimit);
+        if (!str.endsWith(this.tclDelimit)) {
+            this.tclSocketBuf = packets.pop();
+        } else {
+            packets.pop();      // Remove trailing empty string
+            this.tclSocketBuf = '';
+        }
+        if ((this.tclCommandQueue.length > 0) && (packets.length > 0)) {
+            const next = this.tclCommandQueue.shift();
+            next.result = packets.shift();
+            next.resolve(next.result);
+        }
+        while (packets.length > 0) {
+            const p = packets.shift().trim();
+            console.log(`tclNotify: '${p}'`);
+        }
+    }
+
+    private tclSendData(data: string) {
+        if (data) {
+            this.tclSocket.write(data + this.tclDelimit, 'utf8');
+        }
+    }
+}
+
+interface TclCommandQueue {
+    cmd: string;
+    resolve: any;
+    reject: any;
+    result?: string;
+    error?: any;
 }

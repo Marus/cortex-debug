@@ -1,7 +1,6 @@
 
 import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { inherits } from 'util';
 
 export interface RTOSStackInfo {
     stackStart: number;

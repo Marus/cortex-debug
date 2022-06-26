@@ -1101,9 +1101,15 @@
                                     },
                                     "polling_interval": {
                                         "type": "number",
-                                        "description": "number of milliseconds (> 0) to wait for check for data on out channels",
+                                        "description": "number of milliseconds (> 0) to wait for check for data on out channels. Only for OpenOCD",
                                         "default": 0,
                                         "minimum": 1
+                                    },
+                                    "rtt_start_retry": {
+                                        "type": "number",
+                                        "description": "Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry",
+                                        "default": 1000,
+                                        "minimum": 0
                                     },
                                     "clearSearch": {
                                         "type": "boolean",
@@ -2163,9 +2169,15 @@
                                     },
                                     "polling_interval": {
                                         "type": "number",
-                                        "description": "number of milliseconds (> 0) to wait for check for data on out channels",
+                                        "description": "number of milliseconds (> 0) to wait for check for data on out channels. Only for OpenOCD",
                                         "default": 0,
                                         "minimum": 1
+                                    },
+                                    "rtt_start_retry": {
+                                        "type": "number",
+                                        "description": "Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry",
+                                        "default": 1000,
+                                        "minimum": 0
                                     },
                                     "clearSearch": {
                                         "type": "boolean",

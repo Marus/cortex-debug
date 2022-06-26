@@ -104,6 +104,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 this.status = 'failed';
                 this.failedWhy = e;
             }
+            return this;
         }
     }
 

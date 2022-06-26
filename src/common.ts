@@ -6,6 +6,7 @@ import { GDBServer } from './backend/server';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as stream from 'stream';
+import { MI2 } from './backend/mi2/mi2';
 const readline = require('readline');
 
 export enum ADAPTER_DEBUG_MODE {
@@ -203,6 +204,7 @@ export interface RTTConfiguration {
     searchId: string;
     clearSearch: boolean;
     polling_interval: number;
+    rtt_start_retry: number;
     decoders: RTTCommonDecoderOpts[];
 }
 
@@ -264,7 +266,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     swoConfig: SWOConfiguration;
     graphConfig: any[];
     /// Triple slashes will cause the line to be ignored by the options-doc.py script
-    /// We dont expect the following to be in booleann form or have the value of 'none' after
+    /// We don't expect the following to be in booleann form or have the value of 'none' after
     /// The config provider has done the conversion. If it exists, it means output 'something'
     showDevDebugOutput: ADAPTER_DEBUG_MODE;
     showDevDebugTimestamps: boolean;
@@ -349,8 +351,9 @@ export interface GDBServerController extends EventEmitter {
     initMatch(): RegExp;
     serverLaunchStarted(): void;
     serverLaunchCompleted(): Promise<void> | void;
-    debuggerLaunchStarted(): void;
+    debuggerLaunchStarted(obj?: MI2): void;
     debuggerLaunchCompleted(): void;
+    rttPoll?(): void;
 }
 
 export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds: string[]) {
@@ -424,7 +427,8 @@ export class RTTServerHelper {
         });
     }
 
-    public emitConfigures(cfg: RTTConfiguration, obj: EventEmitter) {
+    public emitConfigures(cfg: RTTConfiguration, obj: EventEmitter): boolean {
+        let ret = false;
         if (cfg.enabled) {
             for (const dec of cfg.decoders) {
                 if (dec.tcpPort || dec.tcpPorts) {
@@ -432,9 +436,11 @@ export class RTTServerHelper {
                         type: 'socket',
                         decoder: dec
                     }));
+                    ret = true;
                 }
             }
         }
+        return ret;
     }
 }
 

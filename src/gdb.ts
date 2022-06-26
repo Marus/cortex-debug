@@ -72,6 +72,7 @@ const REG_HANDLE_FINISH     = 0x02FFFF;
 const VAR_HANDLES_START     = 0x030000;
 
 function COMMAND_MAP(c: string): string {
+    if (!c) { return c; }
     c = c.trim();
     if (['continue', 'c', 'cont'].find((s) => s === c)) {
         // For some reason doing a continue in one of the commands from launch.json does not work with gdb when in MI mode
@@ -604,7 +605,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         return doResolve();
                     }
 
-                    this.serverController.debuggerLaunchStarted();
+                    this.serverController.debuggerLaunchStarted(this.miDebugger);
                     this.miDebugger.once('debug-ready', () => {
                         this.debugReady = true;
                         this.attached = attach;
@@ -1040,16 +1041,16 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.disassember.customDisassembleRequest(response, args);
                 break;
             case 'execute-command':
-                let cmd = args['command'] as string;
-                if (cmd.startsWith('-')) { cmd = cmd.substring(1); }
-                else { cmd = `interpreter-exec console "${cmd}"`; }
-                this.miDebugger.sendCommand(cmd).then((node) => {
-                    response.body = node.resultRecords;
-                    this.sendResponse(response);
-                }, (error) => {
-                    response.body = error;
-                    this.sendErrorResponse(response, 110, 'Unable to execute command');
-                });
+                const cmd = COMMAND_MAP(args?.command as string);
+                if (cmd) {
+                    this.miDebugger.sendCommand(cmd).then((node) => {
+                        response.body = node.resultRecords;
+                        this.sendResponse(response);
+                    }, (error) => {
+                        response.body = error;
+                        this.sendErrorResponse(response, 110, 'Unable to execute command');
+                    });
+                }
                 break;
             case 'reset-device':
                 this.resetDevice(response, args);
@@ -1063,6 +1064,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.emit('children-terminating');
                 this.sendResponse(response);
                 break;
+            case 'rtt-poll': {
+                if (this.serverController.rttPoll) {
+                    this.serverController.rttPoll();
+                }
+                break;
+            }
             default:
                 response.body = { error: 'Invalid command.' };
                 this.sendResponse(response);
@@ -3132,7 +3139,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         const doit = (response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) => {
             return new Promise<void>(async (resolve) => {
-                if (isBusy()) {
+                if (isBusy() && (a.context !== 'repl')) {
                     busyError(response, args);
                     resolve();
                     return;
