@@ -85,6 +85,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 'launch.json: "runToMain" has been deprecated and will not work in future versions of Cortex-Debug. Please use "runToEntryPoint" instead');
         }
 
+        if ((type !== 'openocd') || !config.ctiOpenOCDConfig?.enabled) {
+            delete config.ctiOpenOCDConfig;
+        }
+
         switch (type) {
             case 'jlink':
                 validationResponse = this.verifyJLinkConfiguration(folder, config);

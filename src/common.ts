@@ -6,7 +6,7 @@ import { GDBServer } from './backend/server';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as stream from 'stream';
-import { MI2 } from './backend/mi2/mi2';
+import { GDBDebugSession } from './gdb';
 const readline = require('readline');
 
 export enum ADAPTER_DEBUG_MODE {
@@ -115,6 +115,14 @@ export enum BinaryEncoding {
     Q1616 = 'Q16.16',
     FLOAT = 'float'
 }
+
+export interface CTIOpenOCDConfig {
+    enabled: boolean;
+    initCommands: string[];
+    pauseCommands: string[];
+    resumeCommands: string[];
+}
+
 export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
     // Console  options
     label: string;      // label for window
@@ -262,6 +270,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     breakAfterReset: boolean;
     svdFile: string;
     svdAddrGapThreshold: number;
+    ctiOpenOCDConfig: CTIOpenOCDConfig;
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
     graphConfig: any[];
@@ -332,6 +341,12 @@ export interface DisassemblyInstruction {
     opcodes: string;
 }
 
+export enum CTIAction {
+    'init',
+    'pause',
+    'resume'
+}
+
 export interface GDBServerController extends EventEmitter {
     portsNeeded: string[];
     name: string;
@@ -351,9 +366,10 @@ export interface GDBServerController extends EventEmitter {
     initMatch(): RegExp;
     serverLaunchStarted(): void;
     serverLaunchCompleted(): Promise<void> | void;
-    debuggerLaunchStarted(obj?: MI2): void;
+    debuggerLaunchStarted(obj?: GDBDebugSession): void;
     debuggerLaunchCompleted(): void;
     rttPoll?(): void;
+    ctiStopResume?(action: CTIAction): void;
 }
 
 export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds: string[]) {

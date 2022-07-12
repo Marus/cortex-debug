@@ -1,12 +1,13 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
 import {
     GDBServerController, ConfigurationArguments, SWOConfigureEvent,
-    calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands
+    calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands, CTIAction
 } from './common';
 import * as os from 'os';
 import * as net from 'net';
 import { EventEmitter } from 'events';
 import { MI2 } from './backend/mi2/mi2';
+import { GDBDebugSession } from './gdb';
 import { nextTick } from 'process';
 
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
@@ -246,16 +247,19 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         }
     }
 
-    private debugger: MI2;
+    private session: GDBDebugSession;
     private MI2Leftover: string = '';
     private rttStarted = false;
     private rttAutoStartDetected = false;
     private rttPollTimer: NodeJS.Timeout;
-    public debuggerLaunchStarted(obj: MI2): void {
-        this.debugger = obj;
+    public debuggerLaunchStarted(obj: GDBDebugSession): void {
+        this.session = obj;
     }
     public debuggerLaunchCompleted(): void {
         const hasRtt = this.rttHelper.emitConfigures(this.args.rttConfig, this);
+        if (hasRtt || this.args.ctiOpenOCDConfig?.enabled) {
+            this.ctiStopResume(CTIAction.init);
+        }
         if (hasRtt) {
             this.startRttMonitor();
         }
@@ -270,7 +274,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     private startRttMonitor() {
-        this.debugger.on('msg', (type, msg) => {
+        this.session.miDebugger.on('msg', (type, msg) => {
             if (this.rttStarted) { return; }
             msg = this.MI2Leftover + msg;
             const lines = msg.split(/[\r]\n/);
@@ -293,7 +297,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             }
         });
 
-        this.debugger.on('stopped', async (info: any, reason: string) => {
+        this.session.miDebugger.on('stopped', async (info: any, reason: string) => {
             if (reason === 'entry') { return; } // Should not happen
             if (!this.rttStarted && this.tclSocket && !this.rttAutoStartDetected) {
                 const result = await this.tclCommand('rtt start');
@@ -307,7 +311,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     private dbgPollCounter = 0;
     private rttPollStart() {
         this.rttPollTimer = setInterval(async () => {
-            if ((this.debugger.status === 'running') && !this.rttAutoStartDetected) {
+            if ((this.session.miDebugger.status === 'running') && !this.rttAutoStartDetected) {
                 try {
                     this.dbgPollCounter++;
                     const result = await this.tclCommand('capture "rtt start"');
@@ -321,14 +325,23 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     private tclCommandQueue: TclCommandQueue[] = [];
+    private tclCommandId: number = 1;
     private tclCommand(cmd: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             this.tclStartSocket().then(() => {
+                if (!cmd) {
+                    resolve('');
+                    return;
+                }
                 const newCmd: TclCommandQueue = {
                     cmd: cmd,
+                    id: this.tclCommandId++,
                     resolve: resolve,
                     reject: reject
                 };
+                if (this.args.showDevDebugOutput) {
+                    this.session.handleMsg('log', `openocd <- ${newCmd.id}-${cmd}\n`);
+                }
                 this.tclCommandQueue.push(newCmd);
                 this.tclSendData(cmd);
             }, (e) => {
@@ -351,9 +364,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     port: tclPortNum
                 };
                 this.tclSocket = net.createConnection(obj, () => {
-                    nextTick(() => {
-                        this.tclCommand('tcl_notifications on');
-                    });
                     resolve();
                 });
                 this.tclSocket.on('data', this.tclRecvTclData.bind(this));
@@ -387,11 +397,16 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         if ((this.tclCommandQueue.length > 0) && (packets.length > 0)) {
             const next = this.tclCommandQueue.shift();
             next.result = packets.shift();
+            if (this.args.showDevDebugOutput) {
+                this.session.handleMsg('log', `openocd -> ${next.id}-'${next.result}'\n`);
+            }
             next.resolve(next.result);
         }
         while (packets.length > 0) {
             const p = packets.shift().trim();
-            console.log(`tclNotify: '${p}'`);
+            if (this.args.showDevDebugOutput) {
+                this.session.handleMsg('log', `openocd -> '${p}'\n`);
+            }
         }
     }
 
@@ -400,10 +415,26 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             this.tclSocket.write(data + this.tclDelimit, 'utf8');
         }
     }
+
+    public ctiStopResume?(action: CTIAction): void {
+        let commands = [];
+        if (action === CTIAction.init) {
+            this.tclCommand('tcl_notifications on');
+            commands = this.args.ctiOpenOCDConfig?.enabled ? this.args.ctiOpenOCDConfig?.initCommands : [];
+        } else if (action === CTIAction.pause) {
+            commands = this.args.ctiOpenOCDConfig?.pauseCommands;
+        } else {
+            commands = this.args.ctiOpenOCDConfig?.resumeCommands;
+        }
+        for (const p of commands || []) {
+            this.tclCommand(p);
+        }
+    }
 }
 
 interface TclCommandQueue {
     cmd: string;
+    id: number;
     resolve: any;
     reject: any;
     result?: string;

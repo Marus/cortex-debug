@@ -11,7 +11,7 @@ proc CDSWOConfigure { CDCPUFreqHz CDSWOFreqHz CDSWOOutput } {
     # We don't create/configure the entire TPIU which requires advanced knowledge of the device
     # like which DAP/AP ports to use, what their bases addresses are, etc. That should already
     # be done by the config files from the Silicon Vendor
-    tpiu init; # we are allowed to call this multiple times. So, call it just in case
+    catch {tpiu init}; # we are allowed to call this multiple times. So, call it just in case
     set tipu_names [tpiu names]
     if { [llength $tipu_names] == 0 } {
         puts stderr "[info script]: Error: Could not find TPIU/SWO names. Perhaps it hasn't been created?"

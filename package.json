@@ -1,5 +1,5 @@
 {
-    "version": "1.5.2-pre1",
+    "version": "1.5.2-pre2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -1854,6 +1854,44 @@
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
+                            },
+                            "ctiOpenOCDConfig": {
+                                "properties": {
+                                    "enabled": {
+                                        "default": true,
+                                        "description": "Enable/Disable Cross Trigger Interface/Matrix for synchronized pause/resume",
+                                        "type": "boolean"
+                                    },
+                                    "initCommands": {
+                                        "default": [],
+                                        "description": "List of OpenOCD TCL commands to initialize the CTI/CTM infrastructure (if any)",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "pauseCommands": {
+                                        "default": [],
+                                        "description": "List of OpenOCD TCL commands to pause all processors",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "resumeCommands": {
+                                        "default": [],
+                                        "description": "List of OpenOCD TCL commands to resume all processors",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "default": {
+                                    "enabled": true,
+                                    "pauseCommands": [],
+                                    "resumeCommands": []
+                                }                                
                             },
                             "chainedConfigurations": {
                                 "properties": {

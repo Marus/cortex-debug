@@ -9,7 +9,7 @@ import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
-    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile
+    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -228,12 +228,21 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected suppressRadixMsgs = false;
 
+    protected tcpPortAllocatedListner = this.tcpPortsAllocated.bind(this);
+
     public constructor(debuggerLinesStartAt1: boolean, public readonly isServer: boolean = false, threadID: number = 1) {
         super(undefined, debuggerLinesStartAt1, isServer);     // Use if deriving from LogDebugSession
         // super(debuggerLinesStartAt1, isServer);  // Use if deriving from DebugSession
-        TcpPortScanner.PortAllocated.on('allocated', (ports) => {
-            this.sendEvent(new GenericCustomEvent('ports-allocated', ports));
-        });
+
+        // TcpPortScanner.PortAllocated.on('allocated', (ports) => {
+        //    this.sendEvent(new GenericCustomEvent('ports-allocated', ports));
+        // });
+        // While debugging, we are in server mode so these listners start piling up preventing addition of more listners
+        TcpPortScanner.PortAllocated.on('allocated', this.tcpPortAllocatedListner);
+    }
+
+    private tcpPortsAllocated(ports) {
+        this.sendEvent(new GenericCustomEvent('ports-allocated', ports));
     }
 
     // tslint:disable-next-line: max-line-length
@@ -605,7 +614,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         return doResolve();
                     }
 
-                    this.serverController.debuggerLaunchStarted(this.miDebugger);
+                    this.serverController.debuggerLaunchStarted(this);
                     this.miDebugger.once('debug-ready', () => {
                         this.debugReady = true;
                         this.attached = attach;
@@ -1292,6 +1301,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected disconnectingPromise: Promise<void> = undefined;
     protected async disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): Promise<void> {
+        TcpPortScanner.PortAllocated.removeListener('allocated', this.tcpPortAllocatedListner);
         if (this.disconnectingPromise) {
             // One of the ways this happens when we have the following
             // * we are a child session of someone else
@@ -3006,7 +3016,11 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments): Promise<void> {
         try {
-            const done = await this.miDebugger.interrupt();
+            if (this.args.ctiOpenOCDConfig?.enabled && this.args.ctiOpenOCDConfig?.pauseCommands && this.serverController.ctiStopResume) {
+                this.serverController.ctiStopResume(CTIAction.pause);
+            } else {
+                const done = await this.miDebugger.interrupt();
+            }
             this.sendResponse(response);
         }
         catch (msg) {
@@ -3016,7 +3030,11 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): Promise<void> {
         try {
-            const done = await this.miDebugger.continue(args.threadId);
+            if (this.args.ctiOpenOCDConfig?.enabled && this.args.ctiOpenOCDConfig?.resumeCommands && this.serverController.ctiStopResume) {
+                this.serverController.ctiStopResume(CTIAction.resume);
+            } else {
+                const done = await this.miDebugger.continue(args.threadId);
+            }
             response.body = { allThreadsContinued: true };
             this.sendResponse(response);
         }
