@@ -420,18 +420,20 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         if (config.rttConfig && config.rttConfig.enabled && config.rttConfig.decoders && (config.rttConfig.decoders.length !== 0)) {
-            var chosenPort = undefined;
+            let chosenPort;
             for (const dec of config.rttConfig.decoders) {
                 if (dec.port === undefined) {
                     dec.port = 0;
                 } else if (dec.port < 0 || dec.port > 15) {
-                    return `Invalid port/channel '${dec.port}'.  JLink RTT port/channel must be between 0 and 15.`
+                    return `Invalid port/channel '${dec.port}'.  JLink RTT port/channel must be between 0 and 15.`;
                 }
 
-                if (chosenPort !== undefined && chosenPort !== dec.port) {
-                    return `Port/channel ${dec.port} selected but another decoder is using port ${chosenPort}.  JLink RTT only allows a single RTT port/channel per debugging session.`
+                if ((chosenPort !== undefined) && (chosenPort !== dec.port)) {
+                    return `Port/channel ${dec.port} selected but another decoder is using port ${chosenPort}. ` +
+                        'JLink RTT only allows a single RTT port/channel per debugging session.';
+                } else {
+                    chosenPort = dec.port;
                 }
-                chosenPort = dec.port;
             }
         }
 
