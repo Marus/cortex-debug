@@ -6,6 +6,7 @@ ChangeLog
 ## New features
 * RTOS View for uC/OS-II. Added by @PhilippHaefele & @mayjs via PR [#642](https://github.com/Marus/cortex-debug/pull/642) 
 * Better error handling during RTOS initial queries
+* Memory references are returned from DAP evaluate requests. PR [#694](https://github.com/Marus/cortex-debug/pull/694)
 
 # V1.5.1
 ## New features
