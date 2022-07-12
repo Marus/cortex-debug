@@ -119,3 +119,17 @@ export class SocketRTTSource extends SocketSWOSource {
         }
     }
 }
+
+export class JLinkSocketRTTSource extends SocketRTTSource {
+    constructor(tcpPort: string, public readonly channel: number) {
+        super(tcpPort, channel);
+
+        // When the TCP connection to the RTT port is established, send config commands
+        // within 100ms to configure the RTT channel.  See
+        // https://wiki.segger.com/RTT#SEGGER_TELNET_Config_String for more information
+        // on the config string format.
+        this.on('connected', () => {
+            this.write(`$$SEGGER_TELNET_ConfigStr=RTTCh;${channel}$$`);
+        });
+    }
+}
