@@ -424,7 +424,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 if (!path.isAbsolute(folder)) {
                     folder = path.join(args.cwd || process.cwd(), folder);
                 }
-                folder = path.normalize(folder).replace('\\', '/');
+                folder = path.normalize(folder).replace(/\\/g, '/');
                 while ((folder.length > 1) && folder.endsWith('/') && !folder.endsWith(':/')) {
                     folder = folder.substring(0, folder.length - 1);
                 }
@@ -809,7 +809,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 return null;
             }
         }
-        else if (!hasbin.sync(gdbExePath.replace('.exe', ''))) {
+        else if (!hasbin.sync(gdbExePath.replace(/\.exe$/i, ''))) {
             this.launchErrorResponse(response, 103, gdbMissingMsg);
             return null;
         }

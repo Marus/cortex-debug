@@ -229,7 +229,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             for (const symF of symFiles) {
                 let exe = symF.file;
                 exe = path.isAbsolute(exe) ? exe : path.join(cwd, exe);
-                exe = path.normalize(exe).replace('\\', '/');
+                exe = path.normalize(exe).replace(/\\/g, '/');
                 if (!config.symbolFiles) {
                     config.executable = exe;
                 } else {
@@ -260,7 +260,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             for (let ix = 0; ix < config.loadFiles.length; ix++) {
                 let fName = config.loadFiles[ix];
                 fName = path.isAbsolute(fName) ? fName : path.join(cwd, fName);
-                fName = path.normalize(fName).replace('\\', '/');
+                fName = path.normalize(fName).replace(/\\/g, '/');
                 config.loadFiles[ix] = fName;
             }
         }

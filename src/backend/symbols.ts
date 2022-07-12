@@ -86,7 +86,7 @@ interface ISymbolTableSerData {
 // or replacement the same as search string, then null is returned
 function replaceProgInPath(filepath: string, search: string | RegExp, replace: string): string {
     if (os.platform() === 'win32') {
-        filepath = filepath.toLowerCase().replace('\\', '/');
+        filepath = filepath.toLowerCase().replace(/\\/g, '/');
     }
     const ix = filepath.lastIndexOf('/');
     const prefix = (ix >= 0) ? filepath.substring(0, ix + 1) : '' ;

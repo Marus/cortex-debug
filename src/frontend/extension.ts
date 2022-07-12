@@ -834,7 +834,7 @@ export class CortexDebugExtension {
         if (folder) {
             const orig = folder;
             const normalize = (fsPath: string) => {
-                fsPath = path.normalize(fsPath).replace('\\', '/');
+                fsPath = path.normalize(fsPath).replace(/\\/g, '/');
                 fsPath = (fsPath === '/') ? fsPath : fsPath.replace(/\/+$/, '');
                 if (process.platform === 'win32') {
                     fsPath = fsPath.toLowerCase();

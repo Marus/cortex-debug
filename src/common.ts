@@ -379,7 +379,7 @@ export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds:
         } else {
             const ret = [...preLoadCmds];
             for (const f of config.loadFiles) {
-                const tmp = f.replace('\\', '/');
+                const tmp = f.replace(/\\/g, '/');
                 ret.push(`file-exec-file "${tmp}"`, 'target-download');
             }
             return ret;

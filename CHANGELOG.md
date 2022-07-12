@@ -7,6 +7,9 @@ ChangeLog
 * RTOS View for uC/OS-II. Added by @PhilippHaefele & @mayjs via PR [#642](https://github.com/Marus/cortex-debug/pull/642) 
 * Better error handling during RTOS initial queries
 * Memory references are returned from DAP evaluate requests. PR [#694](https://github.com/Marus/cortex-debug/pull/694)
+* RTT with OpenOCD will attempt to retry the `rtt start` command if the first attempt fails. This is done as a background task. The retry interval is controlled by `rtt_start_retry` option in `rttConfig` (default is 1000 ms)
+* Issue #698: Windows only, fixed path-name issues with `loadFiles` and a couple of other places
+* PR #700: RTT with JLink can now be used with any valid channel (0-15) but you can only have one channel per session which is limited by JLink server. Before, only channel#0 was allowed
 
 # V1.5.1
 ## New features
