@@ -135,12 +135,29 @@ export class VariableObject {
             },
             variablesReference: this.id
         };
-        if ((this.numchild > 0) && this.value.startsWith('0x')) {
-            res.memoryReference = hexFormat(parseInt(this.value));
-        }
+        this.tryAddMemoryReference(res);
 
         res.type = this.createToolTip(res.name, res.value);      // This ends up becoming a tool-tip
         return res;
+    }
+
+    public toProtocolEvaluateResponseBody(): DebugProtocol.EvaluateResponse['body'] {
+        const res: DebugProtocol.EvaluateResponse['body'] = {
+            result: this.value,
+            type: this.type,
+            presentationHint: {
+                kind: this.displayhint
+            },
+            variablesReference: this.id,
+        };
+        this.tryAddMemoryReference(res);
+        return res;
+    }
+
+    private tryAddMemoryReference(result: object): void {
+        if ((this.numchild > 0) && this.value.startsWith('0x')) {
+            result['memoryReference'] = hexFormat(parseInt(this.value));
+        }
     }
 }
 

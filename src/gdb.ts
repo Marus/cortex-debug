@@ -3211,14 +3211,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             }
                         }
 
-                        response.body = {
-                            result: varObj.value,
-                            type: varObj.type,
-                            presentationHint: {
-                                kind: varObj.displayhint
-                            },
-                            variablesReference: varObj.id
-                        };
+                        response.body = varObj.toProtocolEvaluateResponseBody();
                         this.sendResponse(response);
                     }
                     catch (err) {
