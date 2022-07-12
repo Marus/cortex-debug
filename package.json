@@ -1107,7 +1107,7 @@
                                     },
                                     "rtt_start_retry": {
                                         "type": "number",
-                                        "description": "Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry",
+                                        "description": "Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry. Only for OpenOCD",
                                         "default": 1000,
                                         "minimum": 0
                                     },
@@ -2213,7 +2213,7 @@
                                     },
                                     "rtt_start_retry": {
                                         "type": "number",
-                                        "description": "Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry",
+                                        "description": "Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry. Only for OpenOCD",
                                         "default": 1000,
                                         "minimum": 0
                                     },
