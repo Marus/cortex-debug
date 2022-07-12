@@ -14,7 +14,7 @@ import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import { CortexDebugConfigurationProvider } from './configprovider';
-import { SocketRTTSource, SocketSWOSource } from './swo/sources/socket';
+import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource } from './swo/sources/socket';
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
@@ -975,7 +975,11 @@ export class CortexDebugExtension {
                 resolve(src);
                 return;
             }
-            src = new SocketRTTSource(tcpPort, channel);
+            if (mySession.config.servertype === 'jlink') {
+                src = new JLinkSocketRTTSource(tcpPort, channel);
+            } else {
+                src = new SocketRTTSource(tcpPort, channel);
+            }
             mySession.rttPortMap[channel] = src;     // Yes, we put this in the list even if start() can fail
             resolve(src);                       // Yes, it is okay to resolve it even though the connection isn't made yet
             src.start().then(() => {
