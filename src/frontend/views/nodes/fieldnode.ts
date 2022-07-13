@@ -5,7 +5,7 @@ import { toStringDecHexOctBin } from '../../../common';
 
 export class FieldNode extends BaseNode {
     public prevValue: string = '';
-    public value: string = ''
+    public value: string = '';
     
     constructor(public name: string, private offset: number, private size: number, private register: RegisterNode) {
         super(register);
@@ -21,7 +21,7 @@ export class FieldNode extends BaseNode {
 
         const label: TreeItemLabel = {
             label: this.name + ' ' + this.value
-        }
+        };
         if (this.prevValue && (this.prevValue !== this.value)) {
             label.highlights = [[this.name.length + 1, label.label.length]];
         }

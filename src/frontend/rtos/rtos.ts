@@ -340,7 +340,7 @@ export class RTOSTracker
                     ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
                         'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
                 } else {
-                    ret.html += /*html*/`<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n`;
+                    ret.html += /*html*/'<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
                 }
             } else {
                 const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' detected.' + (!rtosSession.htmlContent ? ' (No data available yet)' : '');

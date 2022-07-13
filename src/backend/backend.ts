@@ -148,7 +148,7 @@ export class VariableObject {
             presentationHint: {
                 kind: this.displayhint
             },
-            variablesReference: this.id,
+            variablesReference: this.id
         };
         this.tryAddMemoryReference(res);
         return res;

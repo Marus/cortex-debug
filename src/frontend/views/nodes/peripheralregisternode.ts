@@ -140,7 +140,8 @@ export class PeripheralRegisterNode extends PeripheralBaseNode {
         mds.appendMarkdown('|:---|:---:|:---|:---|\n');
 
         children.forEach((field) => {
-            mds.appendMarkdown(`| ${ field.name } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${ field.getFormattedRange() } | ${ field.getFormattedValue(field.getFormat(), true) } |\n`);
+            mds.appendMarkdown(`| ${ field.name } | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | ${ field.getFormattedRange() } | `
+                + `${ field.getFormattedValue(field.getFormat(), true) } |\n`);
         });
 
         return mds;
