@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache NPM Install
+      id: cache-npm
+      uses: actions/cache@v2
+      with:
+        path: ./node_modules
+        key: npm-${{ hashFiles('./package-lock.json') }}
+    - name: Install NPM dependencies
+      if: steps.cache-npm.outputs.cache-hit != 'true'
+      run: |
+        npm install
+        cd webview; npm install; cd ..
+  
+  build:
+    name: Build
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Load NPM install
+      id: cache-npm
+      uses: actions/cache@v2
+      with:
+        path: ./node_modules
+        key: npm-${{ hashFiles('./package-lock.json') }}
+    - name: Install VSCE for packaging
+      run: npm install vsce
+    - name: Package Binary
+      run: ./node_modules/vsce/vsce package -o cortex-debug.vsix
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: cortex-debug.vsix
+        path: ./cortex-debug.vsix
+
+  lint:
+    name: Lint
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Load NPM install
+      id: cache-npm
+      uses: actions/cache@v2
+      with:
+        path: ./node_modules
+        key: npm-${{ hashFiles('./package-lock.json') }}
+    - name: Lint Project
+      run: ./node_modules/tslint/bin/tslint --project .
