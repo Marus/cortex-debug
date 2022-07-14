@@ -34,7 +34,7 @@ export class FileSWOSource extends EventEmitter implements SWORTTSource {
                 if (delta >= timeout) {
                     vscode.window.showWarningMessage(`SWO File ${SWOPath} does not exist even after timeout of ${timeout}ms.`);
                 } else {
-                    setTimeout(openFile, Math.min(10, retryTime+1));
+                    setTimeout(openFile, Math.min(10, retryTime + 1));
                 }
             }
         }
