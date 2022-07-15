@@ -506,7 +506,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
         htmlContent.html = msg + ret.html + (this.helpHtml || '');
         htmlContent.css = ret.css;
 
-        this.lastValidHtmlContent = htmlContent; // TODO Shouldn't the html part without the msg?
+        this.lastValidHtmlContent = htmlContent;
         // console.log(this.lastValidHtmlContent.html);
         return this.lastValidHtmlContent;
     }
@@ -520,7 +520,7 @@ enum OsTaskPendingState {
     READY = 0x00,
     TASK_EVENT = 0x08, /* flag group "assigned" to one task */
     MUTEX = 0x10,
-    UNKNOWN = 0x18, // TODO check when this is set
+    UNKNOWN = 0x18, // Not sure when this value is set
     SEMAPHORE = 0x20,
     MEMPOOL = 0x28,
     QUEUE_NOT_EMPTY = 0x30,
