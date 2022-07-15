@@ -38,11 +38,11 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
     // We keep a bunch of variable references (essentially pointers) that we can use to query for values
     // Since all of them are global variable, we only need to create them once per session. These are
     // similar to Watch/Hover variables
-    private OS_Global: RTOSCommon.RTOSVarHelper;
-    private OS_GlobalVal: any;
+    private OSGlobal: RTOSCommon.RTOSVarHelper;
+    private OSGlobalVal: any;
 
-    private OS_Global_pTask: RTOSCommon.RTOSVarHelper; /* start of task linked list */
-    private OS_Global_pObjNameRoot: RTOSCommon.RTOSVarHelper; /* start of object name linked list */
+    private OSGlobalpTask: RTOSCommon.RTOSVarHelper; /* start of task linked list */
+    private OSGlobalpObjNameRoot: RTOSCommon.RTOSVarHelper; /* start of object name linked list */
 
     private pCurrentTaskVal: number;
 
@@ -81,9 +81,9 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 // and the caller may try again until we know that it definitely passed or failed. Note that while we
                 // re-try everything, we do remember what already had succeeded and don't waste time trying again. That
                 // is how this.getVarIfEmpty() works
-                this.OS_Global = await this.getVarIfEmpty(this.OS_Global, useFrameId, 'OS_Global', false);
-                this.OS_Global_pTask = await this.getVarIfEmpty(this.OS_Global_pTask, useFrameId, 'OS_Global.pTask', false);
-                this.OS_Global_pObjNameRoot = await this.getVarIfEmpty(this.OS_Global_pObjNameRoot, useFrameId, 'OS_Global.pObjNameRoot', false);
+                this.OSGlobal = await this.getVarIfEmpty(this.OSGlobal, useFrameId, 'OS_Global', false);
+                this.OSGlobalpTask = await this.getVarIfEmpty(this.OSGlobalpTask, useFrameId, 'OS_Global.pTask', false);
+                this.OSGlobalpObjNameRoot = await this.getVarIfEmpty(this.OSGlobalpObjNameRoot, useFrameId, 'OS_Global.pObjNameRoot', false);
 
                 this.status = 'initialized';
             }
@@ -111,7 +111,8 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
                 // FIXME rework once clear what is missing => done initial changes but needs improvements
                 if (!thInfo['sName-val']) {
-                    ret += `Thread name missing: Use embOS in a library mode /configuration where task names are supported and use ${strong('sName')} parameter on task creation in FW<br><br>`;
+                    ret += `Thread name missing: Use embOS in a library mode / configuration where task names are supported and use ${strong('sName')}
+                    parameter on task creation in FW<br><br>`;
                 }
                 if (!th.stackInfo.stackSize) {
                     ret += `Stack Size & Peak missing: Enable macro ${strong('OS_SUPPORT_STAT')} or use library mode that enables it<br><br>`;
@@ -143,24 +144,25 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
             this.taskCount = Number.MAX_SAFE_INTEGER;
             this.foundThreads = [];
 
-            this.OS_Global.getVarChildrenObj(frameId).then(async (varObj) => {
+            this.OSGlobal.getVarChildrenObj(frameId).then(async (varObj) => {
                 try {
-                    this.OS_GlobalVal = varObj;
+                    this.OSGlobalVal = varObj;
 
                     // TODO Maybe check for IsRunning here too
 
-                    const taskList = this.OS_GlobalVal["pTask-val"];
+                    const taskList = this.OSGlobalVal['pTask-val'];
 
-                    if (undefined !== taskList && (0 !== parseInt(taskList))) { // TODO check if we have this here already, maybe also add a check for NaN result!!!
+                    // TODO check if we have this here already, maybe also add a check for NaN result!!!
+                    if (undefined !== taskList && (0 !== parseInt(taskList))) {
 
-                        this.pCurrentTaskVal = this.OS_GlobalVal["pCurrentTask-val"] ? parseInt(this.OS_GlobalVal["pCurrentTask-val"]) : Number.MAX_SAFE_INTEGER;
+                        this.pCurrentTaskVal = this.OSGlobalVal['pCurrentTask-val'] ? parseInt(this.OSGlobalVal['pCurrentTask-val']) : Number.MAX_SAFE_INTEGER;
 
                         const objectNameEntries = await this.getObjectNameEntries(frameId);
 
-                        await this.getThreadInfo(this.OS_Global_pTask, objectNameEntries, frameId);
+                        await this.getThreadInfo(this.OSGlobalpTask, objectNameEntries, frameId);
 
-                        this.foundThreads.sort((a, b) =>
-                            parseInt(a.display[DisplayFieldNames[DisplayFields.ID_Address]].text) - parseInt(b.display[DisplayFieldNames[DisplayFields.ID_Address]].text));
+                        this.foundThreads.sort((a, b) => parseInt(a.display[DisplayFieldNames[DisplayFields.ID_Address]].text)
+                            - parseInt(b.display[DisplayFieldNames[DisplayFields.ID_Address]].text));
 
                         this.finalThreads = [...this.foundThreads];
                     }
@@ -224,9 +226,9 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
                         const myHexNumStrCon = (hexNumberString: string): string => {
                             return parseInt(hexNumberString).toString();
-                        }
+                        };
 
-                        const prioString = `${myHexNumStrCon(curTaskObj["Priority-val"])},${myHexNumStrCon(curTaskObj["BasePrio-val"])}`;
+                        const prioString = `${myHexNumStrCon(curTaskObj['Priority-val'])},${myHexNumStrCon(curTaskObj['BasePrio-val'])}`;
                         mySetter(DisplayFields.Priority, prioString);
 
                         if ((stackInfo.stackUsed !== undefined) && (stackInfo.stackSize !== undefined)) {
@@ -284,12 +286,12 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
         const state = parseInt(curTaskObj['Stat-val']);
 
         const suspendCount = (state & OS_TASK_STATE_SUSPEND_MASK);
-        if (suspendCount != 0) {
+        if (suspendCount !== 0) {
             return new TaskSuspended(suspendCount);
         }
 
-        var pendTimeout = Number.MAX_SAFE_INTEGER;
-        var TimeoutActive = false;
+        let pendTimeout = Number.MAX_SAFE_INTEGER;
+        let TimeoutActive = false;
 
         if (state & OS_TASK_STATE_TIMEOUT_ACTIVE) {
             pendTimeout = parseInt(curTaskObj['Timeout-val']);
@@ -312,10 +314,10 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     if ((state & candidateState) === candidateState) {
                         resultState.addEventType(candidateState);
                     }
-                })
+                });
 
                 if (curTaskObj['pWaitList-val']) {
-                    var waitListEntryAddress = parseInt(curTaskObj['pWaitList-val']);
+                    let waitListEntryAddress = parseInt(curTaskObj['pWaitList-val']);
 
                     while (waitListEntryAddress !== 0) {
                         const waitListEntry = await this.getVarChildrenObj(curTaskObj['pWaitList-ref'], 'pWaitList');
@@ -330,7 +332,8 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                             eventInfo.timeOut = pendTimeout;
                         }
 
-                        // TODO For Task Event and Event object add event mask somehow curTaskObj['EventMask-val']. curTaskObj['Events-val'] maybe makes also some sense
+                        // TODO For Task Event and Event object add event mask somehow => curTaskObj['EventMask-val']
+                        // curTaskObj['Events-val'] maybe makes also some sense
 
                         resultState.addEvent(eventInfo);
 
@@ -414,24 +417,24 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
     }
 
     protected async getObjectNameEntries(frameId: number): Promise<Map<number, string>> {
-        var result: Map<number, string> = new Map();
+        const result: Map<number, string> = new Map();
 
-        await this.OS_Global_pObjNameRoot.getValue(frameId);
+        await this.OSGlobalpObjNameRoot.getValue(frameId);
 
         /* Follow the linked list of object identifier nodes */
-        if (0 !== parseInt(this.OS_Global_pObjNameRoot.value)) {
-            var entry = await this.OS_Global_pObjNameRoot.getVarChildrenObj(frameId);
+        if (0 !== parseInt(this.OSGlobalpObjNameRoot.value)) {
+            let entry = await this.OSGlobalpObjNameRoot.getVarChildrenObj(frameId);
             while (entry) {
-                const object_id = parseInt(entry['pOSObjID-val']);
-                if (!object_id || object_id === 0) {
+                const objectId = parseInt(entry['pOSObjID-val']);
+                if (!objectId || objectId === 0) {
                     break;
                 }
 
                 const matchName = entry['sName-val'].match(/"([^*]*)"$/);
-                const object_name = matchName ? matchName[1] : entry['sName-val'];
+                const objectName = matchName ? matchName[1] : entry['sName-val'];
 
-                if (object_name && !result.has(object_id)) {
-                    result.set(object_id, object_name);
+                if (objectName && !result.has(objectId)) {
+                    result.set(objectId, objectName);
                 }
 
                 const nextEntryAddr = parseInt(entry['pNext-val']);
@@ -535,15 +538,15 @@ class TaskReady extends TaskState {
 }
 
 class TaskDelayed extends TaskState {
-    protected delay_ticks: number;
+    protected delayTicks: number;
 
-    constructor(delay_ticks: number) {
+    constructor(delayTicks: number) {
         super();
-        this.delay_ticks = delay_ticks;
+        this.delayTicks = delayTicks;
     }
 
     public describe(): string {
-        return `DELAYED by ${this.delay_ticks}`; // TODO Not sure what unit this variable holds
+        return `DELAYED by ${this.delayTicks}`; // TODO Not sure what unit this variable holds
     }
 
     public fullData(): any {
