@@ -298,7 +298,9 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
             TimeoutActive = true;
         }
 
-        switch ((state & OS_TASK_STATE_MASK)) {
+        const maskedState = (state & OS_TASK_STATE_MASK);
+
+        switch (maskedState) {
             case OsTaskPendingState.READY:
                 if (pendTimeout) {
                     return new TaskDelayed(pendTimeout);
@@ -306,20 +308,33 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 else {
                     return new TaskReady();
                 }
+
+            case OsTaskPendingState.TASK_EVENT:
+                const resultState = new TaskPending();
+                resultState.addEventType(maskedState);
+
+                if (curTaskObj['EventMask-val']) {
+                    const eventMask = parseInt(curTaskObj['EventMask-val']); // Waiting bits
+                    const event = parseInt(curTaskObj['Events-val']); // Set bits
+                    const eventInfo: EventInfo = { address: eventMask, eventType: state, name: `mask ${eventMask} - set ${event}` };
+
+                    if (TimeoutActive) {
+                        eventInfo.timeOut = pendTimeout;
+                    }
+
+                    resultState.addEvent(eventInfo);
+                }
+
+                return resultState;
+
             default: {
                 const resultState = new TaskPending();
-
-                /* Maybe not needed for embOS as there can't be different states set at the same time but ok */
-                PendingTaskStates.forEach((candidateState) => {
-                    if ((state & candidateState) === candidateState) {
-                        resultState.addEventType(candidateState);
-                    }
-                });
+                resultState.addEventType(maskedState);
 
                 if (curTaskObj['pWaitList-val']) {
-                    let waitListEntryAddress = parseInt(curTaskObj['pWaitList-val']);
+                    const waitListEntryAddress = parseInt(curTaskObj['pWaitList-val']);
 
-                    while (waitListEntryAddress !== 0) {
+                    if (waitListEntryAddress !== 0) {
                         const waitListEntry = await this.getVarChildrenObj(curTaskObj['pWaitList-ref'], 'pWaitList');
                         const waitObject = parseInt(waitListEntry['pWaitObj-val']);
                         const eventInfo: EventInfo = { address: waitObject, eventType: state };
@@ -332,12 +347,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                             eventInfo.timeOut = pendTimeout;
                         }
 
-                        // TODO For Task Event and Event object add event mask somehow => curTaskObj['EventMask-val']
-                        // curTaskObj['Events-val'] maybe makes also some sense
-
                         resultState.addEvent(eventInfo);
-
-                        waitListEntryAddress = parseInt(waitListEntry['pNext-val']);
                     }
                 }
 
@@ -499,7 +509,7 @@ const OS_TASK_STATE_MASK = 0xF8; /* Task state mask (bit 3 - bit 7) */
 
 enum OsTaskPendingState {
     READY = 0x00,
-    TASK_EVENT = 0x08,
+    TASK_EVENT = 0x08, /* flag group "assigned" to one task */
     MUTEX = 0x10,
     UNKNOWN = 0x18, // TODO check when this is set
     SEMAPHORE = 0x20,
@@ -507,20 +517,9 @@ enum OsTaskPendingState {
     QUEUE_NOT_EMPTY = 0x30,
     MAILBOX_NOT_FULL = 0x38,
     MAILBOX_NOT_EMPTY = 0x40,
-    EVENT_OBJECT = 0x48,
+    EVENT_OBJECT = 0x48, /* flag group without task "assignment" */
     QUEUE_NOT_FULL = 0x50
 }
-
-const PendingTaskStates = [
-    OsTaskPendingState.TASK_EVENT, /* flag group "assigned" to one task */
-    OsTaskPendingState.MUTEX,
-    OsTaskPendingState.SEMAPHORE,
-    OsTaskPendingState.MEMPOOL,
-    OsTaskPendingState.QUEUE_NOT_EMPTY,
-    OsTaskPendingState.MAILBOX_NOT_FULL,
-    OsTaskPendingState.MAILBOX_NOT_EMPTY,
-    OsTaskPendingState.EVENT_OBJECT, /* flag group without task "assignment" */
-    OsTaskPendingState.QUEUE_NOT_FULL] as const;
 
 abstract class TaskState {
     public abstract describe(): string;
