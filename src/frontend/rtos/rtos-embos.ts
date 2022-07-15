@@ -32,6 +32,9 @@ RTOSEMBOSItems[DisplayFields[DisplayFields.StackPeakPercent]] = {
     width: 4, headerRow1: 'Stack Peak Usage', headerRow2: '% (Peak B / Size B)', colType: RTOSCommon.ColTypeEnum.colTypePercentage
 };
 
+// TODO Maybe add a column with NumActivations and/or NumPreemptions which is available when OS_SUPPORT_STAT is set (not 0)
+// TODO Maybe add a column with Load / ExecTotal / ExecLast which is available when OS_SUPPORT_PROFILE is set (not 0)
+
 const DisplayFieldNames: string[] = Object.keys(RTOSEMBOSItems);
 
 export class RTOSEmbOS extends RTOSCommon.RTOSBase {
@@ -109,13 +112,12 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     return `<strong>${text}</strong>`;
                 }
 
-                // FIXME rework once clear what is missing => done initial changes but needs improvements
                 if (!thInfo['sName-val']) {
-                    ret += `Thread name missing: Use embOS in a library mode / configuration where task names are supported and use ${strong('sName')}
-                    parameter on task creation in FW<br><br>`;
+                    ret += `Thread name missing: Enable ${strong('OS_SUPPORT_TRACKNAME')} or use library mode that enables it and
+                    use ${strong('sName')} parameter on task creation in FW<br><br>`;
                 }
                 if (!th.stackInfo.stackSize) {
-                    ret += `Stack Size & Peak missing: Enable macro ${strong('OS_SUPPORT_STAT')} or use library mode that enables it<br><br>`;
+                    ret += `Stack Size & Peak missing: Enable ${strong('OS_SUPPORT_STACKCHECK')} or use library mode that enables it<br><br>`;
                 }
 
                 if (ret) {
@@ -148,23 +150,30 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 try {
                     this.OSGlobalVal = varObj;
 
-                    // TODO Maybe check for IsRunning here too
+                    const isRunning = this.OSGlobalVal['IsRunning-val'];
+                    if (undefined !== isRunning && !isNaN(isRunning) && (0 !== parseInt(isRunning))) {
+                        const taskList = this.OSGlobalVal['pTask-val'];
+                        if (undefined !== taskList && (0 !== parseInt(taskList))) {
 
-                    const taskList = this.OSGlobalVal['pTask-val'];
+                            if (this.OSGlobalVal['pCurrentTask-val']) {
+                                this.pCurrentTaskVal = parseInt(this.OSGlobalVal['pCurrentTask-val']);
+                            }
+                            else {
+                                this.pCurrentTaskVal = Number.MAX_SAFE_INTEGER;
+                            }
 
-                    // TODO check if we have this here already, maybe also add a check for NaN result!!!
-                    if (undefined !== taskList && (0 !== parseInt(taskList))) {
+                            const objectNameEntries = await this.getObjectNameEntries(frameId);
 
-                        this.pCurrentTaskVal = this.OSGlobalVal['pCurrentTask-val'] ? parseInt(this.OSGlobalVal['pCurrentTask-val']) : Number.MAX_SAFE_INTEGER;
+                            await this.getThreadInfo(this.OSGlobalpTask, objectNameEntries, frameId);
 
-                        const objectNameEntries = await this.getObjectNameEntries(frameId);
+                            this.foundThreads.sort((a, b) => parseInt(a.display[DisplayFieldNames[DisplayFields.ID_Address]].text)
+                                - parseInt(b.display[DisplayFieldNames[DisplayFields.ID_Address]].text));
 
-                        await this.getThreadInfo(this.OSGlobalpTask, objectNameEntries, frameId);
-
-                        this.foundThreads.sort((a, b) => parseInt(a.display[DisplayFieldNames[DisplayFields.ID_Address]].text)
-                            - parseInt(b.display[DisplayFieldNames[DisplayFields.ID_Address]].text));
-
-                        this.finalThreads = [...this.foundThreads];
+                            this.finalThreads = [...this.foundThreads];
+                        }
+                        else {
+                            this.finalThreads = [];
+                        }
                     }
                     else {
                         this.finalThreads = [];
