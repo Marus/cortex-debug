@@ -86,7 +86,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 // is how this.getVarIfEmpty() works
                 this.OSGlobal = await this.getVarIfEmpty(this.OSGlobal, useFrameId, 'OS_Global', false);
                 this.OSGlobalpTask = await this.getVarIfEmpty(this.OSGlobalpTask, useFrameId, 'OS_Global.pTask', false);
-                this.OSGlobalpObjNameRoot = await this.getVarIfEmpty(this.OSGlobalpObjNameRoot, useFrameId, 'OS_Global.pObjNameRoot', false);
+                this.OSGlobalpObjNameRoot = await this.getVarIfEmpty(this.OSGlobalpObjNameRoot, useFrameId, 'OS_Global.pObjNameRoot', true);
 
                 this.status = 'initialized';
             }
@@ -150,11 +150,19 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 try {
                     this.OSGlobalVal = varObj;
 
-                    const isRunning = this.OSGlobalVal['IsRunning-val'];
+                    let isRunning: any = '0';
+
+                    if (this.OSGlobalVal.hasOwnProperty('IsRunning-val')) {
+                        isRunning = this.OSGlobalVal['IsRunning-val'];
+                    }
+                    else {
+                        /* older embOS versions do not have IsRunning struct member */
+                        isRunning = '1';
+                    }
+
                     if (undefined !== isRunning && !isNaN(isRunning) && (0 !== parseInt(isRunning))) {
                         const taskList = this.OSGlobalVal['pTask-val'];
                         if (undefined !== taskList && (0 !== parseInt(taskList))) {
-
                             if (this.OSGlobalVal['pCurrentTask-val']) {
                                 this.pCurrentTaskVal = parseInt(this.OSGlobalVal['pCurrentTask-val']);
                             }
@@ -215,9 +223,14 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
                     do {
                         let thName = '???';
-                        if (curTaskObj['sName-val']) {
+
+                        if (curTaskObj.hasOwnProperty('sName-val')) {
                             const matchName = curTaskObj['sName-val'].match(/"([^*]*)"$/);
                             thName = matchName ? matchName[1] : curTaskObj['sName-val'];
+                        }
+                        else if (curTaskObj.hasOwnProperty('Name-val')) { /* older embOS versions used Name */
+                            const matchName = curTaskObj['Name-val'].match(/"([^*]*)"$/);
+                            thName = matchName ? matchName[1] : curTaskObj['Name-val'];
                         }
 
                         const threadRunning = (thAddress === this.pCurrentTaskVal);
@@ -369,8 +382,16 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
         const TopOfStack = thInfo['pStack-val'];
 
         /* only available with #if (OS_SUPPORT_STACKCHECK != 0) || (OS_SUPPORT_MPU != 0) (optional) */
-        const EndOfStack = thInfo['pStackBase-val'];
         const StackSize = thInfo['StackSize-val'];
+        let EndOfStack: any;
+
+        if (thInfo.hasOwnProperty('pStackBase-val')) {
+            EndOfStack = thInfo['pStackBase-val'];
+        }
+        else {
+            /* older embOS versions used pStackBot instead of pStackBase */
+            EndOfStack = thInfo['pStackBot-val'];
+        }
 
         let Stack = 0;
         if (EndOfStack && StackSize) {
@@ -438,29 +459,31 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
     protected async getObjectNameEntries(frameId: number): Promise<Map<number, string>> {
         const result: Map<number, string> = new Map();
 
-        await this.OSGlobalpObjNameRoot.getValue(frameId);
+        if (null !== this.OSGlobalpObjNameRoot) {
+            await this.OSGlobalpObjNameRoot.getValue(frameId);
 
-        /* Follow the linked list of object identifier nodes */
-        if (0 !== parseInt(this.OSGlobalpObjNameRoot.value)) {
-            let entry = await this.OSGlobalpObjNameRoot.getVarChildrenObj(frameId);
-            while (entry) {
-                const objectId = parseInt(entry['pOSObjID-val']);
-                if (!objectId || objectId === 0) {
-                    break;
-                }
+            /* Follow the linked list of object identifier nodes */
+            if (0 !== parseInt(this.OSGlobalpObjNameRoot.value)) {
+                let entry = await this.OSGlobalpObjNameRoot.getVarChildrenObj(frameId);
+                while (entry) {
+                    const objectId = parseInt(entry['pOSObjID-val']);
+                    if (!objectId || objectId === 0) {
+                        break;
+                    }
 
-                const matchName = entry['sName-val'].match(/"([^*]*)"$/);
-                const objectName = matchName ? matchName[1] : entry['sName-val'];
+                    const matchName = entry['sName-val'].match(/"([^*]*)"$/);
+                    const objectName = matchName ? matchName[1] : entry['sName-val'];
 
-                if (objectName && !result.has(objectId)) {
-                    result.set(objectId, objectName);
-                }
+                    if (objectName && !result.has(objectId)) {
+                        result.set(objectId, objectName);
+                    }
 
-                const nextEntryAddr = parseInt(entry['pNext-val']);
-                if (nextEntryAddr === 0) {
-                    break;
-                } else {
-                    entry = await this.getVarChildrenObj(entry['pNext-ref'], 'pNext');
+                    const nextEntryAddr = parseInt(entry['pNext-val']);
+                    if (nextEntryAddr === 0) {
+                        break;
+                    } else {
+                        entry = await this.getVarChildrenObj(entry['pNext-ref'], 'pNext');
+                    }
                 }
             }
         }
