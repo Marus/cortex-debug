@@ -180,7 +180,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                                 await this.getThreadInfo(this.OSTCBList, flagPendMap, frameId);
 
-                                if (this.foundThreads[0]['ID'] !== '???') {
+                                if (this.foundThreads[0].display['ID'].text !== '???') {
                                     this.foundThreads.sort((a, b) => parseInt(a.display['ID'].text) - parseInt(b.display['ID'].text));
                                 }
                                 else {
@@ -522,7 +522,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         htmlContent.html = msg + ret.html + (this.helpHtml || '');
         htmlContent.css = ret.css;
 
-        this.lastValidHtmlContent = htmlContent; // TODO Shouldn't the html part without the msg?
+        this.lastValidHtmlContent = htmlContent;
         // console.log(this.lastValidHtmlContent.html);
         return this.lastValidHtmlContent;
     }

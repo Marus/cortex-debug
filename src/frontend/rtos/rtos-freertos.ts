@@ -217,7 +217,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         promises = [];
                         if (this.foundThreads.length > 0) {
                             const th = this.foundThreads[0];
-                            if (th['ID'] !== '??') {
+                            if (th.display['ID'].text !== '??') {
                                 this.foundThreads.sort((a, b) => parseInt(a.display['ID'].text) - parseInt(b.display['ID'].text));
                             } else {
                                 this.foundThreads.sort((a, b) => parseInt(a.display['Address'].text) - parseInt(b.display['Address'].text));
@@ -416,7 +416,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         htmlContent.html = msg + ret.html + (this.helpHtml || '');
         htmlContent.css = ret.css;
 
-        this.lastValidHtmlContent = htmlContent; // TODO Shouldn't the html part without the msg?
+        this.lastValidHtmlContent = htmlContent;
         // console.log(this.lastValidHtmlContent.html);
         return this.lastValidHtmlContent;
     }
