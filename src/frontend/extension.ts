@@ -762,6 +762,9 @@ export class CortexDebugExtension {
                         vscode.window.showErrorMessage('Failed to launch chained configuration ' + launch.name);
                     }
                     CDebugChainedSessionItem.RemoveItem(child);
+                }, (e) => {
+                    vscode.window.showErrorMessage(`Failed to launch chained configuration ${launch.name}: ${e}`);
+                    CDebugChainedSessionItem.RemoveItem(child);
                 });
             }, delay);
             if (launch && launch.detached && (count > 0)) {
