@@ -4,7 +4,8 @@ ChangeLog
 # V1.5.2
 
 ## New features
-* RTOS View for uC/OS-II. Added by @PhilippHaefele & @mayjs via PR [#642](https://github.com/Marus/cortex-debug/pull/642) 
+* RTOS View for uC/OS-II. Added by @PhilippHaefele & @mayjs via PR [#642](https://github.com/Marus/cortex-debug/pull/642)
+* RTOS View for embOS. Added by @PhilippHaefele via PR [#705](https://github.com/Marus/cortex-debug/pull/705)
 * Better error handling during RTOS initial queries
 * Memory references are returned from DAP evaluate requests. PR [#694](https://github.com/Marus/cortex-debug/pull/694)
 * RTT with OpenOCD will attempt to retry the `rtt start` command if the first attempt fails. This is done as a background task. The retry interval is controlled by `rtt_start_retry` option in `rttConfig` (default is 1000 ms)
