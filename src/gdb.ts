@@ -2761,7 +2761,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
-            this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
+            await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
                 try {
