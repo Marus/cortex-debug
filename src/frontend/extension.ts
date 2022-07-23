@@ -9,7 +9,7 @@ import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 import { RTTCore, SWOCore } from './swo/core';
 import { NumberFormat, ConfigurationArguments,
     RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
-    CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE } from '../common';
+    CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE, ChainedConfig } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -161,8 +161,25 @@ export class CortexDebugExtension {
     }
 
     private resetDevice() {
-        const session = CortexDebugExtension.getActiveCDSession();
+        let session = CortexDebugExtension.getActiveCDSession();
         if (session) {
+            let mySession = CDebugSession.FindSession(session);
+            const parentConfig = mySession.config?.pvtParent;
+            while (mySession && parentConfig) {
+                // We have a parent. See if our life-cycle is managed by our parent, if so
+                // send a reset to the parent instead
+                const chConfig = mySession.config?.pvtMyConfigFromParent as ChainedConfig;
+                if (chConfig?.lifecycleManagedByParent && parentConfig.__sessionId) {
+                    // __sessionId is not documented but has existed forever and used by VSCode itself
+                    mySession = CDebugSession.FindSessionById(parentConfig.__sessionId);
+                    if (!mySession) {
+                        break;
+                    }
+                    session = mySession.session || session;
+                } else {
+                    break;
+                }
+            }
             session.customRequest('reset-device', 'reset');
         }
     }
