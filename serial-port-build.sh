@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+echo "OBSOLETE: This script does not work anymore. Please build locally by doing"
+echo "  cd ./binary_modules"
+echo "  bash ./build.sh <electron-version-number>"
+exit 1
+
 if [[ $# -ne 3 ]] ; then
     echo "Usage: $0 <electron-version> <node-version> <arch>"
     exit 1
