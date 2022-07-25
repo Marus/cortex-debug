@@ -116,9 +116,8 @@ suite('GDB Value Expansion', () => {
         assert.equal(variables[3].value, '"foobar"');
     });
     test('Complex node', () => {
-        const node = '{quit = false, _views = {{view = 0x7ffff7ece1e8, renderer = 0x7ffff7eccc50, world = 0x7ffff7ece480}}'
-            + 'deltaTimer = {_flagStarted = false, _timeStart = {length = 0}, _timeMeasured = {length = 0}}, _start = {callbacks = 0x0}, '
-            + '_stop = {callbacks = 0x0}}';
+        // tslint:disable-next-line: max-line-length
+        const node = '{quit = false, _views = {{view = 0x7ffff7ece1e8, renderer = 0x7ffff7eccc50, world = 0x7ffff7ece480}}, deltaTimer = {_flagStarted = false, _timeStart = {length = 0}, _timeMeasured = {length = 0}}, _start = {callbacks = 0x0}, _stop = {callbacks = 0x0}}';
         assert.strictEqual(isExpandable(node), 1);
         const variables = expandValue(variableCreate, node);
         assert.deepEqual(variables, [
