@@ -11,13 +11,13 @@ export function findSerialPortModuleHelp(extensionPath: string) {
         '2. or, you can compile the serialport module locally on your computer. Follow these instructions on a shell prompt\n' +
         `    cd ${extensionPath}/binary_modules\n` +
         `    bash ./build.sh ${process.versions['electron']}\n` +
-        'If you chose to compile your own, make sure NodeJS is installed on your system. Visit https://nodejs.org/en/download/';
+        'If you chose to compile locally, make sure NodeJS is installed on your system. Visit https://nodejs.org/en/download/';
 }
 
 export function findSerialPortModule(extensionPath: string, useModule) {
     const paths = [];
     const p = path.normalize(path.join(extensionPath, 'binary_modules', 'electron-' + process.versions['electron'], 'node_modules'));
-    if (fs.existsSync(p) && fs.existsSync(path.join(p, "serialport"))) {
+    if (fs.existsSync(p) && fs.existsSync(path.join(p, 'serialport'))) {
         paths.push(p);
     } else {
         const serMonitorExt = 'ms-vscode.vscode-serial-monitor';
@@ -30,7 +30,7 @@ export function findSerialPortModule(extensionPath: string, useModule) {
 
     let added = false;
     for (const p of paths) {
-        if (fs.existsSync(path.join(p, "serialport"))) {
+        if (fs.existsSync(path.join(p, 'serialport'))) {
             if (useModule.paths.indexOf(p) === -1) {
                 console.log(`Adding ${p} to module search path`);
                 useModule.paths.push(p);
