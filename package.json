@@ -1,5 +1,5 @@
 {
-    "version": "1.5.4",
+    "version": "1.5.5",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -1052,7 +1052,12 @@
                             },
                             "svdFile": {
                                 "default": null,
-                                "description": "Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "description": "This is for 'CORTEX PERIPHERALS' window provided by Cortex-Debug. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "type": "string"
+                            },
+                            "svdPath": {
+                                "default": null,
+                                "description": "This is for 'PERIPHERAL VIEW' provided by 'Embedded Tools' Extension from Microsoft. Path to a CMSIS SVD file describing the peripherals of the microcontroller",
                                 "type": "string"
                             },
                             "svdAddrGapThreshold": {
@@ -2158,7 +2163,12 @@
                             },
                             "svdFile": {
                                 "default": null,
-                                "description": "Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "description": "This is for 'CORTEX PERIPHERALS' window provided by Cortex-Debug. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "type": "string"
+                            },
+                            "svdPath": {
+                                "default": null,
+                                "description": "This is for 'PERIPHERAL VIEW' provided by 'Embedded Tools' Extension from Microsoft. Path to a CMSIS SVD file describing the peripherals of the microcontroller",
                                 "type": "string"
                             },
                             "svdAddrGapThreshold": {

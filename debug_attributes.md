@@ -6,6 +6,7 @@ Also using IntelliSense while editing launch.json in VSCode can be quite helpful
 | --------- | ---------- | ----------- |
 | breakAfterReset | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored if `runToEntryPoint` is used.
 | chainedConfigurations | Common | (unknown)
+| ctiOpenOCDConfig | Common | (unknown)
 | cwd | Common | Directory to run commands from
 | debuggerArgs | Common | Additional arguments to pass to GDB command line
 | device | Common | Target Device Identifier
@@ -41,7 +42,7 @@ Also using IntelliSense while editing launch.json in VSCode can be quite helpful
 | showDevDebugOutput | Common | Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions
 | showDevDebugTimestamps | Common | Show timestamps when 'showDevDebugOutput' is enabled
 | svdAddrGapThreshold | Common | If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device. -1 means never combine registers and is very slow
-| svdFile | Common | Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.
+| svdFile | Common | This is for 'CORTEX PERIPHERALS' window provided by Cortex-Debug. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.
 | swoConfig | Common | (unknown)
 | symbolFiles | Common | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols
 | targetId | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)

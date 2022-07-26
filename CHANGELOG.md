@@ -1,6 +1,9 @@
 ChangeLog
 =========
 
+# V1.5.5
+* Enables `Peripheral View` provided by `Embedded Tools` extension from Microsoft. You can request this by specifying `svdPath` property in `launch.json`. `svdFile` still remains and that will display a window named 'Cortex Peripherals'. For now, you can use both but will require twice as many memory reads. Make slow down fast single stepping.
+
 # V1.5.4
 * Version 1.5.3 has accidentally enabled some debug info that is should not have enabled during production. Corrected
 
