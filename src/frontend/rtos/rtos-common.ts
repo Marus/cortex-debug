@@ -2,6 +2,8 @@
 import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 
+export const traceVars = false;
+
 export interface RTOSStackInfo {
     stackStart: number;
     stackTop: number;
@@ -81,6 +83,29 @@ export abstract class RTOSBase {
     //
     public abstract tryDetect(useFrameId: number): Promise<RTOSBase>;
 
+    private static reqCounter = 0;
+    public customRequest(cmd: string, arg: any, opt?: boolean): Thenable<any> {
+        return new Promise<any>(async (resolve, reject) => {
+            const c = ++RTOSBase.reqCounter;
+            if (traceVars) {
+                console.log(`${c} RTOS: request -> ${opt ? 'opt' : ''} ${cmd} ${JSON.stringify(arg)}`);
+            }
+            try {
+                const result = await this.session.customRequest(cmd, arg);
+                if (traceVars) {
+                    console.log(`${c} RTOS: result <- ${JSON.stringify(result)}`);
+                }
+                resolve(result);
+            }
+            catch (e) {
+                if (traceVars) {
+                    console.log(`${c} RTOS: exception <- ${e}`);
+                }
+                reject(e);
+            }
+        });
+    }
+
     public onStopped(frameId: number): Promise<void> {
         this.progStatus = 'stopped';
         return this.refresh(frameId);
@@ -115,7 +140,7 @@ export abstract class RTOSBase {
             context: 'hover'
         };
         try {
-            const result = await this.session.customRequest('evaluate', arg);
+            const result = await this.customRequest('evaluate', arg, optional);
             if (!result || (!optional && (result.variablesReference === 0))) {
                 throw new Error(`Failed to evaluate ${expr}`);
             }
@@ -134,7 +159,7 @@ export abstract class RTOSBase {
             context: 'hover'
         };
         try {
-            const result = await this.session.customRequest('evaluate', arg);
+            const result = await this.customRequest('evaluate', arg);
             const ret = result?.result;
             return ret;
         }
@@ -151,7 +176,7 @@ export abstract class RTOSBase {
                 const arg: DebugProtocol.VariablesArguments = {
                     variablesReference: varRef
                 };
-                this.session.customRequest('variables', arg).then((result: any) => {
+                this.customRequest('variables', arg).then((result: any) => {
                     if (!result || !result.variables || !result.variables.length) {
                         reject(Error(`Failed to evaluate variable ${arg.variablesReference} ${dbg}`));
                     } else {
@@ -188,20 +213,23 @@ export abstract class RTOSBase {
     //   * If not optional, Throws an exception
     //
     // This function may have to be adjusted for other debuggers, for when there is an error. We know what our
-    // behavior is not not sure what cppdbg does
+    // behavior is fairly good idea of what cppdbg does
     protected async getVarIfEmpty(prev: RTOSVarHelper, fId: number, expr: string, opt?: boolean): Promise<RTOSVarHelper> {
         try {
             if ((prev !== undefined) || (this.progStatus !== 'stopped')) {
                 return prev;
             }
             const tmp = new RTOSVarHelper(expr, this);
-            const success = await tmp.tryInitOrUpdate(fId);
+            const success = await tmp.tryInitOrUpdate(fId, opt);
             if (!success || (isNullOrUndefined(tmp.value) && (this.progStatus !== 'stopped'))) {
                 // It is most likely busy .... try again. Program status can change while we are querying
                 throw new ShouldRetry(expr);
             }
             if (isNullOrUndefined(tmp.value)) {
                 if (!opt) {
+                    if (traceVars) {
+                        console.error(`1. Throwing exception for variable ${expr}`);
+                    }
                     throw Error(`${expr} not found`);
                 }
                 return null;
@@ -209,7 +237,16 @@ export abstract class RTOSBase {
             return tmp;
         }
         catch (e) {
-            throw e;
+            if (e instanceof ShouldRetry) {
+                throw e;
+            }
+            if (opt && (this.progStatus === 'stopped')) {
+                return null;        // This optional item will never succeed. Return null to avoid retries
+            }
+            if (traceVars) {
+                console.error(`2. Throwing exception for variable ${expr}`);
+            }
+            throw new Error(`Failed to evaluate ${expr}: ${e.toString()}`);
         }
     }
 
@@ -391,7 +428,7 @@ export class RTOSVarHelper {
         return obj;
     }
 
-    public async tryInitOrUpdate(useFrameId: number): Promise<boolean> {
+    public async tryInitOrUpdate(useFrameId: number, opt?: boolean): Promise<boolean> {
         try {
             if (this.rtos.progStatus !== 'stopped') {
                 return false;
@@ -403,13 +440,21 @@ export class RTOSVarHelper {
             };
             this.value = undefined;
             // We have to see what a debugger like cppdbg returns for failures or when busy. And, is hover the right thing to use
-            const result = await this.rtos.session.customRequest('evaluate', arg);
+            const result = await this.rtos.customRequest('evaluate', arg, opt);
             this.value = result.result;
             this.varReference = result.variablesReference;
             return true;
         }
         catch (e) {
-            return false;
+            const msg = e?.message as string;
+            if (msg) {
+                if ((msg === 'Busy') ||                        // Cortex-Debug
+                    (msg.includes('process is running'))) {    // cppdbg
+                    // For cppdbg, the whole message is 'Unable to perform this action because the process is running.'
+                    return false;
+                }
+            }
+            throw e;
         }
     }
 
@@ -444,7 +489,7 @@ export class RTOSVarHelper {
                     const arg: DebugProtocol.VariablesArguments = {
                         variablesReference: this.varReference
                     };
-                    this.rtos.session.customRequest('variables', arg).then((result: any) => {
+                    this.rtos.customRequest('variables', arg).then((result: any) => {
                         if (!result || !result.variables || !result.variables.length) {
                             reject(Error(`Failed to evaluate variable ${this.expression} ${arg.variablesReference}`));
                         } else {

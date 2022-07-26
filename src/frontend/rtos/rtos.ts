@@ -1,5 +1,8 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
 import * as vscode from 'vscode';
+import * as os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as RTOSCommon from './rtos-common';
 import { RTOSFreeRTOS } from './rtos-freertos';
 import { RTOSUCOS2 } from './rtos-ucosii';
@@ -118,6 +121,7 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
     ) { }
 
     public onDidSendMessage(msg: any): void {
+        appendMsgToTmpDir('s ' + JSON.stringify(msg));
         const message = msg as DebugProtocol.ProtocolMessage;
         if (!message) {
             return;
@@ -129,6 +133,7 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                     if (ev.event === 'stopped') {
                         this.lastFrameId = undefined;
                     } else if (ev.event === 'continued') {
+                        // cppdbg does not issue a continued event
                         this.handler.onContinued(this.session);
                     }
                 }
@@ -137,6 +142,7 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
             case 'response': {
                 const rsp: DebugProtocol.Response = message as DebugProtocol.Response;
                 if (rsp) {
+                    const continueCommands = ['continue', 'reverseContinue', 'step', 'stepIn', 'stepOut', 'stepBack', 'next', 'goto'];
                     // We don't actually do anything when the session is paused. We wait until someone (VSCode) makes
                     // a stack trace request and we get the frameId from there. Any one will do. Either this or we
                     // have to make our requests for threads, scopes, stackTrace, etc. Unnecessary traffic and work
@@ -151,6 +157,8 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                             this.lastFrameId = rsp.body.stackFrames[0].id;
                             this.handler.onStopped(this.session, this.lastFrameId);
                         }
+                    } else if (rsp.success && continueCommands.includes(rsp.command)) {
+                        this.handler.onContinued(this.session);
                     }
                 }
                 break;
@@ -160,6 +168,10 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                 break;
             }
         }
+    }
+
+    public onWillReceiveMessage(msg: any) {
+        appendMsgToTmpDir('r ' + JSON.stringify(msg));
     }
 }
 
@@ -183,7 +195,7 @@ export class RTOSTracker
                 this.debugSessionTerminated.bind(this)
             ),
             vscode.debug.registerDebugAdapterTrackerFactory('cortex-debug', this),
-            // vscode.debug.registerDebugAdapterTrackerFactory('cppdbg', this);
+            vscode.debug.registerDebugAdapterTrackerFactory('cppdbg', this),
             vscode.window.registerWebviewViewProvider(RTOSViewProvider.viewType, this.provider),
             vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
             vscode.commands.registerCommand('cortex-debug.rtos.toggleRTOSPanel', this.toggleRTOSPanel.bind(this)),
@@ -444,7 +456,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         const htmlInfo = this.parent.getHtml();
         // Use a nonce to only allow a specific script to be run.
         const nonce = getNonce();
-        return /*html*/`
+        const ret = /*html*/`
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -468,6 +480,37 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
                 <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
             </body>
             </html>`;
+        writeHtmlToTmpDir(ret);
+        return ret;
+    }
+}
+
+function writeHtmlToTmpDir(str: string) {
+    try {
+        if (false) {
+            const fname = path.join(os.tmpdir(), 'rtos.html');
+            console.log(`Write HTML to file ${fname}`);
+            fs.writeFileSync(fname, str);
+        }
+    }
+    catch (e) {
+        console.log(e ? e.toString() : 'unknown exception?');
+    }
+}
+
+function appendMsgToTmpDir(str: string) {
+    try {
+        if (true) {
+            const fname = path.join(os.tmpdir(), 'rtos-msgs.txt');
+            console.log(`Write ${str} to file ${fname}`);
+            if (!str.endsWith('\n')) {
+                str = str + '\n';
+            }
+            fs.appendFileSync(fname, str);
+        }
+    }
+    catch (e) {
+        console.log(e ? e.toString() : 'unknown exception?');
     }
 }
 

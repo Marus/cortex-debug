@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+# V1.5.3
+
+## New features and fixes
+* Serial port changes: We have no changed how serial ports are supported. We now rely on the Serial Monitor extension from Microsoft to provide a copy of the `serialport` NPM module or you can compile it for cortex-debug yourself. The latter is always preferred. We do this because `serialport` is a binary module and requires it to be compiled using the exact version of Electron and Node that VSCode is built upon. This has become very difficult to support for every OS/Processor combination and it was also increasing the size of the corte-debug package -- exceeding the limits set by Microsoft
+* Cortex-Debug RTOS views will now work with MS `cppdbg` debugger and vice versa. You can use both or either or none. Until the next release, you will need pre-release versions of the Microsoft Embedded tools and this extension.
+* Thanks to a PR by MS embedded folks, you can now have memory views for pointers from the Variable and Watch windows.
+  
 # V1.5.2
 
 ## New features
