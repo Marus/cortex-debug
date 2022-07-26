@@ -1,6 +1,9 @@
 ChangeLog
 =========
 
+# V1.5.4
+* Version 1.5.3 has accidentally enabled some debug info that is should not have enabled during production. Corrected
+
 # V1.5.3
 
 ## New features and fixes

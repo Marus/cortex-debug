@@ -500,7 +500,7 @@ function writeHtmlToTmpDir(str: string) {
 
 function appendMsgToTmpDir(str: string) {
     try {
-        if (true) {
+        if (false) {
             const fname = path.join(os.tmpdir(), 'rtos-msgs.txt');
             console.log(`Write ${str} to file ${fname}`);
             if (!str.endsWith('\n')) {
