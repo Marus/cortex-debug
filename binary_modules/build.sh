@@ -11,7 +11,7 @@ if [[ ! -f ./package.json ]] ; then
     exit 1
 fi
 
-if ! command -v nm &> /dev/null ; then
+if ! command -v npm &> /dev/null ; then
     echo "'npm' could not be found. Please install NodeJS. Visit https://nodejs.org/en/download/"
     exit
 fi
