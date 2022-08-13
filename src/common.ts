@@ -296,6 +296,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
     pvtAvoidPorts: number[];
     pvtVersion: string;                       // Version from package.json
+    pvtOpenOCDDebug: boolean;
 
     numberOfProcessors: number;
     targetProcessor: number;

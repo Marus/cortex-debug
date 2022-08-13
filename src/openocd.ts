@@ -4,11 +4,50 @@ import {
     calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands, CTIAction
 } from './common';
 import * as os from 'os';
+import * as fs from 'fs';
 import * as net from 'net';
+import * as path from 'path';
 import { EventEmitter } from 'events';
 import { MI2 } from './backend/mi2/mi2';
 import { GDBDebugSession } from './gdb';
-import { nextTick } from 'process';
+
+function getLogPath() {
+    try {
+        const tmpDirName = os.tmpdir();
+        const fsPath = path.join(tmpDirName, 'cortex-debug-openocd.log');
+        return fsPath;
+    }
+    catch {
+        return '';
+    }
+}
+
+let firstLog = true;
+let doLog = false;
+const logFsPath = getLogPath();
+
+function OpenOCDLog(str: string) {
+    if (!str) { return; }
+    try {
+        const date = new Date();
+        str = `[${date.toISOString()}] ` + str;
+        console.log(str);
+        if (doLog && logFsPath) {
+            if (!str.endsWith('\n')) {
+                str += '\n';
+            }
+            if (firstLog) {
+                fs.writeFileSync(logFsPath, str);
+                firstLog = false;
+            } else {
+                fs.appendFileSync(logFsPath, str);
+            }
+        }
+    }
+    catch (e) {
+        console.log(e ? e.toString() : 'unknown exception?');
+    }
+}
 
 export class OpenOCDServerController extends EventEmitter implements GDBServerController {
     // We wont need all of these ports but reserve them anyways
@@ -28,6 +67,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public setArguments(args: ConfigurationArguments): void {
         this.args = args;
+        if (args.pvtOpenOCDDebug) {
+            doLog = true;
+        }
     }
 
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
@@ -216,6 +258,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             serverargs.push('-c', cmd);
         }
 
+        OpenOCDLog('Launching: ' + serverargs.join(' '));
         return serverargs;
     }
 
@@ -257,7 +300,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
     public debuggerLaunchCompleted(): void {
         const hasRtt = this.rttHelper.emitConfigures(this.args.rttConfig, this);
-        if (hasRtt || this.args.ctiOpenOCDConfig?.enabled) {
+        if (this.args.ctiOpenOCDConfig?.enabled) {
             this.ctiStopResume(CTIAction.init);
         }
         if (hasRtt) {
@@ -267,9 +310,14 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     // This should not be called until the server is ready and accepting connections. Proper time to call is to have
     // established an RTT TCP port already
+    private readonly rttSearchStr = 'Control block found at';
     public rttPoll(): void {
+        OpenOCDLog('RTT Poll requested');
         if (!this.rttStarted && (this.tclSocket === undefined) && (this.args.rttConfig.rtt_start_retry > 0) && !this.rttAutoStartDetected) {
+            OpenOCDLog(`RTT Poll starting. Searching for string '${this.rttSearchStr}' in output`);
             this.rttPollStart();
+        } else {
+            OpenOCDLog('RTT Poll not needed');
         }
     }
 
@@ -284,7 +332,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 this.MI2Leftover = '';
             }
             for (const line of lines) {
-                if (line.includes('Control block found at')) {
+                OpenOCDLog('OpenOCD Output: ' + line);
+                if (line.includes(this.rttSearchStr)) {
+                    OpenOCDLog('RTT control block found. Done');
                     this.rttStarted = true;
                     if (this.rttPollTimer) {
                         clearTimeout(this.rttPollTimer);
@@ -292,6 +342,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     }
                     break;
                 } else if (/rtt:.*will retry/.test(line)) {
+                    OpenOCDLog('This version of OpenOCD already know how to poll. Done');
                     this.rttAutoStartDetected = true;
                 }
             }
@@ -300,6 +351,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         this.session.miDebugger.on('stopped', async (info: any, reason: string) => {
             if (reason === 'entry') { return; } // Should not happen
             if (!this.rttStarted && this.tclSocket && !this.rttAutoStartDetected) {
+                OpenOCDLog('Debugger paused: sending command "rtt start"');
                 const result = await this.tclCommand('rtt start');
             }
         });
@@ -314,11 +366,12 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             if ((this.session.miDebugger.status === 'running') && !this.rttAutoStartDetected) {
                 try {
                     this.dbgPollCounter++;
+                    OpenOCDLog('Sending command "rtt start"');
                     const result = await this.tclCommand('capture "rtt start"');
-                    console.log(`${this.dbgPollCounter}-OpenOCD TCL output: '${result}'`);
+                    OpenOCDLog(`${this.dbgPollCounter}-OpenOCD TCL output: '${result}'`);
                 }
                 catch (e) {
-                    console.error(`OpenOCD TCL error: ${e}`);
+                    OpenOCDLog(`OpenOCD TCL error: ${e}`);
                 }
             }
         }, this.args.rttConfig.rtt_start_retry);
