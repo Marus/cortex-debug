@@ -25,6 +25,7 @@ import { setTimeout } from 'timers';
 import { EventEmitter } from 'events';
 
 import { JLinkServerController } from './jlink';
+import { JLinkExternalServerController } from './jlinkexternal';
 import { OpenOCDServerController } from './openocd';
 import { STUtilServerController } from './stutil';
 import { STLinkServerController } from './stlink';
@@ -39,6 +40,7 @@ import { TcpPortScanner } from './tcpportscanner';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
+    jlinkexternal: JLinkExternalServerController,
     openocd: OpenOCDServerController,
     stutil: STUtilServerController,
     stlink: STLinkServerController,
