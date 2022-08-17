@@ -112,6 +112,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 validationResponse = this.verifyPEConfiguration(folder, config);
                 break;
             case 'external':
+            case 'jlinkexternal':
                 validationResponse = this.verifyExternalConfiguration(folder, config);
                 break;
             case 'qemu':
