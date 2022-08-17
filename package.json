@@ -564,7 +564,7 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp, jlinkexternal and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
@@ -574,7 +574,8 @@
                                     "bmp",
                                     "pe",
                                     "qemu",
-                                    "external"
+                                    "external",
+                                    "jlinkexternal"
                                 ]
                             },
                             "cwd": {
@@ -1627,7 +1628,7 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp, jlinkexternal and external",
                                 "enum": [
                                     "jlink",
                                     "openocd",
@@ -1637,7 +1638,8 @@
                                     "bmp",
                                     "pe",
                                     "qemu",
-                                    "external"
+                                    "external",
+                                    "jlinkexternal"
                                 ]
                             },
                             "cwd": {
