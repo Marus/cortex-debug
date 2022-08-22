@@ -8,4 +8,4 @@ out
 .sass-cache
 /dist
 /tmp
-binary_modules/package-lock.json
+binary_modules/electron*

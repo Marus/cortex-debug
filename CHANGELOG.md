@@ -1,5 +1,15 @@
 ChangeLog
 =========
+# V1.6.0
+* Please see all the notes from the pre-releases (1.5.x). Following are the highlights
+* **RTOS Views**: Support for uC/OS-II & embOS, thanks to  @PhilippHaefele & @mayjs for adding them. Just a reminder, anyone can contribute their favorite RTOS if you have a bit of knowledge of TypeScript/JavaScript and more importantly, knowledge of RTOS internals
+* You can also use **Microsoft Embedded Tools** and their RTOS views as we are now compatible with each other
+* Microsoft Embedded Tools also added compatibility for Cortex-Debug for their version of Peripheral Views/Registers. They also helped with integrating Cortex-Debug with MS built-in Hex-Editor. To use MS Peripheral View, use `svdPath` in launch.json. `svdFile` uses the SVD feature from Cortex-Debug. You can use both at the same time if you wish but you should typically use only one.
+* Fixed a long standing issue with OpenOCD RTT where there was no good way to know when to start the RTT. We can now poll until RTT is detected and enabled. See `rttConfig.rtt_start_retry` in your launch.json to control who the polling works.
+* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
+* You can now use `breakAfterReset` and `runToEntryPoint` for an `attach` type launch configuration as well but they will only be used on a reset/restart.
+* For chained configuration, the parent can override properties of children and/or allow children to inherit from itself using `overrides` and `inherits`.
+* Of course, many issues fixed: thanks to the community with reporting them helping fixing them
 
 # V1.5.5
 * Enables `Peripheral View` provided by `Embedded Tools` extension from Microsoft. You can request this by specifying `svdPath` property in `launch.json`. `svdFile` still remains and that will display a window named 'Cortex Peripherals'. For now, you can use both but will require twice as many memory reads. Make slow down fast single stepping.
