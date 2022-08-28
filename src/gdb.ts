@@ -306,7 +306,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.args = this.normalizeArguments(args);
         this.handleMsg('stdout',
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). ` +
-            'Usaage info: https://github.com/Marus/cortex-debug#usage');
+            'Usage info: https://github.com/Marus/cortex-debug#usage');
 
         if (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
@@ -467,11 +467,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 }
             };
             if (!fs.existsSync(this.args.executable)) {
-                this.sendErrorResponse(
-                    response,
-                    103,
-                    `Unable to find executable file at ${this.args.executable}.`
-                );
+                this.sendErrorResponse(response, 103, `Unable to find executable file at ${this.args.executable}.`);
                 return doResolve();
             }
 
@@ -521,11 +517,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
                     }
                     if (consolePort === undefined) {
-                        this.launchErrorResponse(
-                            response,
-                            107,
-                            'GDB Server Console tcp port is undefined.'
-                        );
+                        this.launchErrorResponse(response, 107,'GDB Server Console tcp port is undefined.');
                         return doResolve();
                     }
                 }
@@ -533,12 +525,14 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.server.on('exit', () => {
                     if (this.started) {
                         this.serverQuitEvent();
+                    } else if (!this.miDebugger.isRunning()) {
+                        this.launchErrorResponse(response, 103, 'GDB could not start as expected. Bad installation or version mismatch. '
+                            + 'See if you can start gdb from a shell prompt and check its version (Must be >= 9)');
+                        doResolve();
                     } else {
-                        this.launchErrorResponse(
-                            response,
-                            103,
-                            `${this.serverController?.name || this.args.servertype}: GDB Server Quit Unexpectedly. See gdb-server output for more details.`
-                        );
+                        const server = this.serverController?.name || this.args.servertype;
+                        const msg = `${server}: GDB Server Quit Unexpectedly. See gdb-server output in TERMINAL tab for more details.`;
+                        this.launchErrorResponse(response, 103, msg);
                         doResolve();
                     }
                 });

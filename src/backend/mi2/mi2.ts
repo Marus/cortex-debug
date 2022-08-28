@@ -64,6 +64,7 @@ export class MI2 extends EventEmitter implements IBackend {
     public pid: number = -1;
     protected lastContinueSeqId = -1;
     protected actuallyStarted = false;
+    protected isExiting = false;
     // public gdbVarsPromise: Promise<MINode> = null;
 
     constructor(public application: string, public args: string[]) {
@@ -95,9 +96,14 @@ export class MI2 extends EventEmitter implements IBackend {
                 }
                 this.actuallyStarted = true;
                 this.parseVersionInfo(v.output);
-                if (this.gdbMajorVersion < 9) {
-                    reject(new Error(`GDB major version should be >= 9, yours is ${this.gdbMajorVersion}`));
+                if (!this.gdbMajorVersion || (this.gdbMajorVersion < 9)) {
+                    this.isExiting = true;
+                    const ver = this.gdbMajorVersion ? this.gdbMajorVersion.toString() : 'Unknown';
+                    const msg = `ERROR: GDB major version should be >= 9, yours is ${ver}`;
+                    this.log('stderr', msg);
                     this.sendRaw('-gdb-exit');
+                    // reject(new Error(msg));
+                    resolve();
                     return;
                 }
                 const asyncCmd = 'gdb-set mi-async on';
@@ -134,9 +140,6 @@ export class MI2 extends EventEmitter implements IBackend {
             str = str.substr(0, match.index);
             this.gdbMajorVersion = parseInt(match[1]);
             this.gdbMinorVersion = parseInt(match[2]);
-            if (this.gdbMajorVersion < 9) {
-                this.log('stderr', 'WARNING: Cortex-Debug has deprecated use of GDB version 8 after July 2022. Please upgrade to version 9+\n');
-            }
         }
         if (str) {
             this.log('console', str);
@@ -1000,6 +1003,9 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public isRunning(): boolean {
+        if (this.isExiting) {
+            return false;
+        }
         return !!this.process;
     }
 

@@ -1,5 +1,8 @@
 ChangeLog
 =========
+# V1.6.1
+* Better error message when using GDB version less than 9. Starting with 1.5.2, we no longer support GDB version <= 8. For most of last year, we have been warning users of this happening in July 2022. This now August 2022 :-)
+
 # V1.6.0
 * Please see all the notes from the pre-releases (1.5.x). Following are the highlights
 * **RTOS Views**: Support for uC/OS-II & embOS, thanks to  @PhilippHaefele & @mayjs for adding them. Just a reminder, anyone can contribute their favorite RTOS if you have a bit of knowledge of TypeScript/JavaScript and more importantly, knowledge of RTOS internals
