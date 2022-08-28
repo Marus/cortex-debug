@@ -140,6 +140,9 @@ export class SymbolTable {
                 this.objdumpPath = tmp || this.objdumpPath;
             }
         }
+        if (this.objdumpPath) {
+            this.objdumpPath = this.objdumpPath.replace(/\\/g, '/');
+        }
     }
 
     private createSymtableSerializedFName(exeName: string) {

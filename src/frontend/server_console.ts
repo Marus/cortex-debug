@@ -193,7 +193,7 @@ export class GDBServerConsole {
         try {
             const date = new Date();
             msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ` + msg;
-            console.log(msg);
+            // console.log(msg);
             if (ptyTerm) {
                 msg += msg.endsWith('\n') ? '' : '\n';
                 magentaWrite(msg, ptyTerm);
@@ -241,7 +241,7 @@ export class GDBServerConsole {
                     // help if the user kills the terminal. But we would have lost previous data anyways
                     const date = new Date();
                     const msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ******* Terminal not yet ready, buffering... ******`;
-                    console.log(msg);
+                    // console.log(msg);
                     // fs.writeFileSync(logFd, msg);
                 }
                 fs.writeFileSync(consoleLogFd, data.toString());

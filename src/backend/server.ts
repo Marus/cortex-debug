@@ -18,7 +18,7 @@ export function ServerConsoleLog(str: string, usePid?: number) {
             GdbPid = usePid;
         }
         str = `[${date.toISOString()}] ppid=${process.pid} pid=${GdbPid} ` + str;
-        console.log(str);
+        // console.log(str);
         if (true) {
             if (!str.endsWith('\n')) {
                 str += '\n';
