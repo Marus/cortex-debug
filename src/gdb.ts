@@ -517,7 +517,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         initMatch = new RegExp(this.args.overrideGDBServerStartedRegex, 'i');
                     }
                     if (consolePort === undefined) {
-                        this.launchErrorResponse(response, 107,'GDB Server Console tcp port is undefined.');
+                        this.launchErrorResponse(response, 107, 'GDB Server Console tcp port is undefined.');
                         return doResolve();
                     }
                 }
