@@ -134,7 +134,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private parseVersionInfo(str: string) {
-        const regex = RegExp(/^GNU gdb\s\(.*\)\s?(\d+)\.(\d+)\.[^\r\n]*/gm);
+        const regex = RegExp(/^GNU gdb\s\(.*\)\s?(\d+)\.(\d+)[^\r\n]*/gm);
         const match = regex.exec(str);
         if (match !== null) {
             str = str.substr(0, match.index);

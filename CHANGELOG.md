@@ -1,6 +1,9 @@
 ChangeLog
 =========
 # V1.6.1
+* Bit more lenient parsing of GDB version number for custom builds. We still need to know the version number
+  
+# V1.6.1
 * Better error message when using GDB version less than 9. Starting with 1.5.2, we no longer support GDB version <= 8. For most of last year, we have been warning users of this happening in July 2022. This now August 2022 :-)
 
 # V1.6.0
