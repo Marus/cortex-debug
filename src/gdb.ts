@@ -727,7 +727,6 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     private startComplete(mode: SessionMode, sendStoppedEvents = true) {
         this.disableSendStoppedEvents = false;
-        this.pendingBkptResponse = false;
         this.continuing = false;
         this.stopped = this.miDebugger.status !== 'running';        // Set to real status
         if (sendStoppedEvents && !this.args.noDebug && this.stopped) {
@@ -1786,8 +1785,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         const doit = (
             response: DebugProtocol.SetFunctionBreakpointsResponse,
             args: DebugProtocol.SetFunctionBreakpointsArguments,
-            pendContinue: PendingContinue
-        ): Promise<void> => {
+            pendContinue: PendingContinue): Promise<void> => {
             return new Promise(async (resolve) => {
                 if ((args.breakpoints.length === 0) && (this.functionBreakpoints.length === 0)) {
                     this.sendResponse(response);
@@ -1873,219 +1871,220 @@ export class GDBDebugSession extends LoggingDebugSession {
         return this.functionBreakPointsQ.add(doit, r, a);
     }
 
-    protected pendingBkptResponse = false;
-    protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {
-        return new Promise(async (resolve) => {
-            if ((args.breakpoints.length === 0) && (this.breakpointMap.size === 0)) {
-                this.sendResponse(response);
-                resolve();
-                return;
-            }
-            const savedFlag = this.disableSendStoppedEvents;
-            const createBreakpoints = async (shouldContinue) => {
-                const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
+    private breakPointsQ = new RequestQueue<DebugProtocol.SetBreakpointsResponse, DebugProtocol.SetBreakpointsArguments>();
+    protected setBreakPointsRequest(
+        r: DebugProtocol.SetBreakpointsResponse,
+        a: DebugProtocol.SetBreakpointsArguments): Promise<void> {
+        const doit = (
+            response: DebugProtocol.SetBreakpointsResponse,
+            args: DebugProtocol.SetBreakpointsArguments,
+            pendContinue: PendingContinue): Promise<void> => {
+            return new Promise(async (resolve) => {
+                if ((args.breakpoints.length === 0) && (this.breakpointMap.size === 0)) {
+                    this.sendResponse(response);
+                    resolve();
+                    return;
+                }
+                const createBreakpoints = async () => {
+                    const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
 
-                try {
-                    this.disableSendStoppedEvents = savedFlag;
-                    await this.miDebugger.removeBreakpoints(currentBreakpoints);
-                    for (const old of currentBreakpoints) {
-                        this.breakpointById.delete(old);
-                    }
-                    this.breakpointMap.set(args.source.path, []);
-
-                    const all: Array<Promise<OurSourceBreakpoint | MIError>> = [];
-                    const sourcepath = decodeURIComponent(args.source.path);
-
-                    if (sourcepath.startsWith('disassembly:/')) {
-                        let sidx = 13;
-                        if (sourcepath.startsWith('disassembly:///')) { sidx = 15; }
-                        const path = sourcepath.substring(sidx, sourcepath.length - 6); // Account for protocol and extension
-                        const parts = path.split(':::');
-                        let func: string;
-                        let file: string;
-
-                        if (parts.length === 2) {
-                            func = parts[1];
-                            file = parts[0];
+                    try {
+                        await this.miDebugger.removeBreakpoints(currentBreakpoints);
+                        for (const old of currentBreakpoints) {
+                            this.breakpointById.delete(old);
                         }
-                        else {
-                            func = parts[0];
-                        }
+                        this.breakpointMap.set(args.source.path, []);
 
-                        const symbol: SymbolInformation = await this.disassember.getDisassemblyForFunction(func, file);
+                        const all: Array<Promise<OurSourceBreakpoint | MIError>> = [];
+                        const sourcepath = decodeURIComponent(args.source.path);
 
-                        if (symbol) {
-                            args.breakpoints.forEach((brk) => {
-                                if (brk.line <= symbol.instructions.length) {
-                                    const line = symbol.instructions[brk.line - 1];
-                                    const arg: OurSourceBreakpoint = {
-                                        ...brk,
-                                        file: args.source.path,
-                                        raw: line.address
-                                    };
-                                    all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
-                                } else {
-                                    all.push(
-                                        Promise.resolve(
-                                            new MIError(
-                                                `${func} only contains ${symbol.instructions.length} instructions`,
-                                                'Set breakpoint'
-                                            )
-                                        )
-                                    );
-                                }
-                            });
-                        }
-                    }
-                    else {
-                        args.breakpoints.forEach((brk) => {
-                            const arg: OurSourceBreakpoint = {
-                                ...brk,
-                                file: args.source.path
-                            };
-                            all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
-                        });
-                    }
+                        if (sourcepath.startsWith('disassembly:/')) {
+                            let sidx = 13;
+                            if (sourcepath.startsWith('disassembly:///')) { sidx = 15; }
+                            const path = sourcepath.substring(sidx, sourcepath.length - 6); // Account for protocol and extension
+                            const parts = path.split(':::');
+                            let func: string;
+                            let file: string;
 
-                    const brkpoints = await Promise.all(all);
-
-                    response.body = {
-                        breakpoints: brkpoints.map((bp) => {
-                            if (bp instanceof MIError) {
-                                /* Failed breakpoints should be reported with
-                                 * verified: false, so they can be greyed out
-                                 * in the UI. The attached message will be
-                                 * presented as a tooltip.
-                                 */
-                                return {
-                                    verified: false,
-                                    message: bp.message
-                                } as DebugProtocol.Breakpoint;
+                            if (parts.length === 2) {
+                                func = parts[1];
+                                file = parts[0];
+                            }
+                            else {
+                                func = parts[0];
                             }
 
-                            return {
-                                line: bp.line,
-                                id: bp.number,
-                                instructionReference: bp.address,
-                                verified: true
-                            };
-                        })
-                    };
+                            const symbol: SymbolInformation = await this.disassember.getDisassemblyForFunction(func, file);
 
-                    const bpts: OurSourceBreakpoint[] = brkpoints.filter((bp) => !(bp instanceof MIError)) as OurSourceBreakpoint[];
-                    for (const bpt of bpts) {
-                        this.breakpointById.set(bpt.number, bpt);
+                            if (symbol) {
+                                args.breakpoints.forEach((brk) => {
+                                    if (brk.line <= symbol.instructions.length) {
+                                        const line = symbol.instructions[brk.line - 1];
+                                        const arg: OurSourceBreakpoint = {
+                                            ...brk,
+                                            file: args.source.path,
+                                            raw: line.address
+                                        };
+                                        all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
+                                    } else {
+                                        all.push(
+                                            Promise.resolve(
+                                                new MIError(
+                                                    `${func} only contains ${symbol.instructions.length} instructions`,
+                                                    'Set breakpoint'
+                                                )
+                                            )
+                                        );
+                                    }
+                                });
+                            }
+                        }
+                        else {
+                            args.breakpoints.forEach((brk) => {
+                                const arg: OurSourceBreakpoint = {
+                                    ...brk,
+                                    file: args.source.path
+                                };
+                                all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
+                            });
+                        }
+
+                        const brkpoints = await Promise.all(all);
+
+                        response.body = {
+                            breakpoints: brkpoints.map((bp) => {
+                                if (bp instanceof MIError) {
+                                    /* Failed breakpoints should be reported with
+                                     * verified: false, so they can be greyed out
+                                     * in the UI. The attached message will be
+                                     * presented as a tooltip.
+                                     */
+                                    return {
+                                        verified: false,
+                                        message: bp.message
+                                    } as DebugProtocol.Breakpoint;
+                                }
+
+                                return {
+                                    line: bp.line,
+                                    id: bp.number,
+                                    instructionReference: bp.address,
+                                    verified: true
+                                };
+                            })
+                        };
+
+                        const bpts: OurSourceBreakpoint[] = brkpoints.filter((bp) => !(bp instanceof MIError)) as OurSourceBreakpoint[];
+                        for (const bpt of bpts) {
+                            this.breakpointById.set(bpt.number, bpt);
+                        }
+                        this.breakpointMap.set(args.source.path, bpts);
+                        this.sendResponse(response);
                     }
-                    this.breakpointMap.set(args.source.path, bpts);
+                    catch (msg) {
+                        this.sendErrorResponse(response, 9, msg.toString());
+                    }
+
+                    if (pendContinue.haveMore()) {
+                        // do not sendContinue even if we were supposed to
+                        console.log('Yup got another request while we are processing one. VSCode issue\n');
+                    } else if (pendContinue.shouldContinue) {
+                        this.disableSendStoppedEvents = false;
+                        pendContinue.shouldContinue = false;
+                        this.sendContinue();
+                    }
+                    resolve();
+                };
+
+                if (this.miDebugger.status !== 'running') {         // May not even have started just yet
+                    await createBreakpoints();
+                } else {
+                    this.disableSendStoppedEvents = true;
+                    pendContinue.shouldContinue = true;
+                    this.miDebugger.once('generic-stopped', () => { createBreakpoints(); });
+                    this.miDebugger.sendCommand('exec-interrupt');
+                }
+            });
+        };
+        return this.breakPointsQ.add(doit, r, a);
+    }
+
+    private instrBreakPointsQ = new RequestQueue<DebugProtocol.SetInstructionBreakpointsResponse, DebugProtocol.SetInstructionBreakpointsArguments>();
+    protected setInstructionBreakpointsRequest(
+        r: DebugProtocol.SetInstructionBreakpointsResponse,
+        a: DebugProtocol.SetInstructionBreakpointsArguments, request?: DebugProtocol.Request): Promise<void> {
+        const doit = (
+            response: DebugProtocol.SetInstructionBreakpointsResponse,
+            args: DebugProtocol.SetInstructionBreakpointsArguments,
+            pendContinue: PendingContinue): Promise<void> => {
+                return new Promise<void>(async (resolve) => {
+                if ((args.breakpoints.length === 0) && (this.instrBreakpointMap.size === 0)) {
                     this.sendResponse(response);
-                    this.pendingBkptResponse = false;
+                    resolve();
+                    return;
                 }
-                catch (msg) {
-                    this.sendErrorResponse(response, 9, msg.toString());
-                    this.pendingBkptResponse = false;
-                }
+                const createBreakpoints = async (shouldContinue) => {
+                    try {
+                        const currentBreakpoints = Array.from(this.instrBreakpointMap.keys());
+                        this.instrBreakpointMap.clear();
 
-                resolve();
-                if (shouldContinue) {
-                    this.sendContinue();
-                }
-            };
+                        await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
-            const process = async () => {
+                        const all: Array<Promise<OurInstructionBreakpoint | MIError>> = [];
+                        args.breakpoints.forEach((brk) => {
+                            const addr = parseInt(brk.instructionReference) + brk.offset || 0;
+                            const bpt: OurInstructionBreakpoint = { ...brk, number: -1, address: addr };
+                            all.push(this.miDebugger.addInstrBreakPoint(bpt).catch((err: MIError) => err));
+                        });
+
+                        const brkpoints = await Promise.all(all);
+
+                        response.body = {
+                            breakpoints: brkpoints.map((bp) => {
+                                if (bp instanceof MIError) {
+                                    return {
+                                        verified: false,
+                                        message: bp.message
+                                    } as DebugProtocol.Breakpoint;
+                                }
+
+                                this.instrBreakpointMap.set(bp.number, bp);
+                                return {
+                                    id: bp.number,
+                                    verified: true
+                                };
+                            })
+                        };
+
+                        this.sendResponse(response);
+                    }
+                    catch (msg) {
+                        this.sendErrorResponse(response, 9, msg.toString());
+                    }
+
+                    if (pendContinue.haveMore()) {
+                        // do not sendContinue even if we were supposed to
+                        console.log('Yup got another request while we are processing one. VSCode issue\n');
+                    } else if (pendContinue.shouldContinue) {
+                        this.disableSendStoppedEvents = false;
+                        pendContinue.shouldContinue = false;
+                        this.sendContinue();
+                    }
+                    resolve();
+                };
+
                 if (this.miDebugger.status !== 'running') {         // May not even have started just yet
                     createBreakpoints(false);
-                }
-                else {
+                } else {
                     this.disableSendStoppedEvents = true;
+                    pendContinue.shouldContinue = true;
                     this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
                     this.miDebugger.sendCommand('exec-interrupt');
                 }
-            };
+            });
+        };
 
-            // Following will look crazy. VSCode will make this request before we have even finished
-            // the last one and without any user interaction either. To reproduce the problem,
-            // see https://github.com/Marus/cortex-debug/issues/525
-            // It happens with duplicate breakpoints created by the user and one of them is deleted
-            // VSCode will delete the first one and then delete the other one too but in a separate
-            // call
-            const intervalTime = 1;
-            const to = setInterval(() => {
-                if (!this.pendingBkptResponse) {
-                    clearInterval(to);
-                    this.pendingBkptResponse = true;
-                    process();
-                }
-            }, intervalTime);
-        });
-    }
-
-    protected setInstructionBreakpointsRequest(
-        response: DebugProtocol.SetInstructionBreakpointsResponse,
-        args: DebugProtocol.SetInstructionBreakpointsArguments, request?: DebugProtocol.Request): Promise<void> {
-        return new Promise<void>(async (resolve) => {
-            if ((args.breakpoints.length === 0) && (this.instrBreakpointMap.size === 0)) {
-                this.sendResponse(response);
-                resolve();
-                return;
-            }
-            const savedFlag = this.disableSendStoppedEvents;
-            const createBreakpoints = async (shouldContinue) => {
-                try {
-                    const currentBreakpoints = Array.from(this.instrBreakpointMap.keys());
-                    this.instrBreakpointMap.clear();
-
-                    this.disableSendStoppedEvents = savedFlag;
-                    await this.miDebugger.removeBreakpoints(currentBreakpoints);
-
-                    const all: Array<Promise<OurInstructionBreakpoint | MIError>> = [];
-                    args.breakpoints.forEach((brk) => {
-                        const addr = parseInt(brk.instructionReference) + brk.offset || 0;
-                        const bpt: OurInstructionBreakpoint = { ...brk, number: -1, address: addr };
-                        all.push(this.miDebugger.addInstrBreakPoint(bpt).catch((err: MIError) => err));
-                    });
-
-                    const brkpoints = await Promise.all(all);
-
-                    response.body = {
-                        breakpoints: brkpoints.map((bp) => {
-                            if (bp instanceof MIError) {
-                                return {
-                                    verified: false,
-                                    message: bp.message
-                                } as DebugProtocol.Breakpoint;
-                            }
-
-                            this.instrBreakpointMap.set(bp.number, bp);
-                            return {
-                                id: bp.number,
-                                verified: true
-                            };
-                        })
-                    };
-
-                    this.sendResponse(response);
-                    this.pendingBkptResponse = false;
-                }
-                catch (msg) {
-                    this.sendErrorResponse(response, 9, msg.toString());
-                    this.pendingBkptResponse = false;
-                }
-
-                resolve();
-                if (shouldContinue) {
-                    this.sendContinue();
-                }
-            };
-
-            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
-                createBreakpoints(false);
-            }
-            else {
-                this.disableSendStoppedEvents = true;
-                this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
-                this.miDebugger.sendCommand('exec-interrupt');
-            }
-        });
+        return this.instrBreakPointsQ.add(doit, r, a);
     }
 
     protected isVarRefGlobalOrStatic(varRef: number, id: any) {
