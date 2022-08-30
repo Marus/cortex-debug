@@ -111,16 +111,15 @@ class VSCodeRequest<RespType, ArgsType> {
 }
 
 /*
-** There are some requests (setFunctionBreakpoints) where VSCode sends duplicate requests if the target is already running
-** and the second one comes in while the first one is running (still un-resolved) and ruins the sequence in many ways. To avoid this, we can
-** queue all such requests and guaranteed to execute the request one at a time.
+** There are breakpoint requests where VSCode sends duplicate or back to back requests. If the target is already running
+** and the second one comes in while the first one is running (still un-resolved) and ruins the sequence in many ways.
+** To avoid this, we can queue all such requests and guaranteed to execute the request one at a time in proper order
 **
 ** There is another request (evaluateRequest) that can also be messed up by back to back requests, which messes up in other
 ** ways. You can also have duplicates here because the user created such dups.
 **
-**
 ** For requests where gdb needs to be temporarily interrupted for the operation to succeed, use setFunctionBreakpoints as a template (carefully)
-** andfor others, use evaluateRequest as a template
+** and for others, use evaluateRequest as a template
 */
 class RequestQueue<RespType, ArgsType> {
     private queue: Array<VSCodeRequest<RespType, ArgsType>> = [];
@@ -1778,7 +1777,17 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    private functionBreakPointsQ = new RequestQueue<DebugProtocol.SetFunctionBreakpointsResponse, DebugProtocol.SetFunctionBreakpointsArguments>();
+    // These should really by multiple pairs that are unique so you cannot mix up
+    // the response and args
+    private allBreakPointsQ = new RequestQueue<
+        DebugProtocol.SetFunctionBreakpointsResponse |
+        DebugProtocol.SetBreakpointsResponse |
+        DebugProtocol.SetInstructionBreakpointsResponse |
+        DebugProtocol.SetDataBreakpointsResponse,
+        DebugProtocol.SetFunctionBreakpointsArguments |
+        DebugProtocol.SetBreakpointsArguments |
+        DebugProtocol.SetInstructionBreakpointsArguments |
+        DebugProtocol.SetDataBreakpointsArguments>();
     protected setFunctionBreakPointsRequest(
         r: DebugProtocol.SetFunctionBreakpointsResponse,
         a: DebugProtocol.SetFunctionBreakpointsArguments): Promise<void> {
@@ -1846,32 +1855,37 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.sendErrorResponse(response, 10, msg.toString());
                     }
 
-                    if (pendContinue.haveMore()) {
-                        // do not sendContinue even if we were supposed to
-                        console.log('Yup got another request while we are processing one. VSCode issue\n');
-                    } else if (pendContinue.shouldContinue) {
-                        this.disableSendStoppedEvents = false;
-                        pendContinue.shouldContinue = false;
-                        this.sendContinue();
-                    }
+                    this.continueIfNoMore(pendContinue);
                     resolve();
                 };
 
-                if (this.miDebugger.status !== 'running') {         // May not even have started just yet
-                    await createBreakpoints();
-                } else {
-                    this.disableSendStoppedEvents = true;
-                    pendContinue.shouldContinue = true;
-                    this.miDebugger.once('generic-stopped', () => { createBreakpoints(); });
-                    this.miDebugger.sendCommand('exec-interrupt');
-                }
+                await this.doPauseExecContinue(createBreakpoints, pendContinue);
             });
         };
 
-        return this.functionBreakPointsQ.add(doit, r, a);
+        return this.allBreakPointsQ.add(doit, r, a);
     }
 
-    private breakPointsQ = new RequestQueue<DebugProtocol.SetBreakpointsResponse, DebugProtocol.SetBreakpointsArguments>();
+    private continueIfNoMore(pendContinue: PendingContinue) {
+        if (pendContinue.haveMore()) {
+        } else if (pendContinue.shouldContinue) {
+            this.disableSendStoppedEvents = false;
+            pendContinue.shouldContinue = false;
+            this.sendContinue();
+        }
+    }
+
+    private async doPauseExecContinue(createBreakpoints: () => Promise<void>, pendContinue: PendingContinue) {
+        if (this.miDebugger.status !== 'running') { // May not even have started just yet
+            await createBreakpoints();
+        } else {
+            this.disableSendStoppedEvents = true;
+            pendContinue.shouldContinue = true;
+            this.miDebugger.once('generic-stopped', () => { createBreakpoints(); });
+            this.miDebugger.sendCommand('exec-interrupt');
+        }
+    }
+
     protected setBreakPointsRequest(
         r: DebugProtocol.SetBreakpointsResponse,
         a: DebugProtocol.SetBreakpointsArguments): Promise<void> {
@@ -1985,31 +1999,17 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.sendErrorResponse(response, 9, msg.toString());
                     }
 
-                    if (pendContinue.haveMore()) {
-                        // do not sendContinue even if we were supposed to
-                        console.log('Yup got another request while we are processing one. VSCode issue\n');
-                    } else if (pendContinue.shouldContinue) {
-                        this.disableSendStoppedEvents = false;
-                        pendContinue.shouldContinue = false;
-                        this.sendContinue();
-                    }
+                    this.continueIfNoMore(pendContinue);
                     resolve();
                 };
 
-                if (this.miDebugger.status !== 'running') {         // May not even have started just yet
-                    await createBreakpoints();
-                } else {
-                    this.disableSendStoppedEvents = true;
-                    pendContinue.shouldContinue = true;
-                    this.miDebugger.once('generic-stopped', () => { createBreakpoints(); });
-                    this.miDebugger.sendCommand('exec-interrupt');
-                }
+                await this.doPauseExecContinue(createBreakpoints, pendContinue);
             });
         };
-        return this.breakPointsQ.add(doit, r, a);
+
+        return this.allBreakPointsQ.add(doit, r, a);
     }
 
-    private instrBreakPointsQ = new RequestQueue<DebugProtocol.SetInstructionBreakpointsResponse, DebugProtocol.SetInstructionBreakpointsArguments>();
     protected setInstructionBreakpointsRequest(
         r: DebugProtocol.SetInstructionBreakpointsResponse,
         a: DebugProtocol.SetInstructionBreakpointsArguments, request?: DebugProtocol.Request): Promise<void> {
@@ -2023,7 +2023,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     resolve();
                     return;
                 }
-                const createBreakpoints = async (shouldContinue) => {
+                const createBreakpoints = async () => {
                     try {
                         const currentBreakpoints = Array.from(this.instrBreakpointMap.keys());
                         this.instrBreakpointMap.clear();
@@ -2062,29 +2062,15 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.sendErrorResponse(response, 9, msg.toString());
                     }
 
-                    if (pendContinue.haveMore()) {
-                        // do not sendContinue even if we were supposed to
-                        console.log('Yup got another request while we are processing one. VSCode issue\n');
-                    } else if (pendContinue.shouldContinue) {
-                        this.disableSendStoppedEvents = false;
-                        pendContinue.shouldContinue = false;
-                        this.sendContinue();
-                    }
+                    this.continueIfNoMore(pendContinue);
                     resolve();
                 };
 
-                if (this.miDebugger.status !== 'running') {         // May not even have started just yet
-                    createBreakpoints(false);
-                } else {
-                    this.disableSendStoppedEvents = true;
-                    pendContinue.shouldContinue = true;
-                    this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
-                    this.miDebugger.sendCommand('exec-interrupt');
-                }
+                await this.doPauseExecContinue(createBreakpoints, pendContinue);
             });
         };
 
-        return this.instrBreakPointsQ.add(doit, r, a);
+        return this.allBreakPointsQ.add(doit, r, a);
     }
 
     protected isVarRefGlobalOrStatic(varRef: number, id: any) {
@@ -2130,76 +2116,71 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected setDataBreakpointsRequest(
-        response: DebugProtocol.SetDataBreakpointsResponse,
-        args: DebugProtocol.SetDataBreakpointsArguments): Promise<void>
-    {
-        return new Promise<void>((resolve) => {
-            if ((args.breakpoints.length === 0) && (this.dataBreakpointMap.size === 0)) {
-                this.sendResponse(response);
-                resolve();
-                return;
-            }
-            const savedFlag = this.disableSendStoppedEvents;
-            const createBreakpoints = async (shouldContinue) => {
-                try {
-                    const currentBreakpoints = Array.from(this.dataBreakpointMap.keys());
-                    this.dataBreakpointMap.clear();
-
-                    this.disableSendStoppedEvents = savedFlag;
-                    await this.miDebugger.removeBreakpoints(currentBreakpoints);
-
-                    const all: Array<Promise<OurDataBreakpoint | MIError>> = [];
-
-                    args.breakpoints.forEach((brk) => {
-                        const bkp: OurDataBreakpoint = { ...brk };
-                        all.push(this.miDebugger.addDataBreakPoint(bkp).catch((err: MIError) => err));
-                    });
-
-                    const brkpoints = await Promise.all(all);
-
-                    response.body = {
-                        breakpoints: brkpoints.map((bp) => {
-                            if (bp instanceof MIError) {
-                                /* Failed breakpoints should be reported with
-                                 * verified: false, so they can be greyed out
-                                 * in the UI. The attached message will be
-                                 * presented as a tooltip.
-                                 */
-                                return {
-                                    verified: false,
-                                    message: bp.message
-                                } as DebugProtocol.Breakpoint;
-                            }
-
-                            this.dataBreakpointMap.set(bp.number, bp);
-                            return {
-                                id: bp.number,
-                                verified: true
-                            };
-                        })
-                    };
-
+        r: DebugProtocol.SetDataBreakpointsResponse,
+        a: DebugProtocol.SetDataBreakpointsArguments): Promise<void> {
+        const doit = (
+            response: DebugProtocol.SetDataBreakpointsResponse,
+            args: DebugProtocol.SetDataBreakpointsArguments,
+            pendContinue: PendingContinue): Promise<void> => {
+                return new Promise<void>(async (resolve) => {
+                if ((args.breakpoints.length === 0) && (this.dataBreakpointMap.size === 0)) {
                     this.sendResponse(response);
+                    resolve();
+                    return;
                 }
-                catch (msg) {
-                    this.sendErrorResponse(response, 9, msg.toString());
-                }
+                const createBreakpoints = async () => {
+                    try {
+                        const currentBreakpoints = Array.from(this.dataBreakpointMap.keys());
+                        this.dataBreakpointMap.clear();
 
-                resolve();
-                if (shouldContinue) {
-                    this.sendContinue();
-                }
-            };
+                        await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
-            if (this.miDebugger.status !== 'running') {         // May not even have started just yet
-                createBreakpoints(false);
-            }
-            else {
-                this.disableSendStoppedEvents = true;
-                this.miDebugger.once('generic-stopped', () => { createBreakpoints(true); });
-                this.miDebugger.sendCommand('exec-interrupt');
-            }
-        });
+                        const all: Array<Promise<OurDataBreakpoint | MIError>> = [];
+
+                        args.breakpoints.forEach((brk) => {
+                            const bkp: OurDataBreakpoint = { ...brk };
+                            all.push(this.miDebugger.addDataBreakPoint(bkp).catch((err: MIError) => err));
+                        });
+
+                        const brkpoints = await Promise.all(all);
+
+                        response.body = {
+                            breakpoints: brkpoints.map((bp) => {
+                                if (bp instanceof MIError) {
+                                    /* Failed breakpoints should be reported with
+                                     * verified: false, so they can be greyed out
+                                     * in the UI. The attached message will be
+                                     * presented as a tooltip.
+                                     */
+                                    return {
+                                        verified: false,
+                                        message: bp.message
+                                    } as DebugProtocol.Breakpoint;
+                                }
+
+                                this.dataBreakpointMap.set(bp.number, bp);
+                                return {
+                                    id: bp.number,
+                                    verified: true
+                                };
+                            })
+                        };
+
+                        this.sendResponse(response);
+                    }
+                    catch (msg) {
+                        this.sendErrorResponse(response, 9, msg.toString());
+                    }
+
+                    this.continueIfNoMore(pendContinue);
+                    resolve();
+                };
+
+                await this.doPauseExecContinue(createBreakpoints, pendContinue);
+            });
+        };
+
+        return this.allBreakPointsQ.add(doit, r, a);
     }
 
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): Promise<void> {
