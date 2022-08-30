@@ -1796,11 +1796,6 @@ export class GDBDebugSession extends LoggingDebugSession {
             args: DebugProtocol.SetFunctionBreakpointsArguments,
             pendContinue: PendingContinue): Promise<void> => {
             return new Promise(async (resolve) => {
-                if ((args.breakpoints.length === 0) && (this.functionBreakpoints.length === 0)) {
-                    this.sendResponse(response);
-                    resolve();
-                    return;
-                }
                 const createBreakpoints = async () => {
                     try {
                         await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
@@ -1894,11 +1889,6 @@ export class GDBDebugSession extends LoggingDebugSession {
             args: DebugProtocol.SetBreakpointsArguments,
             pendContinue: PendingContinue): Promise<void> => {
             return new Promise(async (resolve) => {
-                if ((args.breakpoints.length === 0) && (this.breakpointMap.size === 0)) {
-                    this.sendResponse(response);
-                    resolve();
-                    return;
-                }
                 const createBreakpoints = async () => {
                     const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
 
@@ -2017,12 +2007,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             response: DebugProtocol.SetInstructionBreakpointsResponse,
             args: DebugProtocol.SetInstructionBreakpointsArguments,
             pendContinue: PendingContinue): Promise<void> => {
-                return new Promise<void>(async (resolve) => {
-                if ((args.breakpoints.length === 0) && (this.instrBreakpointMap.size === 0)) {
-                    this.sendResponse(response);
-                    resolve();
-                    return;
-                }
+            return new Promise<void>(async (resolve) => {
                 const createBreakpoints = async () => {
                     try {
                         const currentBreakpoints = Array.from(this.instrBreakpointMap.keys());
@@ -2068,7 +2053,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                 await this.doPauseExecContinue(createBreakpoints, pendContinue);
             });
-        };
+            };
 
         return this.allBreakPointsQ.add(doit, r, a);
     }
@@ -2122,12 +2107,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             response: DebugProtocol.SetDataBreakpointsResponse,
             args: DebugProtocol.SetDataBreakpointsArguments,
             pendContinue: PendingContinue): Promise<void> => {
-                return new Promise<void>(async (resolve) => {
-                if ((args.breakpoints.length === 0) && (this.dataBreakpointMap.size === 0)) {
-                    this.sendResponse(response);
-                    resolve();
-                    return;
-                }
+            return new Promise<void>(async (resolve) => {
                 const createBreakpoints = async () => {
                     try {
                         const currentBreakpoints = Array.from(this.dataBreakpointMap.keys());
