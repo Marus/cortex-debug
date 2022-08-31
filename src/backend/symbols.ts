@@ -595,9 +595,11 @@ export class SymbolTable {
                 await this.waitOnProgs(this.nmPromises);
                 // This part needs to run after both of the above finished
                 for (const item of this.addressToFileOrig) {
-                    const sym = this.symbolsByAddressOrig.get(item[0]);
-                    if (sym) {
-                        sym.file = item[1];
+                    const syms = this.symbolsByAddressOrig.get(item[0]);
+                    if (syms) {
+                        for (const sym of syms) {
+                            sym.file = item[1];
+                        }
                     } else {
                         console.error('Unknown symbol address. Need to investigate', hexFormat(item[0]), item);
                     }
