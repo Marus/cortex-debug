@@ -27,12 +27,12 @@ let doLog = false;
 const logFsPath = getLogPath();
 
 function OpenOCDLog(str: string) {
-    if (!str) { return; }
+    if (!str || !doLog) { return; }
     try {
         const date = new Date();
         str = `[${date.toISOString()}] ` + str;
         console.log(str);
-        if (doLog && logFsPath) {
+        if (logFsPath) {
             if (!str.endsWith('\n')) {
                 str += '\n';
             }

@@ -105,6 +105,12 @@ interface ExecPromise {
     args: string[];
     promise: Promise<any>;
 }
+
+class AddressToSym extends Map<number, SymbolInformation[]> {
+    constructor(...args: any[]) {
+        super(...args);
+    }
+}
 export class SymbolTable {
     private allSymbols: SymbolInformation[] = [];
     private fileTable: string[] = [];
@@ -121,8 +127,8 @@ export class SymbolTable {
     private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
     private fileMap: {[key: string]: string[]} = {};                    // Potential list of file aliases we found
     public symbolsAsIntervalTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
-    public symbolsByAddress: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
-    public symbolsByAddressOrig: Map<number, SymbolInformation> = new Map<number, SymbolInformation>();
+    public symbolsByAddress: AddressToSym = new AddressToSym();
+    public symbolsByAddressOrig: AddressToSym = new AddressToSym();
     private varsByFile: {[path: string]: VariablesInFile} = null;
     private nmPromises: ExecPromise[] = [];
 
@@ -145,6 +151,7 @@ export class SymbolTable {
         }
     }
 
+    /*
     private createSymtableSerializedFName(exeName: string) {
         return this.createFileMapCacheFileName(exeName, '-syms') + '.gz';
     }
@@ -240,7 +247,7 @@ export class SymbolTable {
                         const sym: any = {};
                         values.forEach((v, i) => sym[keys[i]] = v);
                         sym.file = serObj.fileTable[sym.file as number];
-                        this.addSymbol(sym/* as SymbolInformation*/);
+                        this.addSymbol(sym/* as SymbolInformation* /);
                     }
                     this.memoryRegions = [];
                     for (const m of serObj.memoryRegions) {
@@ -254,6 +261,7 @@ export class SymbolTable {
             };
         });
     }
+    */
 
     /**
      * Problem statement:
@@ -312,11 +320,9 @@ export class SymbolTable {
     private rttSymbol;
     public readonly rttSymbolName = '_SEGGER_RTT';
     private addSymbol(sym: SymbolInformation) {
-        const oldSym = this.symbolsByAddress.get(sym.address);
-        if (oldSym) {
-            // Probably should take the new one. Dups can come from multiple symbol (elf) files
-            // Not sure `symbolsAsIntervalTree` can handle duplicates and we have to do a linear search
-            // in allSymbols. This shouldn't really happen unless user loads duplicate symbol files
+        if ((sym.length === 0) && /^\$[atdbfpm]$/.test(sym.name)) {
+            // see https://docs.adacore.com/live/wave/binutils-stable/html/as/as.html#ARM-Mapping-Symbols
+            // These are special markers for start of (a)RM, (t)humb, (d)ata sections and other not yet implemented
             return;
         }
 
@@ -329,8 +335,20 @@ export class SymbolTable {
             const treeSym = new SymbolNode(sym, sym.address, sym.address + Math.max(1, sym.length) - 1);
             this.symbolsAsIntervalTree.insert(treeSym);
         }
-        this.symbolsByAddress.set(sym.address, sym);
-        this.symbolsByAddressOrig.set(sym.addressOrig, sym);
+        this.addSymbolToTrees(sym);
+    }
+
+    private addSymbolToTrees(sym: SymbolInformation) {
+        const add = (symt: AddressToSym, address: number) => {
+            const info = symt.get(address);
+            if (info) {
+                info.push(sym);
+            } else {
+                symt.set(address, [sym]);
+            }
+        };
+        add(this.symbolsByAddress, sym.address);
+        add(this.symbolsByAddressOrig, sym.addressOrig);
     }
 
     private objdumpReader: SpawnLineReader;
@@ -407,6 +425,11 @@ export class SymbolTable {
                     // units with no clear owner. These can be locals, globals or other.
                     this.currentObjDumpFile = null;
                 }
+                // We don't really use the symmbol except know that the symbol following this belong to this file
+                return true;
+            } else if ((match[7] === 'd') && (match[8] === ' ')) {
+                // This is a pure debug symbol. No use for them
+                return true;
             }
             const type = TYPE_MAP[match[8]];
             const scope = SCOPE_MAP[match[2]];
@@ -468,7 +491,9 @@ export class SymbolTable {
                         reject(e);
                     });
                     this.objdumpReader.on('exit', (code, signal) => {
-                        console.log('objdump exited', code, signal);
+                        if (code !== 0) {
+                            this.gdbSession.handleMsg('log', `'objdump' exited with a nonzero exit status ${code}, ${signal}\n`);
+                        }
                     });
                     this.objdumpReader.on('close', (code, signal) => {
                         this.objdumpReader = undefined;
@@ -486,6 +511,8 @@ export class SymbolTable {
                         args: [this.objdumpPath, ...objDumpArgs],
                         // tslint:disable-next-line: max-line-length
                         promise: this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this, symbolFile))
+                        // tslint:disable-next-line: max-line-length
+                        // promise: this.objdumpReader.startWithFile('/Users/hdm/Downloads/objdump.txt', null, this.readObjdumpHeaderLine.bind(this, symbolFile))
                     });
                     
                     const nmStart = Date.now();
@@ -506,7 +533,9 @@ export class SymbolTable {
                         this.nmPromises = [];
                     });
                     nmReader.on('exit', (code, signal) => {
-                        // console.log('nm exited', code, signal);
+                        if (code !== 0) {
+                            this.gdbSession.handleMsg('log', `'nm' exited with a nonzero exit status ${code}, ${signal}\n`);
+                        }
                     });
                     nmReader.on('close', () => {
                         if (trace || this.gdbSession.args.showDevDebugOutput) {
@@ -724,6 +753,7 @@ export class SymbolTable {
         return { curSimpleName, curName };
     }
 
+    /*
     protected getFileNameHashed(fileName: string): string {
         try {
             fileName = SymbolTable.NormalizePath(fileName);
@@ -749,7 +779,7 @@ export class SymbolTable {
         const fName = path.join(os.tmpdir(), 'Cortex-Debug-' + hash);
         return fName;
     }
-
+*/
     public getFunctionAtAddress(address: number): SymbolInformation {
         const symNodes = this.symbolsAsIntervalTree.search(address, address);
         for (const symNode of symNodes) {
@@ -868,41 +898,6 @@ export class SymbolTable {
                     resolve(true);
                     return;
                 }
-                /*
-                if (!this.gdbSession.miDebugger.gdbVarsPromise) {
-                    resolve(false);
-                    return;
-                }
-                try {
-                    const result = await this.gdbSession.miDebugger.gdbVarsPromise;
-                    nextTick(() => {
-                        this.varsByFile = {};
-                        const dbgInfo = result.result('symbols.debug');
-                        for (const item of dbgInfo || []) {
-                            const fullname = getProp(item, 'fullname');
-                            const filename = getProp(item, 'fullname');
-                            const symbols = getProp(item, 'symbols');
-                            if (symbols && (symbols.length > 0) && (fullname || filename)) {
-                                const fInfo = new VariablesInFile(fullname || filename);
-                                for (const sym of symbols) {
-                                    fInfo.add(sym);
-                                }
-                                this.varsByFile[fInfo.filename] = fInfo;
-                                if (fullname && (fullname !== fInfo.filename)) {
-                                    this.varsByFile[fullname] = fInfo;
-                                }
-                                if (filename && (filename !== fInfo.filename)) {
-                                    this.varsByFile[filename] = fInfo;
-                                }
-                            }
-                        }
-                    });
-                    resolve(true);
-                }
-                catch (e) {
-                    reject(e);
-                }
-                */
             }, (e) => {
                 reject(e);
             });

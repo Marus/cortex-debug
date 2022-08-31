@@ -72,7 +72,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public start(cwd: string, init: string[]): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>(async (resolve, reject) => {
             this.process = ChildProcess.spawn(this.application, this.args, { cwd: cwd, env: this.procEnv });
             this.pid = this.process.pid;
             this.process.stdout.on('data', this.stdout.bind(this));
@@ -87,45 +87,51 @@ export class MI2 extends EventEmitter implements IBackend {
                 this.gdbStartError();
                 reject(new Error('Could not start gdb, no response from gdb'));
                 timeout = undefined;
-            }, 2000);
+            }, 5000);
 
             const swallOutput = this.debugOutput ? false : true;
-            this.sendCommand('gdb-version', false, true, swallOutput).then((v: MINode) => {
+            let v;
+            try {
+                v = await this.sendCommand('gdb-version', false, true, swallOutput);
                 if (timeout) {
                     clearTimeout(timeout);
-                }
-                this.actuallyStarted = true;
-                this.parseVersionInfo(v.output);
-                if (!this.gdbMajorVersion || (this.gdbMajorVersion < 9)) {
-                    this.isExiting = true;
-                    const ver = this.gdbMajorVersion ? this.gdbMajorVersion.toString() : 'Unknown';
-                    const msg = `ERROR: GDB major version should be >= 9, yours is ${ver}`;
-                    this.log('stderr', msg);
-                    this.sendRaw('-gdb-exit');
-                    // reject(new Error(msg));
-                    resolve();
+                } else {
                     return;
                 }
-                const asyncCmd = 'gdb-set mi-async on';
-                const promises = [asyncCmd, ...init].map((c) => this.sendCommand(c));
-                Promise.all(promises).then(() => {
-                    /*
-                    gdb crashes or runs out of memory with the following
-                    if (this.gdbMajorVersion >= 9) {
-                        this.gdbVarsPromise = new Promise((resolve) => {
-                            this.sendCommand('symbol-info-variables', false, false, true).then((x) => {
-                                resolve(x);
-                            }, (e) => {
-                                reject(e);
-                            });
-                        });
-                    }
-                    */
-                    resolve();
-                }, reject);
-            }, (e) => {
+            }
+            catch (e) {
                 reject(e);
-            });
+                return;
+            }
+            this.actuallyStarted = true;
+            this.parseVersionInfo(v.output);
+            if (!this.gdbMajorVersion || (this.gdbMajorVersion < 9)) {
+                this.isExiting = true;
+                const ver = this.gdbMajorVersion ? this.gdbMajorVersion.toString() : 'Unknown';
+                const msg = `ERROR: GDB major version should be >= 9, yours is ${ver}`;
+                this.log('stderr', msg);
+                this.sendRaw('-gdb-exit');
+                // reject(new Error(msg));
+                resolve();
+                return;
+            }
+            const asyncCmd = 'gdb-set mi-async on';
+            const promises = [asyncCmd, ...init].map((c) => this.sendCommand(c));
+            Promise.all(promises).then(() => {
+                /*
+                gdb crashes or runs out of memory with the following
+                if (this.gdbMajorVersion >= 9) {
+                    this.gdbVarsPromise = new Promise((resolve) => {
+                        this.sendCommand('symbol-info-variables', false, false, true).then((x) => {
+                            resolve(x);
+                        }, (e) => {
+                            reject(e);
+                        });
+                    });
+                }
+                */
+                resolve();
+            }, reject);
         });
     }
 

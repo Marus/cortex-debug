@@ -92,7 +92,7 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 
     constructor(reason: string, threadID: number) {
         super('custom-stop', { reason: reason, threadID: threadID });
-        console.log(`${dbgResumeStopCounter} **** Stopped reason:${reason} thread:${threadID}`);
+        // console.log(`${dbgResumeStopCounter} **** Stopped reason:${reason} thread:${threadID}`);
         dbgResumeStopCounter++;
     }
 }
@@ -164,7 +164,7 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
 
     constructor(threadID: number, allThreads: boolean = true) {
         super('custom-continued', { threadID: threadID, allThreads: allThreads });
-        console.log(`${dbgResumeStopCounter} **** Running thread:${threadID}`);
+        // console.log(`${dbgResumeStopCounter} **** Running thread:${threadID}`);
         dbgResumeStopCounter++;
     }
 }

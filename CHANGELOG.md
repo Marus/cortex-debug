@@ -2,6 +2,7 @@ ChangeLog
 =========
 #V1.6.3
 * Issue #730 fixed where bulk breakpoint changes would cause issues and some breakpoint actions would fail. Like enable/disable/delete all breakpoints.
+* Mitigation for Issue #725 with extraneous/dummy symbols masking real ones
 
 # V1.6.1
 * Bit more lenient parsing of GDB version number for custom builds. We still need to know the version number
