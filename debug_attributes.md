@@ -49,6 +49,7 @@ Also using IntelliSense while editing launch.json in VSCode can be quite helpful
 | targetProcessor | Common | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors'
 | toolchainPrefix | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration.
 | BMPGDBSerialPort | BMP Specific | The serial port for the Black Magic Probe GDB Server. On Windows this will be "COM<num>", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)
+| bmpConnectUnderReset | BMP Specific | Configure connect under SRST.
 | powerOverBMP | BMP Specific | Power up the board over Black Magic Probe. "powerOverBMP" : "enable" or "powerOverBMP" : "disable". If not set it will use the last power state.
 | gdbTarget | External | For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port
 | ipAddress | J-Link Specific | IP Address for networked J-Link Adapter
