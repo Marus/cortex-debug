@@ -31,6 +31,12 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             `target-select extended-remote ${this.args.BMPGDBSerialPort}`
         ];
 
+        if (this.args.bmpConnectUnderReset) {
+            commands.push('interpreter-exec console "monitor connect_rst enable"');
+        } else {
+            commands.push('interpreter-exec console "monitor connect_rst disable"');
+        }
+
         if (this.args.powerOverBMP === 'enable') {
             commands.push('interpreter-exec console "monitor tpwr enable"');
             // sleep for 100 ms. MCU need some time to boot up after power up

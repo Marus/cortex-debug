@@ -325,6 +325,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     // BMP Specific
     BMPGDBSerialPort: string;
     powerOverBMP: string;
+    bmpConnectUnderReset: boolean;
 
     // QEMU Specific
     cpu: string;
