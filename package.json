@@ -1,5 +1,5 @@
 {
-    "version": "1.6.3-pre3",
+    "version": "1.6.3-pre4",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -3058,7 +3058,6 @@
         "nan": "^2.14.2",
         "node-interval-tree": "^1.3.3",
         "prebuild-install": "^7.0.1",
-        "react": "^18.2.0",
         "ringbufferjs": "^1.1.0",
         "safe-buffer": "^5.2.1",
         "stream-json": "^1.7.3",

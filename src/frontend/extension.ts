@@ -25,6 +25,7 @@ import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import { ServerConsoleLog } from '../backend/server';
 import { RTOSTracker } from './rtos/rtos';
+import { SVDParser } from './svd';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -144,6 +145,34 @@ export class CortexDebugExtension {
                 e.element.expanded = false;
             })
         );
+
+        this.testSVDParser();
+    }
+
+    private testSVDParser() {
+        try {
+            if (false) {
+                const session: vscode.DebugSession = {
+                    id: 'blah',
+                    type: 'cortex-debug',
+                    name: 'blah',
+                    workspaceFolder: undefined,
+                    configuration: undefined,
+                    customRequest: (command: string, args?: any): Thenable<any> => {
+                        throw new Error('Function not implemented.');
+                    },
+                    getDebugProtocolBreakpoint: (breakpoint: any): Thenable<any> => {
+                        throw new Error('Function not implemented.');
+                    }
+                };
+                SVDParser.parseSVD(session, '/Users/hdm/Downloads/SVDs/max32625.svd', 4).then((result) => {
+                    console.log('here');
+                }, (e) => {
+                    console.error('svd file parse failed', e);
+                });
+            }
+        }
+        catch (e) {}
     }
 
     private textDocsClosed(e: vscode.TextDocument) {

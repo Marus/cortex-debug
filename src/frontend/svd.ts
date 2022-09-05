@@ -152,17 +152,19 @@ export class SVDParser {
                     }
                     valueMap = found;
                 }
-                else {
-                    eValues.enumeratedValue.map((ev) => {
-                        if (ev.value && ev.value.length > 0) {
-                            const evname = ev.name[0];
-                            const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
-                            const val = ev.value[0].toLowerCase();
-                            const evvalue = parseInteger(val);
-                            
-                            valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
-                        }
-                    });
+                else if (eValues) {
+                    if (eValues.enumeratedValue) {
+                        eValues.enumeratedValue.map((ev) => {
+                            if (ev.value && ev.value.length > 0) {
+                                const evname = ev.name[0];
+                                const evdesc = this.cleanupDescription(ev.description ? ev.description[0] : '');
+                                const val = ev.value[0].toLowerCase();
+                                const evvalue = parseInteger(val);
+                                
+                                valueMap[evvalue] = new EnumeratedValue(evname, evdesc, evvalue);
+                            }
+                        });
+                    }
 
                     // According to the SVD spec/schema, I am not sure any scope applies. Seems like everything is in a global name space
                     // No make sense but how I am interpreting it for now. Easy to make it scope based but then why allow referencing
