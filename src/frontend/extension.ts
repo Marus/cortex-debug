@@ -2,12 +2,11 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
-import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
+import { BaseNode } from './views/nodes/basenode';
 
 import { RTTCore, SWOCore } from './swo/core';
-import { NumberFormat, ConfigurationArguments,
+import { ConfigurationArguments,
     RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
     CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE, ChainedConfig } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
@@ -25,9 +24,7 @@ import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import { ServerConsoleLog } from '../backend/server';
 import { RTOSTracker } from './rtos/rtos';
-import { SVDParser } from './svd';
 
-const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
     expression: RegExp;
     path: string;
@@ -47,11 +44,9 @@ export class CortexDebugExtension {
 
     private gdbServerConsole: GDBServerConsole = null;
 
-    private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
     private memoryProvider: MemoryContentProvider;
 
-    private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
     private registerTreeView: vscode.TreeView<BaseNode>;
 
     private SVDDirectory: SVDInfo[] = [];
@@ -61,7 +56,6 @@ export class CortexDebugExtension {
     constructor(private context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('cortex-debug');
         this.startServerConsole(context, config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '')); // Make this the first thing we do to be ready for the session
-        this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
 
@@ -76,10 +70,6 @@ export class CortexDebugExtension {
 
         Reporting.activate(context);
 
-        this.peripheralTreeView = vscode.window.createTreeView('cortex-debug.peripherals', {
-            treeDataProvider: this.peripheralProvider
-        });
-
         this.registerTreeView = vscode.window.createTreeView('cortex-debug.registers', {
             treeDataProvider: this.registerProvider
         });
@@ -92,14 +82,7 @@ export class CortexDebugExtension {
         context.subscriptions.push(
             vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
             vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
-
-            vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.pin', this.peripheralsTogglePin.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.unpin', this.peripheralsTogglePin.bind(this)),
-            
+           
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.registers.refresh', this.registersRefresh.bind(this)),
             vscode.commands.registerCommand('cortex-debug.registers.regHexModeTurnOn', this.registersNaturalMode.bind(this, false)),
@@ -134,45 +117,8 @@ export class CortexDebugExtension {
             }),
             this.registerTreeView.onDidExpandElement((e) => {
                 e.element.expanded = true;
-            }),
-            this.peripheralTreeView,
-            this.peripheralTreeView.onDidExpandElement((e) => {
-                e.element.expanded = true;
-                e.element.getPeripheral().updateData();
-                this.peripheralProvider.refresh();
-            }),
-            this.peripheralTreeView.onDidCollapseElement((e) => {
-                e.element.expanded = false;
             })
         );
-
-        this.testSVDParser();
-    }
-
-    private testSVDParser() {
-        try {
-            if (false) {
-                const session: vscode.DebugSession = {
-                    id: 'blah',
-                    type: 'cortex-debug',
-                    name: 'blah',
-                    workspaceFolder: undefined,
-                    configuration: undefined,
-                    customRequest: (command: string, args?: any): Thenable<any> => {
-                        throw new Error('Function not implemented.');
-                    },
-                    getDebugProtocolBreakpoint: (breakpoint: any): Thenable<any> => {
-                        throw new Error('Function not implemented.');
-                    }
-                };
-                SVDParser.parseSVD(session, '/Users/hdm/Downloads/SVDs/max32625.svd', 4).then((result) => {
-                    console.log('here');
-                }, (e) => {
-                    console.error('svd file parse failed', e);
-                });
-            }
-        }
-        catch (e) {}
     }
 
     private textDocsClosed(e: vscode.TextDocument) {
@@ -285,7 +231,7 @@ export class CortexDebugExtension {
         }
     }
     
-    private getSVDFile(device: string): string {
+    public getSVDFile(device: string): string {
         const entry = this.SVDDirectory.find((de) => de.expression.test(device));
         return entry ? entry.path : null;
     }
@@ -494,58 +440,6 @@ export class CortexDebugExtension {
         );
     }
 
-    // Peripherals
-    private peripheralsUpdateNode(node: PeripheralBaseNode): void {
-        node.performUpdate().then((result) => {
-            if (result) {
-                this.peripheralProvider.refresh();
-                Reporting.sendEvent('Peripheral View', 'Update Node');
-            }
-        }, (error) => {
-            vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
-        });
-    }
-
-    private peripheralsCopyValue(node: PeripheralBaseNode): void {
-        const cv = node.getCopyValue();
-        if (cv) {
-            vscode.env.clipboard.writeText(cv).then(() => {
-                Reporting.sendEvent('Peripheral View', 'Copy Value');
-            });
-        }
-    }
-
-    private async peripheralsSetFormat(node: PeripheralBaseNode): Promise<void> {
-        const result = await vscode.window.showQuickPick([
-            { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
-            { label: 'Hex', description: 'Format value in hexadecimal', value: NumberFormat.Hexadecimal },
-            { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
-            { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
-        ]);
-        if (result === undefined) {
-            return;
-        }
-
-        node.format = result.value;
-        this.peripheralProvider.refresh();
-        Reporting.sendEvent('Peripheral View', 'Set Format', result.label);
-    }
-
-    private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
-        if (node) {
-            node.getPeripheral().updateData().then((e) => {
-                this.peripheralProvider.refresh();
-            });
-        } else {
-            this.peripheralProvider.refresh();
-        }
-    }
-
-    private async peripheralsTogglePin(node: PeripheralBaseNode): Promise<void> {
-        this.peripheralProvider.togglePinPeripheral(node);
-        this.peripheralProvider.refresh();
-    }
-
     // Registers
     private registersCopyValue(node: BaseNode): void {
         const cv = node.getCopyValue();
@@ -623,11 +517,6 @@ export class CortexDebugExtension {
         this.functionSymbols = null;
         session.customRequest('get-arguments').then((args) => {
             newSession.config = args;
-            let svdfile = args.svdFile;
-            if (!svdfile) {
-                svdfile = this.getSVDFile(args.device);
-            }
-
             Reporting.beginSession(session.id, args as ConfigurationArguments);
 
             if (newSession.swoSource) {
@@ -640,7 +529,6 @@ export class CortexDebugExtension {
             if (this.isDebugging(session)) {
                 this.registerProvider.debugSessionStarted(session);
             }
-            this.peripheralProvider.debugSessionStarted(session, (svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
             this.cleanupRTTTerminals();
         }, (error) => {
             vscode.window.showErrorMessage(
@@ -655,7 +543,6 @@ export class CortexDebugExtension {
             Reporting.endSession(session.id);
 
             this.registerProvider.debugSessionTerminated(session);
-            this.peripheralProvider.debugSessionTerminated(session);
             if (mySession?.swo) {
                 mySession.swo.debugSessionTerminated();
             }
@@ -933,7 +820,6 @@ export class CortexDebugExtension {
     private receivedStopEvent(e: vscode.DebugSessionCustomEvent) {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'stopped';
-        this.peripheralProvider.debugStopped(e.session);
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugStopped(e.session);
         }
@@ -949,7 +835,6 @@ export class CortexDebugExtension {
     private receivedContinuedEvent(e: vscode.DebugSessionCustomEvent) {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'running';
-        this.peripheralProvider.debugContinued();
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugContinued();
         }

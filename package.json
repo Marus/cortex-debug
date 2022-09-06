@@ -391,16 +391,6 @@
                 "icon": "./images/reset.svg"
             },
             {
-                "command": "cortex-debug.peripherals.updateNode",
-                "title": "Update Value",
-                "icon": "$(pencil)"
-            },
-            {
-                "command": "cortex-debug.peripherals.copyValue",
-                "title": "Copy Value",
-                "icon": "$(files)"
-            },
-            {
                 "command": "cortex-debug.registers.copyValue",
                 "title": "Copy Value",
                 "icon": "$(files)"
@@ -446,25 +436,6 @@
                     "light": "images/hex-off-light.svg",
                     "dark": "images/hex-off-dark.svg"
                 }
-            },
-            {
-                "command": "cortex-debug.peripherals.setFormat",
-                "title": "Set Value Format"
-            },
-            {
-                "command": "cortex-debug.peripherals.forceRefresh",
-                "title": "Refresh",
-                "icon": "$(refresh)"
-            },
-            {
-                "command": "cortex-debug.peripherals.pin",
-                "title": "Pin",
-                "icon": "$(pin)"
-            },
-            {
-                "command": "cortex-debug.peripherals.unpin",
-                "title": "Unpin",
-                "icon": "$(pinned)"
             },
             {
                 "category": "Cortex-Debug",
@@ -1052,7 +1023,7 @@
                             },
                             "svdFile": {
                                 "default": null,
-                                "description": "This is for 'CORTEX PERIPHERALS' window provided by Cortex-Debug. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "description": "This is for 'CORTEX PERIPHERALS' window provided by cortex-debug.svd-viewer Extension. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
                             },
                             "svdPath": {
@@ -2167,7 +2138,7 @@
                             },
                             "svdFile": {
                                 "default": null,
-                                "description": "This is for 'CORTEX PERIPHERALS' window provided by Cortex-Debug. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
+                                "description": "This is for 'CORTEX PERIPHERALS' window provided by cortex-debug.svd-viewer Extension. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.",
                                 "type": "string"
                             },
                             "svdPath": {
@@ -2839,26 +2810,6 @@
         "menus": {
             "commandPalette": [
                 {
-                    "command": "cortex-debug.peripherals.updateNode",
-                    "when": "false"
-                },
-                {
-                    "command": "cortex-debug.peripherals.copyValue",
-                    "when": "false"
-                },
-                {
-                    "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "false"
-                },
-                {
-                    "command": "cortex-debug.peripherals.pin",
-                    "when": "false"
-                },
-                {
-                    "command": "cortex-debug.peripherals.unpin",
-                    "when": "false"
-                },
-                {
                     "command": "cortex-debug.registers.copyValue",
                     "when": "false"
                 },
@@ -2896,67 +2847,6 @@
             ],
             "view/item/context": [
                 {
-                    "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == field",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == fieldWO",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.updateNode",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerWO",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == field",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.copyValue",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRO",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRW"
-                },
-                {
-                    "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem == register"
-                },
-                {
-                    "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem == registerRO"
-                },
-                {
-                    "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && viewItem =~ /peripheral.*/"
-                },
-                {
-                    "command": "cortex-debug.peripherals.pin",
-                    "when": "view == cortex-debug.peripherals && viewItem == peripheral",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.unpin",
-                    "when": "view == cortex-debug.peripherals && viewItem == peripheral.pinned",
-                    "group": "inline"
-                },
-                {
                     "command": "cortex-debug.registers.copyValue",
                     "when": "view == cortex-debug.registers && viewItem == register",
                     "group": "inline"
@@ -2965,10 +2855,6 @@
                     "command": "cortex-debug.registers.copyValue",
                     "when": "view == cortex-debug.registers && viewItem == field",
                     "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.peripherals.setFormat",
-                    "when": "view == cortex-debug.peripherals"
                 }
             ],
             "view/title": [
@@ -2991,11 +2877,6 @@
                     "command": "cortex-debug.rtos.refresh",
                     "when": "view == cortex-debug.rtos",
                     "group": "navigation@99"
-                },
-                {
-                    "command": "cortex-debug.peripherals.forceRefresh",
-                    "when": "view == cortex-debug.peripherals && debugState == stopped",
-                    "group": "navigation"
                 }
             ],
             "debug/variables/context": [
@@ -3032,11 +2913,6 @@
             ],
             "debug": [
                 {
-                    "id": "cortex-debug.peripherals",
-                    "name": "Cortex Peripherals",
-                    "when": "debugType == cortex-debug"
-                },
-                {
                     "id": "cortex-debug.registers",
                     "name": "Cortex Registers",
                     "when": "debugType == cortex-debug"
@@ -3064,8 +2940,7 @@
         "tmp": "^0.2.1",
         "universal-analytics": "^0.5.3",
         "uuid": "^8.3.2",
-        "vscode-jsonrpc": "^6.0.0",
-        "xml2js": "^0.4.23"
+        "vscode-jsonrpc": "^6.0.0"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
     "devDependencies": {
