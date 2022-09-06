@@ -2982,5 +2982,8 @@
         "watch": "webpack --mode development --watch",
         "compile": "webpack --mode development",
         "test-compile": "tsc -p ./"
-    }
+    },
+    "extensionDependencies": [
+        "cortex-debug.svd-viewer"
+    ]
 }
