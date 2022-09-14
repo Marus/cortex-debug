@@ -32,9 +32,9 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         ];
 
         if (this.args.bmpConnectUnderReset) {
-            commands.push('interpreter-exec console "monitor connect_rst enable"');
+            commands.push('interpreter-exec console "monitor connect_srst enable"');
         } else {
-            commands.push('interpreter-exec console "monitor connect_rst disable"');
+            commands.push('interpreter-exec console "monitor connect_srst disable"');
         }
 
         if (this.args.powerOverBMP === 'enable') {
@@ -42,10 +42,10 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             // sleep for 100 ms. MCU need some time to boot up after power up
             commands.push('interpreter-exec console "shell sleep 0.1"');
         }
-        else if (this.args.powerOverBMP === 'disable'){
+        else if (this.args.powerOverBMP === 'disable') {
             commands.push('interpreter-exec console "monitor tpwr disable"');
         }
-        else{
+        else {
             // keep last power state (do nothing)
         }
 
@@ -84,7 +84,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         return commands;
     }
 
-    public swoAndRTTCommands(): string[]{
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
@@ -99,7 +99,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const cpuFrequency = this.args.swoConfig.cpuFrequency;
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-        
+
         const commands: string[] = [];
 
         commands.push(
@@ -115,7 +115,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         );
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -135,7 +135,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         return null;
     }
 
-    public serverLaunchStarted(): void {}
+    public serverLaunchStarted(): void { }
     public serverLaunchCompleted(): void {
         if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
             this.emit('event', new SWOConfigureEvent({
@@ -146,7 +146,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             }));
         }
     }
-    
-    public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {}
+
+    public debuggerLaunchStarted(): void { }
+    public debuggerLaunchCompleted(): void { }
 }
