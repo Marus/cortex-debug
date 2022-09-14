@@ -1617,10 +1617,6 @@
                             "powerOverBMP": {
                                 "type": "string",
                                 "description": "Power up the board over Black Magic Probe. \"powerOverBMP\" : \"enable\" or \"powerOverBMP\" : \"disable\". If not set it will use the last power state."
-                            },
-                            "bmpConnectUnderReset": {
-                                "type": "boolean",
-                                "description": "Configure connect under SRST."
                             }
                         },
                         "required": [
@@ -2732,10 +2728,6 @@
                             "powerOverBMP": {
                                 "type": "string",
                                 "description": "Power up the board over Black Magic Probe. \"powerOverBMP\" : \"enable\" or \"powerOverBMP\" : \"disable\". If not set it will use the last power state."
-                            },
-                            "bmpConnectUnderReset": {
-                                "type": "boolean",
-                                "description": "Configure connect under SRST."
                             }
                         },
                         "required": [
