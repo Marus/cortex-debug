@@ -1114,7 +1114,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected readMemoryRequest(response: DebugProtocol.ReadMemoryResponse, args: DebugProtocol.ReadMemoryArguments, request?: DebugProtocol.Request): void {
-        if (this.isBusy) {
+        if (this.isBusy()) {
             this.busyError(response, args);
             return;
         }
@@ -1152,7 +1152,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected writeMemoryRequest(response: DebugProtocol.WriteMemoryResponse, args: DebugProtocol.WriteMemoryArguments, request?: DebugProtocol.Request): void {
-        if (this.isBusy) {
+        if (this.isBusy()) {
             this.busyError(response, args);
             return;
         }
