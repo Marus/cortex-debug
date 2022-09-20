@@ -285,6 +285,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         response.body.supportsSteppingGranularity = true;
         response.body.supportsInstructionBreakpoints = true;
         response.body.supportsReadMemoryRequest = true;
+        response.body.supportsWriteMemoryRequest = true;
         this.sendResponse(response);
     }
 
@@ -1113,6 +1114,10 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected readMemoryRequest(response: DebugProtocol.ReadMemoryResponse, args: DebugProtocol.ReadMemoryArguments, request?: DebugProtocol.Request): void {
+        if (this.isBusy) {
+            this.busyError(response, args);
+            return;
+        }
         const startAddress = parseInt(args.memoryReference);
         const length = args.count;
         const useAddr = hexFormat(startAddress + (args.offset || 0));
@@ -1143,6 +1148,29 @@ export class GDBDebugSession extends LoggingDebugSession {
         }, (error) => {
             this.sendErrorResponse(response, 114, `Read memory error: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Reading Memory', command));
+        });
+    }
+
+    protected writeMemoryRequest(response: DebugProtocol.WriteMemoryResponse, args: DebugProtocol.WriteMemoryArguments, request?: DebugProtocol.Request): void {
+        if (this.isBusy) {
+            this.busyError(response, args);
+            return;
+        }
+        const startAddress = parseInt(args.memoryReference);
+        const useAddr = hexFormat(startAddress + (args.offset || 0));
+        const buf = Buffer.from(args.data, 'base64');
+        const data = buf.toString('hex');
+
+        // Note: We don't do partials
+        this.miDebugger.sendCommand(`data-write-memory-bytes ${useAddr} ${data}`).then((node) => {
+            response.body = {
+                bytesWritten: buf.length
+            };
+            this.sendResponse(response);
+        }, (error) => {
+            (response as DebugProtocol.Response).body = { error: error };
+            this.sendErrorResponse(response, 114, `Write memory error: ${error.toString()}`);
+            this.sendEvent(new TelemetryEvent('Error', 'Writing Memory', `${startAddress.toString(16)}-${data.length.toString(16)}`));
         });
     }
 
@@ -3089,30 +3117,31 @@ export class GDBDebugSession extends LoggingDebugSession {
         return ret;
     }
 
+    public isBusy() {
+        return !this.stopped || this.continuing || (this.miDebugger.status === 'running') || this.sendDummyStackTrace;
+    }
+
+    public busyError(response: DebugProtocol.Response, args: any) {
+        if (this.args.showDevDebugOutput) {
+            this.handleMsg('log', `Info: Received ${response.command} request while busy. ${JSON.stringify(args)}\n`);
+        }
+        response.message = 'notStopped';
+        this.sendErrorResponse(response, 8, 'Busy', undefined, ErrorDestination.Telemetry);
+    }
+    
     private evaluateQ = new RequestQueue<DebugProtocol.EvaluateResponse, DebugProtocol.EvaluateArguments>();
     protected evaluateRequest(r: DebugProtocol.EvaluateResponse, a: DebugProtocol.EvaluateArguments): Promise<void> {
-        const isBusy = () => {
-            return !this.stopped || this.continuing || (this.miDebugger.status === 'running') || this.sendDummyStackTrace;
-        };
-
-        const busyError = (response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) => {
-            if (this.args.showDevDebugOutput) {
-                this.handleMsg('log', `Info: Attempt to evalute expression while busy. ${JSON.stringify(args)}\n`);
-            }
-            this.sendErrorResponse(response, 8, 'Busy', undefined, ErrorDestination.Telemetry);
-        };
-
         if (a.context !== 'repl') {
-            if (isBusy()) {
-                busyError(r, a);
+            if (this.isBusy()) {
+                this.busyError(r, a);
                 return Promise.resolve();
             }
         }
 
         const doit = (response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) => {
             return new Promise<void>(async (resolve) => {
-                if (isBusy() && (a.context !== 'repl')) {
-                    busyError(response, args);
+                if (this.isBusy() && (a.context !== 'repl')) {
+                    this.busyError(response, args);
                     resolve();
                     return;
                 }
@@ -3138,17 +3167,11 @@ export class GDBDebugSession extends LoggingDebugSession {
                 };
 
                 // Spec says if 'frameId' is specified, evaluate in the scope specified or in the global scope. Well,
-                // we don't have a way to specify global scope ... use current thread then.
-                let threadId = this.currentThreadId;
+                // we don't have a way to specify global scope ... use floating variable.
+                let threadId = this.stoppedThreadId || 1;
                 let frameId = 0;
-                if (args.frameId) {     // Should always be valid
+                if (args.frameId !== undefined) {     // Should always be valid
                     [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
-                    if (traceThreads) {
-                        this.handleMsg('log', `**** evaluateRequest: ${args.context} '${args.expression}' in thread#${threadId} frame#${frameId}\n`);
-                    }
-                } else if (!isBusy()) {
-                    // In practice, never seen this unless it comes from a custom request
-                    this.handleMsg('log', `Thread Warning: ${args.context}: eval. expression '${args.expression}' with no thread context. Using default\n`);
                 }
 
                 if (args.context !== 'repl') {
@@ -3156,6 +3179,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const exp = args.expression;
                         const hasher = crypto.createHash('sha256');
                         hasher.update(exp);
+                        if (args.frameId !== undefined) {
+                            hasher.update(args.frameId.toString(16));
+                        }
                         const exprName = hasher.digest('hex');
                         const varObjName = `${args.context}_${exprName}`;
                         let varObj: VariableObject;
@@ -3172,8 +3198,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                             varObj = this.variableHandles.get(varId) as any;
                         }
                         catch (err) {
-                            if (!isBusy() && (err instanceof MIError && err.message === 'Variable object not found')) {
-                                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                            if (!this.isBusy() && (err instanceof MIError && err.message === 'Variable object not found')) {
+                                if (args.frameId === undefined) {
+                                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                                } else {
+                                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
+                                }
                                 const varId = findOrCreateVariable(varObj);
                                 varObj.exp = exp;
                                 varObj.id = varId;
@@ -3187,8 +3217,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.sendResponse(response);
                     }
                     catch (err) {
-                        if (isBusy()) {
-                            busyError(response, args);
+                        if (this.isBusy()) {
+                            this.busyError(response, args);
                         } else {
                             response.body = {
                                 result: (args.context === 'hover') ? null : `<${err.toString()}>`,
@@ -3204,13 +3234,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                     finally {
                         resolve();
                     }
-                } else {
-                    // REPL: Set the proper thread/frame context before sending command to gdb. We don't know
-                    // what the command is but it needs to be run in the proper context.
+                } else {        // This is an 'repl'
                     try {
-                        if (!isBusy() && args.frameId) {
-                            await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
-                        }
                         this.miDebugger.sendUserInput(args.expression).then((output) => {
                             if (typeof output === 'undefined') {
                                 response.body = {

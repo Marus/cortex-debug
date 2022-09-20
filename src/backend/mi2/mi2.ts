@@ -105,7 +105,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }
             this.actuallyStarted = true;
             this.parseVersionInfo(v.output);
-            if (!this.gdbMajorVersion || (this.gdbMajorVersion < 9)) {
+            if ((this.gdbMajorVersion !== undefined) && (this.gdbMajorVersion < 9)) {
                 this.isExiting = true;
                 const ver = this.gdbMajorVersion ? this.gdbMajorVersion.toString() : 'Unknown';
                 const msg = `ERROR: GDB major version should be >= 9, yours is ${ver}`;
@@ -140,7 +140,7 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private parseVersionInfo(str: string) {
-        const regex = RegExp(/^GNU gdb\s\(.*\)\s?(\d+)\.(\d+)[^\r\n]*/gm);
+        const regex = RegExp(/^GNU gdb.*\s(\d+)\.(\d+)[^\r\n]*/gm);
         const match = regex.exec(str);
         if (match !== null) {
             str = str.substr(0, match.index);
@@ -149,6 +149,10 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         if (str) {
             this.log('console', str);
+        }
+        if (match === null) {
+            this.log('log', 'ERROR: Could not determine gdb-version number (regex failed). We need version >= 9. Please report this problem.');
+            this.log('log', '    This can result in silent failures');
         }
     }
 
