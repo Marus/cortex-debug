@@ -155,7 +155,7 @@ export class VariableObject {
     }
 
     private tryAddMemoryReference(result: object): void {
-        if ((this.numchild > 0 || this.type === "void *")
+        if ((this.numchild > 0 || this.type === 'void *')
             && this.value.startsWith('0x')) {
             result['memoryReference'] = hexFormat(parseInt(this.value));
         }
