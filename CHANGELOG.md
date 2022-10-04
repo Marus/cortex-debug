@@ -3,6 +3,7 @@ ChangeLog
 
 # V1.6.6
 * `void *` variables now return `memoryReference` values.
+* ST-LINK we now reserve four TCP ports when launching their gdb-server. We only use the first one but it done in case a second ST-LINK server is launched.
 
 # V1.6.4
 * Issue #741: Could not determine gdb version from Fedora install

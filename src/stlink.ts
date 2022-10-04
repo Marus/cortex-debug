@@ -65,7 +65,8 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
 
 export class STLinkServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'ST-LINK';
-    public readonly portsNeeded: string[] = ['gdbPort'];
+    // STLink uses 4 ports per core. Not sure what 3rd and 4th are for but reserve them anyways
+    public readonly portsNeeded: string[] = ['gdbPort', 'swoPort', 'gap1', 'gap2'];
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
@@ -170,6 +171,8 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             }
             serverargs.push('-cp', stm32cubeprogrammer);
         }
+
+        serverargs.push('--shared');        // Maybe we should share all the time
          
         if ((this.args.interface !== 'jtag') && (this.args.interface !== 'cjtag')) {       // TODO: handle ctag in when this server supports it
             serverargs.push('--swd');
