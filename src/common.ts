@@ -260,6 +260,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     overrideLaunchCommands: string[];
     preAttachCommands: string[];
     postAttachCommands: string[];
+    preContinueCommands: string[];
     overrideAttachCommands: string[];
     preRestartCommands: string[];
     postRestartCommands: string[];

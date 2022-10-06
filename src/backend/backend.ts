@@ -42,7 +42,7 @@ export interface IBackend {
     stop();
     detach();
     interrupt(arg: string): Thenable<boolean>;
-    continue(threadId: number): Thenable<boolean>;
+    continue(commands: string[], threadId: number): Thenable<boolean>;
     next(threadId: number, instruction: boolean): Thenable<boolean>;
     step(threadId: number, instruction: boolean): Thenable<boolean>;
     stepOut(threadId: number): Thenable<boolean>;

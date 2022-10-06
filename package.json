@@ -610,6 +610,12 @@
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
                             },
+                            "preContinueCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be exectuted immediately before continuing."
+                            },
                             "overrideAttachCommands": {
                                 "default": null,
                                 "type": "array",

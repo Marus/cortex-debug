@@ -505,14 +505,23 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public continue(threadId: number): Thenable<boolean> {
+    public continue(commands: string[], threadId: number): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'continue');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand(`exec-continue --thread ${threadId}`).then((info) => {
-                resolve(info.resultRecords.resultClass === 'running');
-            }, reject);
+            const nextCommand = ((commands: string[]) => {
+                if (commands.length === 0) {
+                    this.sendCommand(`exec-continue --thread ${threadId}`).then((info) => {
+                        resolve(info.resultRecords.resultClass === 'running');
+                    }, reject);
+                } else {
+                    const command = commands[0];
+                    this.sendCommand(command).then((r) => { nextCommand(commands.slice(1)); }, reject);
+                }
+            }).bind(this);
+
+            nextCommand(commands);
         });
     }
 

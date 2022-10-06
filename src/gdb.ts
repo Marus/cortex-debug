@@ -3015,7 +3015,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (this.args.ctiOpenOCDConfig?.enabled && this.args.ctiOpenOCDConfig?.resumeCommands && this.serverController.ctiStopResume) {
                 this.serverController.ctiStopResume(CTIAction.resume);
             } else {
-                const done = await this.miDebugger.continue(args.threadId);
+                const commands = [];
+                commands.push(...this.args.preContinueCommands.map(COMMAND_MAP));
+                const done = await this.miDebugger.continue(commands, args.threadId);
             }
             response.body = { allThreadsContinued: true };
             this.sendResponse(response);
