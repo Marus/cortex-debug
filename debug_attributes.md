@@ -30,6 +30,7 @@ Also using IntelliSense while editing launch.json in VSCode can be quite helpful
 | preAttachCommands | Common | Additional GDB Commands to be executed at the start of the main attach sequence (immediately after attaching to target).
 | preLaunchCommands | Common | Additional GDB Commands to be executed at the start of the main launch sequence (immediately after attaching to target).
 | preRestartCommands | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution).
+| preContinueCommands | Common | Additional GDB Commands to be exectuted immediately before continuing.
 | request | Common | ????
 | rtos | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be ChibiOS, eCos, embKernel, FreeRTOS, mqx, nuttx, ThreadX, uCOS-III, or auto.
 | rttConfig | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future
