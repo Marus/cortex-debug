@@ -4,6 +4,7 @@ ChangeLog
 # V1.6.6
 * `void *` variables now return `memoryReference` values.
 * ST-LINK we now reserve four TCP ports when launching their gdb-server. We only use the first one but it done in case a second ST-LINK server is launched.
+* `Cortex-Debug: View Memory` command now uses a separate memory viewer extension if it is installed. https://marketplace.visualstudio.com/items?itemName=mcu-debug.memory-view. In the future, we may auto install the extension when this extension is installed. We would like to hear if you would like that. The download is about 1MB
 
 # V1.6.4
 * Issue #741: Could not determine gdb version from Fedora install
