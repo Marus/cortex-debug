@@ -3043,7 +3043,7 @@
         "bindings": "^1.5.0",
         "command-exists": "^1.2.9",
         "commander": "^2.20.3",
-        "d3": "^5.16.0",
+        "d3": "^7.6.1",
         "debug": "^4.3.1",
         "hasbin": "^1.2.3",
         "json-stream-stringify": "^2.0.4",
