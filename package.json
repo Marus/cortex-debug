@@ -1187,7 +1187,7 @@
                                                         },
                                                         "iencoding": {
                                                             "type": "string",
-                                                            "description": "How keyoard input is encoded. Cooked mode only",
+                                                            "description": "How keyboard input is encoded. Cooked mode only",
                                                             "default": "utf8",
                                                             "enum": [
                                                                 "ascii",
@@ -2298,7 +2298,7 @@
                                                         },
                                                         "iencoding": {
                                                             "type": "string",
-                                                            "description": "How keyoard input is encoded Cooked mode only",
+                                                            "description": "How keyboard input is encoded Cooked mode only",
                                                             "default": "utf8",
                                                             "enum": [
                                                                 "ascii",
@@ -3063,7 +3063,7 @@
     "devDependencies": {
         "@types/binary-parser": "^1.5.0",
         "@types/mocha": "^5.2.7",
-        "@types/node": "^10.17.51",
+        "@types/node": "16.x",
         "@types/vscode": "^1.52.0",
         "@vscode/debugadapter": "^1.51.1",
         "@vscode/debugprotocol": "^1.51.0",
