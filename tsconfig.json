@@ -7,7 +7,10 @@
 			"es6"
 		],
 		"sourceMap": true,
-		"rootDir": "."
+		"rootDir": ".",
+		"plugins": [
+			{ "name": "typescript-tslint-plugin" }
+		]
 	},
 	"exclude": [
 		"node_modules",

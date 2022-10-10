@@ -60,7 +60,7 @@ suite('TcpPortScanner Tests', () => {
             const server = http.createServer();
             server.on('error', (err: any) => {
                 assert.fail(`Could not start http server on port ${port}`);
-            })
+            });
             setTimeout(() => {
                 server.listen(port, () => {
                     if (doLog) { console.log(`Http server is listening on ${port}`); }

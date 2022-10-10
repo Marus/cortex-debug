@@ -1,4 +1,4 @@
-import { TextEncoding } from "../../common";
+import { TextEncoding } from '../../common';
 
 export interface SWODecoderConfig {
     type: string;
