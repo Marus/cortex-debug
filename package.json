@@ -1,5 +1,5 @@
 {
-    "version": "1.6.6",
+    "version": "1.6.7",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -3038,12 +3038,12 @@
     },
     "dependencies": {
         "@vscode/extension-telemetry": "^0.4.7",
-        "@vscode/webview-ui-toolkit": "^0.9.2",
+        "@vscode/webview-ui-toolkit": "^1.1.0",
         "binary-parser": "^1.7.0",
         "bindings": "^1.5.0",
         "command-exists": "^1.2.9",
         "commander": "^2.20.3",
-        "d3": "^5.16.0",
+        "d3": "^7.6.1",
         "debug": "^4.3.1",
         "hasbin": "^1.2.3",
         "json-stream-stringify": "^2.0.4",
