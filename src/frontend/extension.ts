@@ -416,6 +416,25 @@ export class CortexDebugExtension {
     }
 
     private examineMemory() {
+        const cmd = 'mcu-debug.memory-view.addMemoryView';
+        vscode.commands.executeCommand(cmd).then(() => {}, (e) => {
+            const installExt = 'Install MemoryView Extension';
+            vscode.window.showErrorMessage(
+                `Unable to execute ${cmd}. Perhaps the MemoryView extension is not installed. ` +
+                'Please install extension and try again. A restart may be needed', undefined,
+                    {
+                        title: installExt
+                    },
+                    {
+                        title: 'Cancel'
+                    }).then(async (v) => {
+                    if (v && (v.title === installExt)) {
+                        vscode.commands.executeCommand('workbench.extensions.installExtension', 'mcu-debug.memory-view');
+                    }
+                });
+        });
+        return;
+
         function validateValue(address) {
             if (/^0x[0-9a-f]{1,8}$/i.test(address)) {
                 return address;

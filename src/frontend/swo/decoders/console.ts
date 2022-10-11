@@ -5,7 +5,7 @@ import { SWORTTDecoder } from './common';
 import { SWOConsoleDecoderConfig } from '../common';
 import { Packet } from '../common';
 import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
-import { HrTimer, TerminalInputMode } from '../../../common';
+import { HrTimer, TerminalInputMode, TextEncoding } from '../../../common';
 
 export class SWOConsoleProcessor implements SWORTTDecoder {
     private positionCount: number;
@@ -14,7 +14,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     private timeout: any = null;
     public readonly format: string = 'console';
     private port: number;
-    private encoding: string;
+    private encoding: TextEncoding;
     private showOutputTimer: NodeJS.Timeout = null;
     private useTerminal = true;
     private ptyTerm: PtyTerminal = null;
@@ -25,7 +25,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
 
     constructor(config: SWOConsoleDecoderConfig) {
         this.port = config.port;
-        this.encoding = config.encoding || 'utf8';
+        this.encoding = config.encoding || TextEncoding.UTF8;
         this.timestamp = !!config.timestamp;
         this.useTerminal = 'useTerminal' in config ? (config as any).useTerminal : true;   // TODO: Remove
         if (this.useTerminal) {

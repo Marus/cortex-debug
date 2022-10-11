@@ -11,3 +11,5 @@ vsc-extension-quickstart.md
 webpack.config.js
 node_modules
 binary_modules/electron*
+
+!node_modules/@vscode/webview-ui-toolkit

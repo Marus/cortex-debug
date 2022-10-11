@@ -1,3 +1,5 @@
+import { TextEncoding } from '../../common';
+
 export interface SWODecoderConfig {
     type: string;
 }
@@ -9,7 +11,7 @@ export interface SWOBasicDecoderConfig extends SWODecoderConfig {
 
 export interface SWOConsoleDecoderConfig extends SWOBasicDecoderConfig {
     label: string;
-    encoding: string;
+    encoding: TextEncoding;
     showOnStartup: boolean;
     timestamp: boolean;
 }

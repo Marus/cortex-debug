@@ -444,7 +444,6 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
                 </html>`;
         }
         const toolkitUri = getUri(webview, this.extensionUri, [
-            'webview',
             'node_modules',
             '@vscode',
             'webview-ui-toolkit',
