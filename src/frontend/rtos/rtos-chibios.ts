@@ -41,7 +41,7 @@ enum chThreadState {
     FINAL,
     UNKNOWN,
     _SIZE
-};
+}
 
 const colNumType = RTOSCommon.ColTypeEnum.colTypeNumeric;
 const ChibiOSItems: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
@@ -128,7 +128,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
                 try {
                     this.chReglist = await this.getVarIfEmpty(this.chReglist, useFrameId, '(uint32_t) &ch_system.reglist', false);
                     this.smp = true;
-                } catch(e) {
+                } catch (e) {
                     this.chReglist = await this.getVarIfEmpty(this.chReglist, useFrameId, '(uint32_t) &ch0.reglist', false);
                 }
 
