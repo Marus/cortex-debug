@@ -7,11 +7,13 @@ import * as RTOSCommon from './rtos-common';
 import { RTOSFreeRTOS } from './rtos-freertos';
 import { RTOSUCOS2 } from './rtos-ucosii';
 import { RTOSEmbOS } from './rtos-embos';
+import { RTOSChibiOS } from './rtos-chibios';
 
 const RTOS_TYPES = {
     'FreeRTOS': RTOSFreeRTOS,
     'uC/OS-II': RTOSUCOS2,
-    'embOS': RTOSEmbOS
+    'embOS': RTOSEmbOS,
+    'ChibiOS': RTOSChibiOS
 };
 export class RTOSSession {
     public lastFrameId: number;
