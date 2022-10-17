@@ -2309,6 +2309,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             stackFrames: [],
             totalFrames: 0
         };
+        // Handle optional args when not passed
+        args.startFrame = args.startFrame ?? 0;
+        args.levels = args.levels ?? Infinity;
         if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
             this.sendResponse(response);
             return Promise.resolve();
