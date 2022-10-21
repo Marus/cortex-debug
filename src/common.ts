@@ -264,6 +264,9 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     preRestartCommands: string[];
     postRestartCommands: string[];
     overrideRestartCommands: string[];
+    preResetCommands: string[];
+    postResetCommands: string[];
+    overrideResetCommands: string[];
     postStartSessionCommands: string[];
     postRestartSessionCommands: string[];
     overrideGDBServerStartedRegex: string;

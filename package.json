@@ -610,6 +610,18 @@
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
                             },
+                            "preResetCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the beginning of the reset sequence (after interrupting execution). When not defined this will have the same value of preRestartCommands."
+                            },
+                            "postResetCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the end of the reset sequence. When not defined this will have the same value of postRestartCommands."
+                            },
                             "overrideAttachCommands": {
                                 "default": null,
                                 "type": "array",
@@ -621,6 +633,12 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "You can use this to property to override the commands that are normally executed as part of restarting the target. In most cases it is preferable to use preRestartCommands and postRestartCommands to customize the GDB restart sequence."
+                            },
+                            "overrideResetCommands": {
+                                "default": null,
+                                "type": "array",
+                                "items": "string",
+                                "description": "You can use this to property to override the commands that are normally executed as part of reset the target. When not defined this will have the same value of overrideRestartCommands. In most cases it is preferable to use preResetCommands and postResetCommands to customize the GDB reset sequence."
                             },
                             "postStartSessionCommands": {
                                 "default": [],
@@ -1673,6 +1691,18 @@
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the restart sequence."
                             },
+                            "preResetCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the beginning of the reset sequence (after interrupting execution). When not defined this will have the same value of preRestartCommands."
+                            },
+                            "postResetCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Additional GDB Commands to be executed at the end of the reset sequence. When not defined this will have the same value of postRestartCommands."
+                            },
                             "overrideLaunchCommands": {
                                 "default": null,
                                 "type": "array",
@@ -1684,6 +1714,12 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "You can use this to property to override the commands that are normally executed as part of restarting the target. In most cases it is preferable to use preRestartCommands and postRestartCommands to customize the GDB restart sequence."
+                            },
+                            "overrideResetCommands": {
+                                "default": null,
+                                "type": "array",
+                                "items": "string",
+                                "description": "You can use this to property to override the commands that are normally executed as part of reset the target. When not defined this will have the same value of overrideRestartCommands. In most cases it is preferable to use preResetCommands and postResetCommands to customize the GDB reset sequence."
                             },
                             "postStartSessionCommands": {
                                 "default": [],
