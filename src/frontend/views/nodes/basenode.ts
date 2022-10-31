@@ -50,3 +50,7 @@ export abstract class PeripheralBaseNode extends BaseNode {
     public abstract saveState(path?: string): NodeSetting[];
     public abstract findByPath(path: string[]): PeripheralBaseNode;
 }
+
+export abstract class ClusterOrRegisterBaseNode extends PeripheralBaseNode {
+    public readonly offset: number;
+}

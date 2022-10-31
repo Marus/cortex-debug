@@ -109,6 +109,7 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.toggleVariableHexFormat', this.toggleVariablesHexMode.bind(this)),
 
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.examineMemoryLegacy', this.examineMemoryLegacy.bind(this)),
             vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
             vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
 
@@ -165,7 +166,7 @@ export class CortexDebugExtension {
                         throw new Error('Function not implemented.');
                     }
                 };
-                SVDParser.parseSVD(session, '/Users/hdm/Downloads/SVDs/max32625.svd', 4).then((result) => {
+                SVDParser.parseSVD(session, '/Users/hdm/Downloads/xmc7200.svd', 4).then((result) => {
                     console.log('here');
                 }, (e) => {
                     console.error('svd file parse failed', e);
@@ -417,24 +418,25 @@ export class CortexDebugExtension {
 
     private examineMemory() {
         const cmd = 'mcu-debug.memory-view.addMemoryView';
-        vscode.commands.executeCommand(cmd).then(() => {}, (e) => {
+        vscode.commands.executeCommand(cmd).then(() => { }, (e) => {
             const installExt = 'Install MemoryView Extension';
             vscode.window.showErrorMessage(
                 `Unable to execute ${cmd}. Perhaps the MemoryView extension is not installed. ` +
                 'Please install extension and try again. A restart may be needed', undefined,
-                    {
-                        title: installExt
-                    },
-                    {
-                        title: 'Cancel'
-                    }).then(async (v) => {
+                {
+                    title: installExt
+                },
+                {
+                    title: 'Cancel'
+                }).then(async (v) => {
                     if (v && (v.title === installExt)) {
                         vscode.commands.executeCommand('workbench.extensions.installExtension', 'mcu-debug.memory-view');
                     }
                 });
         });
-        return;
+    }
 
+    private examineMemoryLegacy() {
         function validateValue(address) {
             if (/^0x[0-9a-f]{1,8}$/i.test(address)) {
                 return address;

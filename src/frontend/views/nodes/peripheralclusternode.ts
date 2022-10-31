@@ -1,5 +1,5 @@
 import { TreeItem, TreeItemCollapsibleState } from 'vscode';
-import { PeripheralBaseNode } from './basenode';
+import { PeripheralBaseNode, ClusterOrRegisterBaseNode } from './basenode';
 import { AccessType } from '../../svd';
 import { PeripheralRegisterNode } from './peripheralregisternode';
 import { PeripheralNode } from './peripheralnode';
@@ -16,8 +16,11 @@ export interface ClusterOptions {
     resetValue?: number;
 }
 
-export class PeripheralClusterNode extends PeripheralBaseNode {
-    private children: PeripheralRegisterNode[];
+export type PeripheralOrClusterNode = PeripheralNode | PeripheralClusterNode;
+export type PeripheralRegisterOrClusterNode = PeripheralRegisterNode | PeripheralClusterNode;
+
+export class PeripheralClusterNode extends ClusterOrRegisterBaseNode {
+    private children: PeripheralRegisterOrClusterNode[];
     public readonly name: string;
     public readonly description?: string;
     public readonly offset: number;
@@ -25,7 +28,7 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
     public readonly resetValue: number;
     public readonly accessType: AccessType;
 
-    constructor(public parent: PeripheralNode, options: ClusterOptions) {
+    constructor(public parent: PeripheralOrClusterNode, options: ClusterOptions) {
         super(parent);
         this.name = options.name;
         this.description = options.description;
@@ -47,18 +50,18 @@ export class PeripheralClusterNode extends PeripheralBaseNode {
         return item;
     }
 
-    public getChildren(): PeripheralRegisterNode[] {
+    public getChildren(): PeripheralRegisterOrClusterNode[] {
         return this.children;
     }
 
-    public setChildren(children: PeripheralRegisterNode[]) {
+    public setChildren(children: PeripheralRegisterOrClusterNode[]) {
         this.children = children.slice(0, children.length);
-        this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
+        this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralRegisterNode) {
+    public addChild(child: PeripheralRegisterOrClusterNode) {
         this.children.push(child);
-        this.children.sort((r1, r2) => r1.offset > r2.offset ? 1 : -1);
+        this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
     public getBytes(offset: number, size: number): Uint8Array {

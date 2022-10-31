@@ -6,7 +6,7 @@ import { NumberFormat, NodeSetting } from '../../../common';
 import { MemReadUtils } from '../../memreadutils';
 import { hexFormat } from '../../utils';
 import { PeripheralRegisterNode } from './peripheralregisternode';
-import { PeripheralClusterNode } from './peripheralclusternode';
+import { PeripheralClusterNode, PeripheralRegisterOrClusterNode } from './peripheralclusternode';
 import * as vscode from 'vscode';
 
 export interface PeripheralOptions {
@@ -77,7 +77,7 @@ export class PeripheralNode extends PeripheralBaseNode {
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }
 
-    public addChild(child: PeripheralRegisterNode | PeripheralClusterNode) {
+    public addChild(child: PeripheralRegisterOrClusterNode) {
         this.children.push(child);
         this.children.sort((c1, c2) => c1.offset > c2.offset ? 1 : -1);
     }

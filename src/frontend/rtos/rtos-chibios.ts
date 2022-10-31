@@ -284,9 +284,9 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
 
                             nextEntry = await this.getExprValChildrenObj('(ch_queue_t *)' + currentReglist, frameId);
                             currentReglist = nextEntry['next-val'] ? parseInt(nextEntry['next-val']) : 0;
-
+                            console.log('Got', currentReglist);
                         } while (reglistHeader !== currentReglist);
-
+                        console.log('Done');
                     } else {
                         // TODO: add error message - reglist header not found
                     }

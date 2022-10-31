@@ -1,5 +1,5 @@
 {
-    "version": "1.6.7",
+    "version": "1.6.7-pre1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -470,6 +470,11 @@
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.examineMemory",
                 "title": "View Memory"
+            },
+            {
+                "category": "Cortex-Debug",
+                "command": "cortex-debug.examineMemoryLegacy",
+                "title": "View Memory (Legacy)"
             },
             {
                 "category": "Cortex-Debug",
@@ -2856,6 +2861,10 @@
                 },
                 {
                     "command": "cortex-debug.examineMemory",
+                    "when": "debugType == cortex-debug"
+                },
+                {
+                    "command": "cortex-debug.examineMemoryLegacy",
                     "when": "debugType == cortex-debug"
                 },
                 {

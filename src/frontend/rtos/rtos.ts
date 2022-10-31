@@ -12,8 +12,8 @@ import { RTOSChibiOS } from './rtos-chibios';
 const RTOS_TYPES = {
     'FreeRTOS': RTOSFreeRTOS,
     'uC/OS-II': RTOSUCOS2,
-    'embOS': RTOSEmbOS,
-    'ChibiOS': RTOSChibiOS
+    'embOS': RTOSEmbOS
+    // 'ChibiOS': RTOSChibiOS
 };
 export class RTOSSession {
     public lastFrameId: number;

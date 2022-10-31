@@ -1,7 +1,7 @@
 import { TreeItem, TreeItemCollapsibleState, TreeItemLabel, window, debug, MarkdownString } from 'vscode';
 import { PeripheralNode } from './peripheralnode';
 import { PeripheralClusterNode } from './peripheralclusternode';
-import { PeripheralBaseNode } from './basenode';
+import { ClusterOrRegisterBaseNode, PeripheralBaseNode } from './basenode';
 import { PeripheralFieldNode } from './peripheralfieldnode';
 import { AccessType } from '../../svd';
 import { extractBits, createMask, hexFormat, binaryFormat } from '../../utils';
@@ -17,7 +17,7 @@ export interface PeripheralRegisterOptions {
     resetValue?: number;
 }
 
-export class PeripheralRegisterNode extends PeripheralBaseNode {
+export class PeripheralRegisterNode extends ClusterOrRegisterBaseNode {
     public children: PeripheralFieldNode[];
     public readonly name: string;
     public readonly description?: string;

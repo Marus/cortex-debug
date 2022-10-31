@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+# V1.6.7
+* The old memory viewer is temporarily restored as a new command `Cortex-Debug: View Memory (Legacy)`. We will **not** be maintaining this legacy viewer but there may be capabilities there that are not yet in the new memory viewer. Like selection and copy to clipboard
+## Issues
+* [#769](https://github.com/Marus/cortex-debug/issues/769): Nested register cluster in SVD file is not displayed. The SVD spec changed and v1.3 nested clusters are now allowed. This is now supported
+
 # V1.6.6
 * `void *` variables now return `memoryReference` values.
 * ST-LINK we now reserve four TCP ports when launching their gdb-server. We only use the first one but it done in case a second ST-LINK server is launched.

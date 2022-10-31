@@ -1,5 +1,5 @@
 import { PeripheralRegisterNode } from './views/nodes/peripheralregisternode';
-import { PeripheralClusterNode } from './views/nodes/peripheralclusternode';
+import { PeripheralClusterNode, PeripheralOrClusterNode } from './views/nodes/peripheralclusternode';
 import { PeripheralNode } from './views/nodes/peripheralnode';
 import { parseInteger, parseDimIndex } from './utils';
 import { PeripheralFieldNode, EnumerationMap, EnumeratedValue } from './views/nodes/peripheralfieldnode';
@@ -323,7 +323,7 @@ export class SVDParser {
         return registers;
     }
 
-    private static parseClusters(clusterInfo: any, parent: PeripheralNode): PeripheralClusterNode[] {
+    private static parseClusters(clusterInfo: any, parent: PeripheralOrClusterNode): PeripheralClusterNode[] {
         const clusters: PeripheralClusterNode[] = [];
 
         if (!clusterInfo) { return []; }
@@ -370,6 +370,9 @@ export class SVDParser {
                     if (c.register) {
                         SVDParser.parseRegisters(c.register, cluster);
                     }
+                    if (c.cluster) {
+                        SVDParser.parseClusters(c.cluster, cluster);
+                    }
                     clusters.push(cluster);
                 }
 
@@ -384,6 +387,10 @@ export class SVDParser {
                 });
                 if (c.register) {
                     SVDParser.parseRegisters(c.register, cluster);
+                    clusters.push(cluster);
+                }
+                if (c.cluster) {
+                    SVDParser.parseClusters(c.cluster, cluster);
                     clusters.push(cluster);
                 }
             }
