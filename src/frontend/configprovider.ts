@@ -174,6 +174,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             cwd = path.join(folder.uri.fsPath, cwd);
         }
         config.cwd = cwd;
+        if (!fs.existsSync(cwd)) {
+            vscode.window.showWarningMessage(`Invalid "cwd": "${cwd}". Many operations can fail. Trying to continue`);
+        }
         this.validateLoadAndSymbolFiles(config, cwd);
 
         const extension = vscode.extensions.getExtension('marus25.cortex-debug');
