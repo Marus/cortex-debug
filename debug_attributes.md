@@ -22,14 +22,17 @@ Also using IntelliSense while editing launch.json in VSCode can be quite helpful
 | overrideGDBServerStartedRegex | Common | You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.
 | overrideLaunchCommands | Common | You can use this to property to override the commands that are normally executed as part of flashing and launching the target. In most cases it is preferable to use preLaunchCommands and postLaunchCommands to customize the GDB launch sequence.
 | overrideRestartCommands | Common | You can use this to property to override the commands that are normally executed as part of restarting the target. In most cases it is preferable to use preRestartCommands and postRestartCommands to customize the GDB restart sequence.
+| overrideResetCommands | Common | You can use this to property to override the commands that are normally executed as part of reset the target. When not defined this will have the same value of overrideRestartCommands. In most cases it is preferable to use preResetCommands and postResetCommands to customize the GDB reset sequence.
 | postAttachCommands | Common | Additional GDB Commands to be executed after the main attach sequence has finished.
 | postLaunchCommands | Common | Additional GDB Commands to be executed after the main launch sequence has finished.
 | postRestartCommands | Common | Additional GDB Commands to be executed at the end of the restart sequence.
+| postResetCommands | Common | Additional GDB Commands to be executed at the end of the reset sequence. When not defined this will have the same value of postRestartCommands.
 | postRestartSessionCommands | Common | Additional GDB Commands to be executed at the end of the re-start sequence, after a debug session has already started.
 | postStartSessionCommands | Common | Additional GDB Commands to be executed at the end of the start sequence, after a debug session has already started and runToEntryPoint is not specified.
 | preAttachCommands | Common | Additional GDB Commands to be executed at the start of the main attach sequence (immediately after attaching to target).
 | preLaunchCommands | Common | Additional GDB Commands to be executed at the start of the main launch sequence (immediately after attaching to target).
 | preRestartCommands | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution).
+| preResetCommands | Common | Additional GDB Commands to be executed at the beginning of the reset sequence (after interrupting execution). When not defined this will have the same value of preRestartCommands.
 | request | Common | ????
 | rtos | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be ChibiOS, eCos, embKernel, FreeRTOS, mqx, nuttx, ThreadX, uCOS-III, or auto.
 | rttConfig | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future

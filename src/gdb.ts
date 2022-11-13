@@ -568,13 +568,13 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const showTimes = this.args.showDevDebugOutput && this.args.showDevDebugTimestamps;
                         await gdbPromise;
                         if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Ready...\n'); }
-                                          
+
                         // await gdbInfoVariables;
                         // if (showTimes) { this.handleMsg('log', 'Debug Time: GDB info variables done...\n'); }
 
                         await this.serverController.serverLaunchCompleted();
                         if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Server post start events done...\n'); }
-                          
+
                         await symbolsPromise;
                         if (showTimes) { this.handleMsg('log', 'Debug Time: objdump and nm done...\n'); }
                         if (showTimes) { this.handleMsg('log', 'Debug Time: All pending items done, proceed to gdb connect...\n'); }
@@ -793,7 +793,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
         const gdbMissingMsg = `GDB executable "${gdbExePath}" was not found.\n` +
             'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.';
-        
+
         if (this.args.gdbPath) {
             gdbExePath = this.args.gdbPath;
         } else if (path.isAbsolute(gdbExePath)) {
@@ -1439,11 +1439,20 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.disableSendStoppedEvents = false;
                 this.continuing = false;
 
-                commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
-                const restartCommands = this.args.overrideRestartCommands != null ?
-                    this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
-                commands.push(...restartCommands);
-                commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
+                if (mode === SessionMode.RESTART) {
+                    commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
+                    const restartCommands = this.args.overrideRestartCommands != null ?
+                        this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
+                    commands.push(...restartCommands);
+                    commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
+                } else {
+                    commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
+                    const resetCommands = this.args.overrideResetCommands != null ? this.args.overrideResetCommands.map(COMMAND_MAP) :
+                                          this.args.overrideRestartCommands != null ? this.args.overrideRestartCommands.map(COMMAND_MAP) :
+                                          this.serverController.restartCommands();
+                    commands.push(...resetCommands);
+                    commands.push(...this.args.postResetCommands.map(COMMAND_MAP));
+                }
 
                 let finishCalled = false;
                 const callFinish = () => {
@@ -1494,10 +1503,9 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected getResetCommands(): string[] {
-        if (this.args.overrideRestartCommands != null) {
-            return this.args.overrideRestartCommands.map(COMMAND_MAP);
-        }
-        return this.serverController.restartCommands();
+        return this.args.overrideResetCommands != null ? this.args.overrideResetCommands.map(COMMAND_MAP) :
+               this.args.overrideRestartCommands != null ? this.args.overrideRestartCommands.map(COMMAND_MAP) :
+               this.serverController.restartCommands();
     }
 
     protected async resetDevice(response: DebugProtocol.Response, args: any) {
@@ -1553,7 +1561,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         // Should we call exec-interrupt here? See #561
         // Once we get this, from here on, nothing really works with gdb.
         const msg = 'Error: A serious error occurred with gdb, unable to continue or interrupt We may not be able to recover ' +
-           'from this point. You can try continuing or ending session. Must address root cause though';
+            'from this point. You can try continuing or ending session. Must address root cause though';
         this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
         this.handleMsg('stderr', msg + '\n');
         this.continuing = false;
@@ -2081,7 +2089,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                 await this.doPauseExecContinue(createBreakpoints, pendContinue);
             });
-            };
+        };
 
         return this.allBreakPointsQ.add(doit, r, a);
     }
@@ -3131,7 +3139,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         response.message = 'notStopped';
         this.sendErrorResponse(response, 8, 'Busy', undefined, ErrorDestination.Telemetry);
     }
-    
+
     private evaluateQ = new RequestQueue<DebugProtocol.EvaluateResponse, DebugProtocol.EvaluateArguments>();
     protected evaluateRequest(r: DebugProtocol.EvaluateResponse, a: DebugProtocol.EvaluateArguments): Promise<void> {
         if (a.context !== 'repl') {
