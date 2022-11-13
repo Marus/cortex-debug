@@ -7,7 +7,23 @@ import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKe
 import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
 
-const OPENOCD_VALID_RTOS: string[] = ['ChibiOS', 'eCos', 'embKernel', 'FreeRTOS', 'mqx', 'nuttx', 'ThreadX', 'uCOS-III', 'auto'];
+// Please confirm these names with OpenOCD source code. Their docs are incorrect as to case
+const OPENOCD_VALID_RTOS: string[] = [
+    'auto',
+    'FreeRTOS',
+    'ThreadX',
+    'chibios',
+    'Chromium-EC',
+    'eCos',
+    'embKernel',
+    // 'hwthread',
+    'linux',
+    'mqx',
+    'nuttx',
+    'RIOT',
+    'uCOS-III',
+    'Zephyr'
+];
 const JLINK_VALID_RTOS: string[] = ['Azure', 'ChibiOS', 'embOS', 'FreeRTOS', 'NuttX', 'Zephyr'];
 
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
