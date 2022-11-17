@@ -39,7 +39,7 @@ config_args = re.search(
 
 categories = {}
 category_name = ''
-category_list = []
+category_list = ['armToolchainPath']
 for line in config_args.splitlines():
     line = line.strip()
     if len(line) == 0 or line.startswith('///') or line.startswith('pvt'):
@@ -51,7 +51,6 @@ for line in config_args.splitlines():
     else:
         category_list.append(line.split(':')[0])
 categories[category_name] = category_list
-
 
 # pp.pprint(categories)
 
