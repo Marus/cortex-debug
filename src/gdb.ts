@@ -1441,14 +1441,14 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                 if (mode === SessionMode.RESTART) {
                     commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
-                    const restartCommands = this.args.overrideRestartCommands != null ?
+                    const restartCommands = this.args.overrideRestartCommands ?
                         this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
                     commands.push(...restartCommands);
                     commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
                 } else {
                     commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
-                    const resetCommands = this.args.overrideResetCommands != null ? this.args.overrideResetCommands.map(COMMAND_MAP) :
-                                          this.args.overrideRestartCommands != null ? this.args.overrideRestartCommands.map(COMMAND_MAP) :
+                    const resetCommands = this.args.overrideResetCommands ? this.args.overrideResetCommands.map(COMMAND_MAP) :
+                                          this.args.overrideRestartCommands ? this.args.overrideRestartCommands.map(COMMAND_MAP) :
                                           this.serverController.restartCommands();
                     commands.push(...resetCommands);
                     commands.push(...this.args.postResetCommands.map(COMMAND_MAP));

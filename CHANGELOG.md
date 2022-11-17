@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+# V1.6.8
+* [PR #761 pre, post and override Reset commands.](https://github.com/Marus/cortex-debug/pull/761) There are three new launch.json properties to customize the behavior of the `Reset` button. If they don't exist, they will correspond to the previous defaults which is to use the `Restart` counterparts
+* [Issue #772](OpenOCD server: Spelling mismatch for RTOS 'ChibiOS' vs. 'chibios') OpenOCD documentation which is what we rely on, had typos for official name of RTOSes. We had to through their C source code to determine the real ones. Please use `auto` for the RTOS value as it is pretty effective.
+* JLink now properly supports a `detach` operation so that programs can continue running after the debug session. Please upgrade your JLink SW to V7.82b or later.
+
 # V1.6.7
 * The old memory viewer is temporarily restored as a new command `Cortex-Debug: View Memory (Legacy)`. We will **not** be maintaining this legacy viewer but there may be capabilities there that are not yet in the new memory viewer. Like selection and copy to clipboard
 ## Issues

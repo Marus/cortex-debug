@@ -504,7 +504,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'serverpath', 'openocdPath');
 
         if (config.rtos && OPENOCD_VALID_RTOS.indexOf(config.rtos) === -1) {
-            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}`;
+            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}.` +
+                'You can always use "auto" and OpenOCD generally does the right thing';
         }
 
         if (!CDebugChainedSessionItem.FindByName(config.name)) {
