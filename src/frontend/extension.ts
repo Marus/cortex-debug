@@ -219,7 +219,6 @@ export class CortexDebugExtension {
             const rptMsg = 'Please report this problem.';
             this.gdbServerConsole = new GDBServerConsole(context, logFName);
             this.gdbServerConsole.startServer().then(() => {
-                console.log('GDB server console created');
                 resolve(); // All worked out
             }).catch((e) => {
                 this.gdbServerConsole.dispose();
