@@ -1742,13 +1742,13 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    protected quitEvent(msg?: string) {
+    protected quitEvent(type?: string, msg?: string) {
         this.quit = true;
         if (traceThreads) {
             this.handleMsg('log', '**** quit event\n');
         }
-        if (msg) {
-            this.handleMsg('stderr', msg);
+        if (msg && type) {
+            this.handleMsg(type, msg);
         }
         if (this.server && this.server.isProcessRunning()) {
             // A gdb quit may be happening with VSCode asking us to finish or a crash or user doing something

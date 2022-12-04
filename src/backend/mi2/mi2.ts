@@ -179,7 +179,7 @@ export class MI2 extends EventEmitter implements IBackend {
             const sigstr = signal ? `, signal: ${signal}` : '';
             const how = this.exiting ? '' : ((code || signal) ? ' unexpectedly' : '');
             const msg = `GDB session ended${how}. exit-code: ${codestr}${sigstr}\n`;
-            this.emit('quit', msg);
+            this.emit('quit', how ? 'stderr' : 'stdout', msg);
         }
     }
 
