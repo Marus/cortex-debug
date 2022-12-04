@@ -204,7 +204,9 @@ class SWOWebview {
     }
 
     private getHTML() {
-        const scriptUri = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js')).with({ scheme: 'vscode-resource' });
+        const onDiskPath = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js'));
+        const scriptUri = this.viewPanel.webview.asWebviewUri(onDiskPath);
+        
         const nonce = getNonce();
 
         let html = fs.readFileSync(path.join(this.extensionPath, 'resources', 'grapher.html'), { encoding: 'utf8', flag: 'r' });

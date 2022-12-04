@@ -251,7 +251,7 @@ export class GDBServer extends EventEmitter {
 // See GDBDebugSession.disconnectRequest()
 process.on('exit', (code, signal) => {
     if (currentServers.length > 0) {
-        ServerConsoleLog(`Debug Adapter killed by VSCode? code=${code} signal=${signal}`);
+        ServerConsoleLog(`Debug Adapter crashed or killed by VSCode? code=${code} signal=${signal}`);
         for (const p of [...currentServers]) {
             p.exit();
         }

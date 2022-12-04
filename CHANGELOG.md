@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+# V1.6.9
+* The RTOS view has been moved to another extension so it can work with other debuggers. https://github.com/mcu-debug/rtos-views It will be automatically installed for you with this update. Note that the RTOS view related settings and commands now belong to the new extension (search for `RTOS` in Command Palette)
+* This release will also install the new memory view extension from https://github.com/mcu-debug/memview. The old memory view is still available (search for `legacy` in Command Palette)
+* Fix for [Issue#777](https://github.com/Marus/cortex-debug/issues/777). This supports a new (undocumented) type of watch-point. Depending on version of gdb a watch-point could be called `rwpt` or `awpt`, so we not accept both.
+* Fix for [Issue#786 SWO/RTT grapher cannot display](https://github.com/Marus/cortex-debug/issues/786)
+* Minor useability fixes
+
 # V1.6.8
 * [PR #761 pre, post and override Reset commands.](https://github.com/Marus/cortex-debug/pull/761) There are three new launch.json properties to customize the behavior of the `Reset` button. If they don't exist, they will correspond to the previous defaults which is to use the `Restart` counterparts
 * [Issue #772](OpenOCD server: Spelling mismatch for RTOS 'ChibiOS' vs. 'chibios') OpenOCD documentation which is what we rely on, had typos for official name of RTOSes. We had to through their C source code to determine the real ones. Please use `auto` for the RTOS value as it is pretty effective.

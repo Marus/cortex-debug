@@ -1,5 +1,5 @@
 {
-    "version": "1.6.8",
+    "version": "1.6.9",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -365,11 +365,6 @@
                     "default": null,
                     "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
                 },
-                "cortex-debug.showRTOS": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Enable/Disable display of RTOS panel"
-                },
                 "cortex-debug.showDevDebugOutput": {
                     "enum": [
                         "none",
@@ -407,11 +402,6 @@
             },
             {
                 "command": "cortex-debug.registers.refresh",
-                "title": "Refresh",
-                "icon": "$(refresh)"
-            },
-            {
-                "command": "cortex-debug.rtos.refresh",
                 "title": "Refresh",
                 "icon": "$(refresh)"
             },
@@ -480,11 +470,6 @@
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.viewDisassembly",
                 "title": "View Disassembly (Function)"
-            },
-            {
-                "category": "Cortex-Debug",
-                "command": "cortex-debug.rtos.toggleRTOSPanel",
-                "title": "Toggle RTOS Panel"
             },
             {
                 "category": "Cortex-Debug",
@@ -2908,10 +2893,6 @@
                     "when": "debugType == cortex-debug"
                 },
                 {
-                    "command": "cortex-debug.rtos.toggleRTOSPanel",
-                    "when": "true"
-                },
-                {
                     "command": "cortex-debug.setForceDisassembly",
                     "when": "debugType == cortex-debug"
                 },
@@ -3025,11 +3006,6 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "cortex-debug.rtos.refresh",
-                    "when": "view == cortex-debug.rtos",
-                    "group": "navigation@99"
-                },
-                {
                     "command": "cortex-debug.peripherals.forceRefresh",
                     "when": "view == cortex-debug.peripherals && debugState == stopped",
                     "group": "navigation"
@@ -3131,6 +3107,10 @@
         "gdb",
         "debug",
         "embedded"
+    ],
+    "extensionDependencies": [
+        "mcu-debug.memory-view",
+        "mcu-debug.rtos-views"
     ],
     "main": "./dist/extension.js",
     "name": "cortex-debug",

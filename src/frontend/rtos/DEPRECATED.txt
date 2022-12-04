@@ -1,0 +1,2 @@
+The source code in this directory is no deprecated. The RTOS Views have
+been moved to https://github.com/mcu-debug/rtos-views

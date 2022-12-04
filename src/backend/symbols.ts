@@ -275,7 +275,7 @@ export class SymbolTable {
      * Things we tried:
      * 1.-Wi option objdump -- produces super large output (100MB+) and take minutes to produce and parse
      * 2. Using gdb: We can get variable/function to file information but no addresses -- not super fast but
-     *    inconvenient. We have a couple of do it a couple of different ways and it is still ugly
+     *    inconvenient. We have a couple of different ways and it is still ugly
      * 3. Use nm: This looked super promising until we found out it is super inacurate in telling the type of
      *    symbol. It classifies variables as functions and vice-versa. But for figuring out which variable
      *    belongs to which file that is pretty accurate
@@ -522,7 +522,7 @@ export class SymbolTable {
                         '-S',   // Want size as well
                         '-l',   // File/line info
                         '-C',   // Demangle
-                        '-p',   // do bother sorting
+                        '-p',   // don't bother sorting
                         // Do not use posix format. It is inaccurate
                         executable
                     ];
