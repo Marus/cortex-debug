@@ -77,7 +77,9 @@ export class MI2 extends EventEmitter implements IBackend {
             this.pid = this.process.pid;
             this.process.stdout.on('data', this.stdout.bind(this));
             this.process.stderr.on('data', this.stderr.bind(this));
-            this.process.on('exit', this.onExit.bind(this));
+            this.process.on('exit', (code: number, signal: string) => {
+                this.onExit(code, signal);
+            });
             this.process.on('error', this.onError.bind(this));
             this.process.on('spawn', () => {
                 ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
@@ -166,13 +168,18 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    private onExit() {
+    private onExit(code: number, signal: string) {
         this.gdbStartError();
         ServerConsoleLog('GDB: exited', this.pid);
         if (this.process) {
             this.process = null;
             this.exited = true;
-            this.emit('quit');
+            // Unless we are the ones initiating the quitting,
+            const codestr = code === null || code === undefined ? 'none' : code.toString();
+            const sigstr = signal ? `, signal: ${signal}` : '';
+            const how = this.exiting ? '' : ((code || signal) ? ' unexpectedly' : '');
+            const msg = `GDB session ended${how}. exit-code: ${codestr}${sigstr}\n`;
+            this.emit('quit', msg);
         }
     }
 
@@ -180,7 +187,7 @@ export class MI2 extends EventEmitter implements IBackend {
         if (!this.actuallyStarted) {
             this.log('log', 'Error: Unable to start GDB even after 5 seconds or it couldn\'t even start ' +
                 'Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
-            this.log('log', '    If you cannot, it is most likely because "libncurses5" or "python" is not installed. Some GDBs require these\n');
+            this.log('log', '    If you cannot, it is most likely because "libncurses" or "python" is not installed. Some GDBs require these\n');
         }
     }
 
@@ -401,7 +408,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }
             catch (e) {
                 this.log('log', `kill failed for ${-proc.pid}` + e);
-                this.onExit();      // Process already died or quit. Cleanup
+                this.onExit(-1, '');      // Process already died or quit. Cleanup
             }
         }
     }
@@ -740,7 +747,7 @@ export class MI2 extends EventEmitter implements IBackend {
             const aType = breakpoint.accessType === 'read' ? '-r' : (breakpoint.accessType === 'readWrite' ? '-a' : '');
             this.sendCommand(`break-watch ${aType} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
-                    const bkptNum = parseInt(result.result('hw-awpt.number') || result.result('wpt.number'));
+                    const bkptNum = parseInt(result.result('hw-awpt.number') || result.result('hw-rwpt.number') || result.result('wpt.number'));
                     breakpoint.number = bkptNum;
 
                     if (breakpoint.condition) {

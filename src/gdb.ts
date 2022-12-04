@@ -1,3 +1,9 @@
+//
+// When the new DAP spec is released
+// TODO:
+// * Update setDataBreakpoints to check for frame-id if the 'name' is an expression
+// * Return the new type of busy error for evaluate/memory-requests/disassembly and certain other responses
+//
 import {
     Logger, logger, LoggingDebugSession, InitializedEvent, TerminatedEvent,
     ContinuedEvent, OutputEvent, Thread, ThreadEvent,
@@ -706,7 +712,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         } else if (this.args.servertype === 'stlink') {
             serverCwd = path.dirname(serverExe) || '.';
             if (serverCwd !== '.') {
-                this.handleMsg('log', `Setting GDB-SErver CWD: ${serverCwd}\n`);
+                this.handleMsg('log', `Setting GDB-Server CWD: ${serverCwd}\n`);
             }
         }
         return serverCwd;
@@ -1736,10 +1742,13 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    protected quitEvent() {
+    protected quitEvent(msg?: string) {
         this.quit = true;
         if (traceThreads) {
             this.handleMsg('log', '**** quit event\n');
+        }
+        if (msg) {
+            this.handleMsg('stderr', msg);
         }
         if (this.server && this.server.isProcessRunning()) {
             // A gdb quit may be happening with VSCode asking us to finish or a crash or user doing something
