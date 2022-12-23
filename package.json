@@ -1,5 +1,5 @@
 {
-    "version": "1.6.9",
+    "version": "1.6.10-pre1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -3109,6 +3109,7 @@
         "embedded"
     ],
     "extensionDependencies": [
+        "mcu-debug.debug-tracker-vscode",
         "mcu-debug.memory-view",
         "mcu-debug.rtos-views"
     ],
