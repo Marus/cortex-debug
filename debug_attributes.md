@@ -51,10 +51,10 @@ Also using IntelliSense while editing launch.json in VSCode can be quite helpful
 | symbolFiles | Common | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols
 | targetId | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)
 | targetProcessor | Common | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors'
-| toolchainPrefix | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration.
+| toolchainPrefix | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration. Default = "arm-none-eabi"
 | BMPGDBSerialPort | BMP Specific | The serial port for the Black Magic Probe GDB Server. On Windows this will be "COM<num>", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X)
 | powerOverBMP | BMP Specific | Power up the board over Black Magic Probe. "powerOverBMP" : "enable" or "powerOverBMP" : "disable". If not set it will use the last power state.
-| gdbTarget | External | For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port
+| gdbTarget | External | For externally (servertype = "external") controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port
 | ipAddress | J-Link Specific | IP Address for networked J-Link Adapter
 | jlinkscript | J-Link Specific | J-Link script file - optional input file for customizing J-Link actions.
 | serialNumber | J-Link Specific | J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer

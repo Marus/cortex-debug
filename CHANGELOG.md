@@ -1,6 +1,9 @@
 ChangeLog
 =========
 
+# V1.6.10
+* [Issue#793 Container install broke from v1.6.7 to v1.6.9](https://github.com/Marus/cortex-debug/issues/793). It appears that VSCode does not install extensions with dependencies fully. Ie, if ext. `a` depends on `b` which depends on `c`, `c` is not installed so extension `a` fails to load properly. While we confirm, report this issue to VSCode folks, a (ugly) workaround has been implemented.
+
 # V1.6.9
 * The RTOS view has been moved to another extension so it can work with other debuggers. https://github.com/mcu-debug/rtos-views It will be automatically installed for you with this update. Note that the RTOS view related settings and commands now belong to the new extension (search for `RTOS` in Command Palette)
 * This release will also install the new memory view extension from https://github.com/mcu-debug/memview. The old memory view is still available (search for `legacy` in Command Palette)

@@ -1,5 +1,5 @@
 {
-    "version": "1.6.10-pre1",
+    "version": "1.6.10",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -683,7 +683,7 @@
                             },
                             "toolchainPrefix": {
                                 "default": null,
-                                "description": "This setting can be used to override the toolchainPrefix user setting for a particular launch configuration.",
+                                "description": "This setting can be used to override the toolchainPrefix user setting for a particular launch configuration. Default = \"arm-none-eabi\"",
                                 "type": "string"
                             },
                             "serverpath": {
@@ -767,7 +767,7 @@
                             },
                             "gdbTarget": {
                                 "default": null,
-                                "description": "For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
+                                "description": "For externally (servertype = \"external\") controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "breakAfterReset": {
@@ -1763,7 +1763,7 @@
                             },
                             "toolchainPrefix": {
                                 "default": null,
-                                "description": "This setting can be used to override the toolchainPrefix user setting for a particular launch configuration.",
+                                "description": "This setting can be used to override the toolchainPrefix user setting for a particular launch configuration. Default = \"arm-none-eabi\"",
                                 "type": "string"
                             },
                             "serverpath": {
@@ -1853,7 +1853,7 @@
                             },
                             "gdbTarget": {
                                 "default": null,
-                                "description": "For externally controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
+                                "description": "For externally (servertype = \"external\") controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
                                 "type": "string"
                             },
                             "runToMain": {
