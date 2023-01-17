@@ -110,8 +110,9 @@ export class VariableObject {
             this.value = def;
         }
         */
-        if (!!MINode.valueOf(node, 'type_changed')) {
-            this.type = MINode.valueOf(node, 'new_type');
+        const typeChanged = MINode.valueOf(node, 'type_changed');
+        if (typeChanged === 'true') {
+            this.type = MINode.valueOf(node, 'new_type') || this.type;
         }
         this.dynamic = !!MINode.valueOf(node, 'dynamic');
         this.displayhint = MINode.valueOf(node, 'displayhint');
