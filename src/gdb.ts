@@ -3205,20 +3205,32 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const exprName = hasher.digest('hex');
                         const varObjName = `${args.context}_${exprName}`;
                         let varObj: VariableObject;
+                        let outOfScope = false;
                         try {
                             const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
                             const changelist = changes.result('changelist');
-                            changelist.forEach((change) => {
-                                const name = MINode.valueOf(change, 'name');
-                                const vId = this.variableHandlesReverse[name];
-                                const v = this.variableHandles.get(vId) as any;
-                                v.applyChanges(change);
+                            changelist.forEach(async (change) => {
+                                const inScope = MINode.valueOf(change, 'in_scope');
+                                if (inScope === 'true') {
+                                    const name = MINode.valueOf(change, 'name');
+                                    const vId = this.variableHandlesReverse[name];
+                                    const v = this.variableHandles.get(vId) as any;
+                                    v.applyChanges(change);
+                                } else {
+                                    const msg = `${exp} currently not in scope`;
+                                    await this.miDebugger.sendCommand(`var-delete ${varObjName}`);
+                                    if (this.args.showDevDebugOutput) {
+                                        this.handleMsg('log', `Expression ${msg}. Will try again`);
+                                    }
+                                    outOfScope = true;
+                                    throw new Error(msg);
+                                }
                             });
                             const varId = this.variableHandlesReverse[varObjName];
                             varObj = this.variableHandles.get(varId) as any;
                         }
                         catch (err) {
-                            if (!this.isBusy() && (err instanceof MIError && err.message === 'Variable object not found')) {
+                            if (!this.isBusy() && (outOfScope || ((err instanceof MIError && err.message === 'Variable object not found')))) {
                                 if (args.frameId === undefined) {
                                     varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
                                 } else {
