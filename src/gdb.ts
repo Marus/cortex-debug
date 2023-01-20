@@ -3209,7 +3209,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         try {
                             const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
                             const changelist = changes.result('changelist');
-                            changelist.forEach(async (change) => {
+                            for (const change of changelist || []) {
                                 const inScope = MINode.valueOf(change, 'in_scope');
                                 if (inScope === 'true') {
                                     const name = MINode.valueOf(change, 'name');
@@ -3220,12 +3220,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                                     const msg = `${exp} currently not in scope`;
                                     await this.miDebugger.sendCommand(`var-delete ${varObjName}`);
                                     if (this.args.showDevDebugOutput) {
-                                        this.handleMsg('log', `Expression ${msg}. Will try again`);
+                                        this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
                                     }
                                     outOfScope = true;
                                     throw new Error(msg);
                                 }
-                            });
+                            }
                             const varId = this.variableHandlesReverse[varObjName];
                             varObj = this.variableHandles.get(varId) as any;
                         }
