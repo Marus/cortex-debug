@@ -62,6 +62,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     }
 
     public swoAndRTTCommands(): string[] {
+        // No commands needed for SWO. All are sent on the streaming port
         return [];
     }
 
@@ -109,6 +110,14 @@ export class PEServerController extends EventEmitter implements GDBServerControl
             serverargs.push(`-configfile=${this.args.configFiles[0]}`);
         }
 
+        if (this.args.swoConfig.enabled) {
+            const source = this.args.swoConfig.source;
+            if (source === 'socket') {
+                const swoPort = this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
+                serverargs.push(`-streamingport=${swoPort}`);
+            }
+        }
+
         if (this.args.serverArgs) {
             serverargs = serverargs.concat(this.args.serverArgs);
         }
@@ -121,7 +130,31 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     }
 
     public serverLaunchStarted(): void {}
-    public serverLaunchCompleted(): void {}
+    public serverLaunchCompleted(): void {
+        // if (this.args.swoConfig.enabled) {
+        //     const source = this.args.swoConfig.source;
+        //     if (source === 'socket') {
+        //         const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
+        //         this.emit('event', new SWOConfigureEvent({
+        //             type: 'socket',
+        //             args: this.args,
+        //             port: this.ports[swoPortNm].toString(10)
+        //         }));
+        //     }
+        // }
+    }
     public debuggerLaunchStarted(): void {}
-    public debuggerLaunchCompleted(): void {}
+    public debuggerLaunchCompleted(): void {
+        if (this.args.swoConfig.enabled) {
+            const source = this.args.swoConfig.source;
+            if (source === 'socket') {
+                const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'socket',
+                    args: this.args,
+                    port: this.ports[swoPortNm].toString(10)
+                }));
+            }
+        }
+    }
 }
