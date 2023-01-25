@@ -369,6 +369,8 @@ export class LiveWatchMonitor {
             this.mainSession.handleMsg(type, 'LiveGDB: ' + msg);
         });
 
+        /*
+        Yes, we get all of these events and they seem to be harlmess
         const otherEvents = [
             'stopped',
             'watchpoint',
@@ -389,6 +391,7 @@ export class LiveWatchMonitor {
                     'stderr', `Internal Error: Live watch GDB session received an unexpected event '${ev}' with arg ${arg?.toString() ?? '<empty>'}\n`);
             });
         }
+        */
     }
 
     protected quitEvent() {
