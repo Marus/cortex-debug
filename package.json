@@ -480,6 +480,12 @@
                 "category": "Cortex-Debug",
                 "command": "cortex-debug.toggleVariableHexFormat",
                 "title": "Toggle hex display in Variables window"
+            },
+            {
+                "category": "Cortex-Debug",
+                "command": "cortex-debug.addLiveWatch",
+                "title": "Add expression to Live Watch window",
+                "icon": "$(plus)"
             }
         ],
         "keybindings": [
@@ -1887,6 +1893,27 @@
                                 "maximum": 9,
                                 "default": 0
                             },
+                            "liveWatch": {
+                                "properties": {
+                                    "enabled": {
+                                        "default": false,
+                                        "description": "Enable/Disable Live Watch. Only applies to OpenOCD",
+                                        "type": "boolean"
+                                    },
+                                    "updatesPerSecond": {
+                                        "default": 4,
+                                        "description": "maximum number of updates per second",
+                                        "type": "number",
+                                        "multipleOf": 1,
+                                        "minimum": 0,
+                                        "maximum": 10
+                                    }                                  
+                                },
+                                "default": {
+                                    "enabled": true,
+                                    "updatesPerSecond": 4
+                                }
+                            },
                             "ctiOpenOCDConfig": {
                                 "properties": {
                                     "enabled": {
@@ -2903,6 +2930,10 @@
                 {
                     "command": "cortex-debug.toggleVariableHexFormat",
                     "when": "debugType == cortex-debug"
+                },
+                {
+                    "command": "cortex-debug.addLiveWatch",
+                    "when": "debugType === cortex-debug"
                 }
             ],
             "debug/toolBar": [
@@ -3009,6 +3040,11 @@
                     "command": "cortex-debug.peripherals.forceRefresh",
                     "when": "view == cortex-debug.peripherals && debugState == stopped",
                     "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.addLiveWatch",
+                    "when": "view == cortex-debug.liveWatch",
+                    "group": "navigation"
                 }
             ],
             "debug/variables/context": [
@@ -3044,6 +3080,11 @@
                 }
             ],
             "debug": [
+                {
+                    "id": "cortex-debug.liveWatch",
+                    "name": "Cortex Live Watch",
+                    "when": "debugType == cortex-debug"
+                },
                 {
                     "id": "cortex-debug.peripherals",
                     "name": "Cortex Peripherals",

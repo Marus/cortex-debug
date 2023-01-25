@@ -67,12 +67,13 @@ export class MI2 extends EventEmitter implements IBackend {
     protected isExiting = false;
     // public gdbVarsPromise: Promise<MINode> = null;
 
-    constructor(public application: string, public args: string[]) {
+    constructor(public application: string, public args: string[], public forLiveGdb = false) {
         super();
     }
 
     public start(cwd: string, init: string[]): Promise<void> {
         return new Promise<void>(async (resolve, reject) => {
+            const isLive = this.forLiveGdb ? 'Live ' : '';
             this.process = ChildProcess.spawn(this.application, this.args, { cwd: cwd, env: this.procEnv });
             this.pid = this.process.pid;
             this.process.stdout.on('data', this.stdout.bind(this));
@@ -82,31 +83,36 @@ export class MI2 extends EventEmitter implements IBackend {
             });
             this.process.on('error', this.onError.bind(this));
             this.process.on('spawn', () => {
-                ServerConsoleLog(`GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
+                ServerConsoleLog(isLive + `GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
             });
 
-            let timeout = setTimeout(() => {
-                this.gdbStartError();
-                reject(new Error('Could not start gdb, no response from gdb'));
-                timeout = undefined;
-            }, 5000);
+            if (!this.forLiveGdb) {
+                let timeout = setTimeout(() => {
+                    this.gdbStartError();
+                    reject(new Error('Could not start GDB, no response from gdb'));
+                    timeout = undefined;
+                }, 5000);
 
-            const swallOutput = this.debugOutput ? false : true;
-            let v;
-            try {
-                v = await this.sendCommand('gdb-version', false, true, swallOutput);
-                if (timeout) {
-                    clearTimeout(timeout);
-                } else {
+                const swallOutput = this.debugOutput ? false : true;
+                let v;
+                try {
+                    v = await this.sendCommand('gdb-version', false, true, swallOutput);
+                    if (timeout) {
+                        clearTimeout(timeout);
+                    } else {
+                        return;
+                    }
+                }
+                catch (e) {
+                    reject(e);
                     return;
                 }
+                this.actuallyStarted = true;
+                this.parseVersionInfo(v.output);
+            } else {
+                this.actuallyStarted = true;
             }
-            catch (e) {
-                reject(e);
-                return;
-            }
-            this.actuallyStarted = true;
-            this.parseVersionInfo(v.output);
+            
             if ((this.gdbMajorVersion !== undefined) && (this.gdbMajorVersion < 9)) {
                 this.isExiting = true;
                 const ver = this.gdbMajorVersion ? this.gdbMajorVersion.toString() : 'Unknown';

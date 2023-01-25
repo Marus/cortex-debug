@@ -26,6 +26,11 @@ proc CDSWOConfigure { CDCPUFreqHz CDSWOFreqHz CDSWOOutput } {
     }
 }
 
+#
+# The following function may not work in a multi-core setup. You may want to overide this function
+# to enable RTOS detection for each core appropriately. This function must be called before `init` and
+# after all the targets are created.
+#
 proc CDRTOSConfigure { rtos } {
     set target [target current]
     if { $target != "" } {
@@ -34,5 +39,28 @@ proc CDRTOSConfigure { rtos } {
     } else {
         # Maybe this function was called too early?
         puts stderr "[info script]: Error: No current target. Could not configure target for RTOS"
+    }
+}
+
+#
+# CDLiveWatchSetup
+#    This function must be called before the init is called and after all the targets are created. You can create
+#    a custom version of this function (even empty) if you already setup the gdb-max-connections elsewhere
+#
+#    We increment all gdb-max-connections by one if it is already a non-zero. Note that if it was already set to -1,
+#    we leave it alone as it means unlimited connections
+#
+proc CDLiveWatchSetup {} {
+    try {
+        foreach tgt [target names] {
+            set nConn [$tgt cget -gdb-max-connections]
+            if { $nConn > 0 } {
+                incr nConn
+                $tgt configure -gdb-max-connections $nConn
+                puts "[info script]: Info: Setting gdb-max-connections for target '$tgt' to $nConn"
+            }
+        }
+    } on error {} {
+        puts stderr "[info script]: Error: Failed to increase gdb-max-connections for current target. Live variables will not work"
     }
 }
