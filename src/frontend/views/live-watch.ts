@@ -30,6 +30,11 @@ export class VariableNode extends BaseNode {
         return this.children ?? [];
     }
 
+    public isRootChild(): boolean {
+        const node = this.parent;
+        return node && (node.getParent() === undefined);
+    }
+
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const state = this.children && this.children.length > 0 ?
             (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
@@ -44,7 +49,7 @@ export class VariableNode extends BaseNode {
         this.prevValue = this.value;
         
         const item = new TreeItem(label, state);
-        item.contextValue = 'expression';
+        item.contextValue = this.isRootChild() ? 'expression' : 'field';
         item.tooltip = this.type + ' ' + this.expr || this.name;
         return item;
     }
@@ -60,6 +65,19 @@ export class VariableNode extends BaseNode {
         const child = new VariableNode(this, name, expr || name, value, type, reference);
         this.children.push(child);
         return child;
+    }
+
+    public removeChild(obj: any) {
+        const node = obj as VariableNode;
+        let ix = 0;
+        for (const child of this.children || []) {
+            if (child.name === node.name) {
+                this.children.splice(ix, 1);
+                return true;
+            }
+            ix++;
+        }
+        return false;
     }
 
     public reset() {
@@ -139,11 +157,7 @@ export class VariableNode extends BaseNode {
                         this.children = undefined;
                         resolve();
                     }
-                }, (e) => {
-                    if (LiveWatchTreeProvider.session) {
-                        this.value = `<Error evaluating ${this.expr}: Error: ${e}>`;
-                        this.children = undefined;
-                    }
+                }, () => {
                     resolve();
                 });
             } else if (this.children && !this.parent) {
@@ -225,11 +239,18 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
 
     public refresh(session: vscode.DebugSession, restarTimer = false): void {
         if (this.isSameSession(session)) {
-            this.variables.refresh(session).finally(() => {
-                this.fire();
-                if (restarTimer && LiveWatchTreeProvider.session) {
-                    this.startTimer();
-                }
+            const start = Date.now();
+            session.customRequest('liveCacheRefresh', {
+                deleteAll: false       // Delete gdb-vars?
+            }).then(() => {
+                this.variables.refresh(session).finally(() => {
+                    const elapsed = Date.now() - start;
+                    // console.log(`Refreshed in ${elapsed} ms`);
+                    this.fire();
+                    if (restarTimer && LiveWatchTreeProvider.session) {
+                        this.startTimer(((elapsed < 0) || (elapsed > this.timeoutMs)) ? 0 : elapsed);
+                    }
+                });
             });
         }
     }
@@ -242,20 +263,20 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
         return element ? element.getChildren() : this.variables.getChildren();
     }
 
-    private startTimer() {
-        console.error('Starting Timer');
+    private startTimer(subtract: number = 0) {
+        // console.error('Starting Timer');
         this.killTimer();
         this.timeout = setTimeout(() => {
             this.timeout = undefined;
             if (LiveWatchTreeProvider.session) {
                 this.refresh(LiveWatchTreeProvider.session, true);
             }
-        }, this.timeoutMs);
+        }, this.timeoutMs - subtract);
     }
 
     private killTimer() {
         if (this.timeout) {
-            console.error('Killing Timer');
+            // console.error('Killing Timer');
             clearTimeout(this.timeout);
             this.timeout = undefined;
         }
@@ -315,6 +336,12 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
         if (expr && this.variables.addNewExpr(expr)) {
             this.saveState();
             this.refresh(LiveWatchTreeProvider.session);
+        }
+    }
+
+    public removeWatchExpr(node: any) {
+        if (this.variables.removeChild(node)) {
+            this.fire();
         }
     }
 

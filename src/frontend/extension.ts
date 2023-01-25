@@ -120,7 +120,8 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.resetDevice', this.resetDevice.bind(this)),
             vscode.commands.registerCommand('cortex-debug.pvtEnableDebug', this.pvtCycleDebugMode.bind(this)),
 
-            vscode.commands.registerCommand('cortex-debug.addLiveWatch', this.addLiveWatchExpr.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.addExpr', this.addLiveWatchExpr.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.removeExpr', this.removeLiveWatchExpr.bind(this)),
 
             vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
             vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
@@ -1141,6 +1142,11 @@ export class CortexDebugExtension {
                 this.liveWatchProvider.addWatchExpr(v, vscode.debug.activeDebugSession);
             }
         });
+    }
+
+    private removeLiveWatchExpr(node: any) {
+        this.initLiveWatcher();
+        this.liveWatchProvider.removeWatchExpr(node);
     }
 
     private initLiveWatcher() {

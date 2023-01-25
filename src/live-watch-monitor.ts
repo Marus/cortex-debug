@@ -6,16 +6,48 @@ import { MIError, VariableObject } from './backend/backend';
 import * as crypto from 'crypto';
 import { MINode } from './backend/mi_parse';
 import { expandValue } from './backend/gdb_expansion';
-import { Session } from 'inspector';
 
 export type VariableType = string | VariableObject | ExtendedVariable;
+export interface NameToVarChangeInfo {
+    [name: string]: any;
+}
 export class VariablesHandler {
     public variableHandles = new Handles<VariableType>(0);
     public variableHandlesReverse: { [id: string]: number } = {};
+    public cachedChangeList: NameToVarChangeInfo | undefined;
+
     constructor(
         public isBusy: () => boolean,
         public busyError: (r: DebugProtocol.Response, a: any) => void
     ) { }
+
+    public async clearCachedVars(miDebugger: MI2) {
+        if (this.cachedChangeList) {
+            const poromises = [];
+            for (const name of Object.keys(this.cachedChangeList)) {
+                poromises.push(miDebugger.sendCommand(`var-delete ${name}`));
+            }
+            this.cachedChangeList = {};
+            try {
+                await Promise.allSettled(poromises);
+            }
+            catch (e) {
+            }
+        }
+    }
+
+    public refreshCachedChangeList(miDebugger: MI2, resolve) {
+        this.cachedChangeList = {};
+        miDebugger.varUpdate('*', -1, -1).then((changes: MINode) => {
+            const changelist = changes.result('changelist');
+            for (const change of changelist || []) {
+                const name = MINode.valueOf(change, 'name');
+                this.cachedChangeList[name] = change;
+            }
+        }).finally (() => {
+            resolve();
+        });
+    }
 
     public createVariable(arg: VariableType, options?: any) {
         if (options) {
@@ -82,8 +114,14 @@ export class VariablesHandler {
                         let varObj: VariableObject;
                         let forceCreate = false;
                         try {
-                            const changes = await miDebugger.varUpdate(varObjName, threadId, frameId);
-                            const changelist = changes.result('changelist');
+                            const cachedChange = this.cachedChangeList && this.cachedChangeList[varObjName];
+                            let changelist;
+                            if (!cachedChange) {
+                                const changes = await miDebugger.varUpdate(varObjName, threadId, frameId);
+                                changelist = changes.result('changelist');
+                            } else {
+                                changelist = [cachedChange];
+                            }
                             for (const change of changelist || []) {
                                 const inScope = MINode.valueOf(change, 'in_scope');
                                 if (inScope === 'true') {
@@ -91,6 +129,9 @@ export class VariablesHandler {
                                     const vId = this.variableHandlesReverse[name];
                                     const v = this.variableHandles.get(vId) as any;
                                     v.applyChanges(change);
+                                    if (this.cachedChangeList) {
+                                        this.cachedChangeList[name] = change;
+                                    }
                                 } else {
                                     const msg = `${exp} currently not in scope`;
                                     await miDebugger.sendCommand(`var-delete ${varObjName}`);
@@ -106,6 +147,9 @@ export class VariablesHandler {
                         }
                         catch (err) {
                             if (!this.isBusy() && (forceCreate || ((err instanceof MIError && err.message === 'Variable object not found')))) {
+                                if (this.cachedChangeList) {
+                                    delete this.cachedChangeList[varObjName];
+                                }
                                 if (forceNoFrameId || (args.frameId === undefined)) {
                                     varObj = await miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
                                 } else {
@@ -352,18 +396,35 @@ export class LiveWatchMonitor {
     }
 
     public evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-        args.frameId = undefined;       // We don't have threads or frames here. We always evaluate in global context
-        try {
-            return this.varHandler.evaluateRequest(response, args, this.miDebugger, this.mainSession, true);
-        }
-        catch (e) {
-            console.error('LiveWatchMonitor.evaluateRequest', e);
-            return Promise.resolve();
-        }
+        return new Promise<void>((resolve) => {
+            args.frameId = undefined;       // We don't have threads or frames here. We always evaluate in global context
+            this.varHandler.evaluateRequest(response, args, this.miDebugger, this.mainSession, true).finally(() => {
+                if (this.mainSession.args.showDevDebugOutput) {
+                    this.mainSession.handleMsg('log', `LiveGBD: Evaluated ${args.expression}`);
+                }
+                return Promise.resolve();
+            });
+        });
     }
 
     public async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
         const ret = await this.varHandler.variablesChildrenRequest(response, args, this.miDebugger, this.mainSession);
         return ret;
     }
+
+    // Calling this will also enable caching for the future of the session
+    public async refreshLiveCache(args: RefreshAllArguments): Promise<void> {
+        if (args.deleteAll) {
+            await this.varHandler.clearCachedVars(this.miDebugger);
+            return Promise.resolve();
+        }
+        return new Promise<void>((resolve) => {
+            this.varHandler.refreshCachedChangeList(this.miDebugger, resolve);
+        });
+    }
+}
+
+interface RefreshAllArguments {
+    // Delete all variables and create them afresh
+    deleteAll: boolean;
 }

@@ -1043,6 +1043,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.sendResponse(response);
                 }
                 break;
+            case 'liveCacheRefresh':
+                if (this.miLiveGdb) {
+                    await this.miLiveGdb.refreshLiveCache(args);
+                }
+                this.sendResponse(response);
+                break;
             case 'liveVariables':
                 if (this.miLiveGdb) {
                     const r: DebugProtocol.VariablesResponse = {
