@@ -2961,7 +2961,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
-                    const pvar = id as VariableObject;
+                    const pVar = id as VariableObject;
 
                     // Variable members
                     let children: VariableObject[];
@@ -2972,7 +2972,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
                             if (/^\d+$/.test(child.exp)) {
-                                child.fullExp = `${pvar.fullExp || pvar.exp}[${child.exp}]`;
+                                child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
                             }
                             else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
@@ -2987,9 +2987,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 } else {
                                     // The full-name is not always derivable from the parent and child info. Esp. children
                                     // of anonymous stuff. Might as well store all of them or set-value will not work.
-                                    pvar.children[child.exp] = child.name;
+                                    pVar.children[child.exp] = child.name;
                                 }
-                                child.fullExp = `${pvar.fullExp || pvar.exp}${suffix}`;
+                                child.fullExp = `${pVar.fullExp || pVar.exp}${suffix}`;
                             }
                             return child.toProtocolVariable();
                         });

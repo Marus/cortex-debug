@@ -428,6 +428,7 @@ export class LiveWatchMonitor {
 }
 
 interface RefreshAllArguments {
-    // Delete all variables and create them afresh
+    // Delete all gdb variables and the cache. This should be done when a live expression is deleted,
+    // but otherwise, it is not needed
     deleteAll: boolean;
 }

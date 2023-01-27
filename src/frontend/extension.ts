@@ -153,6 +153,11 @@ export class CortexDebugExtension {
                 e.element.expanded = false;
             }),
             this.liveWatchTreeView,
+            this.liveWatchTreeView.onDidExpandElement((e) => {
+                e.element.expanded = true;
+                // TODO: We don't need to refresh the whole tree but, we are lazy for now
+                this.liveWatchProvider.refresh(vscode.debug.activeDebugSession);
+            }),
             this.liveWatchTreeView.onDidCollapseElement((e) => {
                 e.element.expanded = false;
             })
