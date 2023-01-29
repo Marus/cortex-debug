@@ -1,19 +1,25 @@
-import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, debug, workspace, ProviderResult} from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
+import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, ProviderResult} from 'vscode';
 import * as vscode from 'vscode';
 
-import { CortexDebugKeys, LiveWatchConfig, NodeSetting, ResettableInterval } from '../../common';
-import { MessageNode } from './nodes/messagenode';
+import { LiveWatchConfig } from '../../common';
 import { BaseNode } from './nodes/basenode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 
-export class VariableNode extends BaseNode {
+interface SaveVarState {
+    expanded: boolean;
+    value: string;
+    children: LiveVariableNode[] | undefined;
+}
+
+interface SaveVarStateMap {
+     [name: string]: SaveVarState;
+}
+export class LiveVariableNode extends BaseNode {
     protected session: vscode.DebugSession | undefined;        // This is transient
-    private children: VariableNode[] | undefined;
+    private children: LiveVariableNode[] | undefined;
     private prevValue: string = '';
     constructor(
-        parent: VariableNode | undefined,
+        parent: LiveVariableNode | undefined,
         private name: string,
         private expr: string,       // Any string for top level ars but lower level ones are actual children's simple names
         private value = '',         // Current value
@@ -26,7 +32,7 @@ export class VariableNode extends BaseNode {
         return this.expr;
     }
     
-    public getChildren(): VariableNode[] {
+    public getChildren(): LiveVariableNode[] {
         return this.children ?? [];
     }
 
@@ -36,9 +42,8 @@ export class VariableNode extends BaseNode {
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
-        const state = this.children && this.children.length > 0 ?
-            (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
-            : TreeItemCollapsibleState.None;
+        const state = this.variablesReference || (this.children?.length > 0) ?
+            (this.children?.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed) : TreeItemCollapsibleState.None;
         
         const label: vscode.TreeItemLabel = {
             label: this.name + ': ' + (this.value || 'not available')
@@ -50,7 +55,7 @@ export class VariableNode extends BaseNode {
         
         const item = new TreeItem(label, state);
         item.contextValue = this.isRootChild() ? 'expression' : 'field';
-        item.tooltip = this.type + ' ' + this.expr || this.name;
+        item.tooltip = this.type;
         return item;
     }
 
@@ -58,17 +63,17 @@ export class VariableNode extends BaseNode {
         throw new Error('Method not implemented.');
     }
 
-    public addChild(name: string, expr: string = '', value = '', type = '', reference = 0): VariableNode {
+    public addChild(name: string, expr: string = '', value = '', type = '', reference = 0): LiveVariableNode {
         if (!this.children) {
             this.children = [];
         }
-        const child = new VariableNode(this, name, expr || name, value, type, reference);
+        const child = new LiveVariableNode(this, name, expr || name, value, type, reference);
         this.children.push(child);
         return child;
     }
 
     public removeChild(obj: any) {
-        const node = obj as VariableNode;
+        const node = obj as LiveVariableNode;
         let ix = 0;
         for (const child of this.children || []) {
             if (child.name === node.name) {
@@ -92,40 +97,74 @@ export class VariableNode extends BaseNode {
     private namedVariables: number = 0;
     private indexedVariables: number = 0;
     private refreshChildren(resolve: () => void) {
-        if (this.session !== LiveWatchTreeProvider.session) {
+        if (!LiveWatchTreeProvider.session || (this.session !== LiveWatchTreeProvider.session)) {
             resolve();
-            return;
-        }
-        if (this.expanded && (this.variablesReference > 0)) {
+        } else if (this.expanded && (this.variablesReference > 0)) {
+            // TODO: Implement limits on number of children in adapter and then here
+            // const start = this.children?.length ?? 0;
             const varg: DebugProtocol.VariablesArguments = {
                 variablesReference: this.variablesReference
+                // start: start,
+                // count: 32
                 // filter: this.namedVariables > 0 ? 'named' : 'indexed'
             };
+            const oldStateMap: SaveVarStateMap = {};
+            for (const child of this.children ?? []) {
+                oldStateMap[child.name] = {
+                    expanded: child.expanded,
+                    value: child.value,
+                    children: child.children
+                };
+            }
             this.session.customRequest('liveVariables', varg).then((result) => {
-                if (result) {
-                    if (!result.variables || !result.variables.length) {
-                        this.children = undefined;
-                    } else {
-                        const newChildren = [];
-                        for (const variable of result.variables || []) {
-                            const ch = new VariableNode(
-                                this,
-                                variable.name,
-                                variable.evaluateName || variable.name,
-                                variable.value || '',
-                                variable.type || '',
-                                variable.variablesReference ?? 0);
-                            newChildren.push();
+                if (!result?.variables?.length) {
+                    this.children = undefined;
+                } else {
+                    this.children = [];
+                    for (const variable of result.variables ?? []) {
+                        const ch = new LiveVariableNode(
+                            this,
+                            variable.name,
+                            variable.evaluateName || variable.name,
+                            variable.value || '',
+                            variable.type || '',        // This will become tooltip
+                            variable.variablesReference ?? 0);
+                        const oldState = oldStateMap[ch.name];
+                        if (oldState) {
+                            ch.expanded = oldState.expanded && (ch.variablesReference > 0);
+                            ch.prevValue = oldState.value;
+                            ch.children = oldState.children;     // These will get refreshed later
                         }
+                        ch.session = this.session;
+                        this.children.push(ch);
                     }
                 }
-                resolve();
+                const promises = [];
+                for (const child of this.children ?? []) {
+                    if (child.expanded) {
+                        const p = new Promise<void>((resolve) => {
+                            child.refreshChildren(resolve);
+                        });
+                    }
+                }
+                Promise.allSettled(promises).finally(() => {
+                    resolve();
+                });
             }, (e) => {
                 resolve();
             });
         } else {
             resolve();
         }
+    }
+
+    public expandChildren(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            this.expanded = true;
+            // If we still have a current session, try to get the children or
+            // wait for the next timer
+            this.refreshChildren(resolve);
+        });
     }
 
     public refresh(session: vscode.DebugSession): Promise<void> {
@@ -188,46 +227,90 @@ export class VariableNode extends BaseNode {
         this.addChild(expr, expr);
         return true;
     }
+
+    private pvtSerialize(state: NodeState | undefined): NodeState {
+        const item: NodeState = {
+            name: this.name,
+            expr: this.expr,
+            expanded: this.expanded || !this.parent,
+            children: []
+        };
+        if (!state) {
+            state = item;
+        } else {
+            state.children.push(item);
+        }
+        for (const child of this.children ?? []) {
+            child.pvtSerialize(item);
+        }
+        return item;
+    }
+
+    public serialize(): NodeState {
+        return this.pvtSerialize(undefined);
+    }
+
+    public deSerialize(state: NodeState): void {
+        for (const child of state.children) {
+            if (!this.children) {
+                this.children = [];
+            }
+            const item = new LiveVariableNode(this, child.name, child.expr);
+            item.expanded = child.expanded;
+            this.children.push(item);
+            item.deSerialize(child);
+        }
+    }
+}
+
+interface NodeState {
+    name: string;
+    expr: string;
+    expanded: boolean;
+    children: NodeState[];
 }
 
 const VERSION_ID = 'livewatch.version';
-const WATCH_LIST_ID = 'livewatch.watchlist';
+const WATCH_LIST_STATE = 'livewatch.watchTree';
 
-export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
+export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode> {
     // tslint:disable-next-line:variable-name
-    public _onDidChangeTreeData: EventEmitter<VariableNode | undefined> = new EventEmitter<VariableNode | undefined>();
-    public readonly onDidChangeTreeData: Event<VariableNode | undefined> = this._onDidChangeTreeData.event;
+    public _onDidChangeTreeData: EventEmitter<LiveVariableNode | undefined> = new EventEmitter<LiveVariableNode | undefined>();
+    public readonly onDidChangeTreeData: Event<LiveVariableNode | undefined> = this._onDidChangeTreeData.event;
 
-    private static stateVersion = 1;
-    private variables: VariableNode;
+    private static stateVersion = 2;
+    private variables: LiveVariableNode;
     public static session: vscode.DebugSession | undefined;
     public state: vscode.TreeItemCollapsibleState;
     private timeout: NodeJS.Timeout | undefined;
     private timeoutMs: number = 250;
+    private isStopped = true;
 
     protected oldState = new Map <string, vscode.TreeItemCollapsibleState>();
     constructor(private context: vscode.ExtensionContext) {
-        this.variables = new VariableNode(undefined, '', '');
-        try {
-            const state = context.workspaceState;
-            const ver = state.get(VERSION_ID) ?? LiveWatchTreeProvider.stateVersion;
-            if (ver === LiveWatchTreeProvider.stateVersion) {
-                const obj = state.get(WATCH_LIST_ID);
-                const saved = obj as string[];
-                for (const expr of saved || []) {
-                    this.variables.addChild(expr);
-                }
-            }
-        } catch {}
+        this.variables = new LiveVariableNode(undefined, '', '');
+        this.restoreState();
     }
 
-    private saveState() {
+    private restoreState() {
+        try {
+            const state = this.context.workspaceState;
+            const ver = state.get(VERSION_ID) ?? LiveWatchTreeProvider.stateVersion;
+            if (ver === LiveWatchTreeProvider.stateVersion) {
+                const data = state.get(WATCH_LIST_STATE);
+                const saved = data as NodeState;
+                if (saved) {
+                    this.variables.deSerialize(saved);
+                }
+            }
+        } catch { }
+    }
+
+    public saveState() {
         const state = this.context.workspaceState;
-        const children = this.variables.getChildren();
-        const names = children.map((child) => child.getExpr());
+        const data = this.variables.serialize();
         state.update(VERSION_ID, LiveWatchTreeProvider.stateVersion);
-        state.update(WATCH_LIST_ID, names);
-        // TODO: Save expanded state
+        state.update(WATCH_LIST_STATE, data);
     }
 
     private isSameSession(session: vscode.DebugSession): boolean {
@@ -239,27 +322,38 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
 
     public refresh(session: vscode.DebugSession, restarTimer = false): void {
         if (this.isSameSession(session)) {
-            const start = Date.now();
-            session.customRequest('liveCacheRefresh', {
-                deleteAll: false       // Delete gdb-vars?
-            }).then(() => {
-                this.variables.refresh(session).finally(() => {
-                    const elapsed = Date.now() - start;
-                    // console.log(`Refreshed in ${elapsed} ms`);
-                    this.fire();
-                    if (restarTimer && LiveWatchTreeProvider.session) {
-                        this.startTimer(((elapsed < 0) || (elapsed > this.timeoutMs)) ? 0 : elapsed);
-                    }
+            const restart = (elapsed: number) => {
+                if (!this.isStopped && restarTimer && LiveWatchTreeProvider.session) {
+                    this.startTimer(((elapsed < 0) || (elapsed > this.timeoutMs)) ? 0 : elapsed);
+                }
+            };
+            if (this.variables.getChildren().length === 0) {
+                restart(0);
+            } else {
+                const start = Date.now();
+                // The following will update all the variables in the backend cache in bulk
+                session.customRequest('liveCacheRefresh', {
+                    deleteAll: false       // Delete gdb-vars?
+                }).then(() => {
+                    this.variables.refresh(session).finally(() => {
+                        const elapsed = Date.now() - start;
+                        // console.log(`Refreshed in ${elapsed} ms`);
+                        this.fire();
+                        if (elapsed > this.timeoutMs) {
+                            console.error('??????? over flow ????');
+                        }
+                        restart(elapsed);
+                    });
                 });
-            });
+            }
         }
     }
 
-    public getTreeItem(element: VariableNode): TreeItem | Promise<TreeItem> {
+    public getTreeItem(element: LiveVariableNode): TreeItem | Promise<TreeItem> {
         return element?.getTreeItem();
     }
 
-    public getChildren(element?: VariableNode): ProviderResult<VariableNode[]> {
+    public getChildren(element?: LiveVariableNode): ProviderResult<LiveVariableNode[]> {
         return element ? element.getChildren() : this.variables.getChildren();
     }
 
@@ -284,9 +378,11 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
 
     public debugSessionTerminated(session: vscode.DebugSession) {
         if (this.isSameSession(session)) {
+            this.isStopped = true;
             this.killTimer();
             LiveWatchTreeProvider.session = undefined;
             this.fire();
+            this.saveState();
         }
     }
 
@@ -305,14 +401,16 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
             return;
         }
         LiveWatchTreeProvider.session = session;
+        this.isStopped = true;
         this.variables.reset();
-        const updatesPerSecond = Math.max(1, Math.min(10, liveWatch.updatesPerSecond ?? 4));
+        const updatesPerSecond = Math.max(1, Math.min(10, liveWatch.updatesPerSecond ?? 2));
         this.timeoutMs = 1000 / updatesPerSecond;
         this.startTimer();
     }
 
     public debugStopped(session: vscode.DebugSession) {
         if (this.isSameSession(session)) {
+            this.isStopped = true;
             this.killTimer();
             // There are some pauses that are very brief, so lets not refresh when stopped. Lets
             // wait and see if the a refresh is needed or else it will already be performed if the
@@ -327,6 +425,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
 
     public debugContinued(session: vscode.DebugSession) {
         if (this.isSameSession(session)) {
+            this.isStopped = false;
             this.startTimer();
         }
     }
@@ -339,13 +438,42 @@ export class LiveWatchTreeProvider implements TreeDataProvider<VariableNode> {
         }
     }
 
-    public removeWatchExpr(node: any) {
-        if (this.variables.removeChild(node)) {
-            this.fire();
+    public removeWatchExpr(node: LiveVariableNode) {
+        try {
+            if (this.variables.removeChild(node)) {
+                this.saveState();
+                this.fire();
+            }
+        }
+        catch (e) {
+            // Sometimes we get a garbage node if this is called while we are (aggressively) polling
+            console.error('Failed to remove node. Invalid node?', node);
         }
     }
 
+    public expandChildren(element: LiveVariableNode) {
+        if (element) {
+            element.expandChildren().then(() => {
+                this.fire();
+            });
+        }
+    }
+
+    private pendingFires = 0;
+    private inFire = false;
     public fire() {
-        this._onDidChangeTreeData.fire(undefined);
+        if (!this.inFire) {
+            this.inFire = true;
+            this._onDidChangeTreeData.fire(undefined);
+            setTimeout(() => {
+                this.inFire = false;
+                if (this.pendingFires) {
+                    this.pendingFires = 0;
+                    this.fire();
+                }
+            }, 350);    // TODO: Timeout needs to be a user setting
+        } else {
+            this.pendingFires++;
+        }
     }
 }

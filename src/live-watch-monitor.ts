@@ -43,6 +43,17 @@ export class VariablesHandler {
             for (const change of changelist || []) {
                 const name = MINode.valueOf(change, 'name');
                 this.cachedChangeList[name] = change;
+                const inScope = MINode.valueOf(change, 'in_scope');
+                const typeChanged  = MINode.valueOf(change, 'type_changed');
+                if ((inScope === 'false') || (typeChanged === 'true')) {
+                    // If one of these conditions happened, abandon the entire cache. TODO: Optimize later
+                    this.cachedChangeList = undefined;
+                    break;
+                }
+                const vId = this.variableHandlesReverse[name];
+                const v = this.variableHandles.get(vId) as any;
+                v.applyChanges(change);
+
             }
         }).finally (() => {
             resolve();
@@ -114,15 +125,18 @@ export class VariablesHandler {
                         let varObj: VariableObject;
                         let forceCreate = false;
                         try {
+                            let varId = this.variableHandlesReverse[varObjName];
                             const cachedChange = this.cachedChangeList && this.cachedChangeList[varObjName];
                             let changelist;
-                            if (!cachedChange) {
-                                const changes = await miDebugger.varUpdate(varObjName, threadId, frameId);
-                                changelist = changes.result('changelist');
+                            if (cachedChange) {
+                                changelist = [];
+                            } else if (this.cachedChangeList && (varId !== undefined)) {
+                                changelist = [];
                             } else {
-                                changelist = [cachedChange];
+                                const changes = await miDebugger.varUpdate(varObjName, threadId, frameId);
+                                changelist = changes.result('changelist') ?? [];
                             }
-                            for (const change of changelist || []) {
+                            for (const change of changelist) {
                                 const inScope = MINode.valueOf(change, 'in_scope');
                                 if (inScope === 'true') {
                                     const name = MINode.valueOf(change, 'name');
@@ -142,7 +156,7 @@ export class VariablesHandler {
                                     throw new Error(msg);
                                 }
                             }
-                            const varId = this.variableHandlesReverse[varObjName];
+                            varId = this.variableHandlesReverse[varObjName];
                             varObj = this.variableHandles.get(varId) as any;
                         }
                         catch (err) {
@@ -219,6 +233,23 @@ export class VariablesHandler {
         return this.evaluateQ.add(doit, r, a, miDebugger, session);
     }
 
+    public getCachedChilren(pVar: VariableObject): VariableObject[] | undefined {
+        if (!this.cachedChangeList) { return undefined; }
+        const keys = Object.keys(pVar.children);
+        if (keys.length === 0) { return undefined; }        // We don't have previous children, force a refresh
+        const ret = [];
+        for (const key of keys) {
+            const gdbVaName = pVar.children[key];
+            const childId = this.variableHandlesReverse[gdbVaName];
+            if (childId === undefined) {
+                return undefined;
+            }
+            const childObj = this.variableHandles.get(childId) as any;
+            ret.push(childObj);
+        }
+        return ret;
+    }
+
     public async variablesChildrenRequest(
         response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments,
         miDebugger: MI2, session: GDBDebugSession): Promise<void> {
@@ -238,32 +269,41 @@ export class VariablesHandler {
                 let children: VariableObject[];
                 const childMap: { [name: string]: number } = {};
                 try {
-                    children = await miDebugger.varListChildren(args.variablesReference, id.name);
-                    const vars = children.map((child) => {
-                        const varId = this.findOrCreateVariable(child);
-                        child.id = varId;
-                        if (/^\d+$/.test(child.exp)) {
-                            child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
+                    let vars = [];
+                    children = this.getCachedChilren(pVar);
+                    if (children) {
+                        for (const child of children) {
+                            vars.push(child.toProtocolVariable());
                         }
-                        else {
-                            let suffix = '.' + child.exp;                   // A normal suffix
-                            if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
-                                const prev = childMap[child.exp];
-                                if (prev) {
-                                    childMap[child.exp] = prev + 1;
-                                    child.exp += '#' + prev.toString(10);
-                                }
-                                childMap[child.exp] = 1;
-                                suffix = '';    // Anonymous ones don't have a suffix. Have to use parent name
-                            } else {
-                                // The full-name is not always derivable from the parent and child info. Esp. children
-                                // of anonymous stuff. Might as well store all of them or set-value will not work.
-                                pVar.children[child.exp] = child.name;
+                    } else {
+                        children = await miDebugger.varListChildren(args.variablesReference, id.name);
+                        pVar.children = {};     // Clear in case type changed, dynamic variable, etc.
+                        vars = children.map((child) => {
+                            const varId = this.findOrCreateVariable(child);
+                            child.id = varId;
+                            if (/^\d+$/.test(child.exp)) {
+                                child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
                             }
-                            child.fullExp = `${pVar.fullExp || pVar.exp}${suffix}`;
-                        }
-                        return child.toProtocolVariable();
-                    });
+                            else {
+                                let suffix = '.' + child.exp;                   // A normal suffix
+                                if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
+                                    const prev = childMap[child.exp];
+                                    if (prev) {
+                                        childMap[child.exp] = prev + 1;
+                                        child.exp += '#' + prev.toString(10);
+                                    }
+                                    childMap[child.exp] = 1;
+                                    suffix = '';    // Anonymous ones don't have a suffix. Have to use parent name
+                                } else {
+                                    // The full-name is not always derivable from the parent and child info. Esp. children
+                                    // of anonymous stuff. Might as well store all of them or set-value will not work.
+                                    pVar.children[child.exp] = child.name;
+                                }
+                                child.fullExp = `${pVar.fullExp || pVar.exp}${suffix}`;
+                            }
+                            return child.toProtocolVariable();
+                        });
+                    }
 
                     response.body = {
                         variables: vars

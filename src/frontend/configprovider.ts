@@ -202,7 +202,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.liveWatch?.enabled) {
             const supportedList = ['openocd'/*, 'jlink', 'stlink'*/];
-            if (supportedList.findIndex(config.servertype) < 0) {
+            if (supportedList.indexOf(config.servertype) < 0) {
                 let str = '';
                 for (const s of supportedList) {
                     str += (str ? ', ' : '') + `'${s}'`;

@@ -5,7 +5,7 @@ import * as path from 'path';
 import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
-import { LiveWatchTreeProvider } from './views/live-watch';
+import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
 
 import { RTTCore, SWOCore } from './swo/core';
 import { NumberFormat, ConfigurationArguments,
@@ -53,7 +53,7 @@ export class CortexDebugExtension {
 
     private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
     private registerTreeView: vscode.TreeView<BaseNode>;
-    private liveWatchTreeView: vscode.TreeView<BaseNode>;
+    private liveWatchTreeView: vscode.TreeView<LiveVariableNode>;
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
@@ -154,12 +154,12 @@ export class CortexDebugExtension {
             }),
             this.liveWatchTreeView,
             this.liveWatchTreeView.onDidExpandElement((e) => {
-                e.element.expanded = true;
-                // TODO: We don't need to refresh the whole tree but, we are lazy for now
-                this.liveWatchProvider.refresh(vscode.debug.activeDebugSession);
+                this.liveWatchProvider.expandChildren(e.element);
+                this.liveWatchProvider.saveState();
             }),
             this.liveWatchTreeView.onDidCollapseElement((e) => {
                 e.element.expanded = false;
+                this.liveWatchProvider.saveState();
             })
         );
 

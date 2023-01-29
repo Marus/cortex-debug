@@ -1906,7 +1906,7 @@
                                         "type": "boolean"
                                     },
                                     "updatesPerSecond": {
-                                        "default": 4,
+                                        "default": 2,
                                         "description": "maximum number of updates per second",
                                         "type": "number",
                                         "multipleOf": 1,
@@ -1916,7 +1916,7 @@
                                 },
                                 "default": {
                                     "enabled": true,
-                                    "updatesPerSecond": 4
+                                    "updatesPerSecond": 2
                                 }
                             },
                             "ctiOpenOCDConfig": {
@@ -3070,25 +3070,7 @@
                 }
             ]
         },
-        "viewsContainers": {
-            "panel": [
-                {
-                    "id": "cortex-debug",
-                    "title": "RTOS",
-                    "icon": "images/hex-on-dark.svg"
-                }
-            ]
-        },
         "views": {
-            "cortex-debug": [
-                {
-                    "id": "cortex-debug.rtos",
-                    "type": "webview",
-                    "name": "RTOS",
-                    "when": "cortex-debug:showRTOS",
-                    "icon": "images/hex-on-dark.svg"
-                }
-            ],
             "debug": [
                 {
                     "id": "cortex-debug.liveWatch",
