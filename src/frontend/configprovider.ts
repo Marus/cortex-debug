@@ -201,14 +201,16 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config.pvtVersion = extension?.packageJSON?.version || '<unknown version>';
 
         if (config.liveWatch?.enabled) {
-            const supportedList = ['openocd', 'jlink'/*, 'stlink'*/];
+            const supportedList = ['openocd', 'jlink', 'stlink'];
             if (supportedList.indexOf(config.servertype) < 0) {
                 let str = '';
                 for (const s of supportedList) {
                     str += (str ? ', ' : '') + `'${s}'`;
                 }
-                config.liveWatch.enabled = false;
-                vscode.window.showWarningMessage(`Live watch is not supported for servertype '${config.servertype}'. Only ${str}`);
+                // config.liveWatch.enabled = false;
+                vscode.window.showWarningMessage(
+                    `Live watch is not supported for servertype '${config.servertype}'. Only ${str} supported/tested.\n` +
+                    `Report back to us if it works with '${config.servertype}'`);
             }
         }
 

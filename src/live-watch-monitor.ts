@@ -12,7 +12,7 @@ export interface NameToVarChangeInfo {
     [name: string]: any;
 }
 export class VariablesHandler {
-    public variableHandles = new Handles<VariableType>(0);
+    public variableHandles = new Handles<VariableType>(256);
     public variableHandlesReverse: { [id: string]: number } = {};
     public cachedChangeList: NameToVarChangeInfo | undefined;
 
