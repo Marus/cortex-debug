@@ -201,7 +201,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config.pvtVersion = extension?.packageJSON?.version || '<unknown version>';
 
         if (config.liveWatch?.enabled) {
-            const supportedList = ['openocd'/*, 'jlink', 'stlink'*/];
+            const supportedList = ['openocd', 'jlink'/*, 'stlink'*/];
             if (supportedList.indexOf(config.servertype) < 0) {
                 let str = '';
                 for (const s of supportedList) {

@@ -1911,12 +1911,12 @@
                                         "type": "number",
                                         "multipleOf": 1,
                                         "minimum": 0,
-                                        "maximum": 10
+                                        "maximum": 20
                                     }                                  
                                 },
                                 "default": {
                                     "enabled": true,
-                                    "updatesPerSecond": 2
+                                    "updatesPerSecond": 4
                                 }
                             },
                             "ctiOpenOCDConfig": {

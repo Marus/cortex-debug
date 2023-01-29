@@ -443,9 +443,9 @@ export class LiveWatchMonitor {
             args.frameId = undefined;       // We don't have threads or frames here. We always evaluate in global context
             this.varHandler.evaluateRequest(response, args, this.miDebugger, this.mainSession, true).finally(() => {
                 if (this.mainSession.args.showDevDebugOutput) {
-                    this.mainSession.handleMsg('log', `LiveGBD: Evaluated ${args.expression}`);
+                    this.mainSession.handleMsg('log', `LiveGBD: Evaluated ${args.expression}\n`);
                 }
-                return Promise.resolve();
+                resolve();
             });
         });
     }
@@ -464,6 +464,17 @@ export class LiveWatchMonitor {
         return new Promise<void>((resolve) => {
             this.varHandler.refreshCachedChangeList(this.miDebugger, resolve);
         });
+    }
+
+    private quitting = false;
+    public quit() {
+        try {
+            if (!this.quitting) {
+                this.quitting = true;
+                this.miDebugger.detach();
+            }
+        }
+        catch {}
     }
 }
 

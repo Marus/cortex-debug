@@ -403,7 +403,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
         LiveWatchTreeProvider.session = session;
         this.isStopped = true;
         this.variables.reset();
-        const updatesPerSecond = Math.max(1, Math.min(10, liveWatch.updatesPerSecond ?? 2));
+        const updatesPerSecond = Math.max(1, Math.min(20, liveWatch.updatesPerSecond ?? 4));
         this.timeoutMs = 1000 / updatesPerSecond;
         this.startTimer();
     }
@@ -462,6 +462,11 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
     private pendingFires = 0;
     private inFire = false;
     public fire() {
+        const minRefreshInterval = 350;
+        if (this.timeoutMs >= minRefreshInterval) {
+            this._onDidChangeTreeData.fire(undefined);
+            return;
+        }
         if (!this.inFire) {
             this.inFire = true;
             this._onDidChangeTreeData.fire(undefined);
@@ -471,9 +476,59 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                     this.pendingFires = 0;
                     this.fire();
                 }
-            }, 350);    // TODO: Timeout needs to be a user setting
+            }, minRefreshInterval);    // TODO: Timeout needs to be a user setting
         } else {
             this.pendingFires++;
         }
     }
 }
+
+/*
+    async machineInfo() {
+        if (this.sessionInfo === undefined)
+            return undefined;
+        const session = this.sessionInfo.session;
+        const frameId = this.sessionInfo.frameId;
+        if (this.sessionInfo.language === Language.Cpp) {
+            //const expr1 = await this._evaluate(session, '(unsigned int)((unsigned char)-1)', frameId);
+            const expr2 = await this._evaluate(session, 'sizeof(void*)', frameId);
+            if (expr2 === undefined || expr2.type === undefined)
+                return undefined;
+            let pointerSize: number = 0;
+            if (expr2.result === '4')
+                pointerSize = 4;
+            else if (expr2.result === '8')
+                pointerSize = 8;
+            else
+                return undefined;
+            const expr3 = await this._evaluate(session, 'sizeof(unsigned long)', frameId);
+            if (expr3 === undefined || expr3.type === undefined)
+                return undefined;
+            let endianness: Endianness | undefined = undefined;
+            let expression = '';
+            let expectedLittle = '';
+            let expectedBig = '';
+            if (expr3.result === '4') {
+                expression = '*(unsigned long*)"abc"';
+                expectedLittle = '6513249';
+                expectedBig = '1633837824';
+            } else if (expr3.result === '8') { 
+                expression = '*(unsigned long*)"abcdefg"';
+                expectedLittle = '29104508263162465';
+                expectedBig = '7017280452245743360';
+            } else
+                return undefined;
+            const expr4 = await this._evaluate(session, expression, frameId);
+            if (expr4 === undefined || expr4.type === undefined)
+                return undefined;
+            if (expr4.result === expectedLittle)
+                endianness = Endianness.Little;
+            else if (expr4.result === expectedBig)
+                endianness = Endianness.Big;
+            else
+                return undefined;
+            return new MachineInfo(pointerSize, endianness);
+        }
+        return undefined;
+    }
+    */

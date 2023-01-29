@@ -1440,6 +1440,10 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.disconnectingPromise =  new Promise<void>(async (resolve) => {
             this.serverConsoleLog('Begin disconnectRequest');
             const doDisconnectProcessing = async () => {
+                if (this.miLiveGdb) {
+                    this.miLiveGdb.quit();
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
                 await this.tryDeleteBreakpoints();
                 this.disableSendStoppedEvents = false;
                 this.attached = false;
