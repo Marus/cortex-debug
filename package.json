@@ -365,17 +365,13 @@
                     "default": null,
                     "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
                 },
-                "cortex-debug.showDevDebugOutput": {
-                    "enum": [
-                        "none",
-                        "parsed",
-                        "raw",
-                        "both",
-                        "vscode"
-                    ],
-                    "default": "none",
-                    "description": "Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions",
-                    "type": "string"
+                "cortex-debug.liveWatchRefreshRate": {
+                    "default": "300",
+                    "description": "GUI refresh frequency in milliseconds. Your sample rate can be much faster than refresh rate. VSCode UI cannot handle high refresh rates and your Live Watch window will look frozen. Do not recommend below 250ms as it will not be legible anyways. Anything below 200ms did not work at all for us",
+                    "type": "number",
+                    "multipleOf": 1,
+                    "minimum": 100,
+                    "maximum": 5000
                 }
             }
         },
@@ -806,6 +802,27 @@
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
+                            },
+                            "liveWatch": {
+                                "properties": {
+                                    "enabled": {
+                                        "default": false,
+                                        "description": "Enable/Disable Live Watch. Only applies to OpenOCD",
+                                        "type": "boolean"
+                                    },
+                                    "samplesPerSecond": {
+                                        "default": 2,
+                                        "description": "Maximum number of samples per second. Different from GUI refresh-rate, which is a user/workspace setting",
+                                        "type": "number",
+                                        "multipleOf": 1,
+                                        "minimum": 0,
+                                        "maximum": 20
+                                    }                                  
+                                },
+                                "default": {
+                                    "enabled": true,
+                                    "samplesPerSecond": 4
+                                }
                             },
                             "chainedConfigurations": {
                                 "properties": {
@@ -1905,9 +1922,9 @@
                                         "description": "Enable/Disable Live Watch. Only applies to OpenOCD",
                                         "type": "boolean"
                                     },
-                                    "updatesPerSecond": {
+                                    "samplesPerSecond": {
                                         "default": 2,
-                                        "description": "maximum number of updates per second",
+                                        "description": "Maximum number of samples per second. Different from GUI refresh-rate, which is a user/workspace setting",
                                         "type": "number",
                                         "multipleOf": 1,
                                         "minimum": 0,
@@ -1916,7 +1933,7 @@
                                 },
                                 "default": {
                                     "enabled": true,
-                                    "updatesPerSecond": 4
+                                    "samplesPerSecond": 4
                                 }
                             },
                             "ctiOpenOCDConfig": {

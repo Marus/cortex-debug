@@ -289,7 +289,11 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
     protected oldState = new Map <string, vscode.TreeItemCollapsibleState>();
     constructor(private context: vscode.ExtensionContext) {
         this.variables = new LiveVariableNode(undefined, '', '');
+        this.setRefreshRate();
         this.restoreState();
+        context.subscriptions.push(
+            vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this))
+        );
     }
 
     private restoreState() {
@@ -304,6 +308,24 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                 }
             }
         } catch { }
+    }
+
+    private currentRefreshRate = LiveWatchTreeProvider.defaultRefreshRate;
+    private settingsChanged(e: vscode.ConfigurationChangeEvent) {
+        if (e.  affectsConfiguration('cortex-debug.liveWatchRefreshRate')) {
+            this.setRefreshRate();
+        }
+    }
+
+    private static defaultRefreshRate = 300;
+    private static minRefreshRate = 200;        // Seems to be the magic number
+    private static maxRefreshRate = 5000;
+    private setRefreshRate() {
+        const config = vscode.workspace.getConfiguration('cortex-debug', null);
+        let rate = config.get('liveWatchRefreshRate', LiveWatchTreeProvider.defaultRefreshRate);
+        rate = Math.max(rate, LiveWatchTreeProvider.minRefreshRate);
+        rate = Math.min(rate, LiveWatchTreeProvider.maxRefreshRate);
+        this.currentRefreshRate = rate;
     }
 
     public saveState() {
@@ -403,8 +425,8 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
         LiveWatchTreeProvider.session = session;
         this.isStopped = true;
         this.variables.reset();
-        const updatesPerSecond = Math.max(1, Math.min(20, liveWatch.updatesPerSecond ?? 4));
-        this.timeoutMs = 1000 / updatesPerSecond;
+        const samplesPerSecond = Math.max(1, Math.min(20, liveWatch.samplesPerSecond ?? 4));
+        this.timeoutMs = 1000 / samplesPerSecond;
         this.startTimer();
     }
 
@@ -462,8 +484,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
     private pendingFires = 0;
     private inFire = false;
     public fire() {
-        const minRefreshInterval = 350;
-        if (this.timeoutMs >= minRefreshInterval) {
+        if (this.timeoutMs >= this.currentRefreshRate) {
             this._onDidChangeTreeData.fire(undefined);
             return;
         }
@@ -476,7 +497,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                     this.pendingFires = 0;
                     this.fire();
                 }
-            }, minRefreshInterval);    // TODO: Timeout needs to be a user setting
+            }, this.currentRefreshRate);    // TODO: Timeout needs to be a user setting
         } else {
             this.pendingFires++;
         }

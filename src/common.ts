@@ -231,7 +231,7 @@ export interface SymbolFile {
 
 export interface LiveWatchConfig {
     enabled: boolean;
-    updatesPerSecond?: number;
+    samplesPerSecond?: number;
 }
 
 // Helper function to create a symbolFile object properly with required elements
