@@ -215,6 +215,19 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         }
     }
 
+    public async updateData(): Promise<void> {
+        const trees = this.sessionPeripheralsMap.values();
+        for (const tree of trees) {
+            await tree.updateData();
+        }
+
+        this.refresh();
+    }
+
+    public collapseAll(): void {
+        vscode.commands.executeCommand(`workbench.actions.treeView.cortex-debug.peripherals.collapseAll`);
+    }
+
     public debugSessionStarted(session: vscode.DebugSession, svdfile: string, thresh: any): Thenable<any> {
         return new Promise<void>(async (resolve, reject) => {
             if (!svdfile) {

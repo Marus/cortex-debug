@@ -447,6 +447,16 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "cortex-debug.peripherals.refreshAll",
+                "title": "Refresh All",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "cortex-debug.peripherals.collapseAll",
+                "title": "Collapse All",
+                "icon": "$(collapse-all)"
+            },
+            {
                 "command": "cortex-debug.peripherals.pin",
                 "title": "Pin",
                 "icon": "$(pin)"
@@ -2869,6 +2879,14 @@
                     "when": "false"
                 },
                 {
+                    "command": "cortex-debug.peripherals.refreshAll",
+                    "when": "false"
+                },
+                {
+                    "command": "cortex-debug.peripherals.collapseAll",
+                    "when": "false"
+                },
+                {
                     "command": "cortex-debug.peripherals.pin",
                     "when": "false"
                 },
@@ -3006,8 +3024,13 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "cortex-debug.peripherals.forceRefresh",
+                    "command": "cortex-debug.peripherals.refreshAll",
                     "when": "view == cortex-debug.peripherals && debugState == stopped",
+                    "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.peripherals.collapseAll",
+                    "when": "view == cortex-debug.peripherals",
                     "group": "navigation"
                 }
             ],
