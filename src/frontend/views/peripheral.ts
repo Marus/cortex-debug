@@ -234,7 +234,7 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     }
 
     public collapseAll(): void {
-        vscode.commands.executeCommand(`workbench.actions.treeView.cortex-debug.peripherals.collapseAll`);
+        vscode.commands.executeCommand('workbench.actions.treeView.cortex-debug.peripherals.collapseAll');
     }
 
     public debugSessionStarted(session: vscode.DebugSession, svdfile: string, thresh: any): Thenable<any> {
