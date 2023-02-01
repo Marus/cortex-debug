@@ -19,6 +19,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
     private gapThreshold: number = 16;
     private errMessage: string = 'No SVD file loaded';
     private wsFolderPath: string;
+    private stopped = false;
     
     constructor(
         public session: vscode.DebugSession,
@@ -75,7 +76,7 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         throw new Error('Method not implemented.');
     }
     public updateData(): Thenable<boolean> {
-        if (this.loaded) {
+        if (this.loaded && this.stopped) {
             const promises = this.peripherials.map((p) => p.updateData());
             Promise.all(promises).then((_) => { this.fireCb(); }, (_) => { this.fireCb(); });
         }
@@ -183,6 +184,14 @@ export class PeripheralTreeForSession extends PeripheralBaseNode {
         node.pinned = !node.pinned;
         this.peripherials.sort(PeripheralNode.compare);
     }
+
+    public sessionStopped() {
+        this.stopped = true;
+    }
+
+    public sessionContinued() {
+        this.stopped = false;
+    }
 }
 export class PeripheralTreeProvider implements vscode.TreeDataProvider<PeripheralBaseNode> {
     // tslint:disable-next-line:variable-name
@@ -213,6 +222,19 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
         } else {
             return values;
         }
+    }
+
+    public async updateData(): Promise<void> {
+        const trees = this.sessionPeripheralsMap.values();
+        for (const tree of trees) {
+            await tree.updateData();
+        }
+
+        this.refresh();
+    }
+
+    public collapseAll(): void {
+        vscode.commands.executeCommand('workbench.actions.treeView.cortex-debug.peripherals.collapseAll');
     }
 
     public debugSessionStarted(session: vscode.DebugSession, svdfile: string, thresh: any): Thenable<any> {
@@ -261,11 +283,16 @@ export class PeripheralTreeProvider implements vscode.TreeDataProvider<Periphera
     public debugStopped(session: vscode.DebugSession) {
         const regs = this.sessionPeripheralsMap.get(session.id);
         if (regs) {     // We are called even before the session has started, as part of reset
+            regs.sessionStopped();
             regs.updateData();
         }
     }
 
-    public debugContinued() {
+    public debugContinued(session: vscode.DebugSession) {
+        const regs = this.sessionPeripheralsMap.get(session.id);
+        if (regs) {
+            regs.sessionContinued();
+        }
     }
 
     public togglePinPeripheral(node: PeripheralBaseNode) {
