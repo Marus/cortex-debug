@@ -10,371 +10,391 @@
         "Debuggers"
     ],
     "contributes": {
-        "configuration": {
-            "type": "object",
-            "title": "Cortex-Debug",
-            "properties": {
-                "cortex-debug.armToolchainPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
-                },
-                "cortex-debug.armToolchainPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
-                },
-                "cortex-debug.armToolchainPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
-                },
-                "cortex-debug.armToolchainPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
-                },
-                "cortex-debug.armToolchainPrefix": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": "arm-none-eabi",
-                    "description": "The prefix to use for the arm toolchain - the standard release from arm uses \"arm-none-eabi\" but alternative toolchains may use a different prefix. Currently the gdb, objdump and nm tools are needed."
-                },
-                "cortex-debug.gdbPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
-                },
-                "cortex-debug.gdbPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
-                },
-                "cortex-debug.gdbPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
-                },
-                "cortex-debug.gdbPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
-                },
-                "cortex-debug.objdumpPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
-                },
-                "cortex-debug.objdumpPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
-                },
-                "cortex-debug.objdumpPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
-                },
-                "cortex-debug.objdumpPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
-                },
-                "cortex-debug.JLinkGDBServerPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCL.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.JLinkGDBServerPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCLExe) must be on the system path."
-                },
-                "cortex-debug.JLinkGDBServerPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCLExe) must be on the system path."
-                },
-                "cortex-debug.JLinkGDBServerPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCL.exe) must be on the system path."
-                },
-                "cortex-debug.openocdPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.openocdPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.openocdPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.openocdPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.pyocdPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
-                },
-                "cortex-debug.pyocdPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
-                },
-                "cortex-debug.pyocdPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
-                },
-                "cortex-debug.pyocdPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
-                },
-                "cortex-debug.PEGDBServerPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.PEGDBServerPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.PEGDBServerPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.PEGDBServerPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stutilPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stutilPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stutilPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stutilPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stlinkPath": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stlinkPath.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stlinkPath.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stlinkPath.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
-                },
-                "cortex-debug.stm32cubeprogrammer": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
-                },
-                "cortex-debug.stm32cubeprogrammer.linux": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
-                },
-                "cortex-debug.stm32cubeprogrammer.osx": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
-                },
-                "cortex-debug.stm32cubeprogrammer.windows": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
-                },
-                "cortex-debug.enableTelemetry": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable Telemetry for the Cortex-Debug Extension. Reporting will also respect the global telemetry.enableTelemetry setting."
-                },
-                "cortex-debug.registerUseNaturalFormat": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "If true, display registers in their natural format as specified by ARM. Hex otherwise."
-                },
-                "cortex-debug.variableUseNaturalFormat": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "If true, display variables in their natural format as specified by ARM. Hex otherwise."
-                },
-                "cortex-debug.dbgServerLogfile": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "default": null,
-                    "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
-                },
-                "cortex-debug.liveWatchRefreshRate": {
-                    "default": "300",
-                    "description": "GUI refresh frequency in milliseconds. Your sample rate can be much faster than refresh rate. VSCode UI cannot handle high refresh rates and your Live Watch window will look frozen. Do not recommend below 250ms as it will not be legible anyways. Anything below 200ms did not work at all for us",
-                    "type": "number",
-                    "multipleOf": 1,
-                    "minimum": 100,
-                    "maximum": 5000
+        "configuration": [
+            {
+                "type": "object",
+                "title": "Debugger",
+                "properties": {
+                    "cortex-debug.registerUseNaturalFormat": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "If true, display registers in their natural format as specified by ARM. Hex otherwise."
+                    },
+                    "cortex-debug.variableUseNaturalFormat": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "If true, display variables in their natural format as specified by ARM. Hex otherwise."
+                    },
+                    "cortex-debug.liveWatchRefreshRate": {
+                        "default": "300",
+                        "description": "GUI refresh frequency in milliseconds. Your sample rate can be much faster than refresh rate. VSCode UI cannot handle high refresh rates and your Live Watch window will look frozen. Do not recommend below 250ms as it will not be legible anyways. Anything below 200ms did not work at all for us",
+                        "type": "number",
+                        "multipleOf": 1,
+                        "minimum": 100,
+                        "maximum": 5000
+                    }
+                }
+            },
+            {
+                "type": "object",
+                "title": "External: GNU Tools",
+                "properties": {
+                    "cortex-debug.armToolchainPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                    },
+                    "cortex-debug.armToolchainPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                    },
+                    "cortex-debug.armToolchainPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                    },
+                    "cortex-debug.armToolchainPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the GCC Arm Toolchain (standard prefix is \"arm-none-eabi\" - can be set through the armToolchainPrefix setting) to use. If not set the tools must be on the system path. Do not include the executable file name in this path."
+                    },
+                    "cortex-debug.armToolchainPrefix": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": "arm-none-eabi",
+                        "description": "The prefix to use for the arm toolchain - the standard release from arm uses \"arm-none-eabi\" but alternative toolchains may use a different prefix. Currently the gdb, objdump and nm tools are needed."
+                    },
+                    "cortex-debug.gdbPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                    },
+                    "cortex-debug.gdbPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                    },
+                    "cortex-debug.gdbPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                    },
+                    "cortex-debug.gdbPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the GDB executable. This is useful for cases where your gdb executable doesn't follow the standard <tuple>-gdb format - for example `gdb-multiarch`. This can be just the executable name (if on the system path) or the full path."
+                    },
+                    "cortex-debug.objdumpPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
+                    },
+                    "cortex-debug.objdumpPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
+                    },
+                    "cortex-debug.objdumpPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
+                    },
+                    "cortex-debug.objdumpPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This setting allows you to completely override the path/executable for the objdump executable. This is useful for cases where your objdump executable doesn't follow the standard <tuple>-objdump format - for example `objdump-multiarch`. This can be just the executable name (if on the system path) or the full path. The program 'nm' is also expected alongside"
+                    }
+                }
+            },
+            {
+                "type": "object",
+                "title": "External: GDB Servers",
+                "properties": {            
+                    "cortex-debug.JLinkGDBServerPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCL.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.JLinkGDBServerPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCLExe) must be on the system path."
+                    },
+                    "cortex-debug.JLinkGDBServerPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCLExe) must be on the system path."
+                    },
+                    "cortex-debug.JLinkGDBServerPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the JLink GDB Server. If not set then JLinkGDBServer (JLinkGDBServerCL.exe) must be on the system path."
+                    },
+                    "cortex-debug.openocdPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.openocdPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.openocdPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.openocdPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the OpenOCD GDB Server executable. If not set then openocd (openocd.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.pyocdPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
+                    },
+                    "cortex-debug.pyocdPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
+                    },
+                    "cortex-debug.pyocdPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
+                    },
+                    "cortex-debug.pyocdPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PyOCD GDB Server executable. If not set then pyocd-gdbserver must be on the system path."
+                    },
+                    "cortex-debug.PEGDBServerPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.PEGDBServerPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.PEGDBServerPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.PEGDBServerPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the PEMicro GDB Server. If not set then PEGDBServer (pegdbserver_console.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stutilPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stutilPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stutilPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stutilPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the Texane's ST-Util GDB Server executable. If not set then st-util (st-util.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stlinkPath": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stlinkPath.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stlinkPath.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stlinkPath.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path."
+                    },
+                    "cortex-debug.stm32cubeprogrammer": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                    },
+                    "cortex-debug.stm32cubeprogrammer.linux": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                    },
+                    "cortex-debug.stm32cubeprogrammer.osx": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                    },
+                    "cortex-debug.stm32cubeprogrammer.windows": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "This path is normally resolved to the installed STM32CubeIDE or STM32CubeProgrammer but can be overridden here."
+                    }
+                }
+            },
+            {
+                "type": "object",
+                "title": "Miscellaneous",
+                "properties": {
+                    "cortex-debug.enableTelemetry": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Enable Telemetry for the Cortex-Debug Extension. Reporting will also respect the global telemetry.enableTelemetry setting."
+                    },
+                    "cortex-debug.dbgServerLogfile": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "default": null,
+                        "description": "Logs the contents of the gdb-server terminal. Use ${PID} in the file name to make it unique per VSCode session"
+                    }
                 }
             }
-        },
+        ],
         "commands": [
             {
                 "command": "cortex-debug.resetDevice",
@@ -817,7 +837,7 @@
                                         "multipleOf": 1,
                                         "minimum": 0,
                                         "maximum": 20
-                                    }                                  
+                                    }
                                 },
                                 "default": {
                                     "enabled": true,
@@ -1929,7 +1949,7 @@
                                         "multipleOf": 1,
                                         "minimum": 0,
                                         "maximum": 20
-                                    }                                  
+                                    }
                                 },
                                 "default": {
                                     "enabled": true,
@@ -3110,7 +3130,7 @@
     "dependencies": {
         "@vscode/extension-telemetry": "^0.4.7",
         "@vscode/webview-ui-toolkit": "^1.1.0",
-        "binary-parser": "^1.7.0",
+        "binary-parser": "^2.2.1",
         "bindings": "^1.5.0",
         "command-exists": "^1.2.9",
         "commander": "^2.20.3",
@@ -3132,12 +3152,12 @@
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
     "devDependencies": {
-        "@types/binary-parser": "^1.5.0",
+        "@types/binary-parser": "^1.5.1",
         "@types/mocha": "^5.2.7",
-        "@types/node": "16.x",
+        "@types/node": "^16.18.11",
         "@types/vscode": "^1.52.0",
-        "@vscode/debugadapter": "^1.51.1",
-        "@vscode/debugprotocol": "^1.51.0",
+        "@vscode/debugadapter": "^1.59.0",
+        "@vscode/debugprotocol": "^1.59.0",
         "@vscode/test-electron": "^2.1.3",
         "mocha": "^9.1.3",
         "ts-loader": "^9.2.6",
