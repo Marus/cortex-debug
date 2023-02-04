@@ -42,6 +42,7 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { LiveWatchMonitor } from './live-watch-monitor';
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -63,7 +64,7 @@ enum SessionMode {
     RESET = 'reset'
 }
 
-class ExtendedVariable {
+export class ExtendedVariable {
     constructor(public name, public options) {
     }
 }
@@ -106,13 +107,17 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 class PendingContinue {
     constructor(public shouldContinue: boolean, public haveMore?: () => boolean) {}
 }
+
 class VSCodeRequest<RespType, ArgsType> {
     constructor(
-        public functor: (response: RespType, args: ArgsType, pendedContinue?: PendingContinue) => Promise<void>,
+        // In the varargs extra, the first element is a PenContinue object. The rest are whatever else was passed in
+        // when calling RequestQueue.add
+        public functor: (response: RespType, args: ArgsType, ...extra: any[]) => Promise<void>,
         public response: RespType,
         public args: ArgsType,
         public resolve: any,
-        public reject: any
+        public reject: any,
+        public extra: any[]
     ) {}
 }
 
@@ -127,21 +132,23 @@ class VSCodeRequest<RespType, ArgsType> {
 ** For requests where gdb needs to be temporarily interrupted for the operation to succeed, use setFunctionBreakpoints as a template (carefully)
 ** and for others, use evaluateRequest as a template
 */
-class RequestQueue<RespType, ArgsType> {
+export class RequestQueue<RespType, ArgsType> {
     private queue: Array<VSCodeRequest<RespType, ArgsType>> = [];
     private queueBusy = false;
     public pendedContinue = new PendingContinue(false, this.haveMore.bind(this));
     constructor(private alwaysResolve = true) {}
     public add(
-        functor: (response: RespType, args: ArgsType, pendContinue?: PendingContinue) => Promise<void>,
-        response: RespType, args: ArgsType): Promise<void> {
+        // For the varargs, extra can be any set of args but the first arg if used, is of type PendContinue
+        functor: (response: RespType, args: ArgsType, ...extra: any[]) => Promise<void>,
+        response: RespType, args: ArgsType, ...extra): Promise<void> {
         return new Promise<void>(async (resolve, reject) => {
-            this.queue.push(new VSCodeRequest<RespType, ArgsType>(functor, response, args, resolve, reject));
+            this.queue.push(new VSCodeRequest<RespType, ArgsType>(functor, response, args, resolve, reject, extra));
             while (!this.queueBusy && (this.queue.length > 0)) {
                 this.queueBusy = true;
                 const obj = this.queue.shift();
                 try {
-                    await obj.functor(obj.response, obj.args, this.pendedContinue);
+                    const p = obj.functor(obj.response, obj.args, this.pendedContinue, ...obj.extra);
+                    await p;
                     obj.resolve();
                 }
                 catch (e) {
@@ -192,6 +199,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected started: boolean;
     protected debugReady: boolean;
     public miDebugger: MI2;
+    public miLiveGdb: LiveWatchMonitor | undefined;
     protected forceDisassembly: boolean = false;
     protected activeEditorPath: string = null;
     protected disassember: GdbDisassembler;
@@ -219,7 +227,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     // different from 'currentThreadId'. This is also the last thread-id used to notify VSCode about
     // the current thread so the call-stack will initially point to this thread. Maybe currentThreadId
     // can be made stricter and we can remove this variable
-    private stoppedThreadId: number = 0;
+    public stoppedThreadId: number = 0;
 
     protected functionBreakpoints = [];
     protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map<string, OurSourceBreakpoint[]>();
@@ -632,6 +640,15 @@ export class GDBDebugSession extends LoggingDebugSession {
                         // After the above, VSCode will set various kinds of breakpoints, watchpoints, etc. When all those things
                         // happen, it will finally send a configDone request and now everything should be stable
                         this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
+                        if (this.args.liveWatch?.enabled) {
+                            const liveGdb = new LiveWatchMonitor(this);
+                            this.startGdbForLiveWatch(liveGdb).then(() => {
+                                this.handleMsg('stdout', 'Started live-monitor-gdb session\n');
+                                this.miLiveGdb = liveGdb;
+                            }, (e) => {
+                                this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
+                            });
+                        }
 
                         this.onInternalEvents.once('config-done', async () => {
                             // Let the gdb server settle down. They are sometimes still creating/delteting threads
@@ -816,6 +833,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         return gdbExePath;
     }
 
+    private gdbInitCommands: string[] = [];
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
@@ -843,7 +861,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.quitEvent();
         });
         this.initDebugger();
-        const initCmds = [
+        this.gdbInitCommands = [
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"',
             'enable-pretty-printing',
@@ -858,18 +876,32 @@ export class GDBDebugSession extends LoggingDebugSession {
                 for (const section of symF.sections) {
                     cmd += ` -s ${section.name} ${section.address}`;
                 }
-                initCmds.push(cmd);
+                this.gdbInitCommands.push(cmd);
             }
-            if (initCmds.length === 0) {
+            if (this.gdbInitCommands.length === 0) {
                 this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
             }
         } else {
-            initCmds.push(`file-exec-and-symbols "${this.args.executable}"`);
+            this.gdbInitCommands.push(`file-exec-and-symbols "${this.args.executable}"`);
         }
-        const ret = this.miDebugger.start(this.args.cwd, initCmds);
+        const ret = this.miDebugger.start(this.args.cwd, this.gdbInitCommands);
         return ret;
     }
 
+    public startGdbForLiveWatch(liveGdb: LiveWatchMonitor): Promise<void> {
+        const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, true);
+        liveGdb.setupEvents(mi2);
+        const commands = [...this.gdbInitCommands];
+        mi2.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
+        commands.push('interpreter-exec console "set stack-cache off"');
+        commands.push('interpreter-exec console "set remote interrupt-on-connect off"');
+        if (this.serverController?.initCommands) {
+            commands.push(...this.serverController.initCommands());
+        }
+        const ret = mi2.start(this.args.cwd, commands);
+        return ret;
+    }
+        
     private sendContinue(): Promise<void> {
         return new Promise<void>((resolve) => {
             this.continuing = true;
@@ -997,6 +1029,39 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         const isBusy = !this.stopped || this.continuing || !this.isMIStatusStopped();
         switch (command) {
+            case 'liveEvaluate':
+                if (this.miLiveGdb) {
+                    const r: DebugProtocol.EvaluateResponse = {
+                        ...response,
+                        body: {
+                            result: undefined,
+                            variablesReference: undefined
+                        }
+                    };
+                    await this.miLiveGdb.evaluateRequest(r, args);
+                } else {
+                    this.sendResponse(response);
+                }
+                break;
+            case 'liveCacheRefresh':
+                if (this.miLiveGdb) {
+                    await this.miLiveGdb.refreshLiveCache(args);
+                }
+                this.sendResponse(response);
+                break;
+            case 'liveVariables':
+                if (this.miLiveGdb) {
+                    const r: DebugProtocol.VariablesResponse = {
+                        ...response,
+                        body: {
+                            variables: []
+                        }
+                    };
+                    return this.miLiveGdb.variablesRequest(r, args);
+                } else {
+                    this.sendResponse(response);
+                }
+                break;
             case 'set-force-disassembly':
                 response.body = { success: true };
                 this.forceDisassembly = args.force;
@@ -1375,6 +1440,10 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.disconnectingPromise =  new Promise<void>(async (resolve) => {
             this.serverConsoleLog('Begin disconnectRequest');
             const doDisconnectProcessing = async () => {
+                if (this.miLiveGdb) {
+                    this.miLiveGdb.quit();
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
                 await this.tryDeleteBreakpoints();
                 this.disableSendStoppedEvents = false;
                 this.attached = false;
@@ -1777,11 +1846,11 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     // returns [threadId, frameId]
-    protected static decodeReference(varRef: number): number[] {
+    public static decodeReference(varRef: number): number[] {
         return [(varRef & 0xFF00) >>> 8, varRef & 0xFF];
     }
 
-    protected static encodeReference(threadId: number, frameId: number): number {
+    public static encodeReference(threadId: number, frameId: number): number {
         return ((threadId << 8) | (frameId & 0xFF)) & 0xFFFF;
     }
 
@@ -2896,7 +2965,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
-                    const pvar = id as VariableObject;
+                    const pVar = id as VariableObject;
 
                     // Variable members
                     let children: VariableObject[];
@@ -2907,7 +2976,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
                             if (/^\d+$/.test(child.exp)) {
-                                child.fullExp = `${pvar.fullExp || pvar.exp}[${child.exp}]`;
+                                child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
                             }
                             else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
@@ -2922,9 +2991,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 } else {
                                     // The full-name is not always derivable from the parent and child info. Esp. children
                                     // of anonymous stuff. Might as well store all of them or set-value will not work.
-                                    pvar.children[child.exp] = child.name;
+                                    pVar.children[child.exp] = child.name;
                                 }
-                                child.fullExp = `${pvar.fullExp || pvar.exp}${suffix}`;
+                                child.fullExp = `${pVar.fullExp || pVar.exp}${suffix}`;
                             }
                             return child.toProtocolVariable();
                         });
@@ -3267,6 +3336,13 @@ export class GDBDebugSession extends LoggingDebugSession {
                         resolve();
                     }
                 } else {        // This is an 'repl'
+                    if (args.expression.startsWith('+') && this.miLiveGdb) {
+                        args.expression = args.expression.substring(1);
+                        this.miLiveGdb.evaluateRequest(r, args).finally(() => {
+                            resolve();
+                        });
+                        return;
+                    }
                     try {
                         this.miDebugger.sendUserInput(args.expression).then((output) => {
                             if (typeof output === 'undefined') {

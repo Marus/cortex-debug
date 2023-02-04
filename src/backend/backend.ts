@@ -70,7 +70,7 @@ export class VariableObject {
     public id: number;
     public fullExp: string;
     public parent: number;      // Variable Reference
-    public children: {[name: string]: string};
+    public children: {[name: string]: string};  // Field-name to Gdb-variable map
     constructor(p: number, node: any) {
         this.parent = p;
         this.name = MINode.valueOf(node, 'name');

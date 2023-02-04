@@ -5,6 +5,7 @@ import * as path from 'path';
 import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
+import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
 
 import { RTTCore, SWOCore } from './swo/core';
 import { NumberFormat, ConfigurationArguments,
@@ -48,9 +49,11 @@ export class CortexDebugExtension {
     private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
     private memoryProvider: MemoryContentProvider;
+    private liveWatchProvider: LiveWatchTreeProvider;
 
     private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
     private registerTreeView: vscode.TreeView<BaseNode>;
+    private liveWatchTreeView: vscode.TreeView<LiveVariableNode>;
 
     private SVDDirectory: SVDInfo[] = [];
     private functionSymbols: SymbolInformation[] = null;
@@ -78,6 +81,11 @@ export class CortexDebugExtension {
 
         this.registerTreeView = vscode.window.createTreeView('cortex-debug.registers', {
             treeDataProvider: this.registerProvider
+        });
+
+        this.initLiveWatcher();
+        this.liveWatchTreeView = vscode.window.createTreeView('cortex-debug.liveWatch', {
+            treeDataProvider: this.liveWatchProvider
         });
 
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.REGISTER_DISPLAY_MODE}`,
@@ -115,6 +123,9 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.resetDevice', this.resetDevice.bind(this)),
             vscode.commands.registerCommand('cortex-debug.pvtEnableDebug', this.pvtCycleDebugMode.bind(this)),
 
+            vscode.commands.registerCommand('cortex-debug.liveWatch.addExpr', this.addLiveWatchExpr.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.removeExpr', this.removeLiveWatchExpr.bind(this)),
+
             vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
             vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
             vscode.debug.onDidStartDebugSession(this.debugSessionStarted.bind(this)),
@@ -143,6 +154,15 @@ export class CortexDebugExtension {
             }),
             this.peripheralTreeView.onDidCollapseElement((e) => {
                 e.element.expanded = false;
+            }),
+            this.liveWatchTreeView,
+            this.liveWatchTreeView.onDidExpandElement((e) => {
+                this.liveWatchProvider.expandChildren(e.element);
+                this.liveWatchProvider.saveState();
+            }),
+            this.liveWatchTreeView.onDidCollapseElement((e) => {
+                e.element.expanded = false;
+                this.liveWatchProvider.saveState();
             })
         );
 
@@ -677,6 +697,7 @@ export class CortexDebugExtension {
         try {
             Reporting.endSession(session.id);
 
+            this.liveWatchProvider?.debugSessionTerminated(session);
             this.registerProvider.debugSessionTerminated(session);
             this.peripheralProvider.debugSessionTerminated(session);
             if (mySession?.swo) {
@@ -730,6 +751,7 @@ export class CortexDebugExtension {
                 break;
             case 'custom-event-post-start-gdb':
                 this.startChainedConfigs(e, ChainedEvents.POSTINIT);
+                this.liveWatchProvider?.debugSessionStarted(session);
                 break;
             case 'custom-event-session-terminating':
                 ServerConsoleLog('Got event for sessions terminating', process.pid);
@@ -956,6 +978,7 @@ export class CortexDebugExtension {
     private receivedStopEvent(e: vscode.DebugSessionCustomEvent) {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'stopped';
+        this.liveWatchProvider?.debugStopped(e.session);
         this.peripheralProvider.debugStopped(e.session);
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugStopped(e.session);
@@ -973,6 +996,8 @@ export class CortexDebugExtension {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'running';
         this.peripheralProvider.debugContinued(e.session);
+        this.liveWatchProvider?.debugContinued(e.session);
+        this.peripheralProvider.debugContinued();
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugContinued();
         }
@@ -1116,6 +1141,30 @@ export class CortexDebugExtension {
         const mySession = CDebugSession.FindSession(session);
         if (!mySession.rtt) {
             mySession.rtt = new RTTCore(mySession.rttPortMap, args, this.context.extensionPath);
+        }
+    }
+
+    private addLiveWatchExpr() {
+        vscode.window.showInputBox({
+            placeHolder: 'Enter a valid C/gdb expression. Must be a global variable type expression',
+            ignoreFocusOut: true,
+            prompt: 'Enter Live Watch Expression'
+        }).then((v) => {
+            if (v) {
+                this.initLiveWatcher();
+                this.liveWatchProvider.addWatchExpr(v, vscode.debug.activeDebugSession);
+            }
+        });
+    }
+
+    private removeLiveWatchExpr(node: any) {
+        this.initLiveWatcher();
+        this.liveWatchProvider.removeWatchExpr(node);
+    }
+
+    private initLiveWatcher() {
+        if (!this.liveWatchProvider) {
+            this.liveWatchProvider = new LiveWatchTreeProvider(this.context);
         }
     }
 }
