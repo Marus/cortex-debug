@@ -997,7 +997,6 @@ export class CortexDebugExtension {
         mySession.status = 'running';
         this.peripheralProvider.debugContinued(e.session);
         this.liveWatchProvider?.debugContinued(e.session);
-        this.peripheralProvider.debugContinued();
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugContinued();
         }
