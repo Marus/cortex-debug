@@ -16,15 +16,15 @@ interface SaveVarStateMap {
 }
 export class LiveVariableNode extends BaseNode {
     protected session: vscode.DebugSession | undefined;        // This is transient
-    private children: LiveVariableNode[] | undefined;
-    private prevValue: string = '';
+    protected children: LiveVariableNode[] | undefined;
+    protected prevValue: string = '';
     constructor(
         parent: LiveVariableNode | undefined,
-        private name: string,
-        private expr: string,       // Any string for top level ars but lower level ones are actual children's simple names
-        private value = '',         // Current value
-        private type = '',          // C/C++ Type if any
-        private variablesReference = 0) {   // Variable reference returned by the debugger (only valid per-session)
+        protected name: string,
+        protected expr: string,       // Any string for top level ars but lower level ones are actual children's simple names
+        protected value = '',         // Current value
+        protected type = '',          // C/C++ Type if any
+        protected variablesReference = 0) {   // Variable reference returned by the debugger (only valid per-session)
         super(parent);
     }
 
@@ -33,7 +33,15 @@ export class LiveVariableNode extends BaseNode {
     }
     
     public getChildren(): LiveVariableNode[] {
-        return this.children ?? [];
+        if (!this.parent && (!this.children || !this.children.length)) {
+            return [new LiveVariableNodeMsg(this)];
+        }
+
+        const ret = [...(this.children ?? [])];
+        if (!this.parent && !this.session) {
+            ret.push(new LiveVariableNodeMsg(this, false));
+        }
+        return ret;
     }
 
     public isRootChild(): boolean {
@@ -260,6 +268,28 @@ export class LiveVariableNode extends BaseNode {
             this.children.push(item);
             item.deSerialize(child);
         }
+    }
+}
+
+class LiveVariableNodeMsg extends LiveVariableNode {
+    constructor(parent: LiveVariableNode, private empty = true) {
+        super(parent, 'dummy', 'dummy');
+    }
+
+    public getTreeItem(): TreeItem | Promise<TreeItem> {
+        const state = TreeItemCollapsibleState.None;
+        const tmp = 'Hint: Use "liveWatch" in your launch.json to enable this panel';
+        const label: vscode.TreeItemLabel = {
+            label: tmp + (this.empty ? ', and use the \'+\' button above to add new expressions' : '')
+        };
+        const item = new TreeItem(label, state);
+        item.contextValue = this.isRootChild() ? 'expression' : 'field';
+        item.tooltip = '~' + label.label + '~';
+        return item;
+    }
+
+    public getChildren(): LiveVariableNode[] {
+        return [];
     }
 }
 
