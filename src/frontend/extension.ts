@@ -101,6 +101,9 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.peripherals.refreshAll', () => this.peripheralsForceRefresh()),
+            vscode.commands.registerCommand('cortex-debug.peripherals.collapseAll', () => this.peripheralsCollapseAll()),
+
             vscode.commands.registerCommand('cortex-debug.peripherals.pin', this.peripheralsTogglePin.bind(this)),
             vscode.commands.registerCommand('cortex-debug.peripherals.unpin', this.peripheralsTogglePin.bind(this)),
             
@@ -567,14 +570,18 @@ export class CortexDebugExtension {
         Reporting.sendEvent('Peripheral View', 'Set Format', result.label);
     }
 
-    private async peripheralsForceRefresh(node: PeripheralBaseNode): Promise<void> {
+    private async peripheralsForceRefresh(node?: PeripheralBaseNode): Promise<void> {
         if (node) {
             node.getPeripheral().updateData().then((e) => {
                 this.peripheralProvider.refresh();
             });
         } else {
-            this.peripheralProvider.refresh();
+            this.peripheralProvider.updateData();
         }
+    }
+
+    private peripheralsCollapseAll(): void {
+        this.peripheralProvider.collapseAll();
     }
 
     private async peripheralsTogglePin(node: PeripheralBaseNode): Promise<void> {
@@ -988,6 +995,7 @@ export class CortexDebugExtension {
     private receivedContinuedEvent(e: vscode.DebugSessionCustomEvent) {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'running';
+        this.peripheralProvider.debugContinued(e.session);
         this.liveWatchProvider?.debugContinued(e.session);
         this.peripheralProvider.debugContinued();
         if (this.isDebugging(e.session)) {
