@@ -4,6 +4,7 @@ import * as net from 'net';
 import { parseHostPort } from '../../../common';
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
+import { setFlagsFromString } from 'v8';
 
 const TimerInterval = 250;
 export class SocketSWOSource extends EventEmitter implements SWORTTSource {
@@ -140,134 +141,224 @@ export class JLinkSocketRTTSource extends SocketRTTSource {
     }
 }
 
+enum PeHeaderType {
+    TX_COMMAND = 0,
+    RX_COMMAND = 1,
+    RX_STREAM = 7
+}
+
+class PeMicroHeader {
+    // Headers are 32 bytes separated into 8 uint32 (big endian)
+    // All of the data is reverse-engineered.
+    // There are no public documents that I can find on this stream configuration
+    // Byte[0] - Unknown Seems to always be 1
+    // Byte[1] - Unknown Seems to always be 1
+    // Byte[2] - Semi-Unknown. Possibly direction data type
+    //         - Seems to be 0 when command is sent to the PeMicro.
+    //         -1 when its a command response and 7 when its SWO stream
+    // Byte[3] - Sequence number. Increasing number used to match request response
+    // Byte[4] - Total Length. Length = header size + data size
+    // Byte[5] - Unknown Seems to always be 0. Possibly reserved?
+    // Byte[6] - Unknown Seems to always be 0. Possibly reserved?
+    // Byte[7] - Unknown Seems to always be 0. Possibly reserved?
+
+    // header: Uint32Array;
+    type: PeHeaderType;
+    // headerLength: number;
+    dataLength: number;
+    sequence: number;
+
+    static get headerLength() {
+        return 32;
+    }
+
+    public static fromValues(type: PeHeaderType, sequence: number, dataLength: number): PeMicroHeader {
+        const cls = new PeMicroHeader();
+        // cls.headerLength = 32;
+        cls.type = type;
+        cls.sequence = sequence;
+        cls.dataLength = dataLength;
+        return cls;
+    }
+
+    public static fromBuffer(buffer: Buffer): PeMicroHeader {
+        const cls = new PeMicroHeader();
+        let header = new Uint32Array(8);
+        for(let i = 0; i < 8; i++) {
+            header[i] = buffer.readUInt32BE(i*4);
+        }
+        // Check to see if the header is valid. If its not we might have gotten out of sync.
+        // If we are out of sync, just throw it way.
+        if(header[0] !== 1 || header[1] !== 1) {
+            throw new Error('Invalid PeMicro header start');
+        }
+        cls.type = header[2];
+        cls.sequence = header[3];
+        const messageLength = header[4];
+        if(messageLength < 32)
+        {
+            throw new Error('Message length smaller than header');
+        }
+        // cls.headerLength = 32;
+        cls.dataLength = messageLength-32;
+        if(header[5] !== 0 || header[6] !== 0 || header[7] !== 0) {
+            throw new Error('Invalid PeMicro header end');
+        }
+        return cls;
+    }
+
+    public getTxString(): string {
+        let header = Buffer.alloc(32)
+        header.writeUInt32BE(1, 0*4); // No idea seems to always be 1
+        header.writeUInt32BE(1, 1*4); // No idea seems to always be 1
+        header.writeUInt32BE(PeHeaderType.TX_COMMAND, 2*4);
+        header.writeUInt32BE(this.sequence, 3*4); // Sequence number
+        header.writeUInt32BE(32 + this.dataLength, 4*4); // Size
+        header.writeUInt32BE(0, 5*4); // No idea seems to always be 0
+        header.writeUInt32BE(0, 6*4); // No idea seems to always be 0
+        header.writeUInt32BE(0, 7*4); // No idea seems to always be 0
+        let decoder = new TextDecoder();
+        return decoder.decode(header);
+    }
+}
+
+enum PeState {
+    INIT = 1,
+    CREATE_PIPE,
+    CONFIGURE_SWO,
+    RESUME_PIPE,
+    RECEIVING,
+    RESERVED
+}
+
 export class PeMicroSocketSource extends SocketSWOSource {
     private sequence = 0;
-    private inputBuffer: Buffer = Buffer.alloc(0);
+    private state: PeState = PeState.INIT;
+
+    private createPipe(): void {
+        const createPipe = {
+            "control": {
+                "00000001": {
+                    "command": "createPipe",
+                    "apiversion": "1"
+                }
+            }
+        };
+        this.write(JSON.stringify(createPipe));
+    }
+
+    private configureSWO(): void {
+        const configureSWO = {
+            "control": {
+                "00000001":{
+                    "command": "configureSWOStream",
+                    "streamEnabled": "true",
+                    "itmStimulusPortEnable": "-1",
+                    "postCNTEventEnable": "false",
+                    "pcSamplingEnable": "false",
+                    "postCNTClockRate": "false",
+                    "localTimestamps": "false",
+                    "localTSClock": "false",
+                    "localTSPrescale": "0",
+                    "globalTSFrequency": "0",
+                    "CPI": "false",
+                    "SLEEP": "false",
+                    "FOLD": "false",
+                    "EXCOVER": "false",
+                    "LSU": "false",
+                    "EXCTRC": "false",
+                    "SYNC": "0"
+                }
+            }
+        };
+        this.write(JSON.stringify(configureSWO));
+    }
+
+    private resumePipe(): void {
+        const resumePipe = {
+            "control": {
+                "00000001": {
+                    "command": "resumePipe"
+                }
+            }
+        };
+        this.write(JSON.stringify(resumePipe));
+    }
 
     constructor(tcpPort: string) {
         super(tcpPort);
         this.on('connected', () => {
-            const createPipe = {
-                "control": {
-                    "00000001": {
-                        "command": "createPipe",
-                        "apiversion": "1"
-                    }
-                }
-            };
-            this.write(JSON.stringify(createPipe));
-            this.client.once('data', (buffer) => {
-                const configureSWO = {
-                    "control": {
-                        "00000001":{
-                            "command":"configureSWOStream",
-                            "streamEnabled":"true",
-                            "itmStimulusPortEnable":"-1",
-                            "postCNTEventEnable":"false",
-                            "pcSamplingEnable":"false",
-                            "postCNTClockRate":"false",
-                            "localTimestamps":"false",
-                            "localTSClock":"false",
-                            "localTSPrescale":"0",
-                            "globalTSFrequency":"0",
-                            "CPI":"false",
-                            "SLEEP":"false",
-                            "FOLD":"false",
-                            "EXCOVER":"false",
-                            "LSU":"false",
-                            "EXCTRC":"false",
-                            "SYNC":"0"
-                        }
-                    }
-                };
-                // const configureSWO = {"control":{"00000001":{"command":"configureSWOStream","streamEnabled":"true","itmStimulusPortEnable":"-1","postCNTEventEnable":"false","pcSamplingEnable":"false","postCNTClockRate":"false","localTimestamps":"true","localTSClock":"false","localTSPrescale":"0","globalTSFrequency":"0","CPI":"false","SLEEP":"false","FOLD":"false","EXCOVER":"false","LSU":"false","EXCTRC":"false","SYNC":"0"}}};
-                this.write(JSON.stringify(configureSWO));
-                this.client.once('data', (buffer) => {
-                    const resumePipe = {
-                        "control": {
-                            "00000001": {
-                                "command": "resumePipe"
-                            }
-                        }
-                    };
-                    // const resumePipe = {"control":{"00000001":{"command":"resumePipe"}}};
-                    this.write(JSON.stringify(resumePipe));
-                });
-            });
+            // When we connect we need to start a sequence of commands to configure the SWO stream.
+            // It starts with create pipe and is continued in the data callback
+            this.state = PeState.CREATE_PIPE;
+            this.createPipe();
         });
-
-        // this.client.on('data', (buffer) => {
-        //     this.emit('data', buffer);
-        // });
     }
 
     protected processData(buffer: Buffer): void {
-        this.inputBuffer = Buffer.concat(this.inputBuffer, buffer);
-        while(this.inputBuffer.length >= 32) {
-            const view = new DataView(this.inputBuffer);
-            var header = new Uint32Array(8);
-            for(let i = 0; i < 8; i++) {
-                header[i] = view.getUint32(i*4, false);
+        var offset = 0;
+        // PeMicro streams data in packets. Each packet has a 32 byte header, followed by the data
+        // It only sends one packet per TCP packet, but this interface concatenates TCP packets
+        // So we may need to process multiple in one callback
+        while((buffer.length - offset) >= 32) {
+            try {
+                let header = PeMicroHeader.fromBuffer(buffer.subarray(offset, Math.min(offset+PeMicroHeader.headerLength, buffer.length)));
+                //skip over header
+                offset = offset + PeMicroHeader.headerLength;
+                
+                // 
+                switch (this.state) {
+                    case PeState.CREATE_PIPE: {
+                        if(header.type === PeHeaderType.RX_COMMAND) {
+                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)).toString());
+                            if(response.control['00000001'].result === 0) {
+                                this.configureSWO();
+                                this.state = PeState.CONFIGURE_SWO;
+                            }
+                        }
+                        break;
+                    }
+                    case PeState.CONFIGURE_SWO: {
+                        if(header.type === PeHeaderType.RX_COMMAND) {
+                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)).toString());
+                            if(response.control['00000001'].result === 0) {
+                                this.resumePipe();
+                                this.state = PeState.RESUME_PIPE;
+                            }
+                        }
+                        break;
+                    }
+                    case PeState.RESUME_PIPE: {
+                        if(header.type === PeHeaderType.RX_COMMAND) {
+                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)).toString());
+                            if(response.control['00000001'].result === 0) {
+                                this.state = PeState.RECEIVING;
+                            }
+                        }
+                        break;
+                    }
+                    case PeState.RECEIVING: {
+                        if(header.type === PeHeaderType.RX_STREAM) {
+                            this.emit('data', buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)));
+                        }
+                        break;
+                    }
+                }
+                offset = offset + header.dataLength;
+                console.log("Remaining: " + (buffer.length - offset));
+            } catch (err) {
+                console.log(err.message);
+                // If we couldn't decode the header, just discard the data.
+                // Its probably garbage or out of sync, so upstream would be confused anyway
             }
-            if(header[0] !== 1 || header[1] !== 1 ||header[2] !== 1) {
-                this.inputBuffer = Buffer.alloc(0);
-                return;
-            }
-            const sequence = header[3];
-            const length = header[4];
-            // Check to see if the header is valid. If its not we might have gotten out of sync.
-            // If we are out of sync, just throw it way.
             
-
-            // # skip first 3 words, seems to be fixed
-            // # 00000001 00000001 00000001 ( no idea, maybe 3rd one is direction?)
-            // # val = struct.unpack_from('>I', msg, 0)[0] # Seem to always be 1
-            // # val = struct.unpack_from('>I', msg, 4)[0] # Seem to always be 1
-            // # val = struct.unpack_from('>I', msg, 8)[0] # Seem to always be 1 (maybe direction?)
-            // # Response sequence should match the request, but I'm not going to check
-            // seq = struct.unpack_from('>I', msg, 12)[0]
-            // length = struct.unpack_from('>I', msg, 16)[0]
-            // # Skip the last in the header, seems to be fixed. Maybe reserved?
-            // # val = struct.unpack_from('>I', msg, 20)[0] # Seem to always be 0
-            // # val = struct.unpack_from('>I', msg, 24)[0] # Seem to always be 0
-            // # val = struct.unpack_from('>I', msg, 28)[0] # Seem to always be 0
-
-            // const view = new DataView(this.inputBuffer);
-            // view.setUint32(0*4, 1, false); // No idea seems to always be 1
-            // view.setUint32(1*4, 1, false); // No idea seems to always be 1
-            // view.setUint32(2*4, 0, false); // (maybe direction?)
-            // view.setUint32(3*4, this.sequence, false); // Sequence number
-            // view.setUint32(4*4, 32 + data.length, false); // Size
-            // view.setUint32(5*4, 0, false); // No idea seems to always be 0
-            // view.setUint32(6*4, 0, false); // No idea seems to always be 0
-            // view.setUint32(7*4, 0, false); // No idea seems to always be 0
-            
-            this.emit('data', buffer.subarray(32));
         }
     }
 
     public write(data) {
         try {
-            // const header = new Uint32Array(8);
-            const header = new Uint8Array(8*4)
-            const view = new DataView(header.buffer);
-            view.setUint32(0*4, 1, false); // No idea seems to always be 1
-            view.setUint32(1*4, 1, false); // No idea seems to always be 1
-            view.setUint32(2*4, 0, false); // (maybe direction?)
-            view.setUint32(3*4, this.sequence, false); // Sequence number
-            view.setUint32(4*4, 32 + data.length, false); // Size
-            view.setUint32(5*4, 0, false); // No idea seems to always be 0
-            view.setUint32(6*4, 0, false); // No idea seems to always be 0
-            view.setUint32(7*4, 0, false); // No idea seems to always be 0
-
-            let decoder = new TextDecoder();
-            this.client.write(decoder.decode(header) + data)
-
-            // const encoder = new TextEncoder('utf-8')
-            // this.client.write(header + encoder.encode(data));
-
-            // this.client.write(String.fromCharCode(header) + data);
-            // this.client.write(data);
+            let header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
+            this.client.write(header.getTxString() + data)
             this.sequence = this.sequence + 1
         }
         catch (e) {
