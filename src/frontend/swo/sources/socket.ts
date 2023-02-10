@@ -37,7 +37,6 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                 });
                 this.client.on('data', (buffer) => {
                     this.processData(buffer);
-                    // this.emit('data', buffer);
                 });
                 this.client.on('end', () => {
                     this.dispose();
@@ -155,26 +154,23 @@ class PeMicroHeader {
     // Byte[1] - Unknown Seems to always be 1
     // Byte[2] - Semi-Unknown. Possibly direction data type
     //         - Seems to be 0 when command is sent to the PeMicro.
-    //         -1 when its a command response and 7 when its SWO stream
+    //         - 1 when its a command response and 7 when its SWO stream
     // Byte[3] - Sequence number. Increasing number used to match request response
     // Byte[4] - Total Length. Length = header size + data size
     // Byte[5] - Unknown Seems to always be 0. Possibly reserved?
     // Byte[6] - Unknown Seems to always be 0. Possibly reserved?
     // Byte[7] - Unknown Seems to always be 0. Possibly reserved?
 
-    // header: Uint32Array;
-    type: PeHeaderType;
-    // headerLength: number;
-    dataLength: number;
-    sequence: number;
+    public type: PeHeaderType;
+    public dataLength: number;
+    public sequence: number;
 
-    static get headerLength() {
+    public static get headerLength() {
         return 32;
     }
 
     public static fromValues(type: PeHeaderType, sequence: number, dataLength: number): PeMicroHeader {
         const cls = new PeMicroHeader();
-        // cls.headerLength = 32;
         cls.type = type;
         cls.sequence = sequence;
         cls.dataLength = dataLength;
@@ -188,19 +184,17 @@ class PeMicroHeader {
             header[i] = buffer.readUInt32BE(i*4);
         }
         // Check to see if the header is valid. If its not we might have gotten out of sync.
-        // If we are out of sync, just throw it way.
         if(header[0] !== 1 || header[1] !== 1) {
             throw new Error('Invalid PeMicro header start');
         }
         cls.type = header[2];
         cls.sequence = header[3];
         const messageLength = header[4];
-        if(messageLength < 32)
+        if(messageLength < PeMicroHeader.headerLength)
         {
             throw new Error('Message length smaller than header');
         }
-        // cls.headerLength = 32;
-        cls.dataLength = messageLength-32;
+        cls.dataLength = messageLength - PeMicroHeader.headerLength;
         if(header[5] !== 0 || header[6] !== 0 || header[7] !== 0) {
             throw new Error('Invalid PeMicro header end');
         }
@@ -211,9 +205,9 @@ class PeMicroHeader {
         let header = Buffer.alloc(32)
         header.writeUInt32BE(1, 0*4); // No idea seems to always be 1
         header.writeUInt32BE(1, 1*4); // No idea seems to always be 1
-        header.writeUInt32BE(PeHeaderType.TX_COMMAND, 2*4);
+        header.writeUInt32BE(PeHeaderType.TX_COMMAND, 2*4); // packet type
         header.writeUInt32BE(this.sequence, 3*4); // Sequence number
-        header.writeUInt32BE(32 + this.dataLength, 4*4); // Size
+        header.writeUInt32BE(PeMicroHeader.headerLength + this.dataLength, 4*4); // Size
         header.writeUInt32BE(0, 5*4); // No idea seems to always be 0
         header.writeUInt32BE(0, 6*4); // No idea seems to always be 0
         header.writeUInt32BE(0, 7*4); // No idea seems to always be 0
@@ -300,13 +294,11 @@ export class PeMicroSocketSource extends SocketSWOSource {
         // PeMicro streams data in packets. Each packet has a 32 byte header, followed by the data
         // It only sends one packet per TCP packet, but this interface concatenates TCP packets
         // So we may need to process multiple in one callback
-        while((buffer.length - offset) >= 32) {
+        while((buffer.length - offset) >= PeMicroHeader.headerLength) {
             try {
                 let header = PeMicroHeader.fromBuffer(buffer.subarray(offset, Math.min(offset+PeMicroHeader.headerLength, buffer.length)));
                 //skip over header
                 offset = offset + PeMicroHeader.headerLength;
-                
-                // 
                 switch (this.state) {
                     case PeState.CREATE_PIPE: {
                         if(header.type === PeHeaderType.RX_COMMAND) {

@@ -619,14 +619,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'The PE GDB Server Only supports socket type SWO';
         }
 
-        // if (config.swoConfig.enabled) {
-        //     if (config.swoConfig.source === 'socket' && !config.swoConfig.swoPort) {
-        //         vscode.window.showWarningMessage('SWO source type "socket" requires a "swoPort". Disabling SWO support.');
-        //         config.swoConfig = { enabled: false };
-        //         config.graphConfig = [];
-        //     }
-        // }
-
         return null;
     }
 

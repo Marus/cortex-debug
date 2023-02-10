@@ -130,19 +130,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     }
 
     public serverLaunchStarted(): void {}
-    public serverLaunchCompleted(): void {
-        // if (this.args.swoConfig.enabled) {
-        //     const source = this.args.swoConfig.source;
-        //     if (source === 'socket') {
-        //         const swoPortNm = createPortName(this.args.targetProcessor, 'swoPort');
-        //         this.emit('event', new SWOConfigureEvent({
-        //             type: 'socket',
-        //             args: this.args,
-        //             port: this.ports[swoPortNm].toString(10)
-        //         }));
-        //     }
-        // }
-    }
+    public serverLaunchCompleted(): void {}
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {
         if (this.args.swoConfig.enabled) {

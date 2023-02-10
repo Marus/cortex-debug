@@ -136,13 +136,13 @@ class ITMDecoder extends EventEmitter {
                     }
                     break;
                 case Status.TIMESTAMP:
-                    this.rxWriteByte(byte);
+                    let receivedMax = this.rxWriteByte(byte);
                     // Check if the continuation bit is false.
                     // This indicates the last byte in a timestamp
                     if ((byte & 0x80) === 0x00) {
                         this.emit('timestamp', this.getRxPacket());
                         newStatus = Status.IDLE;
-                    } else if (this.rxCount == 5) {
+                    } else if (receivedMax) {
                         // A timestamp is at most 5 packets. If we didn't see the continuation bit false, something has gone wrong
                         // This often happens with PeMicro because it starts sending garbage after a clock change.
                         // In theory we should go to UNSYNCED, but that leads to never recovering.
