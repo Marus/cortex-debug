@@ -399,7 +399,10 @@
             {
                 "command": "cortex-debug.resetDevice",
                 "title": "Reset device",
-                "icon": "./images/reset.svg"
+                "icon": {
+                    "dark": "images/reset-dark.svg",
+                    "light": "images/reset-light.svg"
+                }
             },
             {
                 "command": "cortex-debug.peripherals.updateNode",
