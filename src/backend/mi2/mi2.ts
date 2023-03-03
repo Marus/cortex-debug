@@ -89,7 +89,9 @@ export class MI2 extends EventEmitter implements IBackend {
             if (!this.forLiveGdb) {
                 let timeout = setTimeout(() => {
                     this.gdbStartError();
-                    reject(new Error('Could not start GDB, no response from gdb'));
+                    setTimeout(() => {
+                        reject(new Error('Could not start gdb, no response from gdb'));
+                    }, 10);
                     timeout = undefined;
                 }, 5000);
 
