@@ -1013,7 +1013,7 @@ export class CortexDebugExtension {
         const mySession = CDebugSession.GetSession(e.session);
         if (e.body.type === 'socket') {
             let src;
-            if(mySession.config.servertype === 'pe') {
+            if (mySession.config.servertype === 'pe') {
                 src = new PeMicroSocketSource(e.body.port);
             } else {
                 src = new SocketSWOSource(e.body.port);

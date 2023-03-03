@@ -179,39 +179,39 @@ class PeMicroHeader {
 
     public static fromBuffer(buffer: Buffer): PeMicroHeader {
         const cls = new PeMicroHeader();
-        let header = new Uint32Array(8);
-        for(let i = 0; i < 8; i++) {
-            header[i] = buffer.readUInt32BE(i*4);
+        const header = new Uint32Array(8);
+        for (let i = 0; i < 8; i++) {
+            header[i] = buffer.readUInt32BE(i * 4);
         }
         // Check to see if the header is valid. If its not we might have gotten out of sync.
-        if(header[0] !== 1 || header[1] !== 1) {
+        if (header[0] !== 1 || header[1] !== 1) {
             throw new Error('Invalid PeMicro header start');
         }
         cls.type = header[2];
         cls.sequence = header[3];
         const messageLength = header[4];
-        if(messageLength < PeMicroHeader.headerLength)
+        if (messageLength < PeMicroHeader.headerLength)
         {
             throw new Error('Message length smaller than header');
         }
         cls.dataLength = messageLength - PeMicroHeader.headerLength;
-        if(header[5] !== 0 || header[6] !== 0 || header[7] !== 0) {
+        if (header[5] !== 0 || header[6] !== 0 || header[7] !== 0) {
             throw new Error('Invalid PeMicro header end');
         }
         return cls;
     }
 
     public getTxString(): string {
-        let header = Buffer.alloc(32)
-        header.writeUInt32BE(1, 0*4); // No idea seems to always be 1
-        header.writeUInt32BE(1, 1*4); // No idea seems to always be 1
-        header.writeUInt32BE(PeHeaderType.TX_COMMAND, 2*4); // packet type
-        header.writeUInt32BE(this.sequence, 3*4); // Sequence number
-        header.writeUInt32BE(PeMicroHeader.headerLength + this.dataLength, 4*4); // Size
-        header.writeUInt32BE(0, 5*4); // No idea seems to always be 0
-        header.writeUInt32BE(0, 6*4); // No idea seems to always be 0
-        header.writeUInt32BE(0, 7*4); // No idea seems to always be 0
-        let decoder = new TextDecoder();
+        const header = Buffer.alloc(32);
+        header.writeUInt32BE(1, 0 * 4); // No idea seems to always be 1
+        header.writeUInt32BE(1, 1 * 4); // No idea seems to always be 1
+        header.writeUInt32BE(PeHeaderType.TX_COMMAND, 2 * 4); // packet type
+        header.writeUInt32BE(this.sequence, 3 * 4); // Sequence number
+        header.writeUInt32BE(PeMicroHeader.headerLength + this.dataLength, 4 * 4); // Size
+        header.writeUInt32BE(0, 5 * 4); // No idea seems to always be 0
+        header.writeUInt32BE(0, 6 * 4); // No idea seems to always be 0
+        header.writeUInt32BE(0, 7 * 4); // No idea seems to always be 0
+        const decoder = new TextDecoder();
         return decoder.decode(header);
     }
 }
@@ -231,10 +231,10 @@ export class PeMicroSocketSource extends SocketSWOSource {
 
     private createPipe(): void {
         const createPipe = {
-            "control": {
-                "00000001": {
-                    "command": "createPipe",
-                    "apiversion": "1"
+            control: {
+                '00000001': {
+                    command: 'createPipe',
+                    apiversion: '1'
                 }
             }
         };
@@ -243,25 +243,25 @@ export class PeMicroSocketSource extends SocketSWOSource {
 
     private configureSWO(): void {
         const configureSWO = {
-            "control": {
-                "00000001":{
-                    "command": "configureSWOStream",
-                    "streamEnabled": "true",
-                    "itmStimulusPortEnable": "-1",
-                    "postCNTEventEnable": "false",
-                    "pcSamplingEnable": "false",
-                    "postCNTClockRate": "false",
-                    "localTimestamps": "false",
-                    "localTSClock": "false",
-                    "localTSPrescale": "0",
-                    "globalTSFrequency": "0",
-                    "CPI": "false",
-                    "SLEEP": "false",
-                    "FOLD": "false",
-                    "EXCOVER": "false",
-                    "LSU": "false",
-                    "EXCTRC": "false",
-                    "SYNC": "0"
+            control: {
+                '00000001': {
+                    command: 'configureSWOStream',
+                    streamEnabled: 'true',
+                    itmStimulusPortEnable: '-1',
+                    postCNTEventEnable: 'false',
+                    pcSamplingEnable: 'false',
+                    postCNTClockRate: 'false',
+                    localTimestamps: 'false',
+                    localTSClock: 'false',
+                    localTSPrescale: '0',
+                    globalTSFrequency: '0',
+                    CPI: 'false',
+                    SLEEP: 'false',
+                    FOLD: 'false',
+                    EXCOVER: 'false',
+                    LSU: 'false',
+                    EXCTRC: 'false',
+                    SYNC: '0'
                 }
             }
         };
@@ -270,9 +270,9 @@ export class PeMicroSocketSource extends SocketSWOSource {
 
     private resumePipe(): void {
         const resumePipe = {
-            "control": {
-                "00000001": {
-                    "command": "resumePipe"
+            control: {
+                '00000001': {
+                    command: 'resumePipe'
                 }
             }
         };
@@ -290,20 +290,20 @@ export class PeMicroSocketSource extends SocketSWOSource {
     }
 
     protected processData(buffer: Buffer): void {
-        var offset = 0;
+        let offset = 0;
         // PeMicro streams data in packets. Each packet has a 32 byte header, followed by the data
         // It only sends one packet per TCP packet, but this interface concatenates TCP packets
         // So we may need to process multiple in one callback
-        while((buffer.length - offset) >= PeMicroHeader.headerLength) {
+        while ((buffer.length - offset) >= PeMicroHeader.headerLength) {
             try {
-                let header = PeMicroHeader.fromBuffer(buffer.subarray(offset, Math.min(offset+PeMicroHeader.headerLength, buffer.length)));
-                //skip over header
+                const header = PeMicroHeader.fromBuffer(buffer.subarray(offset, Math.min(offset + PeMicroHeader.headerLength, buffer.length)));
+                // skip over header
                 offset = offset + PeMicroHeader.headerLength;
                 switch (this.state) {
                     case PeState.CREATE_PIPE: {
-                        if(header.type === PeHeaderType.RX_COMMAND) {
-                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)).toString());
-                            if(response.control['00000001'].result === 0) {
+                        if (header.type === PeHeaderType.RX_COMMAND) {
+                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset + header.dataLength, buffer.length)).toString());
+                            if (response.control['00000001'].result === 0) {
                                 this.configureSWO();
                                 this.state = PeState.CONFIGURE_SWO;
                             }
@@ -311,9 +311,9 @@ export class PeMicroSocketSource extends SocketSWOSource {
                         break;
                     }
                     case PeState.CONFIGURE_SWO: {
-                        if(header.type === PeHeaderType.RX_COMMAND) {
-                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)).toString());
-                            if(response.control['00000001'].result === 0) {
+                        if (header.type === PeHeaderType.RX_COMMAND) {
+                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset + header.dataLength, buffer.length)).toString());
+                            if (response.control['00000001'].result === 0) {
                                 this.resumePipe();
                                 this.state = PeState.RESUME_PIPE;
                             }
@@ -321,23 +321,22 @@ export class PeMicroSocketSource extends SocketSWOSource {
                         break;
                     }
                     case PeState.RESUME_PIPE: {
-                        if(header.type === PeHeaderType.RX_COMMAND) {
-                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)).toString());
-                            if(response.control['00000001'].result === 0) {
+                        if (header.type === PeHeaderType.RX_COMMAND) {
+                            const response = JSON.parse(buffer.subarray(offset, Math.min(offset + header.dataLength, buffer.length)).toString());
+                            if (response.control['00000001'].result === 0) {
                                 this.state = PeState.RECEIVING;
                             }
                         }
                         break;
                     }
                     case PeState.RECEIVING: {
-                        if(header.type === PeHeaderType.RX_STREAM) {
-                            this.emit('data', buffer.subarray(offset, Math.min(offset+header.dataLength, buffer.length)));
+                        if (header.type === PeHeaderType.RX_STREAM) {
+                            this.emit('data', buffer.subarray(offset, Math.min(offset + header.dataLength, buffer.length)));
                         }
                         break;
                     }
                 }
                 offset = offset + header.dataLength;
-                console.log("Remaining: " + (buffer.length - offset));
             } catch (err) {
                 console.log(err.message);
                 // If we couldn't decode the header, just discard the data.
@@ -349,9 +348,9 @@ export class PeMicroSocketSource extends SocketSWOSource {
 
     public write(data) {
         try {
-            let header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
-            this.client.write(header.getTxString() + data)
-            this.sequence = this.sequence + 1
+            const header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
+            this.client.write(header.getTxString() + data);
+            this.sequence = this.sequence + 1;
         }
         catch (e) {
             throw e;

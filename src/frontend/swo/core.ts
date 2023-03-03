@@ -69,7 +69,7 @@ class ITMDecoder extends EventEmitter {
     }
 
     private rxWriteByte(byte: number): boolean {
-        if(this.rxCount < this.rxBuffer.length) {
+        if (this.rxCount < this.rxBuffer.length) {
             this.rxBuffer.writeUInt8(byte, this.rxCount);
             this.rxCount++;
         }
@@ -136,7 +136,7 @@ class ITMDecoder extends EventEmitter {
                     }
                     break;
                 case Status.TIMESTAMP:
-                    let receivedMax = this.rxWriteByte(byte);
+                    const receivedMax = this.rxWriteByte(byte);
                     // Check if the continuation bit is false.
                     // This indicates the last byte in a timestamp
                     if ((byte & 0x80) === 0x00) {
