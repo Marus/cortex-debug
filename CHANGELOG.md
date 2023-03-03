@@ -1,7 +1,7 @@
 ChangeLog
 =========
 
-# V1.7.0
+# V1.7.0 - Major release only available as a Pre-release.
 * This is a preview (Pre-release). The biggest feature is the addition of Live Watch. In your launch.json add an object property called `liveWatch` and Intellisense should fill out a template to enable Live Watch.
   ```
     "liveWatch": {
@@ -9,8 +9,9 @@ ChangeLog
         "samplesPerSecond": 4
     },
   ```
-* There are other changes planned as pre-releases and they will have versions 1.7.x (this is a Microsoft convention).
-* To enable Pre-releases, you have use the Extension manager within VSCode
+* There are tons of other changes planned as pre-releases and they will have versions 1.7.x (this is a Microsoft convention). There has been some major restructuring of our code and as such, this version may not be as stable as the production releases. **Please help us get to production**
+* To enable Pre-releases, you have use the Extension Manager/Pane within VSCode
+
 # V1.6.10
 * [Issue#793 Container install broke from v1.6.7 to v1.6.9](https://github.com/Marus/cortex-debug/issues/793). It appears that VSCode does not install extensions with dependencies fully. Ie, if ext. `a` depends on `b` which depends on `c`, `c` is not installed so extension `a` fails to load properly. While we confirm, report this issue to VSCode folks, a (ugly) workaround has been implemented.
 
