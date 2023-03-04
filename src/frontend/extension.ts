@@ -15,7 +15,7 @@ import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import { CortexDebugConfigurationProvider } from './configprovider';
-import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource } from './swo/sources/socket';
+import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource, PeMicroSocketSource } from './swo/sources/socket';
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
@@ -1012,7 +1012,12 @@ export class CortexDebugExtension {
     private receivedSWOConfigureEvent(e: vscode.DebugSessionCustomEvent) {
         const mySession = CDebugSession.GetSession(e.session);
         if (e.body.type === 'socket') {
-            const src = new SocketSWOSource(e.body.port);
+            let src;
+            if (mySession.config.servertype === 'pe') {
+                src = new PeMicroSocketSource(e.body.port);
+            } else {
+                src = new SocketSWOSource(e.body.port);
+            }
             mySession.swoSource = src;
             this.initializeSWO(e.session, e.body.args);
             src.start().then(() => {

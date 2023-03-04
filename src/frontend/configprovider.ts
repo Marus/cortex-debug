@@ -615,8 +615,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'Device Identifier is required for PE configurations. Please run `pegdbserver_console.exe -devicelist` for supported devices';
         }
 
-        if (config.swoConfig.enabled) {
-            return 'The PE GDB Server does not have support for SWO';
+        if (config.swoConfig.enabled && config.swoConfig.source !== 'socket') {
+            return 'The PE GDB Server Only supports socket type SWO';
         }
 
         return null;
