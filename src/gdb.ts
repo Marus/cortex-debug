@@ -2639,50 +2639,86 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    private async updateOrCreateVariable(
+        symOrExpr: string, gdbVarName: string, parentVarReference: number,
+        threadId: number, frameId: number, isFloating: boolean): Promise<DebugProtocol.Variable> {
+        try {
+            let varObj: VariableObject;
+            let outOfScope = false;
+            try {
+                const changes = await this.miDebugger.varUpdate(gdbVarName, threadId, frameId);
+                const changelist = changes.result('changelist');
+                for (const change of changelist || []) {
+                    const inScope = MINode.valueOf(change, 'in_scope');
+                    if (inScope === 'true') {
+                        const name = MINode.valueOf(change, 'name');
+                        const vId = this.variableHandlesReverse[name];
+                        const v = this.variableHandles.get(vId) as any;
+                        v.applyChanges(change /*, variable.valueStr*/);
+                    } else {
+                        const msg = `${symOrExpr} currently not in scope`;
+                        await this.miDebugger.sendCommand(`var-delete ${gdbVarName}`);
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
+                        }
+                        outOfScope = true;
+                        throw new Error(msg);
+                    }
+                }
+                const varId = this.variableHandlesReverse[gdbVarName];
+                varObj = this.variableHandles.get(varId) as any;
+            }
+            catch (err) {
+                try {
+                    if (outOfScope || (err instanceof MIError && err.message === 'Variable object not found')) {
+                        // Create variable in current frame/thread context. Matters when we have to set the variable */
+                        if (isFloating) {
+                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName);
+                        } else {
+                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '*', threadId, frameId);
+                        }
+                        const varId = this.findOrCreateVariable(varObj);
+                        varObj.exp = symOrExpr;
+                        varObj.id = varId;
+                    } else if (isFloating) {
+                        throw err;
+                    }
+                }
+                catch (err) {
+                    if (isFloating) {
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', `Could not create global/static variable ${symOrExpr}\n`);
+                            this.handleMsg('stderr', `Error: ${err}\n`);
+                        }
+                        varObj = null;
+                    } else {
+                        throw err;
+                    }
+                }
+            }
+            if (isFloating && varObj) {
+                this.putFloatingVariable(parentVarReference, symOrExpr, varObj);
+            }
+            return varObj?.toProtocolVariable();
+        }
+        catch (err) {
+            const ret: DebugProtocol.Variable = {
+                name: symOrExpr,
+                value: `<${err}>`,
+                variablesReference: 0
+            };
+            return ret;
+        }
+    }
+
     private async globalVariablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
         const symbolInfo: SymbolInformation[] = this.symbolTable.getGlobalVariables();
-
         const globals: DebugProtocol.Variable[] = [];
         try {
             for (const symbol of symbolInfo) {
                 const varObjName = `global_var_${symbol.name}`;
-                let varObj: VariableObject;
-                try {
-                    const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
-                    const changelist = changes.result('changelist');
-                    changelist.forEach((change) => {
-                        const name = MINode.valueOf(change, 'name');
-                        const vId = this.variableHandlesReverse[name];
-                        const v = this.variableHandles.get(vId) as any;
-                        v.applyChanges(change);
-                    });
-                    const varId = this.variableHandlesReverse[varObjName];
-                    varObj = this.variableHandles.get(varId) as any;
-                }
-                catch (err) {
-                    try {
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, symbol.name, varObjName);
-                            const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = symbol.name;
-                            varObj.id = varId;
-                        } else {
-                            throw err;
-                        }
-                    }
-                    catch (err) {
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', `Could not create global variable ${symbol.name}\n`);
-                            this.handleMsg('stderr', `Error: ${err}\n`);
-                        }
-                        varObj = null;
-                    }
-                }
-
-                if (varObj) {
-                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
-                    globals.push(varObj.toProtocolVariable());
-                }
+                const tmp = await this.updateOrCreateVariable(symbol.name, varObjName, args.variablesReference, -1, -1, true);
+                globals.push(tmp);
             }
 
             response.body = { variables: globals };
@@ -2744,46 +2780,8 @@ export class GDBDebugSession extends LoggingDebugSession {
 
             for (const symName of staticNames) {
                 const varObjName = this.createStaticVarName(fHash, symName);
-                let varObj: VariableObject;
-                try {
-                    const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
-                    const changelist = changes.result('changelist');
-                    changelist.forEach((change) => {
-                        const name = MINode.valueOf(change, 'name');
-                        const vId = this.variableHandlesReverse[name];
-                        const v = this.variableHandles.get(vId) as any;
-                        v.applyChanges(change);
-                    });
-                    const varId = this.variableHandlesReverse[varObjName];
-                    varObj = this.variableHandles.get(varId) as any;
-                }
-                catch (err) {
-                    try {
-                        // Not all static variables found via objdump can be found with gdb. Happens
-                        // with function/block scoped static variables (objdump uses one name and gdb uses another)
-                        // Try to report what we can. Others show up under the Locals section hopefully.
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, symName, varObjName);
-                            const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = symName;
-                            varObj.id = varId;
-                        } else {
-                            throw err;
-                        }
-                    }
-                    catch (err) {
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', `Could not create static variable ${file}:${symName}\n`);
-                            this.handleMsg('stderr', `Error: ${err}\n`);
-                        }
-                        varObj = null;
-                    }
-                }
-
-                if (varObj) {
-                    this.putFloatingVariable(args.variablesReference, symName, varObj);
-                    statics.push(varObj.toProtocolVariable());
-                }
+                const tmp = await this.updateOrCreateVariable(symName, varObjName, args.variablesReference, threadId, frameId, true);
+                statics.push(tmp);
             }
 
             response.body = { variables: statics };
@@ -2835,42 +2833,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
-                try {
-                    const varObjName = this.createStackVarName(variable.name, args.variablesReference);
-                    let varObj: VariableObject;
-                    try {
-                        const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
-                        const changelist = changes.result('changelist');
-                        changelist.forEach((change) => {
-                            const name = MINode.valueOf(change, 'name');
-                            const vId = this.variableHandlesReverse[name];
-                            const v = this.variableHandles.get(vId) as any;
-                            v.applyChanges(change/*, variable.valueStr*/);
-                        });
-                        const varId = this.variableHandlesReverse[varObjName];
-                        varObj = this.variableHandles.get(varId) as any;
-                    }
-                    catch (err) {
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            // Create variable in current frame/thread context. Matters when we have to set the variable */
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, variable.name, varObjName, '*', threadId, frameId);
-                            const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = variable.name;
-                            varObj.id = varId;
-                        }
-                        else {
-                            throw err;
-                        }
-                    }
-                    variables.push(varObj.toProtocolVariable());
-                }
-                catch (err) {
-                    variables.push({
-                        name: variable.name,
-                        value: `<${err}>`,
-                        variablesReference: 0
-                    });
-                }
+                const varObjName = this.createStackVarName(variable.name, args.variablesReference);
+                const tmp = await this.updateOrCreateVariable(variable.name, varObjName, args.variablesReference, threadId, frameId, false);
+                variables.push(tmp);
             }
             response.body = {
                 variables: variables
