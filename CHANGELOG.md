@@ -1,6 +1,10 @@
 ChangeLog
 =========
 
+# V1.8.0
+* We messed up and accidentally released 1.7.x in production mode. This is the original 1.6.11 or what it should have been. Because of the VSCode rules, we have to jump forward in release versions, although not much changed. Please accept our apologies
+* There are a couple of minor bug fixes relative to V1.6.10 (#807)
+
 # V1.6.10
 * [Issue#793 Container install broke from v1.6.7 to v1.6.9](https://github.com/Marus/cortex-debug/issues/793). It appears that VSCode does not install extensions with dependencies fully. Ie, if ext. `a` depends on `b` which depends on `c`, `c` is not installed so extension `a` fails to load properly. While we confirm, report this issue to VSCode folks, a (ugly) workaround has been implemented.
 
