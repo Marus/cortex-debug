@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { PeripheralTreeProvider } from './views/peripheral';
 import { RegisterTreeProvider } from './views/registers';
 import { BaseNode, PeripheralBaseNode } from './views/nodes/basenode';
 import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
@@ -46,12 +45,10 @@ export class CortexDebugExtension {
 
     private gdbServerConsole: GDBServerConsole = null;
 
-    private peripheralProvider: PeripheralTreeProvider;
     private registerProvider: RegisterTreeProvider;
     private memoryProvider: MemoryContentProvider;
     private liveWatchProvider: LiveWatchTreeProvider;
 
-    private peripheralTreeView: vscode.TreeView<PeripheralBaseNode>;
     private registerTreeView: vscode.TreeView<BaseNode>;
     private liveWatchTreeView: vscode.TreeView<LiveVariableNode>;
 
@@ -62,7 +59,6 @@ export class CortexDebugExtension {
     constructor(private context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('cortex-debug');
         this.startServerConsole(context, config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '')); // Make this the first thing we do to be ready for the session
-        this.peripheralProvider = new PeripheralTreeProvider();
         this.registerProvider = new RegisterTreeProvider();
         this.memoryProvider = new MemoryContentProvider();
 
@@ -74,10 +70,6 @@ export class CortexDebugExtension {
         catch (e) {}
 
         Reporting.activate(context);
-
-        this.peripheralTreeView = vscode.window.createTreeView('cortex-debug.peripherals', {
-            treeDataProvider: this.peripheralProvider
-        });
 
         this.registerTreeView = vscode.window.createTreeView('cortex-debug.registers', {
             treeDataProvider: this.registerProvider
@@ -96,16 +88,6 @@ export class CortexDebugExtension {
         context.subscriptions.push(
             vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
             vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
-
-            vscode.commands.registerCommand('cortex-debug.peripherals.updateNode', this.peripheralsUpdateNode.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.copyValue', this.peripheralsCopyValue.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.setFormat', this.peripheralsSetFormat.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.forceRefresh', this.peripheralsForceRefresh.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.refreshAll', () => this.peripheralsForceRefresh()),
-            vscode.commands.registerCommand('cortex-debug.peripherals.collapseAll', () => this.peripheralsCollapseAll()),
-
-            vscode.commands.registerCommand('cortex-debug.peripherals.pin', this.peripheralsTogglePin.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.peripherals.unpin', this.peripheralsTogglePin.bind(this)),
             
             vscode.commands.registerCommand('cortex-debug.registers.copyValue', this.registersCopyValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.registers.refresh', this.registersRefresh.bind(this)),
@@ -145,15 +127,6 @@ export class CortexDebugExtension {
             }),
             this.registerTreeView.onDidExpandElement((e) => {
                 e.element.expanded = true;
-            }),
-            this.peripheralTreeView,
-            this.peripheralTreeView.onDidExpandElement((e) => {
-                e.element.expanded = true;
-                e.element.getPeripheral().updateData();
-                this.peripheralProvider.refresh();
-            }),
-            this.peripheralTreeView.onDidCollapseElement((e) => {
-                e.element.expanded = false;
             }),
             this.liveWatchTreeView,
             this.liveWatchTreeView.onDidExpandElement((e) => {
@@ -533,62 +506,6 @@ export class CortexDebugExtension {
         );
     }
 
-    // Peripherals
-    private peripheralsUpdateNode(node: PeripheralBaseNode): void {
-        node.performUpdate().then((result) => {
-            if (result) {
-                this.peripheralProvider.refresh();
-                Reporting.sendEvent('Peripheral View', 'Update Node');
-            }
-        }, (error) => {
-            vscode.window.showErrorMessage(`Unable to update value: ${error.toString()}`);
-        });
-    }
-
-    private peripheralsCopyValue(node: PeripheralBaseNode): void {
-        const cv = node.getCopyValue();
-        if (cv) {
-            vscode.env.clipboard.writeText(cv).then(() => {
-                Reporting.sendEvent('Peripheral View', 'Copy Value');
-            });
-        }
-    }
-
-    private async peripheralsSetFormat(node: PeripheralBaseNode): Promise<void> {
-        const result = await vscode.window.showQuickPick([
-            { label: 'Auto', description: 'Automatically choose format (Inherits from parent)', value: NumberFormat.Auto },
-            { label: 'Hex', description: 'Format value in hexadecimal', value: NumberFormat.Hexadecimal },
-            { label: 'Decimal', description: 'Format value in decimal', value: NumberFormat.Decimal },
-            { label: 'Binary', description: 'Format value in binary', value: NumberFormat.Binary }
-        ]);
-        if (result === undefined) {
-            return;
-        }
-
-        node.format = result.value;
-        this.peripheralProvider.refresh();
-        Reporting.sendEvent('Peripheral View', 'Set Format', result.label);
-    }
-
-    private async peripheralsForceRefresh(node?: PeripheralBaseNode): Promise<void> {
-        if (node) {
-            node.getPeripheral().updateData().then((e) => {
-                this.peripheralProvider.refresh();
-            });
-        } else {
-            this.peripheralProvider.updateData();
-        }
-    }
-
-    private peripheralsCollapseAll(): void {
-        this.peripheralProvider.collapseAll();
-    }
-
-    private async peripheralsTogglePin(node: PeripheralBaseNode): Promise<void> {
-        this.peripheralProvider.togglePinPeripheral(node);
-        this.peripheralProvider.refresh();
-    }
-
     // Registers
     private registersCopyValue(node: BaseNode): void {
         const cv = node.getCopyValue();
@@ -683,7 +600,6 @@ export class CortexDebugExtension {
             if (this.isDebugging(session)) {
                 this.registerProvider.debugSessionStarted(session);
             }
-            this.peripheralProvider.debugSessionStarted(session, (svdfile && !args.noDebug) ? svdfile : null, args.svdAddrGapThreshold);
             this.cleanupRTTTerminals();
         }, (error) => {
             vscode.window.showErrorMessage(
@@ -699,7 +615,6 @@ export class CortexDebugExtension {
 
             this.liveWatchProvider?.debugSessionTerminated(session);
             this.registerProvider.debugSessionTerminated(session);
-            this.peripheralProvider.debugSessionTerminated(session);
             if (mySession?.swo) {
                 mySession.swo.debugSessionTerminated();
             }
@@ -979,7 +894,6 @@ export class CortexDebugExtension {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'stopped';
         this.liveWatchProvider?.debugStopped(e.session);
-        this.peripheralProvider.debugStopped(e.session);
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugStopped(e.session);
         }
@@ -995,9 +909,7 @@ export class CortexDebugExtension {
     private receivedContinuedEvent(e: vscode.DebugSessionCustomEvent) {
         const mySession = CDebugSession.FindSession(e.session);
         mySession.status = 'running';
-        this.peripheralProvider.debugContinued(e.session);
         this.liveWatchProvider?.debugContinued(e.session);
-        this.peripheralProvider.debugContinued(e.session);
         if (this.isDebugging(e.session)) {
             this.registerProvider.debugContinued();
         }

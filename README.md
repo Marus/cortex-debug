@@ -12,7 +12,6 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Experimental, coming in V1.2+: Disassembly of source code available along with instruction level breakpoints and stepping. See https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging
 * Cortex Core Register Viewer (Integrated into Variables Window in V1.2+)
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
-* Peripheral Register Viewer (Defined through standard SVD file)
 * SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single precision floating point values)
     * The registers that are part of the DWT, TPIU, and ITM debug components will automatically be configured and do not need to be set in firmware.
     * Firmware may still need to enable the SWO output pin - as this part of the setup is microcontroller dependant.
@@ -21,7 +20,6 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system.
 * Live graphing of decoded ITM data.
 * Support for SEGGER Real Time Trace (RTT) using OpenOCD and JLink gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT.
-* Raw Memory Viewer ("Cortex-Debug: View Memory" command)
 * Ability to view and step through the disassembled binary. There are three ways that disassembled code will be shown:
     * Disassembly code will automatically be shown if it cannot locate the corresponding source code.
     * You can manually see the disassembly for a particular function ("Cortex-Debug: View Disassembly (Function)" command)
@@ -30,6 +28,11 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Initial support for Rust code (most functionality is working; disassembly views and variables view may still have issues)
 * RTOS Support (J-Link, OpenOCD, pyOCD) - RTOS supported depends on GDB server support)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
+* We have a set of extensions that this extension relies on for various frontend services
+  * These services are under the mcu-debug organization and lot of that content was re-factored from this extension to make them work with other debuggers and with browsers
+  * Visit https://marketplace.visualstudio.com/search?term=mcu-debug&target=VSCode&category=All%20categories&sortBy=Relevance\
+  * Highlights are a Memory Viewer, Peripheral (SVD) Viewer, RTOS viewer, etc.
+  * These extensions are considered as dependency of this extension and VSCode should help you install all of them. We will consider make an `Extension Pack` in the future
 
 ### Release Versioning
 Cortex-Debug uses a [versioning system specified by Microsoft](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) that allows distribution of pre-releases via the marketplace. You can enable (or disable) pre-releases within VSCode for this extension and you will automatically get new pre-releases. By default, pre-releases are disabled. We use pre-releases as allow testing of bug fixes and new features. They allow you participate during the formation of a feature of how an issue gets addressed. [More info about pre-releases](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions). To summarize, extensions use [semantic versioning (SemVer)](https://semver.org/) system which in simple terms is `major.minor.patch`. With MS convention, if the `minor` version is `ODD`, then it is a pre-release.

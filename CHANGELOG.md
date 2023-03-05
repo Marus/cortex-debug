@@ -9,6 +9,7 @@ ChangeLog
         "samplesPerSecond": 4
     },
   ```
+* **MAJOR MAJOR change**: The Peripherals (SVD) panel is now maintained in a separate extension. We are disabling SVD support in this extension. Please refer to https://github.com/mcu-debug/peripheral-viewer. The new panel will show up as 'XPERIPHERALS'. You don't have to make any changes in your configurations. Things should just migrate over. Fingers crossed
 * There are tons of other changes planned as pre-releases and they will have versions 1.7.x (this is a Microsoft convention). There has been some major restructuring of our code and as such, this version may not be as stable as the production releases. **Please help us get to production**
 * To enable Pre-releases, you have use the Extension Manager/Pane within VSCode
 * Bugfix: [#831 Unable to read variables during 2nd breakpoint stop](https://github.com/Marus/cortex-debug/issues/831)
