@@ -1,7 +1,8 @@
 ChangeLog
 =========
 
-# V1.7.1 - Major release only available as a Pre-release.
+# V1.9.0 - Major release only available as a Pre-release.
+* Sorry we had some version number issues. This release was accidentally released as a production 1.7.1 and to undo that, we had to jump two minor versions numbers to keep up with VSCode versioning scheme. Apologies for the confusion.
 * This is a preview (Pre-release). The biggest feature is the addition of Live Watch. In your launch.json add an object property called `liveWatch` and Intellisense should fill out a template to enable Live Watch.
   ```
     "liveWatch": {
