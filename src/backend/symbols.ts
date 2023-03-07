@@ -425,7 +425,7 @@ export class SymbolTable {
                     // units with no clear owner. These can be locals, globals or other.
                     this.currentObjDumpFile = null;
                 }
-                // We don't really use the symmbol except know that the symbol following this belong to this file
+                // We don't really use the symbol except know that the symbol following this belong to this file
                 return true;
             } else if ((match[7] === 'd') && (match[8] === ' ')) {
                 // This is a pure debug symbol. No use for them
@@ -442,6 +442,13 @@ export class SymbolTable {
             }
 
             const secName = match[9].trim();
+            const size = parseInt(match[10], 16);
+            if ((size === 0) && ((secName === '*ABS*') || (secName === '*UND*'))) {
+                // These are not true symbols, AFAIK and can be safely ignored as there can be hundreds of these
+                // junk symbols
+                return true;
+            }
+
             const offset = symF.offset || 0;
             const addr = parseInt(match[1], 16);
             const section = symF.sectionMap[secName];
@@ -453,8 +460,8 @@ export class SymbolTable {
                 file: this.currentObjDumpFile,
                 type: type,
                 scope: scope,
-                section: match[9].trim(),
-                length: parseInt(match[10], 16),
+                section: secName,
+                length: size,
                 isStatic: (scope === SymbolScope.Local) && this.currentObjDumpFile ? true : false,
                 instructions: null,
                 hidden: hidden
