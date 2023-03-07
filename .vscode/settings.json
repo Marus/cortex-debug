@@ -42,5 +42,6 @@
 		"Syms",
 		"XPERIPHERALS",
 		"xtensa"
-	]
+	],
+	"cmake.configureOnOpen": false
 }

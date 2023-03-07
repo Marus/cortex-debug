@@ -1,5 +1,5 @@
 {
-    "version": "1.9.0",
+    "version": "1.9.1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -15,11 +15,6 @@
                 "type": "object",
                 "title": "Debugger",
                 "properties": {
-                    "cortex-debug.registerUseNaturalFormat": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "If true, display registers in their natural format as specified by ARM. Hex otherwise."
-                    },
                     "cortex-debug.variableUseNaturalFormat": {
                         "type": "boolean",
                         "default": true,
@@ -402,32 +397,6 @@
                 "icon": {
                     "dark": "images/reset-dark.svg",
                     "light": "images/reset-light.svg"
-                }
-            },
-            {
-                "command": "cortex-debug.registers.copyValue",
-                "title": "Copy Value",
-                "icon": "$(files)"
-            },
-            {
-                "command": "cortex-debug.registers.refresh",
-                "title": "Refresh",
-                "icon": "$(refresh)"
-            },
-            {
-                "command": "cortex-debug.registers.regHexModeTurnOff",
-                "title": "Enable Natural mode",
-                "icon": {
-                    "light": "images/hex-on-light.svg",
-                    "dark": "images/hex-on-dark.svg"
-                }
-            },
-            {
-                "command": "cortex-debug.registers.regHexModeTurnOn",
-                "title": "Enable Hex mode",
-                "icon": {
-                    "light": "images/hex-off-light.svg",
-                    "dark": "images/hex-off-dark.svg"
                 }
             },
             {
@@ -2884,10 +2853,6 @@
         "menus": {
             "commandPalette": [
                 {
-                    "command": "cortex-debug.registers.copyValue",
-                    "when": "false"
-                },
-                {
                     "command": "cortex-debug.examineMemory",
                     "when": "debugType == cortex-debug"
                 },
@@ -2928,41 +2893,16 @@
                     "command": "cortex-debug.liveWatch.removeExpr",
                     "when": "view == cortex-debug.liveWatch && viewItem == expression",
                     "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.registers.copyValue",
-                    "when": "view == cortex-debug.registers && viewItem == register",
-                    "group": "inline"
-                },
-                {
-                    "command": "cortex-debug.registers.copyValue",
-                    "when": "view == cortex-debug.registers && viewItem == field",
-                    "group": "inline"
                 }
             ],
             "view/title": [
-                {
-                    "command": "cortex-debug.registers.regHexModeTurnOn",
-                    "when": "view == cortex-debug.registers && debugState == stopped &&  cortex-debug:registerUseNaturalFormat",
-                    "group": "navigation"
-                },
-                {
-                    "command": "cortex-debug.registers.regHexModeTurnOff",
-                    "when": "view == cortex-debug.registers && debugState == stopped && !cortex-debug:registerUseNaturalFormat",
-                    "group": "navigation"
-                },
-                {
-                    "command": "cortex-debug.registers.refresh",
-                    "when": "view == cortex-debug.registers && debugState == stopped",
-                    "group": "navigation"
-                },
                 {
                     "command": "cortex-debug.liveWatch.addExpr",
                     "when": "view == cortex-debug.liveWatch",
                     "group": "navigation"
                 }
             ],
-            "debug/variables/context": [
+            "debug/variables/title": [
                 {
                     "command": "cortex-debug.varHexModeTurnOn",
                     "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
@@ -2980,11 +2920,6 @@
                 {
                     "id": "cortex-debug.liveWatch",
                     "name": "Cortex Live Watch",
-                    "when": "debugType == cortex-debug"
-                },
-                {
-                    "id": "cortex-debug.registers",
-                    "name": "Cortex Registers",
                     "when": "debugType == cortex-debug"
                 }
             ]
