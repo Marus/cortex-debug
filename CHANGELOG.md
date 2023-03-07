@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+# V1.9.1 - Major release only available as a Pre-release.
+* The Registers Panel is now removed. We had deprecated this window a year ago as it would not give you accurate register values based on the Program/Thread/Frame. The accurate version of the Registers have been available in the VARIABLES panel for almost a year now.
+* Fixed some issue when the Live Watch window was empty or variables added while there wasn't a debug session sometimes would not show
+* Bugfix: Potential fix for [Issue#840: Variables mixed with a bunch of configuration constants]. Not really a bug but in somecases, the ELF file contained a bunch of symbols that were marked as real object which in fact are not. Trying to filter them out.
+
 # V1.9.0 - Major release only available as a Pre-release.
 * Sorry we had some version number issues. This release was accidentally released as a production 1.7.1 and to undo that, we had to jump two minor versions numbers to keep up with VSCode versioning scheme. Apologies for the confusion.
 * This is a preview (Pre-release). The biggest feature is the addition of Live Watch. In your launch.json add an object property called `liveWatch` and Intellisense should fill out a template to enable Live Watch.
