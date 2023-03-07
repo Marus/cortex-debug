@@ -93,12 +93,14 @@ export class LiveVariableNode extends BaseNode {
         return false;
     }
 
-    public reset() {
+    public reset(valuesToo = true) {
         this.session = undefined;
-        this.value = this.type = this.prevValue = '';
-        this.variablesReference = 0;
+        if (valuesToo) {
+            this.value = this.type = this.prevValue = '';
+            this.variablesReference = 0;
+        }
         for (const child of this.children || []) {
-            child.reset();
+            child.reset(valuesToo);
         }
     }
 
@@ -278,7 +280,7 @@ class LiveVariableNodeMsg extends LiveVariableNode {
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const state = TreeItemCollapsibleState.None;
-        const tmp = 'Hint: Use "liveWatch" in your launch.json to enable this panel';
+        const tmp = 'Hint: Use & Enable "liveWatch" in your launch.json to enable this panel';
         const label: vscode.TreeItemLabel = {
             label: tmp + (this.empty ? ', and use the \'+\' button above to add new expressions' : '')
         };
@@ -373,7 +375,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
     }
 
     public refresh(session: vscode.DebugSession, restarTimer = false): void {
-        if (this.isSameSession(session)) {
+        if (session && this.isSameSession(session)) {
             const restart = (elapsed: number) => {
                 if (!this.isStopped && restarTimer && LiveWatchTreeProvider.session) {
                     this.startTimer(((elapsed < 0) || (elapsed > this.timeoutMs)) ? 0 : elapsed);
@@ -398,6 +400,8 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                     });
                 });
             }
+        } else {
+            this.fire();
         }
     }
 
@@ -435,12 +439,21 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
             LiveWatchTreeProvider.session = undefined;
             this.fire();
             this.saveState();
+            setTimeout(() => {
+                // We hold the current values as they are until we start another debug session and
+                // another fire() is called
+                this.variables.reset(true);
+            }, 100);
         }
     }
 
     public debugSessionStarted(session: vscode.DebugSession) {
         const liveWatch = session.configuration.liveWatch as LiveWatchConfig;
         if (!liveWatch?.enabled) {
+            if (!LiveWatchTreeProvider.session) {
+                // Force a child node to be created to provide a Hint
+                this.fire();
+            }
             return;
         }
         if (LiveWatchTreeProvider.session) {
