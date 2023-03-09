@@ -44,6 +44,40 @@ import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
 import { LiveWatchMonitor } from './live-watch-monitor';
 
+// returns [threadId, frameId]
+// We use 3 nibbles for frameId (max of 4K) and 2 nibbles for ThreadId (max of 256).
+// Thread id's start at 1 and frame id's start from 0 for GDB
+const RegionSize = 0xFFFFF;
+export function decodeReference(varRef: number): number[] {
+    return [(varRef & RegionSize) >>> 12, varRef & 0xFFF];
+}
+
+export function encodeReference(threadId: number, frameId: number): number {
+    return ((threadId << 12) | (frameId & 0xFFF)) & RegionSize;
+}
+
+enum HandleRegions {
+    GLOBAL_HANDLE_ID      = 0xFFFFFFFF,
+    STACK_HANDLES_START   = encodeReference(0x01, 0x000),
+    STACK_HANDLES_FINISH  = encodeReference(0xFF, 0xFFF),
+    STATIC_HANDLES_START  = STACK_HANDLES_FINISH + 1,
+    STATIC_HANDLES_FINISH = STATIC_HANDLES_START + RegionSize,
+    REG_HANDLE_START      = STATIC_HANDLES_FINISH + 1,
+    REG_HANDLE_FINISH     = REG_HANDLE_START + RegionSize,
+    VAR_HANDLES_START     = REG_HANDLE_FINISH + 1,
+    rest = 0xFFFFFFFF - VAR_HANDLES_START
+
+}
+
+if (false) {
+    for (const nm of Object.keys(HandleRegions)) {
+        if (isNaN(Number(nm))) {
+            const v = HandleRegions[nm];
+            console.log(nm.padStart(25, ' '), '0x' + v.toString(16).padStart(8, '0'), v.toString().padStart(10, ' '));
+        }
+    }
+}
+
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
     openocd: OpenOCDServerController,
@@ -68,15 +102,6 @@ export class ExtendedVariable {
     constructor(public name, public options) {
     }
 }
-
-const GLOBAL_HANDLE_ID      = 0x0000FE;
-const STACK_HANDLES_START   = 0x000100;
-const STACK_HANDLES_FINISH  = 0x00FFFF;
-const STATIC_HANDLES_START  = 0x010000;
-const STATIC_HANDLES_FINISH = 0x01FFFF;
-const REG_HANDLE_START      = 0x020000;
-const REG_HANDLE_FINISH     = 0x02FFFF;
-const VAR_HANDLES_START     = 0x030000;
 
 function COMMAND_MAP(c: string): string {
     if (!c) { return c; }
@@ -192,7 +217,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     public symbolTable: SymbolTable;
     private usingParentServer = false;
 
-    protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
+    protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(HandleRegions.VAR_HANDLES_START);
     protected variableHandlesReverse: { [id: string]: number } = {};
     protected quit: boolean;
     protected attached: boolean;
@@ -595,10 +620,6 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         // This is the last of the place where ports are allocated
                         this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
-
-                        if (!this.args.variableUseNaturalFormat) {
-                            commands.push(...this.formatRadixGdbCommand());
-                        }
                         commands.push(...this.serverController.initCommands());
 
                         if (attach) {
@@ -866,7 +887,8 @@ export class GDBDebugSession extends LoggingDebugSession {
             'interpreter-exec console "set print asm-demangle on"',
             'enable-pretty-printing',
             `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
+            `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`,
+            ...this.formatRadixGdbCommand()
         ];
         if (this.args.symbolFiles) {
             for (const symF of this.args.symbolFiles) {
@@ -1062,6 +1084,14 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.sendResponse(response);
                 }
                 break;
+            case 'is-global-or-static': {
+                const varRef = args.varRef;
+                const id = this.variableHandles.get(varRef);
+                const ret = this.isVarRefGlobalOrStatic(varRef, id);
+                response.body = { success: ret };
+                this.sendResponse(response);
+                break;
+            }
             case 'set-force-disassembly':
                 response.body = { success: true };
                 this.forceDisassembly = args.force;
@@ -1101,6 +1131,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             case 'set-var-format':
                 this.args.variableUseNaturalFormat = (args && args.hex) ? false : true;
                 this.setGdbOutputRadix();
+                this.sendResponse(response);
                 break;
             case 'read-registers':
                 if (isBusy || this.sendDummyStackTrace) { return retFunc(); }
@@ -1154,6 +1185,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         for (const cmd of this.formatRadixGdbCommand()) {
             try {
                 await this.miDebugger.sendCommand(cmd);
+                if (this.miLiveGdb?.miDebugger) {
+                    await this.miLiveGdb.miDebugger.sendCommand(cmd);
+                }
             }
             catch {}
         }
@@ -1845,39 +1879,30 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    // returns [threadId, frameId]
-    public static decodeReference(varRef: number): number[] {
-        return [(varRef & 0xFF00) >>> 8, varRef & 0xFF];
-    }
-
-    public static encodeReference(threadId: number, frameId: number): number {
-        return ((threadId << 8) | (frameId & 0xFF)) & 0xFFFF;
-    }
-
     protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
         try {
             let name = args.name;
             let threadId = -1;
             let frameId = -1;
             const varRef = args.variablesReference;
-            const isReg = (varRef >= REG_HANDLE_START && varRef < REG_HANDLE_FINISH);
+            const isReg = (varRef >= HandleRegions.REG_HANDLE_START && varRef < HandleRegions.REG_HANDLE_FINISH);
             const globOrStatic = !isReg && this.getFloatingVariable(varRef, name);
             if (isReg) {
                 const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*');
                 name = varObj.name;
-                [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
+                [threadId, frameId] = decodeReference(varRef);
             } else if (globOrStatic) {
                 name = globOrStatic.name;
-            } else if (varRef >= VAR_HANDLES_START) {
+            } else if (varRef >= HandleRegions.VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
                 const fullName = parent.children[name];
                 name = fullName ? fullName : `${parent.name}.${name}`;
-            } else if (varRef >= STACK_HANDLES_START && varRef < STACK_HANDLES_FINISH) {
+            } else if (varRef >= HandleRegions.STACK_HANDLES_START && varRef < HandleRegions.STACK_HANDLES_FINISH) {
                 const tryName = this.createStackVarName(name, varRef);
                 if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
                     name = tryName;
                 }
-                [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
+                [threadId, frameId] = decodeReference(varRef);
             }
             const res = await this.miDebugger.varAssign(name, args.value, threadId, frameId);
             // TODO: Need to check for errors
@@ -2172,24 +2197,32 @@ export class GDBDebugSession extends LoggingDebugSession {
         return this.allBreakPointsQ.add(doit, r, a);
     }
 
-    protected isVarRefGlobalOrStatic(varRef: number, id: any) {
-        if (varRef === GLOBAL_HANDLE_ID) {
-            return true;
+    protected isVarRefGlobalOrStatic(varRef: number, id: any): 'global' | 'static' | undefined {
+        if (varRef === HandleRegions.GLOBAL_HANDLE_ID) {
+            return 'global';
         }
-        if ((varRef >= STATIC_HANDLES_START) && (varRef <= STACK_HANDLES_FINISH)) {
-            return true;
+        if (varRef <= HandleRegions.STACK_HANDLES_FINISH) {
+            // These are scopes for local variable frames
+            return undefined;
+        }
+        if ((varRef >= HandleRegions.STATIC_HANDLES_START) && (varRef <= HandleRegions.STATIC_HANDLES_FINISH)) {
+            return 'static';
+        }
+        if ((varRef >= HandleRegions.REG_HANDLE_START) && (varRef <= HandleRegions.REG_HANDLE_FINISH)) {
+            return undefined;
+        }
+
+        if (id instanceof ExtendedVariable) {
+            return undefined;
         }
         if (id instanceof VariableObject) {
             const pRef = (id as VariableObject).parent;
             const parent = this.variableHandles.get(pRef);
             return this.isVarRefGlobalOrStatic(pRef, parent);
         }
-        if (id instanceof ExtendedVariable) {
-            return false;
-        }
 
-        console.log(`isVarRefGlobalOrStatic: What is this? varRef = ${varRef}`, id);
-        return false;
+        console.log(`isVarRefGlobalOrStatic: What is this? varRef = ${varRef}`, '0x' + varRef.toString(16).padStart(8, '0'), id);
+        return undefined;
     }
 
     protected dataBreakpointInfoRequest(response: DebugProtocol.DataBreakpointInfoResponse, args: DebugProtocol.DataBreakpointInfoArguments): void {
@@ -2201,9 +2234,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         };
 
         const ref = args.variablesReference;
-        if ((ref !== undefined) && args.name && !((ref >= REG_HANDLE_START) && (ref <= REG_HANDLE_FINISH))) {
+        if ((ref !== undefined) && args.name && !((ref >= HandleRegions.REG_HANDLE_START) && (ref <= HandleRegions.REG_HANDLE_FINISH))) {
             const id = this.variableHandles.get(args.variablesReference);
-            response.body.canPersist = this.isVarRefGlobalOrStatic(args.variablesReference, id);
+            response.body.canPersist = !!this.isVarRefGlobalOrStatic(args.variablesReference, id);
             const parentObj = (id as VariableObject);
             const fullName = (parentObj ? (parentObj.fullExp || parentObj.exp) + '.' : '') + args.name;
             response.body.dataId = fullName;
@@ -2412,7 +2445,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (this.args.showDevDebugOutput) {
                 this.handleMsg('log', `Returning dummy stack frame to workaround VSCode issue with pause button not working: ${JSON.stringify(args)}\n`);
             }
-            response.body.stackFrames = [new StackFrame(GDBDebugSession.encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
+            response.body.stackFrames = [new StackFrame(encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
             response.body.totalFrames = 1;
             this.onInternalEvents.emit('stack-trace-request');
             this.sendResponse(response);
@@ -2425,7 +2458,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, highFrame);
                 const ret: StackFrame[] = [];
                 for (const element of stack) {
-                    const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
+                    const stackId = encodeReference(args.threadId, element.level);
                     const file = element.file;
                     let useNewDisassembly = true;
                     let disassemble = this.forceDisassembly || !file;
@@ -2533,14 +2566,14 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
         const scopes = new Array<Scope>();
-        scopes.push(new Scope('Local', parseInt(args.frameId as any), false));
-        scopes.push(new Scope('Global', GLOBAL_HANDLE_ID, false));
+        scopes.push(new Scope('Local', args.frameId, false));
+        scopes.push(new Scope('Global', HandleRegions.GLOBAL_HANDLE_ID, false));
 
-        const staticId = STATIC_HANDLES_START + parseInt(args.frameId as any);
+        const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
         scopes.push(new Scope('Static', staticId, false));
         this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
 
-        scopes.push(new Scope('Registers', REG_HANDLE_START + parseInt(args.frameId as any)));
+        scopes.push(new Scope('Registers', HandleRegions.REG_HANDLE_START + args.frameId));
 
         response.body = {
             scopes: scopes
@@ -2579,7 +2612,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         try {
-            const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+            const [threadId, frameId] = decodeReference(args.variablesReference);
             const fmt = this.args.variableUseNaturalFormat ? 'N' : 'x';
             // --thread --frame does not work properly when combined with -data-list-register-values
             await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
@@ -2826,7 +2859,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.sendResponse(response);
             return;
         }
-        const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+        const [threadId, frameId] = decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
@@ -2913,14 +2946,14 @@ export class GDBDebugSession extends LoggingDebugSession {
         // but it will re-evaluate everything in the Watch window. Basically, it has no concept of a union and there is no
         // way I know of to force a refresh
         */
-        if (args.variablesReference === GLOBAL_HANDLE_ID) {
+        if (args.variablesReference === HandleRegions.GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
-        } else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference <= STATIC_HANDLES_FINISH) {
-            const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+        } else if (args.variablesReference >= HandleRegions.STATIC_HANDLES_START && args.variablesReference <= HandleRegions.STATIC_HANDLES_FINISH) {
+            const [threadId, frameId] = decodeReference(args.variablesReference);
             return this.staticVariablesRequest(threadId, frameId, response, args);
-        } else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STACK_HANDLES_FINISH) {
+        } else if (args.variablesReference >= HandleRegions.STACK_HANDLES_START && args.variablesReference <= HandleRegions.STACK_HANDLES_FINISH) {
             return this.stackVariablesRequest(response, args);
-        } else if (args.variablesReference >= REG_HANDLE_START && args.variablesReference < REG_HANDLE_FINISH) {
+        } else if (args.variablesReference >= HandleRegions.REG_HANDLE_START && args.variablesReference <= HandleRegions.REG_HANDLE_FINISH) {
             return this.registersRequest(response, args);
         } else {
             id = this.variableHandles.get(args.variablesReference);
@@ -3225,7 +3258,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 let threadId = this.stoppedThreadId || 1;
                 let frameId = 0;
                 if (args.frameId !== undefined) {     // Should always be valid
-                    [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
+                    [threadId, frameId] = decodeReference(args.frameId);
                 }
 
                 if (args.context !== 'repl') {
