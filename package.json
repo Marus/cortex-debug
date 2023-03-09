@@ -1,5 +1,5 @@
 {
-    "version": "1.9.1",
+    "version": "1.9.2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -419,6 +419,26 @@
                 "command": "cortex-debug.liveWatch.removeExpr",
                 "title": "Remove expression",
                 "icon": "$(close)"
+            },
+            {
+                "command": "cortex-debug.liveWatch.editExpr",
+                "title": "Edit expression",
+                "icon": "$(edit)"
+            },
+            {
+                "command": "cortex-debug.liveWatch.moveUp",
+                "title": "Move expression up",
+                "icon": "$(arrow-up)"
+            },
+            {
+                "command": "cortex-debug.liveWatch.moveDown",
+                "title": "Move expression down",
+                "icon": "$(arrow-down)"
+            },
+            {
+                "command": "cortex-debug.liveWatch.addToLiveWatch",
+                "title": "Add to Live Watch",
+                "icon": "$(plus)"
             },
             {
                 "category": "Cortex-Debug",
@@ -2890,6 +2910,21 @@
             ],
             "view/item/context": [
                 {
+                    "command": "cortex-debug.liveWatch.editExpr",
+                    "when": "view == cortex-debug.liveWatch && viewItem == expression",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.liveWatch.moveUp",
+                    "when": "view == cortex-debug.liveWatch && viewItem == expression",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.liveWatch.moveDown",
+                    "when": "view == cortex-debug.liveWatch && viewItem == expression",
+                    "group": "inline"
+                },
+                {
                     "command": "cortex-debug.liveWatch.removeExpr",
                     "when": "view == cortex-debug.liveWatch && viewItem == expression",
                     "group": "inline"
@@ -2900,17 +2935,42 @@
                     "command": "cortex-debug.liveWatch.addExpr",
                     "when": "view == cortex-debug.liveWatch",
                     "group": "navigation"
-                }
-            ],
-            "debug/variables/title": [
+                },
                 {
                     "command": "cortex-debug.varHexModeTurnOn",
-                    "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
-                    "group": "navigation"
+                    "when": "view == workbench.debug.variablesView && inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
+                    "group": "navigation"                    
                 },
                 {
                     "command": "cortex-debug.varHexModeTurnOff",
-                    "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped && !cortex-debug:variableUseNaturalFormat",
+                    "when": "view == workbench.debug.variablesView && inDebugMode && debugType == 'cortex-debug' && debugState == stopped && !cortex-debug:variableUseNaturalFormat",
+                    "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.varHexModeTurnOn",
+                    "when": "view == workbench.debug.watchExpressionsView && inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
+                    "group": "navigation"                    
+                },
+                {
+                    "command": "cortex-debug.varHexModeTurnOff",
+                    "when": "view == workbench.debug.watchExpressionsView && inDebugMode && debugType == 'cortex-debug' && debugState == stopped && !cortex-debug:variableUseNaturalFormat",
+                    "group": "navigation"
+                },
+                {
+                    "command": "cortex-debug.varHexModeTurnOn",
+                    "when": "view == cortex-debug.liveWatch && inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
+                    "group": "navigation"                    
+                },
+                {
+                    "command": "cortex-debug.varHexModeTurnOff",
+                    "when": "view == cortex-debug.liveWatch && inDebugMode && debugType == 'cortex-debug' && debugState == stopped && !cortex-debug:variableUseNaturalFormat",
+                    "group": "navigation"
+                }
+            ],
+            "debug/variables/context": [
+                {
+                    "command": "cortex-debug.liveWatch.addToLiveWatch",
+                    "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped",
                     "group": "navigation"
                 }
             ]

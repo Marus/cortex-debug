@@ -1,6 +1,17 @@
 ChangeLog
 =========
 
+# V1.9.2 - Major release only available as a Pre-release.
+* Many features to Live Watch added
+  * You can now edit the expression
+  * You can move up/down the expression (they rotate if at edges)
+  * You can enable the global hex mode or use the hex mode on one expression at a time just like you can do it in the `WATCH` window
+    * To enable hex mode on a single expression, simply add a `,x` at the end of the expression. You can also do octal by using `,o`. However, this only works for the scalar variables and if it is a pinter or an array, it is not inherited by its children
+* There is now a button on the `VARIABLES`, `WATCH` and `CORTEX LIVE WATCH` panels title bar to enable/disable Hex display mode globally. You can still override on individual expressions.
+* Increased the number of threads (256) and frames (4K) you can have. Such limits should not even exist but it is an artifact of how VSCode works
+
+# V1.9.1 - Major release only available as a Pre-release.
+* Oops. The context menu in the Variables window for enable/disable Hex had disappeared.
 # V1.9.1 - Major release only available as a Pre-release.
 * The Registers Panel is now removed. We had deprecated this window a year ago as it would not give you accurate register values based on the Program/Thread/Frame. The accurate version of the Registers have been available in the VARIABLES panel for almost a year now.
 * Fixed some issue when the Live Watch window was empty or variables added while there wasn't a debug session sometimes would not show

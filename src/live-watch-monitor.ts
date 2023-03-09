@@ -1,7 +1,7 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { Handles } from '@vscode/debugadapter';
 import { MI2 } from './backend/mi2/mi2';
-import { ExtendedVariable, GDBDebugSession, RequestQueue } from './gdb';
+import { decodeReference, ExtendedVariable, GDBDebugSession, RequestQueue } from './gdb';
 import { MIError, VariableObject } from './backend/backend';
 import * as crypto from 'crypto';
 import { MINode } from './backend/mi_parse';
@@ -109,7 +109,7 @@ export class VariablesHandler {
                     threadId = frameId = -1;
                     args.frameId = undefined;
                 } else if (args.frameId !== undefined) {
-                    [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
+                    [threadId, frameId] = decodeReference(args.frameId);
                 }
 
                 if (args.context !== 'repl') {

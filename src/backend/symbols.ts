@@ -443,9 +443,9 @@ export class SymbolTable {
 
             const secName = match[9].trim();
             const size = parseInt(match[10], 16);
-            if ((size === 0) && ((secName === '*ABS*') || (secName === '*UND*'))) {
+            if ((secName === '*ABS*') || (secName === '*UND*')) {
                 // These are not true symbols, AFAIK and can be safely ignored as there can be hundreds of these
-                // junk symbols
+                // junk symbols. We already handled file names above
                 return true;
             }
 

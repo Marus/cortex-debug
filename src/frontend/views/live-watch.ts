@@ -49,6 +49,25 @@ export class LiveVariableNode extends BaseNode {
         return node && (node.getParent() === undefined);
     }
 
+    public rename(nm: string) {
+        if (this.isRootChild()) {
+            this.name = this.expr = nm;
+        }
+    }
+
+    public getName() {
+        return this.name;
+    }
+
+    public findName(str: string): LiveVariableNode | undefined {
+        for (const child of this.children || []) {
+            if (child.name === str) {
+                return child;
+            }
+        }
+        return undefined;
+    }
+
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const state = this.variablesReference || (this.children?.length > 0) ?
             (this.children?.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed) : TreeItemCollapsibleState.None;
@@ -80,12 +99,53 @@ export class LiveVariableNode extends BaseNode {
         return child;
     }
 
-    public removeChild(obj: any) {
-        const node = obj as LiveVariableNode;
+    public removeChild(node: LiveVariableNode): boolean {
+        if (!node || !node.isRootChild()) { return false; }
         let ix = 0;
         for (const child of this.children || []) {
             if (child.name === node.name) {
                 this.children.splice(ix, 1);
+                return true;
+            }
+            ix++;
+        }
+        return false;
+    }
+
+    public moveUpChild(node: LiveVariableNode): boolean {
+        if (!node || !node.isRootChild()) { return false; }
+        let ix = 0;
+        for (const child of this.children || []) {
+            if (child.name === node.name) {
+                if (ix > 0) {
+                    const prev = this.children[ix - 1];
+                    this.children[ix] = prev;
+                    this.children[ix - 1] = child;
+                } else {
+                    const first = this.children.shift();
+                    this.children.push(first);
+                }
+                return true;
+            }
+            ix++;
+        }
+        return false;
+    }
+
+    public moveDownChild(node: LiveVariableNode): boolean {
+        if (!node || !node.isRootChild()) { return false; }
+        let ix = 0;
+        const last = this.children ? this.children.length - 1 : -1;
+        for (const child of this.children || []) {
+            if (child.name === node.name) {
+                if (ix !== last) {
+                    const next = this.children[ix + 1];
+                    this.children[ix] = next;
+                    this.children[ix + 1] = child;
+                } else {
+                    const last = this.children.pop();
+                    this.children.unshift(last);
+                }
                 return true;
             }
             ix++;
@@ -513,6 +573,44 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
         catch (e) {
             // Sometimes we get a garbage node if this is called while we are (aggressively) polling
             console.error('Failed to remove node. Invalid node?', node);
+        }
+    }
+
+    public editNode(node: LiveVariableNode) {
+        if (!node.isRootChild()) {
+            return;     // Should never happen
+        }
+        const opts: vscode.InputBoxOptions = {
+            placeHolder: 'Enter a valid C/gdb expression. Must be a global variable expression',
+            ignoreFocusOut: true,
+            value: node.getName(),
+            prompt: 'Enter Live Watch Expression'
+        };
+        vscode.window.showInputBox(opts).then((result) => {
+            result = result ? result.trim() : result;
+            if (result && (result !== node.getName())) {
+                if (this.variables.findName(result)) {
+                    vscode.window.showInformationMessage(`Live Watch: Expression ${result} is already being watched`);
+                } else {
+                    node.rename(result);
+                    this.saveState();
+                    this.refresh(LiveWatchTreeProvider.session);
+                }
+            }
+        });
+    }
+
+    public moveUpNode(node: LiveVariableNode) {
+        const parent = node?.getParent() as LiveVariableNode;
+        if (parent && parent.moveUpChild(node)) {
+            this.fire();
+        }
+    }
+
+    public moveDownNode(node: LiveVariableNode) {
+        const parent = node?.getParent() as LiveVariableNode;
+        if (parent && parent.moveDownChild(node)) {
+            this.fire();
         }
     }
 

@@ -64,7 +64,7 @@ export class CortexDebugExtension {
 
         Reporting.activate(context);
 
-        this.initLiveWatcher();
+        this.liveWatchProvider = new LiveWatchTreeProvider(this.context);
         this.liveWatchTreeView = vscode.window.createTreeView('cortex-debug.liveWatch', {
             treeDataProvider: this.liveWatchProvider
         });
@@ -90,6 +90,10 @@ export class CortexDebugExtension {
 
             vscode.commands.registerCommand('cortex-debug.liveWatch.addExpr', this.addLiveWatchExpr.bind(this)),
             vscode.commands.registerCommand('cortex-debug.liveWatch.removeExpr', this.removeLiveWatchExpr.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.editExpr', this.editLiveWatchExpr.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.addToLiveWatch', this.addToLiveWatch.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.moveUp', this.moveUpLiveWatchExpr.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.moveDown', this.moveDownLiveWatchExpr.bind(this)),
 
             vscode.workspace.onDidChangeConfiguration(this.settingsChanged.bind(this)),
             vscode.debug.onDidReceiveDebugSessionCustomEvent(this.receivedCustomEvent.bind(this)),
@@ -200,7 +204,11 @@ export class CortexDebugExtension {
                 try {
                     // Session may not have actually started according to VSCode but we know of it
                     if (this.isDebugging(s.session)) {
-                        s.session.customRequest('set-var-format', { hex: isHex });
+                        s.session.customRequest('set-var-format', { hex: isHex }).then(() => {
+                            if (s.status === 'stopped') {
+                                this.liveWatchProvider?.refresh(s.session);
+                            }
+                        });
                         if (s.status === 'stopped') {
                             foundStopped = true;
                         }
@@ -979,26 +987,57 @@ export class CortexDebugExtension {
 
     private addLiveWatchExpr() {
         vscode.window.showInputBox({
-            placeHolder: 'Enter a valid C/gdb expression. Must be a global variable type expression',
+            placeHolder: 'Enter a valid C/gdb expression. Must be a global variable expression',
             ignoreFocusOut: true,
             prompt: 'Enter Live Watch Expression'
         }).then((v) => {
             if (v) {
-                this.initLiveWatcher();
                 this.liveWatchProvider.addWatchExpr(v, vscode.debug.activeDebugSession);
             }
         });
     }
 
+    private addToLiveWatch(arg: any) {
+        if (!arg || !arg.sessionId) {
+            return;
+        }
+        const mySession = CDebugSession.FindSessionById(arg.sessionId);
+        if (!mySession) {
+            vscode.window.showErrorMessage(`addToLiveWatch: Unknown debug session id ${arg.sessionId}`);
+            return;
+        }
+        console.log(arg);
+        const parent = arg.container;
+        const expr = arg.variable?.evaluateName;
+        if (parent && expr) {
+            const varRef = parent.variablesReference;
+            mySession.session.customRequest('is-global-or-static', {varRef: varRef}).then((result) => {
+                console.log(expr, varRef, result);
+                if (!result.success) {
+                    vscode.window.showErrorMessage(`Cannot add ${expr} to Live Watch. Must be a global or static variable`);
+                } else {
+                    this.liveWatchProvider.addWatchExpr(expr, vscode.debug.activeDebugSession);
+                }
+            }, (e) => {
+                console.log(e);
+            });
+        }
+    }
+
     private removeLiveWatchExpr(node: any) {
-        this.initLiveWatcher();
         this.liveWatchProvider.removeWatchExpr(node);
     }
 
-    private initLiveWatcher() {
-        if (!this.liveWatchProvider) {
-            this.liveWatchProvider = new LiveWatchTreeProvider(this.context);
-        }
+    private editLiveWatchExpr(node: any) {
+        this.liveWatchProvider.editNode(node);
+    }
+
+    private moveUpLiveWatchExpr(node: any) {
+        this.liveWatchProvider.moveUpNode(node);
+    }
+
+    private moveDownLiveWatchExpr(node: any) {
+        this.liveWatchProvider.moveDownNode(node);
     }
 }
 
