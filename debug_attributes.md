@@ -48,8 +48,8 @@ The following attributes (properties) can be used in your `launch.json` to contr
 | servertype | Common | GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external
 | showDevDebugOutput | Common | Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions
 | showDevDebugTimestamps | Common | Show timestamps when 'showDevDebugOutput' is enabled
-| svdAddrGapThreshold | Common | If the gap between registers is less than this threshold (multiple of 8), combine into a single read from device. -1 means never combine registers and is very slow
-| svdFile | Common | This is for 'CORTEX PERIPHERALS' window provided by Cortex-Debug. Path to a CMSIS SVD file describing the peripherals of the microcontroller; if not supplied then one may be selected based upon the 'device' entered.
+| svdAddrGapThreshold | Common | ????
+| svdFile | Common | This is for 'XPERIPHERALS' window provided by 'mcu-debug.peripheral-viewer'. It can be a simple file name or more based on a CMSIS pack or deviceName. See 'mcu-debug.peripheral-viewer' for format
 | swoConfig | Common | (unknown)
 | symbolFiles | Common | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols
 | targetId | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)
