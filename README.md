@@ -28,7 +28,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Initial support for Rust code (most functionality is working; disassembly views and variables view may still have issues)
 * RTOS Thread Support in `CALL STACK` window (J-Link, OpenOCD, pyOCD - RTOS supported depend on GDB server)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
-* Live Watch with supported GDB servers (OpenOCD, J-Link, STLink, so far)
+* Live Watch with supported GDB servers (tested with OpenOCD, J-Link, STLink so far - since V1.6)
 * We have a set of extensions that this extension relies on for various frontend services (since V1.6)
   * These services are under the mcu-debug organization and lot of that content was re-factored from this extension to make them work with other debuggers and with browsers
   * Visit https://marketplace.visualstudio.com/search?term=mcu-debug&target=VSCode&category=All%20categories&sortBy=Relevance\
