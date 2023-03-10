@@ -564,7 +564,8 @@
                             "debuggerArgs": {
                                 "default": [],
                                 "description": "Additional arguments to pass to GDB command line",
-                                "type": "array"
+                                "type": "array",
+                                "items": "string"
                             },
                             "preAttachCommands": {
                                 "default": [],
@@ -787,6 +788,7 @@
                                 "default": 0
                             },
                             "liveWatch": {
+                                "description": "An object with parameters for Live Watch",
                                 "properties": {
                                     "enabled": {
                                         "default": false,
@@ -808,6 +810,7 @@
                                 }
                             },
                             "chainedConfigurations": {
+                                "description": "An object describing how additional configurations should be launched",
                                 "properties": {
                                     "enabled": {
                                         "default": true,
@@ -928,6 +931,7 @@
                                 }
                             },
                             "graphConfig": {
+                                "description": "Description of how graphing can be done. See our Wiki for details",
                                 "items": {
                                     "oneOf": [
                                         {
@@ -1309,6 +1313,7 @@
                                 }
                             },
                             "swoConfig": {
+                                "description": "Description of SWO can be configured. Also see our Wiki for details",
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0,
@@ -1603,6 +1608,7 @@
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
+                                "type": "string | number",
                                 "anyOf": [
                                     {
                                         "type": "string"
@@ -1862,7 +1868,8 @@
                             "runToMain": {
                                 "description": "Deprecated: please use 'runToEntryPoint' instead.",
                                 "type": "boolean",
-                                "default": false
+                                "default": false,
+                                "deprecated": true
                             },
                             "breakAfterReset": {
                                 "default": false,
@@ -1891,6 +1898,7 @@
                                 "default": 0
                             },
                             "liveWatch": {
+                                "description": "An object with parameters for Live Watch",
                                 "properties": {
                                     "enabled": {
                                         "default": false,
@@ -1912,6 +1920,7 @@
                                 }
                             },
                             "ctiOpenOCDConfig": {
+                                "description": "Experimental. Does not work yet",
                                 "properties": {
                                     "enabled": {
                                         "default": true,
@@ -1950,6 +1959,7 @@
                                 }
                             },
                             "chainedConfigurations": {
+                                "description": "An object describing how additional configurations should be launched",
                                 "properties": {
                                     "enabled": {
                                         "default": true,
@@ -2070,6 +2080,7 @@
                                 }
                             },
                             "graphConfig": {
+                                "description": "Description of how graphing can be done. See our Wiki for details",
                                 "items": {
                                     "oneOf": [
                                         {
@@ -2451,6 +2462,7 @@
                                 }
                             },
                             "swoConfig": {
+                                "description": "Description of SWO can be configured. Also see our Wiki for details",
                                 "properties": {
                                     "cpuFrequency": {
                                         "default": 0,
@@ -3051,9 +3063,9 @@
         "url": "https://github.com/Marus/cortex-debug.git"
     },
     "scripts": {
-        "vscode:prepublish": "webpack --mode production",
+        "vscode:prepublish": "webpack --mode production && node dist/docgen.js",
         "watch": "webpack --mode development --watch",
-        "compile": "webpack --mode development",
+        "compile": "webpack --mode development && node dist/docgen.js",
         "test-compile": "tsc -p ./"
     }
 }
