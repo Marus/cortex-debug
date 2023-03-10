@@ -1006,13 +1006,11 @@ export class CortexDebugExtension {
             vscode.window.showErrorMessage(`addToLiveWatch: Unknown debug session id ${arg.sessionId}`);
             return;
         }
-        console.log(arg);
         const parent = arg.container;
         const expr = arg.variable?.evaluateName;
         if (parent && expr) {
             const varRef = parent.variablesReference;
             mySession.session.customRequest('is-global-or-static', {varRef: varRef}).then((result) => {
-                console.log(expr, varRef, result);
                 if (!result.success) {
                     vscode.window.showErrorMessage(`Cannot add ${expr} to Live Watch. Must be a global or static variable`);
                 } else {
