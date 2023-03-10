@@ -1,7 +1,7 @@
 ChangeLog
 =========
 # V1.9.3 - Major release - only available as a Pre-release.
-* New handling of static variables. This is also a more change and it will be visible in the Variables window
+* New handling of static variables. This is also a big change and it will be visible in the Variables window near the `Statics` section
   * You will the file the static variables are associated with
   * When you add a static variable to the Live Watch window, we will show the simple name but on a hover you can see which file it comes from
   * We needed this to disambiguate in the Live Watch window the origin of the static variable as they may not be unique
