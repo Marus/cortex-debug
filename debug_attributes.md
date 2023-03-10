@@ -94,7 +94,7 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | swoConfig.swoPath | string | Common | Path name when source is "file" or "serial". Typically a /path-name or a serial-port-name |
 | swoConfig.swoPort | string | Common | When server is "external" && source is "socket", port to connect to. Format [host:]port |
 | symbolFiles | object[] | Common | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols |
-| targetId | {string &#124; number} | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware) |
+| targetId | string &#124; number | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware) |
 | targetProcessor | number | Common | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors' |
 | toolchainPrefix | string | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration. Default = "arm-none-eabi" |
 | v1 | boolean | Common | For st-util only. Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used. |

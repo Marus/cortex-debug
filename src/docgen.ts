@@ -41,13 +41,20 @@ function getType(obj: any) {
 
     function newFunction(obj: any) {
         const ary = [];
-        for (const anyOf of (obj.anyOf || obj.oneOf)) {
-            const tmp = getType(anyOf);
+        let isComplex = false;
+        for (const item of (obj.anyOf || obj.oneOf)) {
+            const tmp = getType(item);
             if (ary.findIndex((s) => s === tmp) === -1) {
-                ary.push(getType(anyOf));
+                ary.push(getType(item));
+            }
+            if (item.itemms || item.properties || item.anyOf || item.oneOf) {
+                isComplex = true;
             }
         }
-        return '{' + ary.join(pipe) + '}';
+        if (isComplex) {
+            return '{' + ary.join(pipe) + '}';
+        }
+        return ary.join(pipe);
     }
 }
 
