@@ -955,7 +955,7 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'varListChildren');
         }
         // TODO: add `from` and `to` arguments
-        const res = await this.sendCommand(`var-list-children --all-values ${name}`);
+        const res = await this.sendCommand(`var-list-children --all-values "${name}"`);
         const keywords = ['private', 'protected', 'public'];
         const children = res.result('children') || [];
         const omg: VariableObject[] = [];

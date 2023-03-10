@@ -1,5 +1,13 @@
 ChangeLog
 =========
+# V1.9.3 - Major release - only available as a Pre-release.
+* New handling of static variables. This is also a more change and it will be visible in the Variables window
+  * You will the file the static variables are associated with
+  * When you add a static variable to the Live Watch window, we will show the simple name but on a hover you can see which file it comes from
+  * We needed this to disambiguate in the Live Watch window the origin of the static variable as they may not be unique
+  * If you add a static variable to the VSCode Watch window you may see the entire path name. We cannot help it but you can edit it
+* Bugfix: [#832 Issue decoding templatized class...](https://github.com/Marus/cortex-debug/issues/832). Because of all the `::` and `<>`, variable names had to be quoted for GDB. Thanks to the issue submitter @jwbmwv for giving me a very simple test case
+
 
 # V1.9.2 - Major release - only available as a Pre-release.
 * Many features to Live Watch added
