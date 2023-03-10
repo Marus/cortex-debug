@@ -59,7 +59,7 @@ function writeHeader(f: fs.WriteStream) {
     f.write('The following attributes (properties) can be used in your `launch.json` to control various aspects of debugging.');
     f.write(' Also `IntelliSense` is an invaluable aid while editing `launch.json`. With `IntelliSense`, you can hover over an attribute to get');
     f.write(' more information and/or help you find attributes (just start typing a double-quote, use Tab key) and provide defaults/options.\n\n');
-    f.write('If the is marked as `{...}` it means that it is a complex item can have multiple types');
+    f.write('If the is marked as `{...}` it means that it is a complex item can have multiple types. Possibly consult our Wiki\n');
 }
 
 export function packageJSONtoMd(path: string, outPath: string) {

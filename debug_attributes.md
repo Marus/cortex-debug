@@ -4,7 +4,8 @@ There are many `User/Workspace Settings` to control things globally. You can fin
 
 The following attributes (properties) can be used in your `launch.json` to control various aspects of debugging. Also `IntelliSense` is an invaluable aid while editing `launch.json`. With `IntelliSense`, you can hover over an attribute to get more information and/or help you find attributes (just start typing a double-quote, use Tab key) and provide defaults/options.
 
-If the is marked as `{...}` it means that it is a complex item can have multiple types| Attribute | Type | Applies To | Description |
+If the is marked as `{...}` it means that it is a complex item can have multiple types. Possibly consult our Wiki
+| Attribute | Type | Applies To | Description |
 | --------- | ---- | ---------- | ----------- |
 | BMPGDBSerialPort | string | Common | The serial port for the Black Magic Probe GDB Server. On Windows this will be "COM<num>", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X) |
 | armToolchainPath | string | Common | This setting can be used to override the armToolchainPath user setting for a particular launch configuration. This should be the path where arm-none-eabi-gdb, arm-none-eabi-objdump and arm-none-eabi-nm are located. |
