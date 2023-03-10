@@ -26,22 +26,28 @@ function getType(obj: any) {
             return obj.items + '[]';
         } else if (obj.items.properties) {
             return 'object[]';
-        } else if (obj.items.anyOf || obj.oneOf) {
-            const ary = [];
-            for (const anyOf of (obj.items.anyOf || obj.items.oneOf)) {
-                const tmp = getType(anyOf);
-                if (ary.findIndex((s) => s === tmp) === -1) {
-                    ary.push(getType(anyOf));
-                }
-            }
-            return '{' + ary.join(pipe) + '}';
+        } else if (obj.items.anyOf || obj.items.oneOf) {
+            return newFunction(obj.items);
         } else if (obj.items.type) {
             return getType(obj.items) + '[]';
         }
+    } else if (obj.anyOf || obj.oneOf) {
+        return newFunction(obj);
     } else if (obj.type) {
         return obj.type;
     } else {
         return '??';
+    }
+
+    function newFunction(obj: any) {
+        const ary = [];
+        for (const anyOf of (obj.anyOf || obj.oneOf)) {
+            const tmp = getType(anyOf);
+            if (ary.findIndex((s) => s === tmp) === -1) {
+                ary.push(getType(anyOf));
+            }
+        }
+        return '{' + ary.join(pipe) + '}';
     }
 }
 
@@ -53,6 +59,7 @@ function writeHeader(f: fs.WriteStream) {
     f.write('The following attributes (properties) can be used in your `launch.json` to control various aspects of debugging.');
     f.write(' Also `IntelliSense` is an invaluable aid while editing `launch.json`. With `IntelliSense`, you can hover over an attribute to get');
     f.write(' more information and/or help you find attributes (just start typing a double-quote, use Tab key) and provide defaults/options.\n\n');
+    f.write('If the is marked as `{...}` it means that it is a complex item can have multiple types');
 }
 
 export function packageJSONtoMd(path: string, outPath: string) {

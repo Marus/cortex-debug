@@ -4,7 +4,7 @@ There are many `User/Workspace Settings` to control things globally. You can fin
 
 The following attributes (properties) can be used in your `launch.json` to control various aspects of debugging. Also `IntelliSense` is an invaluable aid while editing `launch.json`. With `IntelliSense`, you can hover over an attribute to get more information and/or help you find attributes (just start typing a double-quote, use Tab key) and provide defaults/options.
 
-| Attribute | Type | Applies To | Description |
+If the is marked as `{...}` it means that it is a complex item can have multiple types| Attribute | Type | Applies To | Description |
 | --------- | ---- | ---------- | ----------- |
 | BMPGDBSerialPort | string | Common | The serial port for the Black Magic Probe GDB Server. On Windows this will be "COM<num>", on Linux this will be something similar to /dev/ttyACM0, on OS X something like /dev/cu.usbmodemE2C0C4C6 (do not use tty versions on OS X) |
 | armToolchainPath | string | Common | This setting can be used to override the armToolchainPath user setting for a particular launch configuration. This should be the path where arm-none-eabi-gdb, arm-none-eabi-objdump and arm-none-eabi-nm are located. |
@@ -33,7 +33,7 @@ The following attributes (properties) can be used in your `launch.json` to contr
 | executable | string | Common | Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles` |
 | gdbPath | string | Common | This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available. |
 | gdbTarget | string | Common | For externally (servertype = "external") controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port |
-| graphConfig | undefined | Common | Description of how graphing can be done. See our Wiki for details |
+| graphConfig | {object} | Common | Description of how graphing can be done. See our Wiki for details |
 | interface | string | Common | Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes. |
 | ipAddress | string | Common | IP Address for networked J-Link Adapter |
 | jlinkscript | string | Common | J-Link script file - optional input file for customizing J-Link actions. |
@@ -93,7 +93,7 @@ The following attributes (properties) can be used in your `launch.json` to contr
 | swoConfig.swoPath | string | Common | Path name when source is "file" or "serial". Typically a /path-name or a serial-port-name |
 | swoConfig.swoPort | string | Common | When server is "external" && source is "socket", port to connect to. Format [host:]port |
 | symbolFiles | object[] | Common | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols |
-| targetId | ?? | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware) |
+| targetId | {string &#124; number} | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware) |
 | targetProcessor | number | Common | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors' |
 | toolchainPrefix | string | Common | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration. Default = "arm-none-eabi" |
 | v1 | boolean | Common | For st-util only. Set this to true if your debug probe is a ST-Link V1 (for example, the ST-Link on the STM32 VL Discovery is a V1 device). When set to false a ST-Link V2 device is used. |
