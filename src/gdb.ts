@@ -505,7 +505,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                     resolve = null;
                 }
             };
-            if (!fs.existsSync(this.args.executable)) {
+            const haveSymFiles = this.args.symbolFiles && (this.args.symbolFiles.length > 0);
+            if (!fs.existsSync(this.args.executable) && !haveSymFiles) {
                 this.sendErrorResponse(response, 103, `Unable to find executable file at ${this.args.executable}.`);
                 return doResolve();
             }
