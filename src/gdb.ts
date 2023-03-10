@@ -15,7 +15,7 @@ import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
-    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction
+    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -2564,13 +2564,16 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.onInternalEvents.emit('config-done');
     }
 
-    protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
+    protected async scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): Promise<void> {
         const scopes = new Array<Scope>();
         scopes.push(new Scope('Local', args.frameId, false));
         scopes.push(new Scope('Global', HandleRegions.GLOBAL_HANDLE_ID, false));
 
+        const [threadId, frameId] = decodeReference(args.frameId);
+        const frame = await this.miDebugger.getFrame(threadId, frameId);
+        const file = getPathRelative(this.args.cwd, frame?.file || '');
         const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
-        scopes.push(new Scope('Static', staticId, false));
+        scopes.push(new Scope(`Static: ${file}`, staticId, false));
         this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
 
         scopes.push(new Scope('Registers', HandleRegions.REG_HANDLE_START + args.frameId));
@@ -2673,7 +2676,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private async updateOrCreateVariable(
-        symOrExpr: string, gdbVarName: string, parentVarReference: number,
+        displayName: string | undefined, symOrExpr: string, gdbVarName: string, parentVarReference: number,
         threadId: number, frameId: number, isFloating: boolean): Promise<DebugProtocol.Variable> {
         try {
             let varObj: VariableObject;
@@ -2732,7 +2735,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (isFloating && varObj) {
                 this.putFloatingVariable(parentVarReference, symOrExpr, varObj);
             }
-            return varObj?.toProtocolVariable();
+            return varObj?.toProtocolVariable(displayName || varObj.name);
         }
         catch (err) {
             const ret: DebugProtocol.Variable = {
@@ -2750,7 +2753,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         try {
             for (const symbol of symbolInfo) {
                 const varObjName = `global_var_${symbol.name}`;
-                const tmp = await this.updateOrCreateVariable(symbol.name, varObjName, args.variablesReference, -1, -1, true);
+                const tmp = await this.updateOrCreateVariable(symbol.name, symbol.name, varObjName, args.variablesReference, -1, -1, true);
                 globals.push(tmp);
             }
 
@@ -2797,7 +2800,6 @@ export class GDBDebugSession extends LoggingDebugSession {
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
         const statics: DebugProtocol.Variable[] = [];
-
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             let file = frame.file; // Prefer full path name first
@@ -2811,9 +2813,10 @@ export class GDBDebugSession extends LoggingDebugSession {
             hasher.update(file || '');
             const fHash = hasher.digest('hex');
 
-            for (const symName of staticNames) {
-                const varObjName = this.createStaticVarName(fHash, symName);
-                const tmp = await this.updateOrCreateVariable(symName, varObjName, args.variablesReference, threadId, frameId, true);
+            for (const displayName of staticNames) {
+                const exprName = `'${file}'::${displayName}`;
+                const varObjName = this.createStaticVarName(fHash, exprName);
+                const tmp = await this.updateOrCreateVariable(displayName, exprName, varObjName, args.variablesReference, threadId, frameId, true);
                 statics.push(tmp);
             }
 
@@ -2867,7 +2870,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
                 const varObjName = this.createStackVarName(variable.name, args.variablesReference);
-                const tmp = await this.updateOrCreateVariable(variable.name, varObjName, args.variablesReference, threadId, frameId, false);
+                const tmp = await this.updateOrCreateVariable(variable.name, variable.name, varObjName, args.variablesReference, threadId, frameId, false);
                 variables.push(tmp);
             }
             response.body = {

@@ -1,7 +1,7 @@
 import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, ProviderResult} from 'vscode';
 import * as vscode from 'vscode';
 
-import { LiveWatchConfig } from '../../common';
+import { getPathRelative, LiveWatchConfig } from '../../common';
 import { BaseNode } from './nodes/basenode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 
@@ -72,17 +72,24 @@ export class LiveVariableNode extends BaseNode {
         const state = this.variablesReference || (this.children?.length > 0) ?
             (this.children?.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed) : TreeItemCollapsibleState.None;
         
+        const parts = this.name.startsWith('\'') && this.isRootChild() ? this.name.split('\'::') : [this.name];
+        const name = parts.pop();
         const label: vscode.TreeItemLabel = {
-            label: this.name + ': ' + (this.value || 'not available')
+            label: name + ': ' + (this.value || 'not available')
         };
         if (this.prevValue && (this.prevValue !== this.value)) {
-            label.highlights = [[this.name.length + 2, label.label.length]];
+            label.highlights = [[name.length + 2, label.label.length]];
         }
         this.prevValue = this.value;
         
         const item = new TreeItem(label, state);
         item.contextValue = this.isRootChild() ? 'expression' : 'field';
-        item.tooltip = this.type;
+        let file = parts.length ? parts[0].slice(1) : '';
+        if (file) {
+            const cwd = this.session?.configuration?.cwd;
+            file = cwd ? getPathRelative(cwd, file) : file;
+        }
+        item.tooltip = (file ? 'File: ' + file + '\n' : '') + this.type;
         return item;
     }
 
