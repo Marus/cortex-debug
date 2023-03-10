@@ -40,7 +40,6 @@ Cortex-Debug uses a [versioning system specified by Microsoft](https://code.visu
 
 ### Planned Features
 * Additional Graphing Options
-* Enhanced SVD Auto-selection
 * [Our TODO file](https://github.com/Marus/cortex-debug/blob/master/TODO.md)
 
 ## Installation
