@@ -143,7 +143,7 @@
             {
                 "type": "object",
                 "title": "External: GDB Servers",
-                "properties": {            
+                "properties": {
                     "cortex-debug.JLinkGDBServerPath": {
                         "type": [
                             "string",
@@ -2939,7 +2939,7 @@
                 {
                     "command": "cortex-debug.varHexModeTurnOn",
                     "when": "view == workbench.debug.variablesView && inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
-                    "group": "navigation"                    
+                    "group": "navigation"
                 },
                 {
                     "command": "cortex-debug.varHexModeTurnOff",
@@ -2949,7 +2949,7 @@
                 {
                     "command": "cortex-debug.varHexModeTurnOn",
                     "when": "view == workbench.debug.watchExpressionsView && inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
-                    "group": "navigation"                    
+                    "group": "navigation"
                 },
                 {
                     "command": "cortex-debug.varHexModeTurnOff",
@@ -2959,7 +2959,7 @@
                 {
                     "command": "cortex-debug.varHexModeTurnOn",
                     "when": "view == cortex-debug.liveWatch && inDebugMode && debugType == 'cortex-debug' && debugState == stopped &&  cortex-debug:variableUseNaturalFormat",
-                    "group": "navigation"                    
+                    "group": "navigation"
                 },
                 {
                     "command": "cortex-debug.varHexModeTurnOff",
@@ -3048,7 +3048,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Marus/cortex-debug.git"
+        "url": "https://github.com/Marus/cortex-debug"
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production",
