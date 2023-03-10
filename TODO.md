@@ -2,11 +2,7 @@
 
 Low, medium, high are importance/usefulness. But they sometimes represent *bang-for-the-buck* as well where the effort could be high vs. relative usefulness. Some of there are here because there is new functionality in VSCode APIs
 
-* **Done**: High: Better support for multi-core and multi-session debugging in a single instance of the IDE
-* **Done**: Live Watch with supported GDB servers (OpenOCD, JLink, STLink, so far)
 * Low: `Set Value` in `Watch` Window
-* **Done**: Superior disassembly
-* **Done**: Better memory viewer. It is now a separate extension
 
 # Other
 
