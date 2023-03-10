@@ -49,13 +49,16 @@ Requirements:
 
 * ARM GCC Toolchain (https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads) - provides arm-none-eabi-gdb and related tools
 * At least one of:
-    * J-Link Software Tools - provides the J-Link GDB Server for J-Link based debuggers (https://www.segger.com/downloads/jlink)
-    * OpenOCD - provides a GDB Server that can be used with a number of debuggers (http://openocd.org)
-        * NOTE: On macOS do not use the default version of OpenOCD provided by homebrew, this is not compatible with releases V0.2.4 and newer. You can either install from source using homebrew (`brew install open-ocd --HEAD`) or the packages from https://github.com/gnu-mcu-eclipse/openocd/releases will also work. Some linux versions and Windows may also need a more up-to-date version of OpenOCD from the gnu-mcu-eclipse releases.
-    * Texane's st-util GDB server - Only supports ST-Link Debug Probes (https://github.com/texane/stlink)
-    * ST-LINK GDB server - This server is packaged with the [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html) which must be installed. The location of the STM32CubeIDE and related tools is automatically resolved but also can be overridden using configuration settings (`armToolchainPath`, `stm32cubeprogrammer` and `serverpath`).
-    * pyOCD GDB Server - GDB server that supports the CMSIS-DAP debugger on a number of mbed boards (https://github.com/mbedmicro/pyOCD)
-    * Black Magic Probe
+  * J-Link Software Tools - provides the J-Link GDB Server for J-Link based debuggers (https://www.segger.com/downloads/jlink)
+  * OpenOCD - provides a GDB Server that can be used with a number of debuggers (http://openocd.org)
+    * NOTE: If a chip vendor ships it's own OpenOCD version, for sure use NOTHING but that
+    * NOTE: On macOS do not use the default version of OpenOCD provided by homebrew, this is not compatible with releases V0.2.4 and newer.
+      * You can either install from source using homebrew (`brew install open-ocd --HEAD`) or the packages from https://github.com/xpack-dev-tools/openocd-xpack/releases/ will also work.
+    * NOTE: Some linux versions and Windows may also need a more up-to-date version of OpenOCD from the xPack releases.
+  * Texane's st-util GDB server - Only supports ST-Link Debug Probes (https://github.com/texane/stlink)
+  * ST-LINK GDB server - This server is packaged with the [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html) which must be installed. The location of the STM32CubeIDE and related tools is automatically resolved but also can be overridden using configuration settings (`armToolchainPath`, `stm32cubeprogrammer` and `serverpath`).
+  * pyOCD GDB Server - GDB server that supports the CMSIS-DAP debugger on a number of mbed boards (https://github.com/mbedmicro/pyOCD)
+  * Black Magic Probe
 
 ## Usage
 
