@@ -1,5 +1,5 @@
 {
-    "version": "1.9.2",
+    "version": "1.9.3",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -452,16 +452,6 @@
             },
             {
                 "category": "Cortex-Debug",
-                "command": "cortex-debug.viewDisassembly",
-                "title": "View Disassembly (Function)"
-            },
-            {
-                "category": "Cortex-Debug",
-                "command": "cortex-debug.setForceDisassembly",
-                "title": "Set Force Disassembly"
-            },
-            {
-                "category": "Cortex-Debug",
                 "command": "cortex-debug.toggleVariableHexFormat",
                 "title": "Toggle hex display in Variables window"
             },
@@ -481,15 +471,6 @@
         ],
         "languages": [
             {
-                "id": "cortex-debug.disassembly",
-                "aliases": [
-                    "Cortex-Debug Disassembly"
-                ],
-                "extensions": [
-                    ".cdasm"
-                ]
-            },
-            {
                 "id": "cortex-debug.memoryview",
                 "aliases": [
                     "Cortex-Debug Memory View"
@@ -500,11 +481,6 @@
             }
         ],
         "grammars": [
-            {
-                "language": "cortex-debug.disassembly",
-                "scopeName": "source.cortex-debug-disassembly",
-                "path": "./syntaxes/cortex-debug-disassembly.json"
-            },
             {
                 "language": "cortex-debug.memoryview",
                 "scopeName": "source.cortex-debug-memoryview",
@@ -2890,14 +2866,6 @@
                 },
                 {
                     "command": "cortex-debug.examineMemoryLegacy",
-                    "when": "debugType == cortex-debug"
-                },
-                {
-                    "command": "cortex-debug.viewDisassembly",
-                    "when": "debugType == cortex-debug"
-                },
-                {
-                    "command": "cortex-debug.setForceDisassembly",
                     "when": "debugType == cortex-debug"
                 },
                 {

@@ -5,8 +5,8 @@ import * as path from 'path';
 import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
 
 import { RTTCore, SWOCore } from './swo/core';
-import { NumberFormat, ConfigurationArguments,
-    RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
+import {
+    ConfigurationArguments, RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
     CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE, ChainedConfig } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
@@ -16,7 +16,6 @@ import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource, PeMicroSocketSo
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
-import { DisassemblyContentProvider } from './disassembly_content_provider';
 import { SymbolInformation, SymbolScope } from '../symbols';
 import { RTTTerminal } from './rtt_terminal';
 import { GDBServerConsole } from './server_console';
@@ -74,7 +73,6 @@ export class CortexDebugExtension {
                   
         context.subscriptions.push(
             vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
-            vscode.workspace.registerTextDocumentContentProvider('disassembly', new DisassemblyContentProvider()),
             
             vscode.commands.registerCommand('cortex-debug.varHexModeTurnOn', this.variablesNaturalMode.bind(this, false)),
             vscode.commands.registerCommand('cortex-debug.varHexModeTurnOff', this.variablesNaturalMode.bind(this, true)),
@@ -82,8 +80,6 @@ export class CortexDebugExtension {
 
             vscode.commands.registerCommand('cortex-debug.examineMemory', this.examineMemory.bind(this)),
             vscode.commands.registerCommand('cortex-debug.examineMemoryLegacy', this.examineMemoryLegacy.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.viewDisassembly', this.showDisassembly.bind(this)),
-            vscode.commands.registerCommand('cortex-debug.setForceDisassembly', this.setForceDisassembly.bind(this)),
 
             vscode.commands.registerCommand('cortex-debug.resetDevice', this.resetDevice.bind(this)),
             vscode.commands.registerCommand('cortex-debug.pvtEnableDebug', this.pvtCycleDebugMode.bind(this)),
@@ -261,114 +257,7 @@ export class CortexDebugExtension {
             if (uri.scheme === 'file') {
                 // vscode.debug.activeDebugSession.customRequest('set-active-editor', { path: uri.path });
             }
-            else if (uri.scheme === 'disassembly') {
-                session.customRequest('set-active-editor', { path: `${uri.scheme}://${uri.authority}${uri.path}` });
-            }
         }
-    }
-
-    private async showDisassembly() {
-        const session = CortexDebugExtension.getActiveCDSession();
-        if (!session) {
-            vscode.window.showErrorMessage('No cortex-debug debugging session available');
-            return;
-        }
-
-        if (!this.functionSymbols) {
-            try {
-                const resp = await session.customRequest('load-function-symbols');
-                this.functionSymbols = resp.functionSymbols;
-            }
-            catch (e) {
-                vscode.window.showErrorMessage('Unable to load symbol table. Disassembly view unavailable.');
-            }
-        }
-
-        try {
-            let funcname: string = await vscode.window.showInputBox({
-                placeHolder: 'main',
-                ignoreFocusOut: true,
-                prompt: 'Function Name (exact or a regexp) to Disassemble.'
-            });
-            
-            funcname = funcname ? funcname.trim() : null;
-            if (!funcname) { return ; }
-
-            let functions = this.functionSymbols.filter((s) => s.name === funcname);
-            if (functions.length === 0) {
-                let regExp = new RegExp(funcname);
-                if (funcname.endsWith('/i')) {
-                    // This is not the best way or UI. But this is the only flag that makes sense
-                    regExp = new RegExp(funcname.substring(0, funcname.length - 2), 'i');
-                }
-                functions = this.functionSymbols.filter((s) => regExp.test(s.name));
-            }
-
-            let url: string;
-
-            if (functions.length === 0) {
-                vscode.window.showInformationMessage(`No function matching name/regexp '${funcname}' found.\n` +
-                    'Please report this problem if you think it in error. We will need your executable to debug.');
-                url = `disassembly:///${funcname}.cdasm`;
-            }
-            else if (functions.length === 1) {
-                if (!functions[0].file || (functions[0].scope === SymbolScope.Global)) {
-                    url = `disassembly:///${functions[0].name}.cdasm`;
-                }
-                else {
-                    url = `disassembly:///${functions[0].file}:::${functions[0].name}.cdasm`;
-                }
-            }
-            else if (functions.length > 31) { /* arbitrary limit. 31 is prime! */
-                vscode.window.showErrorMessage(`Too many(${functions.length}) functions matching '${funcname}' found.`);
-            }
-            else {
-                const selected = await vscode.window.showQuickPick(functions.map((f) => {
-                    return {
-                        label: f.name,
-                        name: f.name,
-                        file: f.file,
-                        scope: f.scope,
-                        description: (!f.file || (f.scope === SymbolScope.Global)) ? 'Global Scope' : `Static in ${f.file}`
-                    };
-                }), {
-                    ignoreFocusOut: true
-                });
-
-                if (!selected.file || (selected.scope === SymbolScope.Global)) {
-                    url = `disassembly:///${selected.name}.cdasm`;
-                }
-                else {
-                    url = `disassembly:///${selected.file}:::${selected.name}.cdasm`;
-                }
-            }
-
-            if (url) {
-                vscode.window.showTextDocument(vscode.Uri.parse(url));
-            }
-        }
-        catch (e) {
-            vscode.window.showErrorMessage('Unable to show disassembly.');
-        }
-    }
-
-    private setForceDisassembly() {
-        const session = CortexDebugExtension.getActiveCDSession();
-        if (!session) {
-            vscode.window.showErrorMessage('Command not valid when cortex-debug session not active');
-            return;
-        }
-        vscode.window.showQuickPick(
-            [
-                { label: 'Auto', description: 'Show disassembly for functions when source cannot be located.' },
-                { label: 'Forced', description: 'Always show disassembly for functions.' }
-            ],
-            { matchOnDescription: true, ignoreFocusOut: true }
-        ).then((result) => {
-            const force = result.label === 'Forced';
-            session.customRequest('set-force-disassembly', { force: force });
-            Reporting.sendEvent('Force Disassembly', 'Set', force ? 'Forced' : 'Auto');
-        }, (error) => {});
     }
 
     private examineMemory() {
@@ -587,9 +476,6 @@ export class CortexDebugExtension {
                 break;
             case 'record-event':
                 this.receivedEvent(e);
-                break;
-            case 'custom-event-open-disassembly':
-                vscode.commands.executeCommand('editor.debug.action.openDisassemblyView');
                 break;
             case 'custom-event-post-start-server':
                 this.startChainedConfigs(e, ChainedEvents.POSTSTART);

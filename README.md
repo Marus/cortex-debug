@@ -7,8 +7,8 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Support J-Link, OpenOCD GDB Server, STMicroelectronic's ST-LINK GDB server (no SWO support yet), pyOCD
 * Initial support for the Black Magic Probe (This has not been as heavily tested; SWO can only be captured via a serial port)
 * Partial support textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
-* Experimental (since V1.2): Multi-core and multi-session debugging. See https://github.com/Marus/cortex-debug/wiki/Multi-core-debugging
-* Experimental (since V1.2): Disassembly of source code available along with instruction level breakpoints and stepping. See https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging
+* Multi-core and multi-session debugging. See https://github.com/Marus/cortex-debug/wiki/Multi-core-debugging
+* Disassembly of source code available along with instruction level breakpoints and stepping. The actual disassembly window is provided and managed by VSCode. See https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging
 * Cortex Core Register Viewer (integrated into Variables window since V1.2)
     * In some cases the st-util GDB server can report incomplete/incorrect registers, so there may be some issues here.
 * SWO Decoding - "console" text output and binary data (signed and unsigned 32-bit integers, Q16.16 fixed point integers, single precision floating point values)
@@ -18,14 +18,10 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * Live graphing of decoded ITM data.
 * Support for Custom ITM Data Decoders:
     * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system.
-* Initial Semihosting Support
+* Initial Semi-hosting Support
 * Support for SEGGER Real Time Trace (RTT) using OpenOCD and J-Link gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT.
-* Ability to view and step through the disassembled binary. There are three ways that disassembled code will be shown:
-    * Disassembly code will automatically be shown if it cannot locate the corresponding source code.
-    * You can manually see the disassembly for a particular function (`Cortex-Debug: View Disassembly (Function)` command)
-    * You can set the debugger to always show show disassembly (`Cortex-Debug: Set Force Disassembly` command)
 * Globals and Static scopes in the variables view
-* Initial support for Rust code (most functionality is working; disassembly views and variables view may still have issues)
+* Initial support for Rust code (most functionality is working; report any issues
 * RTOS Thread Support in `CALL STACK` window (J-Link, OpenOCD, pyOCD - RTOS supported depend on GDB server)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 * Live Watch with supported GDB servers (tested with OpenOCD, J-Link, STLink so far - since V1.6)
