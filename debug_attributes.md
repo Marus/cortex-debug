@@ -12,22 +12,22 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | boardId | string | Common | PyOCD Board Identifier. Needed if multiple compatible boards are connected. |
 | breakAfterReset | boolean | Common | Applies to Restart/Reset/Launch, halt debugger after a reset. Ignored if `runToEntryPoint` is used. |
 | chainedConfigurations | object | Common | An object describing how additional configurations should be launched |
-| chainedConfigurations.delayMs | number | Common | Default delay in milliseconds for a certain amount of milliseconds to begin launch. Inherited by children |
-| chainedConfigurations.detached | boolean | Common | Related or independent server sessions. Set to true for servers like 'JLink'. Inherited by children |
-| chainedConfigurations.enabled | boolean | Common | Enable/Disable entire set of chained configurations |
-| chainedConfigurations.inherits | string[] | Common | List of properties to inherit from parent. Sorry, no IntelliSense |
-| chainedConfigurations.launches | object[] | Common | undefined |
-| chainedConfigurations.lifecycleManagedByParent | boolean | Common | Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root. Inherited by children |
-| chainedConfigurations.overrides | object | Common | Values to override/set in this child configuration. A set of name/value pairs. Set value to 'null' (no quotes) to delete. Sorry, no IntelliSense |
-| chainedConfigurations.waitOnEvent | string | Common | Event to wait for. 'postStart' means wait for gdb-server connecting, 'postInit' is after init commands are completed by gdb. Inherited by children |
+| chainedConfigurations<br>.delayMs | number | Common | Default delay in milliseconds for a certain amount of milliseconds to begin launch. Inherited by children |
+| chainedConfigurations<br>.detached | boolean | Common | Related or independent server sessions. Set to true for servers like 'JLink'. Inherited by children |
+| chainedConfigurations<br>.enabled | boolean | Common | Enable/Disable entire set of chained configurations |
+| chainedConfigurations<br>.inherits | string[] | Common | List of properties to inherit from parent. Sorry, no IntelliSense |
+| chainedConfigurations<br>.launches | object[] | Common | undefined |
+| chainedConfigurations<br>.lifecycleManagedByParent | boolean | Common | Are Restart/Reset/Stop/Disconnect shared? All life-cycle management done as a group by parent/root. Inherited by children |
+| chainedConfigurations<br>.overrides | object | Common | Values to override/set in this child configuration. A set of name/value pairs. Set value to 'null' (no quotes) to delete. Sorry, no IntelliSense |
+| chainedConfigurations<br>.waitOnEvent | string | Common | Event to wait for. 'postStart' means wait for gdb-server connecting, 'postInit' is after init commands are completed by gdb. Inherited by children |
 | cmsisPack | string | Common | Path to a CMSIS-Pack file. Use to add extra device support. |
 | configFiles | string[] | Common | OpenOCD/PE GDB Server configuration file(s) to use when debugging (OpenOCD -f option) |
 | cpu | string | Common | CPU Type Selection - used for QEMU server type |
 | ctiOpenOCDConfig | object | Launch | Experimental. Does not work yet |
-| ctiOpenOCDConfig.enabled | boolean | Launch | Enable/Disable Cross Trigger Interface/Matrix for synchronized pause/resume |
-| ctiOpenOCDConfig.initCommands | string[] | Launch | List of OpenOCD TCL commands to initialize the CTI/CTM infrastructure (if any) |
-| ctiOpenOCDConfig.pauseCommands | string[] | Launch | List of OpenOCD TCL commands to pause all processors |
-| ctiOpenOCDConfig.resumeCommands | string[] | Launch | List of OpenOCD TCL commands to resume all processors |
+| ctiOpenOCDConfig<br>.enabled | boolean | Launch | Enable/Disable Cross Trigger Interface/Matrix for synchronized pause/resume |
+| ctiOpenOCDConfig<br>.initCommands | string[] | Launch | List of OpenOCD TCL commands to initialize the CTI/CTM infrastructure (if any) |
+| ctiOpenOCDConfig<br>.pauseCommands | string[] | Launch | List of OpenOCD TCL commands to pause all processors |
+| ctiOpenOCDConfig<br>.resumeCommands | string[] | Launch | List of OpenOCD TCL commands to resume all processors |
 | cwd | string | Common | Directory to run commands from |
 | debuggerArgs | array | Common | Additional arguments to pass to GDB command line |
 | device | string | Common | Target Device Identifier |
@@ -39,8 +39,8 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | ipAddress | string | Common | IP Address for networked J-Link Adapter |
 | jlinkscript | string | Common | J-Link script file - optional input file for customizing J-Link actions. |
 | liveWatch | object | Common | An object with parameters for Live Watch |
-| liveWatch.enabled | boolean | Common | Enable/Disable Live Watch. Only applies to OpenOCD |
-| liveWatch.samplesPerSecond | number | Common | Maximum number of samples per second. Different from GUI refresh-rate, which is a user/workspace setting |
+| liveWatch<br>.enabled | boolean | Common | Enable/Disable Live Watch. Only applies to OpenOCD |
+| liveWatch<br>.samplesPerSecond | number | Common | Maximum number of samples per second. Different from GUI refresh-rate, which is a user/workspace setting |
 | loadFiles | string[] | Launch | List of files (hex/bin/elf files) to load/program instead of the executable file. Symbols are not loaded (see `symbolFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used to program the device |
 | machine | string | Common | Machine Type Selection - used for QEMU server type |
 | numberOfProcessors | number | Common | Number of processors/cores in the target device. |
@@ -65,14 +65,14 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | preRestartCommands | string[] | Common | Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution). |
 | rtos | string | Common | RTOS being used. For JLink this can be Azure, ChibiOS, embOS, FreeRTOS, NuttX, Zephyr or the path to a custom JLink RTOS Plugin library. For OpenOCD this can be auto (recommended), FreeRTOS, ThreadX, chibios, Chromium-EC, eCos, embKernel, linux, mqx, nuttx, RIOT, uCOS-III, or Zephyr. |
 | rttConfig | object | Common | SEGGER's Real Time Trace (RTT) and supported by JLink, OpenOCD and perhaps others in the future |
-| rttConfig.address | string | Common | Address to start searching for the RTT control block. Use "auto" for Cortex-Debug to use the address from elf file |
-| rttConfig.clearSearch | boolean | Common | When true, clears the search-string. Only applicable when address is "auto" |
-| rttConfig.decoders | {object} | Common | SWO Decoder Configuration |
-| rttConfig.enabled | boolean | Common | Enable/Disable RTT |
-| rttConfig.polling_interval | number | Common | number of milliseconds (> 0) to wait for check for data on out channels. Only for OpenOCD |
-| rttConfig.rtt_start_retry | number | Common | Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry. Only for OpenOCD |
-| rttConfig.searchId | string | Common | A string to search for to find the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation |
-| rttConfig.searchSize | number | Common | Number of bytes to search for the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation |
+| rttConfig<br>.address | string | Common | Address to start searching for the RTT control block. Use "auto" for Cortex-Debug to use the address from elf file |
+| rttConfig<br>.clearSearch | boolean | Common | When true, clears the search-string. Only applicable when address is "auto" |
+| rttConfig<br>.decoders | {object} | Common | SWO Decoder Configuration |
+| rttConfig<br>.enabled | boolean | Common | Enable/Disable RTT |
+| rttConfig<br>.polling_interval | number | Common | number of milliseconds (> 0) to wait for check for data on out channels. Only for OpenOCD |
+| rttConfig<br>.rtt_start_retry | number | Common | Keep trying to start RTT for OpenOCD until it succeeds with given internal in milliseconds. <= 0 means do not retry. Only for OpenOCD |
+| rttConfig<br>.searchId | string | Common | A string to search for to find the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation |
+| rttConfig<br>.searchSize | number | Common | Number of bytes to search for the RTT control block. If 'address' is 'auto', use ONLY if you have a custom RTT implementation |
 | runToEntryPoint | string | Common | Applies to Launch/Restart/Reset, ignored for Attach. If enabled the debugger will run until the start of the given function. |
 | searchDir | string[] | Common | OpenOCD directories to search for config files and scripts (-s option). If no search directories are specified, it defaults to the configured cwd. |
 | serialNumber | string | Common | J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer |
@@ -86,13 +86,13 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | svdFile | string | Common | This is for 'XPERIPHERALS' window provided by 'mcu-debug.peripheral-viewer'. It can be a simple file name or more based on a CMSIS pack or deviceName. See 'mcu-debug.peripheral-viewer' for format |
 | svdPath | string | Common | This is for 'XPERIPHERALS' window provided by 'mcu-debug.peripheral-viewer' and 'Embedded Tools' Extension from Microsoft. It can be a simple file name. For 'mcu-debug.peripheral-viewer' or more based on a CMSIS pack or deviceName. See 'mcu-debug.peripheral-viewer' for format |
 | swoConfig | object | Common | Description of SWO can be configured. Also see our Wiki for details |
-| swoConfig.cpuFrequency | number | Common | Target CPU frequency in Hz. |
-| swoConfig.decoders | {object} | Common | SWO Decoder Configuration |
-| swoConfig.enabled | boolean | Common | Enable SWO decoding. |
-| swoConfig.source | string | Common | Source for SWO data. Can either be "probe" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe. |
-| swoConfig.swoFrequency | number | Common | SWO frequency in Hz. |
-| swoConfig.swoPath | string | Common | Path name when source is "file" or "serial". Typically a /path-name or a serial-port-name |
-| swoConfig.swoPort | string | Common | When server is "external" && source is "socket", port to connect to. Format [host:]port |
+| swoConfig<br>.cpuFrequency | number | Common | Target CPU frequency in Hz. |
+| swoConfig<br>.decoders | {object} | Common | SWO Decoder Configuration |
+| swoConfig<br>.enabled | boolean | Common | Enable SWO decoding. |
+| swoConfig<br>.source | string | Common | Source for SWO data. Can either be "probe" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe. |
+| swoConfig<br>.swoFrequency | number | Common | SWO frequency in Hz. |
+| swoConfig<br>.swoPath | string | Common | Path name when source is "file" or "serial". Typically a /path-name or a serial-port-name |
+| swoConfig<br>.swoPort | string | Common | When server is "external" && source is "socket", port to connect to. Format [host:]port |
 | symbolFiles | object[] | Common | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols |
 | targetId | string &#124; number | Common | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware) |
 | targetProcessor | number | Common | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors' |

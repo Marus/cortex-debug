@@ -4,7 +4,7 @@ function handleObject(obj: any, prop: string, appliesTo, stream: fs.WriteStream)
     const keys = Object.keys(obj).sort();
     for (const key of keys) {
         const child = obj[key];
-        const chProp = prop + '.' + key;
+        const chProp = prop + '<br>.' + key;
         const chType = getType(child);
         stream.write(`| ${chProp} | ${chType} | ${appliesTo} | ${child.description} |\n`);
         if (child.properties) {
