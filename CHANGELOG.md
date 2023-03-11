@@ -1,7 +1,7 @@
 ChangeLog
 =========
 
-# V1.9.3 - Major release - only available as a Pre-release.
+# V1.9.3/1.11.0 - Major release - only available as a Pre-release.
 * Removed all (user visible) remnants of the old disassembly. The new disassmbly view is provided by VSCode and we supply the contents.
 * New handling of static variables. This is also a big change and it will be visible in the Variables window near the `Statics` section
   * You will see the file the static variables are associated with
