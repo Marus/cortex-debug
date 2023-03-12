@@ -3028,12 +3028,17 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Marus/cortex-debug"
+        "url": "https://github.com/Marus/cortex-debug.git"
+    },
+    "bugs": {
+        "url": "https://github.com/Marus/cortex-debug/issues"
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production && node dist/docgen.js",
         "watch": "webpack --mode development --watch",
         "compile": "webpack --mode development && node dist/docgen.js",
-        "test-compile": "tsc -p ./"
+        "test-compile": "tsc -p ./",
+        "do-package": "node ./release.js --package",
+        "do-publish": "node ./release.js --publish"
     }
 }
