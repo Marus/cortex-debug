@@ -21,7 +21,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system. If you are using TCP/IP instead, you can use a variety of tools to connect to the that port.
 * Semi-hosting Support. In the `TERMINAL` tab, there will be a sub-window called `gdb-server`. That terminal is bidirectional and is intended for semi-hosting. This applies to those gdb-servers that do their semi-hosting on their stdio.
 ![](images/gdb-server.png)
-* Support for SEGGER Real Time Trace (RTT) using OpenOCD and J-Link gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT.
+* Support for SEGGER Real Time Trace (RTT) using OpenOCD and J-Link gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT. See image above for console style output. SWO output also creates another section.
 * Globals and Static scopes in the variables view
 * Initial support for Rust code (most functionality is working; report any issues
 * RTOS Thread Support in `CALL STACK` window (J-Link, OpenOCD, pyOCD - RTOS supported depend on GDB server)
@@ -34,7 +34,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
   * These extensions are considered as dependency of this extension and VSCode should help you install all of them. We will consider make an `Extension Pack` in the future
 
 ### Release Versioning
-Cortex-Debug uses a [versioning system specified by Microsoft](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) that allows distribution of pre-releases via the marketplace. You can enable (or disable) pre-releases within VSCode for this extension and you will automatically get new pre-releases. By default, pre-releases are disabled. We use pre-releases as allow testing of bug fixes and new features. They allow you participate during the formation of a feature of how an issue gets addressed. [More info about pre-releases](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions). To summarize, extensions use [semantic versioning (SemVer)](https://semver.org/) system which in simple terms is `major.minor.patch`. With MS convention, if the `minor` version is `ODD`, then it is a pre-release.
+Cortex-Debug uses a [versioning system specified by Microsoft](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) that allows distribution of pre-releases via the marketplace. You can enable (or disable) pre-releases within VSCode for this extension and you will automatically get new pre-releases. By default, pre-releases are disabled. We use pre-releases as allow testing of bug fixes and new features. They allow you participate during the formation of a feature of how an issue gets addressed. [More info about pre-releases](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions). To summarize, extensions use [semantic versioning (SemVer)](https://semver.org/) system which in simple terms is `major.minor.patch`. With MS convention, if the `minor` version is `odd`, then it is a pre-release.
 
 ### Planned Features
 * Additional Graphing Options
