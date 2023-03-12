@@ -124,7 +124,7 @@ export function packageJSONtoMd(path: string, outPath: string) {
         try {
             const stream = fs.createWriteStream(outPath);
             writeHeader(stream);
-            stream.write('| Attribute | Type | Launch or Attach | Description |\n');
+            stream.write('| Attribute | Type | Launch/ Attach | Description |\n');
             stream.write('| --------- | ---- | ---------------- | ----------- |\n');
             for (const prop of allProps) {
                 let obj = common[prop];
