@@ -18,8 +18,9 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
     * Decoding ETM data over the SWO pin is not currently supported.
 * Live graphing of decoded ITM data.
 * Support for Custom ITM Data Decoders:
-    * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system.
-* Initial Semi-hosting Support
+    * Ability to define JavaScript modules to decode complex data formats streamed over one or more ITM ports. Data can be printed to a output window, or sent to the graphing system. If you are using TCP/IP instead, you can use a variety of tools to connect to the that port.
+* Semi-hosting Support. In the `TERMINAL` tab, there will be a sub-window called `gdb-server`. That terminal is bidirectional and is intended for semi-hosting. This applies to those gdb-servers that do their semi-hosting on their stdio.
+![](images/gdb-server.png)
 * Support for SEGGER Real Time Trace (RTT) using OpenOCD and J-Link gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT.
 * Globals and Static scopes in the variables view
 * Initial support for Rust code (most functionality is working; report any issues
