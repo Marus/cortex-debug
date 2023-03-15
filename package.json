@@ -3038,7 +3038,7 @@
         "watch": "webpack --mode development --watch",
         "compile": "webpack --mode development && node dist/docgen.js",
         "test-compile": "tsc -p ./",
-        "do-package": "node ./release.js --package",
-        "do-publish": "node ./release.js --publish"
+        "package": "node ./release.js --package",
+        "publish": "node ./release.js --publish --vsx-also"
     }
 }

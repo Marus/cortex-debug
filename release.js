@@ -5,6 +5,8 @@ const child_process = require('child_process');
 let prog = '??';
 let tagName = '';
 let isDryRun = false;
+let vsxAlso = false;
+let openVsxPat = '';
 
 function errExit(...args) {
     console.error(`${prog}: Error:`, ...args);
@@ -42,9 +44,13 @@ function isPreRelease() {
 }
 
 function vsceRun(pkgOnly) {
-    const args = ["vsce", (pkgOnly ? 'package' : 'release')];
+    const args = ['npx', 'vsce', (pkgOnly ? 'package' : 'release')];
     if (isPreRelease()) {
         args.push('--pre-release');
+        if (vsxAlso) {
+            console.log(`${prog}: Note: Not publishing to open-vsx because this is a pre-release`);
+            vsxAlso = false;
+        }
     }
     if (!isDryRun && !pkgOnly) {
         ensureGitClean();
@@ -64,6 +70,14 @@ function vsceRun(pkgOnly) {
                     errExit(`Failed '${gitCmd}'`);
                 }
             });
+            if (vsxAlso) {
+                vsxCmd = ['npx', 'ovsx', 'publish', '-p', openVsxPat];
+                runProg(vsxCmd, (code) => {
+                    if (code !== 0) {
+                        errExit(`Failed '${vsxCmd}'`);
+                    }
+                });
+            }
         }
     });
 }
@@ -74,18 +88,19 @@ function runProg(args, cb) {
     }
     // console.log('Executing ' + args.join(' '));
     const arg0 = args.shift();
+    const cmd = args.join(' ');
     const prog = child_process.spawn(arg0, args, {
         stdio:'inherit'
     });
     prog.on('error', (error) => {
-        console.error(`error: ${error.message}`);
+        console.error(`Error running '${cmd}': ${error.message}`);
         if (cb) {
             cb(-1);
         }
     });
     prog.on("close", (code) => {
         if (!isDryRun) {
-            console.log(`${arg0} exited with code ${code}`);
+            console.log(`'${cmd}' ... exited with code ${code}`);
         }
         if (cb) {
             cb(code);
@@ -102,8 +117,8 @@ function run() {
         switch (argv[0]) {
             case '-h':
             case '--help': {
-                console.log(`Usage: node ${prog} [--dryrun] [--package] [--publish]`);
-                console.log('\t--package is by default true');
+                console.log(`Usage: node ${prog} [--dryrun] [--package] [--publish] [--vsx-also]`);
+                console.log('\t--package is by default, true');
                 process.exit(0);
             }
             case '--dryrun': {
@@ -119,12 +134,23 @@ function run() {
                 isPkg = false;
                 break;
             }
+            case '--vsx-also': {
+                vsxAlso = true;
+                openVsxPat =  process.env.OPEN_VSX_PAT;
+                if (!openVsxPat) {
+                    errExit('Environment variable OPEN_VSX_PAT not found');
+                }
+                break;
+            }
             default: {
                 errExit(`Unknown argument '${argv[0]}'`);
                 process.exit(1);
             }
         }
         argv.shift();
+    }
+    if (isPkg) {
+        vsxAlso = false;
     }
     vsceRun(isPkg);
 }
