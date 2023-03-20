@@ -44,19 +44,14 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
 
     public launchCommands(): string[] {
         const commands = [
-            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset halt"']),
-            'interpreter-exec console "monitor reset halt"'
+            ...genDownloadCommands(this.args, []),
         ];
 
         return commands;
     }
 
     public attachCommands(): string[] {
-        const commands = [
-            'interpreter-exec console "monitor halt"'
-        ];
-
-        return commands;
+        return [];
     }
 
     public swoAndRTTCommands(): string[] {
@@ -64,11 +59,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
     }
 
     public restartCommands(): string[] {
-        const commands: string[] = [
-            'interpreter-exec console "monitor reset halt"'
-        ];
-
-        return commands;
+        return [];
     }
 
     public serverExecutable(): string {
