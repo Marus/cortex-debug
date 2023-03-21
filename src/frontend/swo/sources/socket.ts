@@ -23,10 +23,17 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
     }
 
     // Default wait time is about 5 minutes
-    public start(maxTries = (1000 * 60 * 5) / TimerInterval): Promise<void> {
+    public start(timeout = (1000 * 60 * 5)): Promise<void> {
+        let retry = true;
+        const start = Date.now();
         const obj = parseHostPort(this.tcpPort);
         return new Promise((resolve, reject) => {
             this.timer = setInterval(() => {
+                if (!retry) {
+                    // Last attempt is still ongoing. It hasn't failed or succeeded
+                    return;
+                }
+                retry = false;
                 this.client = net.createConnection(obj, () => {
                     clearInterval(this.timer);
                     this.timer = undefined;
@@ -56,7 +63,8 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                         this.dispose();
                     } else if (code === 'ECONNREFUSED') {
                         // We expect 'ECONNREFUSED' if the server has not yet started.
-                        if (this.nTries > maxTries) {
+                        const delta = Date.now() - start;
+                        if (delta > timeout) {
                             (e as any).message = `Error: Failed to connect to port ${this.tcpPort} ${code}`;
                             console.log(`Failed ECONNREFUSED SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
                             this.connError = e;
@@ -67,6 +75,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                             if ((this.nTries % 10) === 0) {
                                 console.log(`Trying SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
                             }
+                            retry = true;
                             this.nTries++;
                             this.disposeClient();
                         }

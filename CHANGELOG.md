@@ -1,5 +1,7 @@
 ChangeLog
 =========
+# V1.9.3/1.11.0 - Major release - only available as a Pre-release.
+* Bugfix: [#853 Multiple SWO (OpenOCD tpiu_swo_trace) Connections for External OpenOCD Server](https://github.com/Marus/cortex-debug/issues/853) The issue is with very long connection times inside WSL2 where we would timeout and try again. This caused multiple SWO connections which we did not even know was possible.
 
 # V1.9.3/1.11.0 - Major release - only available as a Pre-release.
 * Removed all (user visible) remnants of the old disassembly. The new disassmbly view is provided by VSCode and we supply the contents.
