@@ -87,8 +87,8 @@ function runProg(args, cb) {
         args.unshift('echo');
     }
     // console.log('Executing ' + args.join(' '));
-    const arg0 = args.shift();
     const cmd = args.join(' ');
+    const arg0 = args.shift();
     const prog = child_process.spawn(arg0, args, {
         stdio:'inherit'
     });
