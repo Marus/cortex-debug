@@ -30,7 +30,9 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 * We have a set of extensions that this extension relies on for various frontend services (since V1.6)
   * These services are under the mcu-debug organization and lot of that content was re-factored from this extension to make them work with other debuggers and with browsers
   * Visit https://marketplace.visualstudio.com/search?term=mcu-debug&target=VSCode&category=All%20categories&sortBy=Relevance\
-  * Highlights are a Memory Viewer, Peripheral (SVD) Viewer, RTOS viewer
+  * Highlights are a Memory Viewer, RTOS viewer, Peripheral (SVD) Viewer
+  ![image](https://user-images.githubusercontent.com/41269583/227667748-599a7ad1-afa8-4fab-92a8-17c3da3b0fdd.png)<br>
+  ![image](https://user-images.githubusercontent.com/41269583/227667788-df4bfcea-e4a1-4ea6-86a8-9cf70198817e.png)
   * These extensions are considered as dependency of this extension and VSCode should help you install all of them. We will consider make an `Extension Pack` in the future
 
 ### Release Versioning
