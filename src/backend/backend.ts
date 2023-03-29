@@ -70,7 +70,7 @@ export class VariableObject {
     public id: number;
     public fullExp: string;
     public parent: number;      // Variable Reference
-    public children: {[name: string]: string};
+    public children: {[name: string]: string};  // Field-name to Gdb-variable map
     constructor(p: number, node: any) {
         this.parent = p;
         this.name = MINode.valueOf(node, 'name');
@@ -125,9 +125,9 @@ export class VariableObject {
             (this.dynamic && (this.displayhint === 'array' || this.displayhint === 'map'));
     }
 
-    public toProtocolVariable(): DebugProtocol.Variable {
+    public toProtocolVariable(newName?: string): DebugProtocol.Variable {
         const res: DebugProtocol.Variable = {
-            name: this.exp,
+            name: newName || this.exp,
             evaluateName: this.fullExp || this.exp,
             value: (this.value === void 0) ? '<unknown>' : this.value,
             type: this.type,

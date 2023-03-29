@@ -69,8 +69,10 @@ class ITMDecoder extends EventEmitter {
     }
 
     private rxWriteByte(byte: number): boolean {
-        this.rxBuffer.writeUInt8(byte, this.rxCount);
-        this.rxCount++;
+        if (this.rxCount < this.rxBuffer.length) {
+            this.rxBuffer.writeUInt8(byte, this.rxCount);
+            this.rxCount++;
+        }
         return this.rxCount === this.rxTargetLength;
     }
 
@@ -134,9 +136,17 @@ class ITMDecoder extends EventEmitter {
                     }
                     break;
                 case Status.TIMESTAMP:
-                    this.rxWriteByte(byte);
+                    const receivedMax = this.rxWriteByte(byte);
+                    // Check if the continuation bit is false.
+                    // This indicates the last byte in a timestamp
                     if ((byte & 0x80) === 0x00) {
                         this.emit('timestamp', this.getRxPacket());
+                        newStatus = Status.IDLE;
+                    } else if (receivedMax) {
+                        // A timestamp is at most 5 packets. If we didn't see the continuation bit false, something has gone wrong
+                        // This often happens with PeMicro because it starts sending garbage after a clock change.
+                        // In theory we should go to UNSYNCED, but that leads to never recovering.
+                        // Going back to IDLE allows recovery when it stops sending garbage
                         newStatus = Status.IDLE;
                     }
                     break;

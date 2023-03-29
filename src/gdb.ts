@@ -15,7 +15,7 @@ import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
-    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction
+    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -42,6 +42,41 @@ import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
+import { LiveWatchMonitor } from './live-watch-monitor';
+
+// returns [threadId, frameId]
+// We use 3 nibbles for frameId (max of 4K) and 2 nibbles for ThreadId (max of 256).
+// Thread id's start at 1 and frame id's start from 0 for GDB
+const RegionSize = 0xFFFFF;
+export function decodeReference(varRef: number): number[] {
+    return [(varRef & RegionSize) >>> 12, varRef & 0xFFF];
+}
+
+export function encodeReference(threadId: number, frameId: number): number {
+    return ((threadId << 12) | (frameId & 0xFFF)) & RegionSize;
+}
+
+enum HandleRegions {
+    GLOBAL_HANDLE_ID      = 0xFFFFFFFF,
+    STACK_HANDLES_START   = encodeReference(0x01, 0x000),
+    STACK_HANDLES_FINISH  = encodeReference(0xFF, 0xFFF),
+    STATIC_HANDLES_START  = STACK_HANDLES_FINISH + 1,
+    STATIC_HANDLES_FINISH = STATIC_HANDLES_START + RegionSize,
+    REG_HANDLE_START      = STATIC_HANDLES_FINISH + 1,
+    REG_HANDLE_FINISH     = REG_HANDLE_START + RegionSize,
+    VAR_HANDLES_START     = REG_HANDLE_FINISH + 1,
+    rest = 0xFFFFFFFF - VAR_HANDLES_START
+
+}
+
+if (false) {
+    for (const nm of Object.keys(HandleRegions)) {
+        if (isNaN(Number(nm))) {
+            const v = HandleRegions[nm];
+            console.log(nm.padStart(25, ' '), '0x' + v.toString(16).padStart(8, '0'), v.toString().padStart(10, ' '));
+        }
+    }
+}
 
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
@@ -63,19 +98,10 @@ enum SessionMode {
     RESET = 'reset'
 }
 
-class ExtendedVariable {
+export class ExtendedVariable {
     constructor(public name, public options) {
     }
 }
-
-const GLOBAL_HANDLE_ID      = 0x0000FE;
-const STACK_HANDLES_START   = 0x000100;
-const STACK_HANDLES_FINISH  = 0x00FFFF;
-const STATIC_HANDLES_START  = 0x010000;
-const STATIC_HANDLES_FINISH = 0x01FFFF;
-const REG_HANDLE_START      = 0x020000;
-const REG_HANDLE_FINISH     = 0x02FFFF;
-const VAR_HANDLES_START     = 0x030000;
 
 function COMMAND_MAP(c: string): string {
     if (!c) { return c; }
@@ -106,13 +132,17 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
 class PendingContinue {
     constructor(public shouldContinue: boolean, public haveMore?: () => boolean) {}
 }
+
 class VSCodeRequest<RespType, ArgsType> {
     constructor(
-        public functor: (response: RespType, args: ArgsType, pendedContinue?: PendingContinue) => Promise<void>,
+        // In the varargs extra, the first element is a PenContinue object. The rest are whatever else was passed in
+        // when calling RequestQueue.add
+        public functor: (response: RespType, args: ArgsType, ...extra: any[]) => Promise<void>,
         public response: RespType,
         public args: ArgsType,
         public resolve: any,
-        public reject: any
+        public reject: any,
+        public extra: any[]
     ) {}
 }
 
@@ -127,21 +157,23 @@ class VSCodeRequest<RespType, ArgsType> {
 ** For requests where gdb needs to be temporarily interrupted for the operation to succeed, use setFunctionBreakpoints as a template (carefully)
 ** and for others, use evaluateRequest as a template
 */
-class RequestQueue<RespType, ArgsType> {
+export class RequestQueue<RespType, ArgsType> {
     private queue: Array<VSCodeRequest<RespType, ArgsType>> = [];
     private queueBusy = false;
     public pendedContinue = new PendingContinue(false, this.haveMore.bind(this));
     constructor(private alwaysResolve = true) {}
     public add(
-        functor: (response: RespType, args: ArgsType, pendContinue?: PendingContinue) => Promise<void>,
-        response: RespType, args: ArgsType): Promise<void> {
+        // For the varargs, extra can be any set of args but the first arg if used, is of type PendContinue
+        functor: (response: RespType, args: ArgsType, ...extra: any[]) => Promise<void>,
+        response: RespType, args: ArgsType, ...extra): Promise<void> {
         return new Promise<void>(async (resolve, reject) => {
-            this.queue.push(new VSCodeRequest<RespType, ArgsType>(functor, response, args, resolve, reject));
+            this.queue.push(new VSCodeRequest<RespType, ArgsType>(functor, response, args, resolve, reject, extra));
             while (!this.queueBusy && (this.queue.length > 0)) {
                 this.queueBusy = true;
                 const obj = this.queue.shift();
                 try {
-                    await obj.functor(obj.response, obj.args, this.pendedContinue);
+                    const p = obj.functor(obj.response, obj.args, this.pendedContinue, ...obj.extra);
+                    await p;
                     obj.resolve();
                 }
                 catch (e) {
@@ -185,14 +217,14 @@ export class GDBDebugSession extends LoggingDebugSession {
     public symbolTable: SymbolTable;
     private usingParentServer = false;
 
-    protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
+    protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(HandleRegions.VAR_HANDLES_START);
     protected variableHandlesReverse: { [id: string]: number } = {};
     protected quit: boolean;
     protected attached: boolean;
     protected started: boolean;
     protected debugReady: boolean;
     public miDebugger: MI2;
-    protected forceDisassembly: boolean = false;
+    public miLiveGdb: LiveWatchMonitor | undefined;
     protected activeEditorPath: string = null;
     protected disassember: GdbDisassembler;
     // currentThreadId is the currently selected thread or where execution has stopped. It not very
@@ -219,7 +251,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     // different from 'currentThreadId'. This is also the last thread-id used to notify VSCode about
     // the current thread so the call-stack will initially point to this thread. Maybe currentThreadId
     // can be made stricter and we can remove this variable
-    private stoppedThreadId: number = 0;
+    public stoppedThreadId: number = 0;
 
     protected functionBreakpoints = [];
     protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map<string, OurSourceBreakpoint[]>();
@@ -472,7 +504,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                     resolve = null;
                 }
             };
-            if (!fs.existsSync(this.args.executable)) {
+            const haveSymFiles = this.args.symbolFiles && (this.args.symbolFiles.length > 0);
+            if (!fs.existsSync(this.args.executable) && !haveSymFiles) {
                 this.sendErrorResponse(response, 103, `Unable to find executable file at ${this.args.executable}.`);
                 return doResolve();
             }
@@ -587,10 +620,6 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         // This is the last of the place where ports are allocated
                         this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
-
-                        if (!this.args.variableUseNaturalFormat) {
-                            commands.push(...this.formatRadixGdbCommand());
-                        }
                         commands.push(...this.serverController.initCommands());
 
                         if (attach) {
@@ -632,6 +661,15 @@ export class GDBDebugSession extends LoggingDebugSession {
                         // After the above, VSCode will set various kinds of breakpoints, watchpoints, etc. When all those things
                         // happen, it will finally send a configDone request and now everything should be stable
                         this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
+                        if (this.args.liveWatch?.enabled) {
+                            const liveGdb = new LiveWatchMonitor(this);
+                            this.startGdbForLiveWatch(liveGdb).then(() => {
+                                this.handleMsg('stdout', 'Started live-monitor-gdb session\n');
+                                this.miLiveGdb = liveGdb;
+                            }, (e) => {
+                                this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
+                            });
+                        }
 
                         this.onInternalEvents.once('config-done', async () => {
                             // Let the gdb server settle down. They are sometimes still creating/delteting threads
@@ -816,6 +854,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         return gdbExePath;
     }
 
+    private gdbInitCommands: string[] = [];
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
@@ -843,12 +882,13 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.quitEvent();
         });
         this.initDebugger();
-        const initCmds = [
+        this.gdbInitCommands = [
             'interpreter-exec console "set print demangle on"',
             'interpreter-exec console "set print asm-demangle on"',
             'enable-pretty-printing',
             `interpreter-exec console "source ${this.args.extensionPath}/support/gdbsupport.init"`,
-            `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`
+            `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`,
+            ...this.formatRadixGdbCommand()
         ];
         if (this.args.symbolFiles) {
             for (const symF of this.args.symbolFiles) {
@@ -858,18 +898,32 @@ export class GDBDebugSession extends LoggingDebugSession {
                 for (const section of symF.sections) {
                     cmd += ` -s ${section.name} ${section.address}`;
                 }
-                initCmds.push(cmd);
+                this.gdbInitCommands.push(cmd);
             }
-            if (initCmds.length === 0) {
+            if (this.gdbInitCommands.length === 0) {
                 this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
             }
         } else {
-            initCmds.push(`file-exec-and-symbols "${this.args.executable}"`);
+            this.gdbInitCommands.push(`file-exec-and-symbols "${this.args.executable}"`);
         }
-        const ret = this.miDebugger.start(this.args.cwd, initCmds);
+        const ret = this.miDebugger.start(this.args.cwd, this.gdbInitCommands);
         return ret;
     }
 
+    public startGdbForLiveWatch(liveGdb: LiveWatchMonitor): Promise<void> {
+        const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, true);
+        liveGdb.setupEvents(mi2);
+        const commands = [...this.gdbInitCommands];
+        mi2.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
+        commands.push('interpreter-exec console "set stack-cache off"');
+        commands.push('interpreter-exec console "set remote interrupt-on-connect off"');
+        if (this.serverController?.initCommands) {
+            commands.push(...this.serverController.initCommands());
+        }
+        const ret = mi2.start(this.args.cwd, commands);
+        return ret;
+    }
+        
     private sendContinue(): Promise<void> {
         return new Promise<void>((resolve) => {
             this.continuing = true;
@@ -997,16 +1051,47 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         const isBusy = !this.stopped || this.continuing || !this.isMIStatusStopped();
         switch (command) {
-            case 'set-force-disassembly':
-                response.body = { success: true };
-                this.forceDisassembly = args.force;
-                if (this.stopped) {
-                    this.activeEditorPath = null;
-                    this.sendEvent(new ContinuedEvent(this.currentThreadId, true));
-                    this.sendEvent(new StoppedEvent(this.stoppedReason, this.currentThreadId, true));
+            case 'liveEvaluate':
+                if (this.miLiveGdb) {
+                    const r: DebugProtocol.EvaluateResponse = {
+                        ...response,
+                        body: {
+                            result: undefined,
+                            variablesReference: undefined
+                        }
+                    };
+                    await this.miLiveGdb.evaluateRequest(r, args);
+                } else {
+                    this.sendResponse(response);
+                }
+                break;
+            case 'liveCacheRefresh':
+                if (this.miLiveGdb) {
+                    await this.miLiveGdb.refreshLiveCache(args);
                 }
                 this.sendResponse(response);
                 break;
+            case 'liveVariables':
+                if (this.miLiveGdb) {
+                    const r: DebugProtocol.VariablesResponse = {
+                        ...response,
+                        body: {
+                            variables: []
+                        }
+                    };
+                    return this.miLiveGdb.variablesRequest(r, args);
+                } else {
+                    this.sendResponse(response);
+                }
+                break;
+            case 'is-global-or-static': {
+                const varRef = args.varRef;
+                const id = this.variableHandles.get(varRef);
+                const ret = this.isVarRefGlobalOrStatic(varRef, id);
+                response.body = { success: ret };
+                this.sendResponse(response);
+                break;
+            }
             case 'load-function-symbols':
                 response.body = { functionSymbols: this.symbolTable.getFunctionSymbols() };
                 this.sendResponse(response);
@@ -1036,6 +1121,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             case 'set-var-format':
                 this.args.variableUseNaturalFormat = (args && args.hex) ? false : true;
                 this.setGdbOutputRadix();
+                this.sendResponse(response);
                 break;
             case 'read-registers':
                 if (isBusy || this.sendDummyStackTrace) { return retFunc(); }
@@ -1089,6 +1175,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         for (const cmd of this.formatRadixGdbCommand()) {
             try {
                 await this.miDebugger.sendCommand(cmd);
+                if (this.miLiveGdb?.miDebugger) {
+                    await this.miLiveGdb.miDebugger.sendCommand(cmd);
+                }
             }
             catch {}
         }
@@ -1375,6 +1464,10 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.disconnectingPromise =  new Promise<void>(async (resolve) => {
             this.serverConsoleLog('Begin disconnectRequest');
             const doDisconnectProcessing = async () => {
+                if (this.miLiveGdb) {
+                    this.miLiveGdb.quit();
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
                 await this.tryDeleteBreakpoints();
                 this.disableSendStoppedEvents = false;
                 this.attached = false;
@@ -1776,39 +1869,30 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    // returns [threadId, frameId]
-    protected static decodeReference(varRef: number): number[] {
-        return [(varRef & 0xFF00) >>> 8, varRef & 0xFF];
-    }
-
-    protected static encodeReference(threadId: number, frameId: number): number {
-        return ((threadId << 8) | (frameId & 0xFF)) & 0xFFFF;
-    }
-
     protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
         try {
             let name = args.name;
             let threadId = -1;
             let frameId = -1;
             const varRef = args.variablesReference;
-            const isReg = (varRef >= REG_HANDLE_START && varRef < REG_HANDLE_FINISH);
+            const isReg = (varRef >= HandleRegions.REG_HANDLE_START && varRef < HandleRegions.REG_HANDLE_FINISH);
             const globOrStatic = !isReg && this.getFloatingVariable(varRef, name);
             if (isReg) {
                 const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*');
                 name = varObj.name;
-                [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
+                [threadId, frameId] = decodeReference(varRef);
             } else if (globOrStatic) {
                 name = globOrStatic.name;
-            } else if (varRef >= VAR_HANDLES_START) {
+            } else if (varRef >= HandleRegions.VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
                 const fullName = parent.children[name];
                 name = fullName ? fullName : `${parent.name}.${name}`;
-            } else if (varRef >= STACK_HANDLES_START && varRef < STACK_HANDLES_FINISH) {
+            } else if (varRef >= HandleRegions.STACK_HANDLES_START && varRef < HandleRegions.STACK_HANDLES_FINISH) {
                 const tryName = this.createStackVarName(name, varRef);
                 if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
                     name = tryName;
                 }
-                [threadId, frameId] = GDBDebugSession.decodeReference(varRef);
+                [threadId, frameId] = decodeReference(varRef);
             }
             const res = await this.miDebugger.varAssign(name, args.value, threadId, frameId);
             // TODO: Need to check for errors
@@ -2103,24 +2187,32 @@ export class GDBDebugSession extends LoggingDebugSession {
         return this.allBreakPointsQ.add(doit, r, a);
     }
 
-    protected isVarRefGlobalOrStatic(varRef: number, id: any) {
-        if (varRef === GLOBAL_HANDLE_ID) {
-            return true;
+    protected isVarRefGlobalOrStatic(varRef: number, id: any): 'global' | 'static' | undefined {
+        if (varRef === HandleRegions.GLOBAL_HANDLE_ID) {
+            return 'global';
         }
-        if ((varRef >= STATIC_HANDLES_START) && (varRef <= STACK_HANDLES_FINISH)) {
-            return true;
+        if (varRef <= HandleRegions.STACK_HANDLES_FINISH) {
+            // These are scopes for local variable frames
+            return undefined;
+        }
+        if ((varRef >= HandleRegions.STATIC_HANDLES_START) && (varRef <= HandleRegions.STATIC_HANDLES_FINISH)) {
+            return 'static';
+        }
+        if ((varRef >= HandleRegions.REG_HANDLE_START) && (varRef <= HandleRegions.REG_HANDLE_FINISH)) {
+            return undefined;
+        }
+
+        if (id instanceof ExtendedVariable) {
+            return undefined;
         }
         if (id instanceof VariableObject) {
             const pRef = (id as VariableObject).parent;
             const parent = this.variableHandles.get(pRef);
             return this.isVarRefGlobalOrStatic(pRef, parent);
         }
-        if (id instanceof ExtendedVariable) {
-            return false;
-        }
 
-        console.log(`isVarRefGlobalOrStatic: What is this? varRef = ${varRef}`, id);
-        return false;
+        console.log(`isVarRefGlobalOrStatic: What is this? varRef = ${varRef}`, '0x' + varRef.toString(16).padStart(8, '0'), id);
+        return undefined;
     }
 
     protected dataBreakpointInfoRequest(response: DebugProtocol.DataBreakpointInfoResponse, args: DebugProtocol.DataBreakpointInfoArguments): void {
@@ -2132,9 +2224,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         };
 
         const ref = args.variablesReference;
-        if ((ref !== undefined) && args.name && !((ref >= REG_HANDLE_START) && (ref <= REG_HANDLE_FINISH))) {
+        if ((ref !== undefined) && args.name && !((ref >= HandleRegions.REG_HANDLE_START) && (ref <= HandleRegions.REG_HANDLE_FINISH))) {
             const id = this.variableHandles.get(args.variablesReference);
-            response.body.canPersist = this.isVarRefGlobalOrStatic(args.variablesReference, id);
+            response.body.canPersist = !!this.isVarRefGlobalOrStatic(args.variablesReference, id);
             const parentObj = (id as VariableObject);
             const fullName = (parentObj ? (parentObj.fullExp || parentObj.exp) + '.' : '') + args.name;
             response.body.dataId = fullName;
@@ -2343,7 +2435,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (this.args.showDevDebugOutput) {
                 this.handleMsg('log', `Returning dummy stack frame to workaround VSCode issue with pause button not working: ${JSON.stringify(args)}\n`);
             }
-            response.body.stackFrames = [new StackFrame(GDBDebugSession.encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
+            response.body.stackFrames = [new StackFrame(encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
             response.body.totalFrames = 1;
             this.onInternalEvents.emit('stack-trace-request');
             this.sendResponse(response);
@@ -2356,74 +2448,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, highFrame);
                 const ret: StackFrame[] = [];
                 for (const element of stack) {
-                    const stackId = GDBDebugSession.encodeReference(args.threadId, element.level);
+                    const stackId = encodeReference(args.threadId, element.level);
                     const file = element.file;
-                    let useNewDisassembly = true;
-                    let disassemble = this.forceDisassembly || !file;
-                    if (!disassemble) { disassemble = !this.checkFileExists(file); }
-                    if (!disassemble && this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
-                        const symbolInfo = this.symbolTable.getFunctionByName(element.function, element.fileName);
-                        let url: string;
-                        if (symbolInfo) {
-                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
-                            }
-                            else {
-                                url = `disassembly:///${symbolInfo.name}.cdasm`;
-                            }
-                            if (url === this.activeEditorPath) {
-                                useNewDisassembly = false;
-                                disassemble = true;
-                            }
-                        }
-                    }
-
-                    try {
-                        if (disassemble) {
-                            if (useNewDisassembly) {
-                                const tmp = `${element.function}@${element.address}`;
-                                const sf = new StackFrame(stackId, tmp);
-                                sf.instructionPointerReference = element.address;
-                                ret.push(sf);
-                            } else {
-                                const symbolInfo = await this.disassember.getDisassemblyForFunction(element.function, element.fileName);
-                                let line = -1;
-                                symbolInfo.instructions.forEach((inst, idx) => {
-                                    if (inst.address === element.address) { line = idx + 1; }
-                                });
-
-                                if (line !== -1) {
-                                    let fname: string;
-                                    if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                        fname = `${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
-                                    }
-                                    else {
-                                        fname = `${symbolInfo.name}.cdasm`;
-                                    }
-
-                                    const url = 'disassembly:///' + fname;
-                                    const sf = new StackFrame(stackId, `${element.function}@${element.address}`, new Source(fname, url), line, 0);
-                                    sf.instructionPointerReference = element.address;
-                                    ret.push(sf);
-                                }
-                                else {
-                                    const sf = new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0);
-                                    sf.instructionPointerReference = element.address;
-                                    ret.push(sf);
-                                }
-                            }
-                        } else {
-                            const src = file ? new Source(element.fileName, file) : undefined;
-                            const sf = new StackFrame(stackId, element.function + '@' + element.address, src, element.line, 0);
-                            sf.instructionPointerReference = element.address;
-                            ret.push(sf);
-                        }
-                    }
-                    catch (e) {
-                        const sf = new StackFrame(stackId, element.function + '@' + element.address, null, element.line, 0);
-                        sf.instructionPointerReference = element.address;
-                        ret.push(sf);
-                    }
+                    const src = file ? new Source(element.fileName, file) : undefined;
+                    const sf = new StackFrame(stackId, element.function + '@' + element.address, src, element.line, 0);
+                    sf.instructionPointerReference = element.address;
+                    ret.push(sf);
                 }
 
                 if ((ret.length > 0) && !ret[0].source) {
@@ -2462,16 +2492,19 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.onInternalEvents.emit('config-done');
     }
 
-    protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
+    protected async scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): Promise<void> {
         const scopes = new Array<Scope>();
-        scopes.push(new Scope('Local', parseInt(args.frameId as any), false));
-        scopes.push(new Scope('Global', GLOBAL_HANDLE_ID, false));
+        scopes.push(new Scope('Local', args.frameId, false));
+        scopes.push(new Scope('Global', HandleRegions.GLOBAL_HANDLE_ID, false));
 
-        const staticId = STATIC_HANDLES_START + parseInt(args.frameId as any);
-        scopes.push(new Scope('Static', staticId, false));
+        const [threadId, frameId] = decodeReference(args.frameId);
+        const frame = await this.miDebugger.getFrame(threadId, frameId);
+        const file = getPathRelative(this.args.cwd, frame?.file || '');
+        const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
+        scopes.push(new Scope(`Static: ${file}`, staticId, false));
         this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
 
-        scopes.push(new Scope('Registers', REG_HANDLE_START + parseInt(args.frameId as any)));
+        scopes.push(new Scope('Registers', HandleRegions.REG_HANDLE_START + args.frameId));
 
         response.body = {
             scopes: scopes
@@ -2510,7 +2543,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         try {
-            const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+            const [threadId, frameId] = decodeReference(args.variablesReference);
             const fmt = this.args.variableUseNaturalFormat ? 'N' : 'x';
             // --thread --frame does not work properly when combined with -data-list-register-values
             await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
@@ -2570,50 +2603,86 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    private async updateOrCreateVariable(
+        displayName: string | undefined, symOrExpr: string, gdbVarName: string, parentVarReference: number,
+        threadId: number, frameId: number, isFloating: boolean): Promise<DebugProtocol.Variable> {
+        try {
+            let varObj: VariableObject;
+            let outOfScope = false;
+            try {
+                const changes = await this.miDebugger.varUpdate(gdbVarName, threadId, frameId);
+                const changelist = changes.result('changelist');
+                for (const change of changelist || []) {
+                    const inScope = MINode.valueOf(change, 'in_scope');
+                    if (inScope === 'true') {
+                        const name = MINode.valueOf(change, 'name');
+                        const vId = this.variableHandlesReverse[name];
+                        const v = this.variableHandles.get(vId) as any;
+                        v.applyChanges(change /*, variable.valueStr*/);
+                    } else {
+                        const msg = `${symOrExpr} currently not in scope`;
+                        await this.miDebugger.sendCommand(`var-delete ${gdbVarName}`);
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
+                        }
+                        outOfScope = true;
+                        throw new Error(msg);
+                    }
+                }
+                const varId = this.variableHandlesReverse[gdbVarName];
+                varObj = this.variableHandles.get(varId) as any;
+            }
+            catch (err) {
+                try {
+                    if (outOfScope || (err instanceof MIError && err.message === 'Variable object not found')) {
+                        // Create variable in current frame/thread context. Matters when we have to set the variable */
+                        if (isFloating) {
+                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName);
+                        } else {
+                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '*', threadId, frameId);
+                        }
+                        const varId = this.findOrCreateVariable(varObj);
+                        varObj.exp = symOrExpr;
+                        varObj.id = varId;
+                    } else if (isFloating) {
+                        throw err;
+                    }
+                }
+                catch (err) {
+                    if (isFloating) {
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('stderr', `Could not create global/static variable ${symOrExpr}\n`);
+                            this.handleMsg('stderr', `Error: ${err}\n`);
+                        }
+                        varObj = null;
+                    } else {
+                        throw err;
+                    }
+                }
+            }
+            if (isFloating && varObj) {
+                this.putFloatingVariable(parentVarReference, symOrExpr, varObj);
+            }
+            return varObj?.toProtocolVariable(displayName || varObj.name);
+        }
+        catch (err) {
+            const ret: DebugProtocol.Variable = {
+                name: symOrExpr,
+                value: `<${err}>`,
+                variablesReference: 0
+            };
+            return ret;
+        }
+    }
+
     private async globalVariablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
         const symbolInfo: SymbolInformation[] = this.symbolTable.getGlobalVariables();
-
         const globals: DebugProtocol.Variable[] = [];
         try {
             for (const symbol of symbolInfo) {
                 const varObjName = `global_var_${symbol.name}`;
-                let varObj: VariableObject;
-                try {
-                    const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
-                    const changelist = changes.result('changelist');
-                    changelist.forEach((change) => {
-                        const name = MINode.valueOf(change, 'name');
-                        const vId = this.variableHandlesReverse[name];
-                        const v = this.variableHandles.get(vId) as any;
-                        v.applyChanges(change);
-                    });
-                    const varId = this.variableHandlesReverse[varObjName];
-                    varObj = this.variableHandles.get(varId) as any;
-                }
-                catch (err) {
-                    try {
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, symbol.name, varObjName);
-                            const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = symbol.name;
-                            varObj.id = varId;
-                        } else {
-                            throw err;
-                        }
-                    }
-                    catch (err) {
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', `Could not create global variable ${symbol.name}\n`);
-                            this.handleMsg('stderr', `Error: ${err}\n`);
-                        }
-                        varObj = null;
-                    }
-                }
-
-                if (varObj) {
-                    this.putFloatingVariable(args.variablesReference, symbol.name, varObj);
-                    globals.push(varObj.toProtocolVariable());
-                }
+                const tmp = await this.updateOrCreateVariable(symbol.name, symbol.name, varObjName, args.variablesReference, -1, -1, true);
+                globals.push(tmp);
             }
 
             response.body = { variables: globals };
@@ -2659,7 +2728,6 @@ export class GDBDebugSession extends LoggingDebugSession {
         args: DebugProtocol.VariablesArguments
     ): Promise<void> {
         const statics: DebugProtocol.Variable[] = [];
-
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             let file = frame.file; // Prefer full path name first
@@ -2673,48 +2741,11 @@ export class GDBDebugSession extends LoggingDebugSession {
             hasher.update(file || '');
             const fHash = hasher.digest('hex');
 
-            for (const symName of staticNames) {
-                const varObjName = this.createStaticVarName(fHash, symName);
-                let varObj: VariableObject;
-                try {
-                    const changes = await this.miDebugger.varUpdate(varObjName, -1, -1);
-                    const changelist = changes.result('changelist');
-                    changelist.forEach((change) => {
-                        const name = MINode.valueOf(change, 'name');
-                        const vId = this.variableHandlesReverse[name];
-                        const v = this.variableHandles.get(vId) as any;
-                        v.applyChanges(change);
-                    });
-                    const varId = this.variableHandlesReverse[varObjName];
-                    varObj = this.variableHandles.get(varId) as any;
-                }
-                catch (err) {
-                    try {
-                        // Not all static variables found via objdump can be found with gdb. Happens
-                        // with function/block scoped static variables (objdump uses one name and gdb uses another)
-                        // Try to report what we can. Others show up under the Locals section hopefully.
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, symName, varObjName);
-                            const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = symName;
-                            varObj.id = varId;
-                        } else {
-                            throw err;
-                        }
-                    }
-                    catch (err) {
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', `Could not create static variable ${file}:${symName}\n`);
-                            this.handleMsg('stderr', `Error: ${err}\n`);
-                        }
-                        varObj = null;
-                    }
-                }
-
-                if (varObj) {
-                    this.putFloatingVariable(args.variablesReference, symName, varObj);
-                    statics.push(varObj.toProtocolVariable());
-                }
+            for (const displayName of staticNames) {
+                const exprName = `'${file}'::${displayName}`;
+                const varObjName = this.createStaticVarName(fHash, exprName);
+                const tmp = await this.updateOrCreateVariable(displayName, exprName, varObjName, args.variablesReference, threadId, frameId, true);
+                statics.push(tmp);
             }
 
             response.body = { variables: statics };
@@ -2759,49 +2790,16 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.sendResponse(response);
             return;
         }
-        const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+        const [threadId, frameId] = decodeReference(args.variablesReference);
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
             await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
-                try {
-                    const varObjName = this.createStackVarName(variable.name, args.variablesReference);
-                    let varObj: VariableObject;
-                    try {
-                        const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
-                        const changelist = changes.result('changelist');
-                        changelist.forEach((change) => {
-                            const name = MINode.valueOf(change, 'name');
-                            const vId = this.variableHandlesReverse[name];
-                            const v = this.variableHandles.get(vId) as any;
-                            v.applyChanges(change/*, variable.valueStr*/);
-                        });
-                        const varId = this.variableHandlesReverse[varObjName];
-                        varObj = this.variableHandles.get(varId) as any;
-                    }
-                    catch (err) {
-                        if (err instanceof MIError && err.message === 'Variable object not found') {
-                            // Create variable in current frame/thread context. Matters when we have to set the variable */
-                            varObj = await this.miDebugger.varCreate(args.variablesReference, variable.name, varObjName, '*', threadId, frameId);
-                            const varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = variable.name;
-                            varObj.id = varId;
-                        }
-                        else {
-                            throw err;
-                        }
-                    }
-                    variables.push(varObj.toProtocolVariable());
-                }
-                catch (err) {
-                    variables.push({
-                        name: variable.name,
-                        value: `<${err}>`,
-                        variablesReference: 0
-                    });
-                }
+                const varObjName = this.createStackVarName(variable.name, args.variablesReference);
+                const tmp = await this.updateOrCreateVariable(variable.name, variable.name, varObjName, args.variablesReference, threadId, frameId, false);
+                variables.push(tmp);
             }
             response.body = {
                 variables: variables
@@ -2879,14 +2877,14 @@ export class GDBDebugSession extends LoggingDebugSession {
         // but it will re-evaluate everything in the Watch window. Basically, it has no concept of a union and there is no
         // way I know of to force a refresh
         */
-        if (args.variablesReference === GLOBAL_HANDLE_ID) {
+        if (args.variablesReference === HandleRegions.GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
-        } else if (args.variablesReference >= STATIC_HANDLES_START && args.variablesReference <= STATIC_HANDLES_FINISH) {
-            const [threadId, frameId] = GDBDebugSession.decodeReference(args.variablesReference);
+        } else if (args.variablesReference >= HandleRegions.STATIC_HANDLES_START && args.variablesReference <= HandleRegions.STATIC_HANDLES_FINISH) {
+            const [threadId, frameId] = decodeReference(args.variablesReference);
             return this.staticVariablesRequest(threadId, frameId, response, args);
-        } else if (args.variablesReference >= STACK_HANDLES_START && args.variablesReference < STACK_HANDLES_FINISH) {
+        } else if (args.variablesReference >= HandleRegions.STACK_HANDLES_START && args.variablesReference <= HandleRegions.STACK_HANDLES_FINISH) {
             return this.stackVariablesRequest(response, args);
-        } else if (args.variablesReference >= REG_HANDLE_START && args.variablesReference < REG_HANDLE_FINISH) {
+        } else if (args.variablesReference >= HandleRegions.REG_HANDLE_START && args.variablesReference <= HandleRegions.REG_HANDLE_FINISH) {
             return this.registersRequest(response, args);
         } else {
             id = this.variableHandles.get(args.variablesReference);
@@ -2896,7 +2894,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
-                    const pvar = id as VariableObject;
+                    const pVar = id as VariableObject;
 
                     // Variable members
                     let children: VariableObject[];
@@ -2907,7 +2905,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             const varId = this.findOrCreateVariable(child);
                             child.id = varId;
                             if (/^\d+$/.test(child.exp)) {
-                                child.fullExp = `${pvar.fullExp || pvar.exp}[${child.exp}]`;
+                                child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
                             }
                             else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
@@ -2922,9 +2920,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 } else {
                                     // The full-name is not always derivable from the parent and child info. Esp. children
                                     // of anonymous stuff. Might as well store all of them or set-value will not work.
-                                    pvar.children[child.exp] = child.name;
+                                    pVar.children[child.exp] = child.name;
                                 }
-                                child.fullExp = `${pvar.fullExp || pvar.exp}${suffix}`;
+                                child.fullExp = `${pVar.fullExp || pVar.exp}${suffix}`;
                             }
                             return child.toProtocolVariable();
                         });
@@ -3047,30 +3045,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): Promise<void> {
         try {
-            let assemblyMode = args.granularity === 'instruction';
-            if (!assemblyMode) {
-                // Following will be deprecated
-                assemblyMode = this.forceDisassembly;
-                if (!assemblyMode) {
-                    const frame = await this.miDebugger.getFrame(args.threadId, 0);
-                    assemblyMode = !this.checkFileExists(frame.file);
-
-                    if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
-                        const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                        if (symbolInfo) {
-                            let url: string;
-                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
-                            }
-                            else {
-                                url = `disassembly:///${symbolInfo.name}.cdasm`;
-                            }
-                            if (url === this.activeEditorPath) { assemblyMode = true; }
-                        }
-                    }
-                }
-            }
-
+            const assemblyMode = args.granularity === 'instruction';
             const done = await this.miDebugger.step(args.threadId, assemblyMode);
             this.sendResponse(response);
         }
@@ -3091,30 +3066,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): Promise<void> {
         try {
-            let assemblyMode = args.granularity === 'instruction';
-            if (!assemblyMode) {
-                // Following will be deprecated
-                assemblyMode = this.forceDisassembly;
-                if (!assemblyMode) {
-                    const frame = await this.miDebugger.getFrame(args.threadId, 0);
-                    assemblyMode = !this.checkFileExists(frame.file);
-
-                    if (this.activeEditorPath && this.activeEditorPath.startsWith('disassembly:///')) {
-                        const symbolInfo = this.symbolTable.getFunctionByName(frame.function, frame.fileName);
-                        if (symbolInfo) {
-                            let url: string;
-                            if (symbolInfo.file && (symbolInfo.scope !== SymbolScope.Global)) {
-                                url = `disassembly:///${symbolInfo.file}:::${symbolInfo.name}.cdasm`;
-                            }
-                            else {
-                                url = `disassembly:///${symbolInfo.name}.cdasm`;
-                            }
-                            if (url === this.activeEditorPath) { assemblyMode = true; }
-                        }
-                    }
-                }
-            }
-
+            const assemblyMode = args.granularity === 'instruction';
             const done = await this.miDebugger.next(args.threadId, assemblyMode);
             this.sendResponse(response);
         }
@@ -3191,7 +3143,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 let threadId = this.stoppedThreadId || 1;
                 let frameId = 0;
                 if (args.frameId !== undefined) {     // Should always be valid
-                    [threadId, frameId] = GDBDebugSession.decodeReference(args.frameId);
+                    [threadId, frameId] = decodeReference(args.frameId);
                 }
 
                 if (args.context !== 'repl') {
@@ -3267,6 +3219,13 @@ export class GDBDebugSession extends LoggingDebugSession {
                         resolve();
                     }
                 } else {        // This is an 'repl'
+                    if (args.expression.startsWith('+') && this.miLiveGdb) {
+                        args.expression = args.expression.substring(1);
+                        this.miLiveGdb.evaluateRequest(r, args).finally(() => {
+                            resolve();
+                        });
+                        return;
+                    }
                     try {
                         this.miDebugger.sendUserInput(args.expression).then((output) => {
                             if (typeof output === 'undefined') {

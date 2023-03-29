@@ -23,12 +23,16 @@
 		"bkpt",
 		"cdasm",
 		"cdmem",
+		"cjtag",
 		"cppdbg",
 		"dprintf",
+		"eabi",
 		"hwthread",
 		"insn",
 		"insns",
 		"instrs",
+		"jlink",
+		"jtag",
 		"Logpoints",
 		"nuttx",
 		"Prio",
@@ -36,6 +40,8 @@
 		"SEGGER",
 		"stlink",
 		"Syms",
+		"XPERIPHERALS",
 		"xtensa"
-	]
+	],
+	"cmake.configureOnOpen": false
 }
