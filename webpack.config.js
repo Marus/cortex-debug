@@ -115,37 +115,4 @@ const grapherConfig = {
   }
 };
 
-const docgenConfig = {
-  target: 'node',
-  entry: './src/docgen.ts',
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'docgen.js',
-    libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../[resource-path]'
-  },
-  devtool: 'source-map',
-  resolve: {
-    extensions: ['.ts', '.js']
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
-  },
-  plugins: [
-    new webpack.DefinePlugin({
-      __COMMIT_HASH__: JSON.stringify(commitHash)
-    })
-  ]  
-}
-
-module.exports = [extensionConfig, adapterConfig, grapherConfig, docgenConfig];
+module.exports = [extensionConfig, adapterConfig, grapherConfig];

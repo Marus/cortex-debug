@@ -5,9 +5,7 @@ import { TcpPortScanner } from './tcpportscanner';
 import { GDBServer } from './backend/server';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
-import * as os from 'os';
 import * as stream from 'stream';
-import * as path from 'path';
 import { GDBDebugSession } from './gdb';
 const readline = require('readline');
 
@@ -231,11 +229,6 @@ export interface SymbolFile {
     sectionMap: {[name: string]: ElfSection};
 }
 
-export interface LiveWatchConfig {
-    enabled: boolean;
-    samplesPerSecond?: number;
-}
-
 // Helper function to create a symbolFile object properly with required elements
 export function defSymbolFile(file: string): SymbolFile {
     const ret: SymbolFile = {
@@ -283,7 +276,6 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ctiOpenOCDConfig: CTIOpenOCDConfig;
     rttConfig: RTTConfiguration;
     swoConfig: SWOConfiguration;
-    liveWatch: LiveWatchConfig;
     graphConfig: any[];
     /// Triple slashes will cause the line to be ignored by the options-doc.py script
     /// We don't expect the following to be in booleann form or have the value of 'none' after
@@ -381,7 +373,6 @@ export interface GDBServerController extends EventEmitter {
     debuggerLaunchStarted(obj?: GDBDebugSession): void;
     debuggerLaunchCompleted(): void;
     rttPoll?(): void;
-    liveGdbInitCommands?(): string[];
     ctiStopResume?(action: CTIAction): void;
 }
 
@@ -529,7 +520,7 @@ export function toStringDecHexOctBin(val: number/* should be an integer*/): stri
         return 'NaN: Not a number';
     }
     if (!Number.isSafeInteger(val)) {
-        // TODO: Handle bigNum's. We eventually have to. We need to use bigint as javascript
+        // TODO: Handle big nums. We eventually have to. We need to use bigint as javascript
         // looses precision beyond 53 bits
         return 'Big Num: ' + val.toString() + '\nother-radix values not yet available. Sorry';
     }
@@ -883,40 +874,4 @@ export class SpawnLineReader extends EventEmitter {
             this.emit('error', e);
         }
     }
-}
-
-// Both arguments are expected to be full path names
-export function getPathRelative(base: string, target: string) {
-    if (os.platform() === 'win32') {
-        base = base.replace(/\\/g, '/');
-        target = target.replace(/\\/g, '/');
-    }
-    if (!path.isAbsolute(base) || !path.isAbsolute(target)) {
-        return target;
-    }
-    const baseElts = base.split('/');
-    const targetElts = target.split('/');
-    if (!base || !target || (base.length > target.length) || (baseElts[0] !== targetElts[0])) {
-        // Roots don't even match or base is larger than the target, so no point
-        return target;
-    }
-    while (baseElts.length && targetElts.length) {
-        if (baseElts[0] !== targetElts[0]) {
-            break;
-        }
-        baseElts.shift();
-        targetElts.shift();
-    }
-    if (baseElts.length === 0) {
-        return './' + targetElts.join('/');
-    }
-    if (baseElts.length > 4) {
-        return target;
-    }
-    while (baseElts.length) {
-        targetElts.unshift('..');
-        baseElts.shift();
-    }
-    const ret = targetElts.join('/');
-    return ret;
 }

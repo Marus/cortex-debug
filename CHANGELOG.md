@@ -1,47 +1,5 @@
 ChangeLog
 =========
-# V1.9.3/1.11.0 - Major release - only available as a Pre-release.
-* Bugfix: [#853 Multiple SWO (OpenOCD tpiu_swo_trace) Connections for External OpenOCD Server](https://github.com/Marus/cortex-debug/issues/853) The issue is with very long connection times inside WSL2 where we would timeout and try again. This caused multiple SWO connections which we did not even know was possible.
-
-# V1.9.3/1.11.0 - Major release - only available as a Pre-release.
-* Removed all (user visible) remnants of the old disassembly. The new disassmbly view is provided by VSCode and we supply the contents.
-* New handling of static variables. This is also a big change and it will be visible in the Variables window near the `Statics` section
-  * You will see the file the static variables are associated with
-  * When you add a static variable to the Live Watch window, it will show the simple name but on a hover you can see which file it comes from
-  * We needed this to disambiguate in the `Live Watch` window the origin of the static variable as they may not be unique
-  * If you add a static variable from the `Variables` window to the builtin `Watch` window you may see the entire path name. We cannot help it but you can edit it
-  * Known issue: no fix identified. The `Add to Live Watch` was added to all the `Variable` window elements. We have no way to tell VSCode, which categories (Scopes) should be allowed. So, on a right-click, you will see this menu option but it will not work and you will be notified if you use it.
-* Bugfix: [#832 Issue decoding templatized class...](https://github.com/Marus/cortex-debug/issues/832). Because of all the `::` and `<>`, variable names had to be quoted for GDB. Thanks to the issue submitter @jwbmwv for giving me a very simple test case
-
-
-# V1.9.2 - Major release - only available as a Pre-release.
-* Many features to Live Watch added
-  * You can now edit the expression
-  * You can move up/down the expression (they rotate if at edges)
-  * You can enable the global hex mode or use the hex mode on one expression at a time just like you can do it in the `WATCH` window
-    * To enable hex mode on a single expression, simply add a `,x` at the end of the expression. You can also do octal by using `,o`. However, this only works for the scalar variables and if it is a pinter or an array, it is not inherited by its children
-* There is now a button on the `VARIABLES`, `WATCH` and `CORTEX LIVE WATCH` panels title bar to enable/disable Hex display mode globally. You can still override on individual expressions.
-* Oops. The context menu in the Variables window for enable/disable Hex had disappeared.
-* Increased the number of threads (256) and frames (4K) you can have. Such limits should not even exist but it is an artifact of how VSCode works
-
-# V1.9.1 - Major release - only available as a Pre-release.
-* The Registers Panel is now removed. We had deprecated this window a year ago as it would not give you accurate register values based on the Program/Thread/Frame. The accurate version of the Registers have been available in the VARIABLES panel for almost a year now.
-* Fixed some issue when the Live Watch window was empty or variables added while there wasn't a debug session sometimes would not show
-* Bugfix: Potential fix for [Issue#840: Variables mixed with a bunch of configuration constants](https://github.com/Marus/cortex-debug/issues/840). Not really a bug but in some cases, the ELF file contained a bunch of symbols that were marked as real object which in fact are not. Trying to filter them out.
-
-# V1.9.0 - Major release - only available as a Pre-release.
-* Sorry we had some version number issues. This release was accidentally released as a production 1.7.1 and to undo that, we had to jump two minor versions numbers to keep up with VSCode versioning scheme. Apologies for the confusion.
-* This is a preview (Pre-release). The biggest feature is the addition of Live Watch. In your launch.json add an object property called `liveWatch` and Intellisense should fill out a template to enable Live Watch.
-  ```
-    "liveWatch": {
-        "enabled": true,
-        "samplesPerSecond": 4
-    },
-  ```
-* **MAJOR MAJOR change**: The Peripherals (SVD) panel is now maintained in a separate extension. We are disabling SVD support in this extension. Please refer to https://github.com/mcu-debug/peripheral-viewer. The new panel will show up as 'XPERIPHERALS'. You don't have to make any changes in your configurations. Things should just migrate over. Fingers crossed
-* There are tons of other changes planned as pre-releases and they will have versions 1.7.x (this is a Microsoft convention). There has been some major restructuring of our code and as such, this version may not be as stable as the production releases. **Please help us get to production**
-* To enable Pre-releases, you have use the Extension Manager/Pane within VSCode
-* Bugfix: [#831 Unable to read variables during 2nd breakpoint stop](https://github.com/Marus/cortex-debug/issues/831)
 
 # V1.8.0
 * We messed up and accidentally released 1.7.x in production mode. This is the original 1.6.11 or what it should have been. Because of the VSCode rules, we have to jump forward in release versions, although not much changed. Please accept our apologies
@@ -81,7 +39,7 @@ ChangeLog
 
 # V1.6.1
 * Bit more lenient parsing of GDB version number for custom builds. We still need to know the version number
-
+  
 # V1.6.1
 * Better error message when using GDB version less than 9. Starting with 1.5.2, we no longer support GDB version <= 8. For most of last year, we have been warning users of this happening in July 2022. This now August 2022 :-)
 
@@ -108,7 +66,7 @@ ChangeLog
 * Serial port changes: We have no changed how serial ports are supported. We now rely on the Serial Monitor extension from Microsoft to provide a copy of the `serialport` NPM module or you can compile it for cortex-debug yourself. The latter is always preferred. We do this because `serialport` is a binary module and requires it to be compiled using the exact version of Electron and Node that VSCode is built upon. This has become very difficult to support for every OS/Processor combination and it was also increasing the size of the corte-debug package -- exceeding the limits set by Microsoft
 * Cortex-Debug RTOS views will now work with MS `cppdbg` debugger and vice versa. You can use both or either or none. Until the next release, you will need pre-release versions of the Microsoft Embedded tools and this extension.
 * Thanks to a PR by MS embedded folks, you can now have memory views for pointers from the Variable and Watch windows.
-
+  
 # V1.5.2
 
 ## New features
@@ -123,7 +81,6 @@ ChangeLog
 * Reset button now resets all cores (using lifecycle management rules) and works the same as Restart
 
 # V1.5.1
-
 ## New features
 * Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
 * You can now use `breakAfterReset` and `runToEntryPoint` for an `attach` type launch configuration as well but they will only be used on a reset/restart.
@@ -146,19 +103,16 @@ General
 * Bugfix: #618, #619: Work around a gdb bug in info-variables. gdb either takes forever or crashes or runs out of memory
 * Bugfix: Implemented a workaround for VSCode issue with pause not working if neither `breakOnReset` or `runToEntryPoint` is set.
 * Bugfix: Workaround a gdb issue where it loses track of current thread when the current thread is deleted. This caused gdb `continue` to not work as expected. It may actually be a problem in the gdb-server as it reports a thread being deleted after a breakpoint/pause -- ie, program status changes while paused which is not expected.
-
+  
 # V1.4.3
 * Bugfix: Mistake in the release. No significant change
-
 # V1.4.2
 
 * FreeRTOS View performance improvements
 * FreeRTOS View now provides FW hints for missing information
 
 # V1.4.1
-
 ## New Features
-
 * Experimental: A memory view provided by VSCode can be launched by clicking on variables in the Variables Window. When available it is indicated by a small icon on the right edge.
   * We don't yet allow this for all variables. Only those that are obviously pointers. So no arrays, structures, expressions, etc.
   * VSCode is not very nice at the moment. It requests 128KB of memory (twice for one pointer) which for a lot of people could take a lot of time and it affects every time you step/pause/step. We will work with Microsoft to see if this can be customizable. If not we will remove this feature.
@@ -167,7 +121,6 @@ General
 ![](https://user-images.githubusercontent.com/41269583/159561475-b9a6fe5d-4fe3-4d29-aca7-9c2cebaf8a19.png)
 
 # V1.4.0
-
 ## New Features
 * Hover is now much more powerful. You can expand arrays, objects, etc.
 * RTOS View is now available. It is experimental and there is only support for FreeRTOS. **With your help, we can add support for more RTOSes**. You can enable this feature using the extension setting `"cortex-debug.showRTOS": true` via the interactive Setting dialog or adding it to User/Workspace/Folder settings.json. You can also use Command Palette  `Cortex-Debug: Toggle RTOS Panel` command. See [#605](https://github.com/Marus/cortex-debug/issues/605) and here is a screnshot ![screenshot](https://user-images.githubusercontent.com/41269583/159186076-e13db666-c7f7-405f-a75d-c9dd523577d4.png)<br>
@@ -198,7 +151,7 @@ General
 
 # V1.3.3
 * Bigfix: Regression since introducing chained configurations a month ago. We were not waiting for the gdb-server to open a TCP port and launching gdb far ahead or time. Most times, this worked okay but this is wrong. Reverting back to old/proper behavior.
-
+  
 # V1.3.2
 * Major change: We now require both `objdump` and `nm` for extract the source-file, type, address and size of symbols from the executable elf file. `objdump` gives us better (not perfect) symbol information and its types but bad file information. `nm` gives good file information but is wrong in classifying symbols types (function vs data). Gdb does not give us size information, hard to correlate and very version dependent. We need everything addresses, sizes, names and origin (files). Without this, we have trouble giving a proper experience wrt Statics, Globals and other things like disassembly.<br><br>
   There is no special setting for this. We modify the path to `objdump` and expect to find `nm` there. If not, we will continue with the debug session but experience will not be as good (you will see a warning in the Debug Console)
@@ -207,7 +160,7 @@ General
 * Minor improvement in disassembly.
 * Issue #592: We were not properly detecting used TCP ports causing failures in gdb-server starts. On some systems
 * Issue #585: RTT Terminals were not being re-cycled. Instead, new ones were being created requiring manual cleanup.
-
+  
 # V1.3.1 (preview release for 1.4.0)
 * Improved startup code for `launch` and `attach`. Quite a bit of old unneeded code removed following VSCode's current APIs. We were doing a few things inefficiently and thew updated VSCode APIs helped. We have a few too many options for startup like `runToEntryPoint`, `breakAfterReset`, etc. along with user defined overrides/pre/post commands. These are consolidated. This will also reduce the number of updated that happen to the various windows. We tested best we could but this is yet another major change.
 * Also the reset/restart processing uses virtually the same code as startup.
@@ -237,7 +190,6 @@ General
 
 # V1.2.0
 This is a rather large release. Contains many enhancements, new features and bug fixes
-
 ## New Features
 * **Release policy**: Our release policy and versioning system has changed. Microsoft recently released the ability to push pre-releases to the marketplace. With that came a new versioning scheme we have to follow. Our version numbers follow the SemVer specification major.minor.patch format. Releases with even minor numbers are final releases, and odd minor numbers are pre-releases. Between the last final release and this one, we have done 11 pre-releases and thanks to those who subscribed to those and helped refine the extension. See https://code.visualstudio.com/updates/v1_63#_pre-release-extensions <br>
 *Note: We will no longer be publishing releases (or pre-releases) via github as they are automatically pushed to your VSCode and for those that need a VSIX file, you can download it from the marketplace. This is until we can automate the github releases because it is error prone rework to do two kinds of releases*
@@ -258,18 +210,16 @@ This is a rather large release. Contains many enhancements, new features and bug
   * Platform specific settings for `objdumpPath`
   * On a restart, now the debugger will stop at your `runToEntryPoint` setting or `breakAfterReset` or just continue execution if neither is enabled.
   * File extensions `.S` and `.s` are recognized as valid assembly source code for breakpoint setting
-
-## Bug fixes:
+# Bug fixes:
 * STLink restart and attach were broken
 * With the new release of STM32 software, SWO was broken. Should be working now
 * Issue #561 more graceful handling when gdb is wedged
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
 * Issue #522: Qemu launch failed because it does not have a matching regular expression that indicated a start. It never does and code to handle that did not work. Fixed.
 * Issue #539: Using GDB to get some symbol information for locals and globals. Hopefully, gives better performance for large executables. Most information still comes from objdump though.
-
-## Others
+# Others
 * The `Adapter Output` window in the `OUTPUT` tab is no more. We have had a deprecation notice for months now and have been using the `gdb-server` tab in the `TERMINALS` tab.
-
+ 
 # V1.1.10
 * Bugfix: Unable to delete instruction breakpoint
 
@@ -282,13 +232,13 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Some improvements in disassembly
 * Maintenance: We were using very old API definitions from VSCode. We switched to the newest APIs for all types of breakpoint (function, file/line, data, instruction). Fingers crossed!
 * Bugfix: Double clicking in the disassembly window will now take you to the corresponding source file/line if any
-* There have been many other bug fixes for disassembly and a few enhancements. Improved performance, be able to see
+* There have been many other bug fixes for diassembly and a few enhancements. Improved performance, be able to see
 * more than one line of source (max of 3) -- note that gdb does not provide more than one line in the API
 * If you do use disassembly, there is some extra debugging output in the Debug Console to be able to track things
 * `showDevDebugOutput` is going through a change so we can better debug this extension and users can provide better bug reports. It is now a set of choices.
 
 # V1.1.7
-* Feature: New Disassembly mechanism. **While debugging** you can right click in the editor or the `CALL STACK` window on any thread/frame and you will see the Disassembly window show up. It is helpful to have the original source code and the Disassembly window side-by-side. THe Call-stack, Register in the Variable Window, C/C++ source code and Disassembly all track. Note that the Disassembly window is managed by Microsoft/VSCode.
+* Feature: New Disassembly mechanism. **While debugging** you can right click in the editor or the `CALL STACK` window on any thread/frame and you will see the Disassembly window show up. It is helpful to have the original source code and the Disassembly window side-by-side. THe Call-stack, Register in the Variable Window, C/C++ source code and Disassembly all track. Note that the Disassmebly window is managed by Microsoft/VSCode.
   * You can set breakpoints in the Disassembly window
   * If the focus is in the Disassembly window, then you can single step at an instruction level and follow long in both source and assembly. Some scrolling issues may be visible in the window that does not have focus.
   * See https://github.com/Marus/cortex-debug/wiki/Disassembly-Debugging
@@ -306,7 +256,6 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Feature: There now a command (default key-binding Ctrl+Shift+X) to toggle Hex display in the Variables window. Does not affect the Registers window (which may be going away) as it has its own command and button. You can find this command in the "Command Palette" as "Cortex-Debug: Toggle hex display in Variables window"
 * Fixed issue with with SWO (or RTT) not working the first time. It was a race condition where we were trying to connect too fast. Now we re-try. The max timeout is 5 mins.
 * Fixed SWO and RTT are now session aware. As in, you can have multiple RTT/SWO windows from different debug sessions.
-
 # V1.1.4
 * BugFix: Reset was broken in previous release
 * Reset and Restart should be working now for chained configurations
@@ -320,12 +269,12 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Bugfix: There was a bug dealing with large integers (bigger than 32 bits) in tooltip generation. May have caused Register values to be not displayed at all.
 
 # V1.1.2
-* Multi-core debug: Synchronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**. The top level configuration has to be a `Launch` session but others can be `Launch` or `Attach`. Same will be available with `Attach` at the root of the chain -- `Attach` requires all the configuration to be duplicated, so we wanted to wait for a bit more maturity.
+* Multi-core debug: Syncronized launching/terminating working, Registers & Peripherals working. **Restart/Reset needs a bit more work**. The top level configuration has to be a `Launch` session but others can be `Launch` or `Attach`. Same will be available with `Attach` at the root of the chain -- `Attach` requires all the configuration to be duplicated, so we wanted to wait for a bit more maturity.
 * Included with multi-core is multi-session where you can have multiple gdb-servers running at the same time. This is required for JLink where you may have one JLinkGDBServerCLExe connected to one core where as with OpenOCD and others, you will see the same GDB server shared for all the cores.
 * With the above changes, you may see multiple `Debug Consoles`, `gdb-server` Terminals, multiple programs in the `Call Stack` window, multiple `Registers` and multiple `Peripherals`.
 * DEPRECATION NOTICE: We are moving the registers window to the VARIABLES Panel (new category with Locals, Statics, Globals). As much as we liked having a separate panel for Registers, it was not possible (due to a VSCode limitation) for it to track the current Thread/Frame in the CALL STACK window. As such, you may have seen in accurate display. In the VARIABLES Panel, all values are in sync. with the CALL STACK window and it is also more efficient.
-* SWO: The method of configuring SWO has changed. There is a new GDB-script that we encourage users to customize. Frequently, vendors are using non-standard addresses for ARM debug components (CoreSight) and hence it is not possible for to detect or keep track. You can now customize the script yourself. See https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init. Currently, only OpenOCD uses this script while the others are still using the old scripts that were not easily modifiable. Feedback, improvements welcome.
-* OpenOCD requires additional configuration that is now done in a TCL script (config file in OpenOCD lingo). This is also user customizable as vendors are using non recommended ways of defining SWO/TPIU configuration. This is user configurable. See https://github.com/Marus/cortex-debug/blob/master/support/openocd-helpers.tcl. This file also has what is required to configure for an RTOS as the previous hard-coded method does not work well for multi-core systems and for those who do not follow OpenOCD recommended naming conventions.
+* SWO: The method of configuring SWO has changed. There is a new GDB-script that we encourage users to customize. Frequently, vendors are using non-standard addresses for ARM debug components (CoreSight) and hence it is not possibe for to detect or keep track. You can now customize the script yourself. See https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init. Currently, only OpenOCD uses this script while the others are still using the old scripts that were not easily modifiable. Feedback, improvements welcome.
+* OpenOCD requires additional configuration that is now done in a TCL script (config file in OpenOCD lingo). This is also user customizable as vendors are using non recommended ways of defining SWO/TPIU configuration. This is user configuratble. See https://github.com/Marus/cortex-debug/blob/master/support/openocd-helpers.tcl. This file also has what is required to configure for an RTOS as the previous hard-coded method does not work well for multi-core systems and for those who do not follow OpenOCD recommended naming conventions.
 
 # V1.1.1
 * For STLink Gdb-server and Cube-Programmer, set `LD_LIBRARY_PATH` on Linux and equivalent `DYLD_FALLBACK_LIBRARY_PATH` on MacOS
@@ -336,7 +285,7 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Bug fix: When using arm tools version 9+, some global variables were not being displayed
 
 # V1.1.0
-* Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering schema. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions
+* Version numbering change. Now that VSCode extensions are allowed to publish pre-releases via the marketplace, we will be moving to a new version numbering schem. A version number is (following SemVer standard) major.minor.patch. The general SemVer standard also allows a suffix for alpha, beta, etc., but this is not supported by the marketplace. Instead, they recommend that ODD minor versions be pre-releases and EVEN ones for release versions. This versioning scheme may change in the future. See: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#prerelease-extensions
   This will be the first pre-release coming to you direct from the marketplace.
 * Issue #538: Fixed bug SVD internal debug verification. Not supposed to be for production but got released and caused false errors. This in turn resulted in SVD load failure.
 * `launch.json` option `demangle` is removed. We always demangle. Its default value was true for quite some time. There is quite a bit of C++ now coming in and Rust as well. It appears there is no harm in always enabling it.
@@ -353,7 +302,7 @@ This is a rather large release. Contains many enhancements, new features and bug
 * Preliminary support for data watchpoints
 * SVD now can allow no merge of consecutive addresses with a -1 specified for `svdAddrGapThreshold`. This will make peripheral updates very slow but certain devices may need this option.
 * You can now save the output of a gdb-server into a text file by specifying `cortex-debug.dbgServerLogfile` in User/Workspace/Folder settings. This will save output from the servers from all sessions (not just the recent ones). This is primarily for debugging and for users when submitting issues.
-* Path names for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
+* Pathnames for gdb-servers can be OS specific. For instance `cortex-debug.openocdPath` can be suffixed with one of `.linux`, `.osx` or `.windows`. For instance `cortex-debug.openocdPath.windows` is used only on Windows and if that is missing, it will default looking for cortex-debug.openocdPath`.
 * SWO output can now be logged (saved) to a file just like RTT output
 * Issues #524 and #525
 * Improved handling of J-Link RTOS option (file extension), added NuttX
@@ -434,7 +383,6 @@ New Features
 # V0.4.1
 
 Minor bug fix. The `launch.json` option `clearSearch` was not working for `rttConfig`. Only affected OpenOCD users.
-
 # V0.4.0
 
 This is a major release with a lot of changes and many new features. The `TERMINAL` area of VSCode is utilized a lot to enable bidirectional communication with the firmware. It is used for RTT, SWO and Semi-hosting.
@@ -469,7 +417,6 @@ New Features:
    * WARNING: The `Adapter Output` window in the `OUTPUT` tab will go away. Replaced by the 'gdb-server' in the `TERMINAL` tab mentioned above.
 
 A big thanks to Henrik Maier @hwmaier for helping me with the RTT feedback. Without that, it would have taken a lot longer and perhaps not as nice.
-
 # V0.3.13
 
 New Features:
@@ -501,9 +448,7 @@ Bug Fixes:
 New Features:
    * Enable ChibiOS RTOS support for the J-Link server
    * Added additional details to the the register and field level hover tooltips in the peripheral register view.
-
 # V0.3.10
-
 This feature upgrades our VSCode dependency for the extension - as a result V0.3.10 will only support the Visual Studio Code version 1.52 and above.
 
 Also wanted to call out the `gdbPath` user setting that was introduced at V0.3.8 (but not included in the changelog) - this allows users to override the complete path to GDB including the executable name - allowing the use of `gdb-multiarch`.
@@ -528,7 +473,6 @@ Bug fix
    * Fixed issue with not being able to properly disable function break points
 
 # V0.3.7
-
 Minor bug fix release
 
 1. New feature

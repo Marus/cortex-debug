@@ -84,10 +84,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         ];
     }
 
-    public liveGdbInitCommands(): string[] {
-        return this.initCommands();
-    }
-
     // ST/OpenOCD HACK: There are two problems.
     // ST with their release on Dec 31 2021, released their FW/SW where it no longer works
     // when any configuring is done after reset. It is more than likely something that
@@ -98,7 +94,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     // step. So, in some cases, your PC an the stack don't match resulting in wrong source
     // being shown.
     //
-    // OpenOCD provides a hack to synchronize gdb and itself by issuing 'monitor gdb_sync' followed
+    // OpenOCD provides a hack to synchronze gdb and itself by issuing 'monitor gdb_sync' followed
     // by a 'stepi' which doesn't really do a stepi but can emulate a break due to a step that
     // gdb expects
     public launchCommands(): string[] {
@@ -260,10 +256,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         for (const cmd of this.args.openOCDLaunchCommands || []) {
             serverargs.push('-c', cmd);
-        }
-
-        if (this.args.liveWatch?.enabled) {
-            serverargs.push('-c', 'CDLiveWatchSetup');
         }
 
         OpenOCDLog('Launching: ' + serverargs.join(' '));
