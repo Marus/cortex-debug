@@ -520,7 +520,7 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external. For \"external\", please read our [Wiki](https://github.com/Marus/cortex-debug/wiki/External-gdb-server-configuration)",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external. For \"external\", [please read our Wiki](https://github.com/Marus/cortex-debug/wiki/External-gdb-server-configuration)",
                                 "enum": [
                                     "jlink",
                                     "openocd",
@@ -1620,7 +1620,7 @@
                         "properties": {
                             "servertype": {
                                 "type": "string",
-                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external. For \"external\", please read our [Wiki](https://github.com/Marus/cortex-debug/wiki/External-gdb-server-configuration)",
+                                "description": "GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external. For \"external\", [please read our Wiki](https://github.com/Marus/cortex-debug/wiki/External-gdb-server-configuration)",
                                 "enum": [
                                     "jlink",
                                     "openocd",
