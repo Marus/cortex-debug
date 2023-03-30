@@ -8,7 +8,9 @@ import { EventEmitter } from 'events';
 function get_ST_DIR() {
     switch (os.platform()) {
         case 'win32':
-            return 'C:\\ST';
+            const oldDirName = 'C:\\ST';
+            const newDirName = 'C:\\Program Files\\STMicroelectronics';
+            return fs.existsSync(newDirName) ? newDirName : oldDirName;
         case 'darwin':
             return '/Applications/STM32CubeIDE.app/Contents/Eclipse';
         default:
