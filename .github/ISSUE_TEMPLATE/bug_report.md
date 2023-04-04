@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Create a report to help us improve. Please make you search through our existing [issues](https://github.com/Marus/cortex-debug/issues?q=type:issue) (both open and closed)
 title: ''
 labels: ''
 assignees: ''
