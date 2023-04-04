@@ -19,29 +19,34 @@ Steps to reproduce the behavior:
 4. See issue
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+
+[comment]: <> A clear and concise description of what you expected to happen.
 
 **Screenshots**
-If applicable, add screenshots to help explain your problem.
+
+[comment]: <> If applicable, add screenshots to help explain your problem.
 
 **Environment (please complete the following information):**
+
+[comment]: <> Whenever possible, please make sure you are using the latest versions of VSCode and our extension
+
  - Cortex-Debug Version (this extension) [e.g. 0.2.3]
- - OS: [e.g. iOS]
- - GDB Version: [e.g. 1.12.1]
+ - OS: [e.g. Linux Ubuntu 18.04 LTS, Windows 11, etc.]
+ - GDB Version: [e.g. 1.11.1]
  - Compiler Toolchain Version: [e.g. arn-none-eabi V 11.1]
 
 **Please include `launch.json`**
 
 *Note: We are unlikely to look at the issue if you do not supply this*
 ```
-Paste console output here
+Paste launch.json contents here
 ```
 
 **Attach text from `Debug Console`**
 
 Please enable debug output in your launch.json (`"showDevDebugOutput": "raw"`). It this is too large, please attach it as a file
 ```
-Paste Debug Console output here
+Paste Debug Console contents here
 ```
 
 **Additional context**
