@@ -3103,6 +3103,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     private evaluateQ = new RequestQueue<DebugProtocol.EvaluateResponse, DebugProtocol.EvaluateArguments>();
     protected evaluateRequest(r: DebugProtocol.EvaluateResponse, a: DebugProtocol.EvaluateArguments): Promise<void> {
+        a.context = a.context || 'hover';       // Not sure who is calling with an undefined context
         if (a.context !== 'repl') {
             if (this.isBusy()) {
                 this.busyError(r, a);
@@ -3183,16 +3184,20 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                         catch (err) {
                             if (!this.isBusy() && (outOfScope || ((err instanceof MIError && err.message === 'Variable object not found')))) {
-                                if (args.frameId === undefined) {
-                                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
-                                } else {
-                                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
+                                try {
+                                    if (args.frameId === undefined) {
+                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                                    } else {
+                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
+                                    }
+                                    const varId = findOrCreateVariable(varObj);
+                                    varObj.exp = exp;
+                                    varObj.id = varId;
                                 }
-                                const varId = findOrCreateVariable(varObj);
-                                varObj.exp = exp;
-                                varObj.id = varId;
-                            }
-                            else {
+                                catch (e) {
+                                    throw e;
+                                }
+                            } else {
                                 throw err;
                             }
                         }

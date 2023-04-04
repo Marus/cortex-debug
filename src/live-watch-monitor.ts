@@ -83,6 +83,7 @@ export class VariablesHandler {
     public evaluateRequest(
         r: DebugProtocol.EvaluateResponse, a: DebugProtocol.EvaluateArguments,
         miDebugger: MI2, session: GDBDebugSession, forceNoFrameId = false): Promise<void> {
+        a.context = a.context || 'hover';
         if (a.context !== 'repl') {
             if (this.isBusy()) {
                 this.busyError(r, a);
@@ -164,14 +165,19 @@ export class VariablesHandler {
                                 if (this.cachedChangeList) {
                                     delete this.cachedChangeList[varObjName];
                                 }
-                                if (forceNoFrameId || (args.frameId === undefined)) {
-                                    varObj = await miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
-                                } else {
-                                    varObj = await miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
+                                try {
+                                    if (forceNoFrameId || (args.frameId === undefined)) {
+                                        varObj = await miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                                    } else {
+                                        varObj = await miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
+                                    }
+                                    const varId = this.findOrCreateVariable(varObj);
+                                    varObj.exp = exp;
+                                    varObj.id = varId;
                                 }
-                                const varId = this.findOrCreateVariable(varObj);
-                                varObj.exp = exp;
-                                varObj.id = varId;
+                                catch (e) {
+                                    throw e;
+                                }
                             }
                             else {
                                 throw err;
