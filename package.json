@@ -2986,7 +2986,7 @@
         "universal-analytics": "^0.5.3",
         "uuid": "^8.3.2",
         "vscode-jsonrpc": "^6.0.0",
-        "xml2js": "^0.4.23"
+        "xml2js": "^0.5.0"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
     "devDependencies": {
