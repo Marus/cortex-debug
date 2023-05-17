@@ -1134,10 +1134,11 @@
                                                         "type": {
                                                             "enum": [
                                                                 "console",
-                                                                "binary"
+                                                                "binary",
+                                                                "defmt"
                                                             ],
                                                             "default": "console",
-                                                            "description": "'console' with text input/output, 'binary' is for converting byte stream to other data types",
+                                                            "description": "'console' with text input/output, 'binary' is for converting byte stream to other data types, 'defmt' uses defmt-print",
                                                             "type": "string"
                                                         },
                                                         "prompt": {
