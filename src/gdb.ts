@@ -2498,7 +2498,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         scopes.push(new Scope('Global', HandleRegions.GLOBAL_HANDLE_ID, false));
 
         const [threadId, frameId] = decodeReference(args.frameId);
-        let file = '<unknown file>'
+        let file = '<unknown file>';
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             file = getPathRelative(this.args.cwd, frame?.file || '');
