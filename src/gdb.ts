@@ -661,15 +661,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                         // After the above, VSCode will set various kinds of breakpoints, watchpoints, etc. When all those things
                         // happen, it will finally send a configDone request and now everything should be stable
                         this.sendEvent(new GenericCustomEvent('post-start-gdb', this.args));
-                        if (this.args.liveWatch?.enabled) {
-                            const liveGdb = new LiveWatchMonitor(this);
-                            this.startGdbForLiveWatch(liveGdb).then(() => {
-                                this.handleMsg('stdout', 'Started live-monitor-gdb session\n');
-                                this.miLiveGdb = liveGdb;
-                            }, (e) => {
-                                this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
-                            });
-                        }
 
                         this.onInternalEvents.once('config-done', async () => {
                             // Let the gdb server settle down. They are sometimes still creating/delteting threads
@@ -789,6 +780,15 @@ export class GDBDebugSession extends LoggingDebugSession {
                     const swoRttCommands = this.serverController.swoAndRTTCommands();
                     for (const cmd of swoRttCommands) {
                         await this.miDebugger.sendCommand(cmd);
+                    }
+                    if (this.args.liveWatch?.enabled) {
+                        const liveGdb = new LiveWatchMonitor(this);
+                        this.startGdbForLiveWatch(liveGdb).then(() => {
+                            this.handleMsg('stdout', 'Started live-monitor-gdb session\n');
+                            this.miLiveGdb = liveGdb;
+                        }, (e) => {
+                            this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
+                        });
                     }
                 }
             }
@@ -2498,11 +2498,16 @@ export class GDBDebugSession extends LoggingDebugSession {
         scopes.push(new Scope('Global', HandleRegions.GLOBAL_HANDLE_ID, false));
 
         const [threadId, frameId] = decodeReference(args.frameId);
-        const frame = await this.miDebugger.getFrame(threadId, frameId);
-        const file = getPathRelative(this.args.cwd, frame?.file || '');
-        const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
-        scopes.push(new Scope(`Static: ${file}`, staticId, false));
-        this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
+        let file = '<unknown file>'
+        try {
+            const frame = await this.miDebugger.getFrame(threadId, frameId);
+            file = getPathRelative(this.args.cwd, frame?.file || '');
+        }
+        finally {
+            const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
+            scopes.push(new Scope(`Static: ${file}`, staticId, false));
+            this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
+        }
 
         scopes.push(new Scope('Registers', HandleRegions.REG_HANDLE_START + args.frameId));
 
