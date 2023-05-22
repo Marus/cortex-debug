@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Cache NPM Install
       id: cache-npm
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ./node_modules
         key: npm-${{ hashFiles('./package-lock.json') }}
@@ -31,7 +31,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Load NPM install
       id: cache-npm
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ./node_modules
         key: npm-${{ hashFiles('./package-lock.json') }}
@@ -53,7 +53,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Load NPM install
       id: cache-npm
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ./node_modules
         key: npm-${{ hashFiles('./package-lock.json') }}
