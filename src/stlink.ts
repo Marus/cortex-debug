@@ -171,8 +171,6 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             }
             serverargs.push('-cp', stm32cubeprogrammer);
         }
-
-        serverargs.push('--shared');        // Maybe we should share all the time
          
         if ((this.args.interface !== 'jtag') && (this.args.interface !== 'cjtag')) {       // TODO: handle ctag in when this server supports it
             serverargs.push('--swd');
