@@ -1,5 +1,5 @@
 ---
-name: Bug report
+name: Bug/issue report. You MUST use this form unless you have a feature request
 about: Create a report to help us improve
 title: ''
 labels: ''
