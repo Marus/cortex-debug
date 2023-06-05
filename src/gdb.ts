@@ -792,7 +792,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                         catch (e) {
                             this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
-                        };
+                        }
                     }
                 }
             }
@@ -2514,7 +2514,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             file = getPathRelative(this.args.cwd, frame?.file || '');
         }
-        catch (_e) {
+        catch () {
             // Do Nothing. If you hit step/next really really fast, this can fail our/gdb/gdb-server/vscode are out of synch.
             // Side effect is statics won't show up but only during the fast transitions.
             // Objective is just not to crash
