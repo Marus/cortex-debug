@@ -783,12 +783,16 @@ export class GDBDebugSession extends LoggingDebugSession {
                     }
                     if (this.args.liveWatch?.enabled) {
                         const liveGdb = new LiveWatchMonitor(this);
-                        this.startGdbForLiveWatch(liveGdb).then(() => {
+                        try {
+                            // We must connect while it is paused. If no breakAfterReset and no runToEntryPoint, the program will
+                            // continue but a connection from gdb will halt gdb-servers and we don't want that.
+                            await this.startGdbForLiveWatch(liveGdb);
                             this.handleMsg('stdout', 'Started live-monitor-gdb session\n');
                             this.miLiveGdb = liveGdb;
-                        }, (e) => {
+                        }
+                        catch (e) {
                             this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
-                        });
+                        };
                     }
                 }
             }
@@ -2494,6 +2498,13 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): Promise<void> {
         const scopes = new Array<Scope>();
+        response.body = {
+            scopes: scopes
+        };
+        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
+            this.sendResponse(response);
+            return Promise.resolve();
+        }
         scopes.push(new Scope('Local', args.frameId, false));
         scopes.push(new Scope('Global', HandleRegions.GLOBAL_HANDLE_ID, false));
 
@@ -2503,6 +2514,11 @@ export class GDBDebugSession extends LoggingDebugSession {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             file = getPathRelative(this.args.cwd, frame?.file || '');
         }
+        catch (_e) {
+            // Do Nothing. If you hit step/next really really fast, this can fail our/gdb/gdb-server/vscode are out of synch.
+            // Side effect is statics won't show up but only during the fast transitions.
+            // Objective is just not to crash
+        }
         finally {
             const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
             scopes.push(new Scope(`Static: ${file}`, staticId, false));
@@ -2510,10 +2526,6 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         scopes.push(new Scope('Registers', HandleRegions.REG_HANDLE_START + args.frameId));
-
-        response.body = {
-            scopes: scopes
-        };
         this.sendResponse(response);
     }
 
@@ -2956,8 +2968,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                             this.sendResponse(response);
                         };
                         const addOne = async () => {
-                            const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`), -1, -1);
                             try {
+                                const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`), -1, -1);
                                 const expanded = expandValue(this.createVariable.bind(this), variable.result('value'), varReq.name, variable);
                                 if (!expanded) {
                                     this.sendErrorResponse(response, 15, 'Could not expand variable');
