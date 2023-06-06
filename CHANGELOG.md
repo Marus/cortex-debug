@@ -4,6 +4,7 @@
 * Issue #861: Potential fix
 * Issue #867: STLink make it so that user has to enable `-shared` if needed. Before it was automatically added to the command-line and there was no (good) way to remove it
 * Issue #882: Potential fix. In some cases the extension would crash while single stepping
+* Issue #896: Bug in handling of OS specific overrides (like `cortex-debug.gdbPath.linux`)
 
 # V1.11.2
 * Minor bug fix to guard against invalid expressions (watch and live watch)
