@@ -1,5 +1,5 @@
 {
-    "version": "1.11.3-pre5",
+    "version": "1.11.3",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -2858,7 +2858,8 @@
                 "variables": {},
                 "languages": [
                     "c",
-                    "cpp"
+                    "cpp",
+                    "rust"
                 ]
             }
         ],
