@@ -2855,7 +2855,11 @@
                 "program": "./dist/debugadapter.js",
                 "runtime": "node",
                 "type": "cortex-debug",
-                "variables": {}
+                "variables": {},
+                "languages": [
+                    "c",
+                    "cpp"
+                ]
             }
         ],
         "menus": {
