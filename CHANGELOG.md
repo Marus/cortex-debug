@@ -1,5 +1,17 @@
 # ChangeLog
 
+# V1.12.0
+
+This is a major release. It has been in pre-release for quite a while and some of you have already been using it. Please refer to all the V1.11.x change logs to see what changed. Here is the biggest highlights
+
+* We now offer **Live Watch** for OpenOCD, STLink and JLink gdb-servers. **Live Watch** allows you watch a few global variables without halting the processor. The interface is similar to the standard VSCode `MATCH` panel. It has only been tested with the SWD interface (not JTAG). This is still considered **EXPERIMENTAL**. In your `launch.json` you can enable `liveWatch` (please use IntelliSense and it will give you sensible defaults). You can also follow the development of this in [Issue #810](https://github.com/Marus/cortex-debug/issues/810). We have had some stability issues with JLink though with some devices.
+* Our extension has been split up into multiple extensions so it can work with other debuggers like Microsoft, Arm, IAR, etc. They also work non-Arm devices. Please submit issues to the respective repos. We attempt to install these extensions automatically but had some reports of things not installing due to non-standard installation methods. We are sorry for any inconvenience
+  * [RTOS Views](https://marketplace.visualstudio.com/items?itemName=mcu-debug.rtos-views)
+  * [Memory View](https://marketplace.visualstudio.com/items?itemName=mcu-debug.memory-view)
+  * [Peripheral Viewer](https://marketplace.visualstudio.com/items?itemName=mcu-debug.peripheral-viewer)
+ 
+ *Note: Please install this extension using VSCode with a working internet connection. Do not try to install it manually. If you install it manually, then also make sure all the other dependent extensions are installed.*
+  
 # V1.11.3
 * Issue #861: Potential fix
 * Issue #867: STLink make it so that user has to enable `-shared` if needed. Before it was automatically added to the command-line and there was no (good) way to remove it
