@@ -29,6 +29,18 @@ const JLINK_VALID_RTOS: string[] = ['Azure', 'ChibiOS', 'embOS', 'FreeRTOS', 'Nu
 export class CortexDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     constructor(private context: vscode.ExtensionContext) {}
 
+    public provideDebugConfigurations(): vscode.ProviderResult<vscode.DebugConfiguration[]> {
+        return [{
+            name: 'Cortex Debug',
+            cwd: '${workspaceFolder}',
+            executable: './bin/executable.elf',
+            request: 'launch',
+            type: 'cortex-debug',
+            runToEntryPoint: 'main',
+            servertype: 'jlink'
+        }];
+    }
+    
     public resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
