@@ -11,6 +11,7 @@ export class RTTTerminal {
     protected ptyOptions: IPtyTerminalOptions;
     protected binaryFormatter: BinaryFormatter;
     private source: SocketRTTSource;
+    private firstHeaderWrite = true;
     public inUse = true;
     protected logFd: number;
     protected hrTimer: HrTimer = new HrTimer();
@@ -69,14 +70,73 @@ export class RTTTerminal {
         magentaWrite(`RTT connection on TCP port ${this.options.tcpPort} ended. Waiting for next connection...`, this.ptyTerm);
     }
 
+    /**
+     * Write buffer data to the log file.
+     * It does nothing if the file descriptor is not valid.
+     * @param data - The data to write.
+     */
+    private writeLogFile(data: Buffer) {
+        if (this.logFd >= 0) {
+            fs.writeSync(this.logFd, data);
+        }
+    }
+
+    /**
+     * Write buffer data to the log file appending a header data before
+     * it (normally used for adding a timestamp info).
+     * Notes:
+     * - It does nothing if the file descriptor is not valid.
+     * - At first time execution, it writes the header data to ensure
+     *   first data line written in file has the header.
+     * - For the sake of speed, location of end-of-line characters is
+     *   done by loop on each buffer byte. Also, the write to the file
+     *   system is done just one time after all bytes prepared in RAM,
+     *   this is why a list of Buffers is used to push each byte and
+     *   concatenate it into a new buffer that is going to be written.
+     * @param data - The data to write.
+     */
+    private writeLogFileWithHeader(data: Buffer, header: Buffer) {
+        let toWriteList = [];
+        if (this.logFd < 0) {
+            return;
+        }
+        if (this.firstHeaderWrite) {
+            toWriteList.push(header);
+            this.firstHeaderWrite = false;
+        }
+        for (let i = 0; i < data.length; i++) {
+            const chr = data[i];
+            // Ignore if not ASCII printable
+            // Allow Tabulation (9 == \t) and Line Feed (10 == \n)
+            if ( (chr < 32) || (chr > 126) ) {
+                if ( (chr != 9) && (chr != 10) ) {
+                    continue;
+                }
+            }
+            toWriteList.push(data.slice(i, i+1));
+            if (chr == 10) {
+                toWriteList.push(header);
+            }
+        }
+        if (toWriteList.length > 0) {
+            this.writeLogFile(Buffer.concat(toWriteList));
+        }
+    }
+
     private onData(data: Buffer) {
         try {
-            if (this.logFd >= 0) {
-                fs.writeSync(this.logFd, data);
-            }
             if (this.options.type === 'binary') {
+                this.writeLogFile(data);
                 this.binaryFormatter.writeBinary(data);
             } else {
+                if (this.options.timestamp) {
+                    let time = this.hrTimer.createDateTimestamp() + ' ';
+                    let timeBuf = Buffer.from(time, 'utf-8')
+                    this.writeLogFileWithHeader(data, timeBuf);
+                }
+                else {
+                    this.writeLogFile(data);
+                }
                 this.writeNonBinary(data);
             }
         }
@@ -105,7 +165,6 @@ export class RTTTerminal {
         if (this.options.timestamp) {
             time = this.hrTimer.createDateTimestamp() + ' ';
         }
-
         for (let ix = 1; ix < buf.length; ix++ ) {
             if (buf[ix - 1] !== 0xff) { continue; }
             const chr = buf[ix];
@@ -284,7 +343,7 @@ class BinaryFormatter {
                 const decodedValue = parseEncoded(this.buffer, this.encoding);
                 const decodedStr = padLeft(`${decodedValue}`, 12);
                 const scaledValue = padLeft(`${decodedValue * this.scale}`, 12);
-                
+
                 this.ptyTerm.write(`${timestamp} ${chars}  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
                 this.bytesRead = 0;
             }
