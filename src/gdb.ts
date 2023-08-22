@@ -327,15 +327,14 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
-    private origShowDevDebugOutput: ADAPTER_DEBUG_MODE;
     private setupLogger(enable: boolean, args: ConfigurationArguments) {
-        const level = enable && (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop;
-        const showTimes = (enable && (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE)) && args.showDevDebugTimestamps;
+        const level = enable && (args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop;
+        const showTimes = (enable && (args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE)) && args.showDevDebugTimestamps;
         logger.setup(level, false, showTimes);
     }
     private launchAttachInit(args: ConfigurationArguments) {
         // make sure to 'Stop' the buffered logging if 'trace' is not set
-        this.origShowDevDebugOutput = args.showDevDebugOutput;
+        args.pvtShowDevDebugOutput = args.showDevDebugOutput;
         this.setupLogger(true, args);
         if (args.showDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
@@ -346,7 +345,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). ` +
             'Usage info: https://github.com/Marus/cortex-debug#usage');
 
-        if (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+        if (this.args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
         }
 
@@ -666,12 +665,16 @@ export class GDBDebugSession extends LoggingDebugSession {
                             // Let the gdb server settle down. They are sometimes still creating/delteting threads
                             await new Promise<void>((r) => setTimeout(() => { this.startComplete(mode), r(); }, 100));
                             // We wait for all other initialization to complete so we don't create race conditions.
+                            // This is such a piece of shit/fragile code. Not sure how what VSCode is doing but it hangs when we send an appropriate
+                            // busy error.
                             if (this.sendDummyStackTrace) {
                                 this.onInternalEvents.once('stack-trace-request', () => {
                                     // Now, we wait for VSCode to query the stack trace. This is an issue with VSCode that if we don't allow it
                                     // to collect some thread/stack information, and we issue a continue, the pause button will never work.
-                                    this.sendDummyStackTrace = false;
-                                    this.finishStartSequence(mode);
+                                    // We sometimes seem to get duplicate stack trace requests (back to back). We have implemented the workaround for just
+                                    // one request but we have to handle multiple. Ridiculous. Not sure what we are doing wrong.
+                                    this.sendDummyStackTrace = false;       // Maybe this should be inside the timeout, it keeps returning dummy stack traces
+                                    setTimeout(() => this.finishStartSequence(mode), 100);
                                 });
                             } else {
                                 // Let VSCode finish its queries from the stop we sent in startComplete()
@@ -1643,7 +1646,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         if (type === 'target') { type = 'stdout'; }
         if (type === 'log') { type = 'stderr'; }
         msg = this.wrapTimeStamp(msg);
-        if (this.origShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+        if (this.args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             // Suppress output prevents so it does not flood the Debug Console with duplicate stuff.
             this.setupLogger(false, this.args);
             this.sendEvent(new OutputEvent(msg, type));
@@ -2425,10 +2428,13 @@ export class GDBDebugSession extends LoggingDebugSession {
         // Handle optional args when not passed
         args.startFrame = args.startFrame ?? 0;
         args.levels = args.levels ?? Infinity;
-        if (!this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing) {
-            this.sendResponse(response);
-            return Promise.resolve();
-        }
+        const createDummy = () => {
+            response.body.stackFrames = [new StackFrame(encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
+            response.body.totalFrames = 1;            
+        };
+        const isBusy = () => {
+            return !this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing;
+        };
         if (this.sendDummyStackTrace) {
             // VSCode has a bug. Once we send a Stopped Event, VSCode pause button refuses to work until some stack trace is
             // returned. We have issues during startup (and reset/restart) where we need to continue right after the initial
@@ -2439,9 +2445,13 @@ export class GDBDebugSession extends LoggingDebugSession {
             if (this.args.showDevDebugOutput) {
                 this.handleMsg('log', `Returning dummy stack frame to workaround VSCode issue with pause button not working: ${JSON.stringify(args)}\n`);
             }
-            response.body.stackFrames = [new StackFrame(encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
-            response.body.totalFrames = 1;
+            createDummy();
             this.onInternalEvents.emit('stack-trace-request');
+            this.sendResponse(response);
+            return Promise.resolve();
+        }
+        if (isBusy()) {
+            createDummy();
             this.sendResponse(response);
             return Promise.resolve();
         }
@@ -2459,16 +2469,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                     sf.instructionPointerReference = element.address;
                     ret.push(sf);
                 }
-
-                if ((ret.length > 0) && !ret[0].source) {
-                    /*
-                    // Let VSCode stabilize on our stack information
-                    setTimeout(() => {
-                        this.sendEvent(new GenericCustomEvent('open-disassembly', {}));
-                    }, 10);
-                    */
-                }
-
                 response.body = {
                     stackFrames: ret,
                     totalFrames: maxDepth
@@ -2477,7 +2477,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 resolve();
             }
             catch (err) {
-                if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
+                if (isBusy()) {     // Between the time we asked for a info, a continue occurred
                     this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
                 } else {
                     this.sendResponse(response);

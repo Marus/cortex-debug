@@ -303,8 +303,8 @@ export class SymbolTable {
             }
             catch (e) {
                 // We treat this is non-fatal, but why did it fail?
-                this.gdbSession.handleMsg('log', `Error: objdump failed! statics/globals/functions may not be properly classified: ${e.toString()}`);
-                this.gdbSession.handleMsg('log', '    ENOENT means program not found. If that is not the issue, please report this problem.');
+                this.gdbSession.handleMsg('log', `Error: objdump failed! statics/globals/functions may not be properly classified: ${e.toString()}\n`);
+                this.gdbSession.handleMsg('log', '    ENOENT means program not found. If that is not the issue, please report this problem.\n');
                 resolve();
             }
         });
