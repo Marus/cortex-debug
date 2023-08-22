@@ -3042,6 +3042,7 @@
         "compile": "webpack --mode development && node dist/docgen.js",
         "test-compile": "tsc -p ./",
         "package": "node ./release.js --package",
-        "publish": "node ./release.js --publish --vsx-also"
+        "publish": "node ./release.js --publish --vsx-also",
+        "lint": "./node_modules/tslint/bin/tslint --project ."
     }
 }

@@ -2430,7 +2430,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         args.levels = args.levels ?? Infinity;
         const createDummy = () => {
             response.body.stackFrames = [new StackFrame(encodeReference(args.threadId, 0), 'cortex-debug-dummy', null, 0, 0)];
-            response.body.totalFrames = 1;            
+            response.body.totalFrames = 1;
         };
         const isBusy = () => {
             return !this.isMIStatusStopped() || !this.stopped || this.disableSendStoppedEvents || this.continuing;
