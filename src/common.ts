@@ -289,6 +289,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     /// We don't expect the following to be in booleann form or have the value of 'none' after
     /// The config provider has done the conversion. If it exists, it means output 'something'
     showDevDebugOutput: ADAPTER_DEBUG_MODE;
+    pvtShowDevDebugOutput: ADAPTER_DEBUG_MODE;
     showDevDebugTimestamps: boolean;
     cwd: string;
     extensionPath: string;
