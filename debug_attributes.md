@@ -93,7 +93,7 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | swoConfig<br>.swoFrequency | number | Both | SWO frequency in Hz. |
 | swoConfig<br>.swoPath | string | Both | Path name when source is "file" or "serial". Typically a /path-name or a serial-port-name |
 | swoConfig<br>.swoPort | string | Both | When server is "external" && source is "socket", port to connect to. Format [host:]port |
-| symbolFiles | object[] | Both | List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols |
+| symbolFiles | object[] | Both | Array of ELF files to load symbols from instead of the executable file. Each item in the array cab be a string or an object. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols |
 | targetId | string &#124; number | Both | On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware) |
 | targetProcessor | number | Both | The processor you want to debug. Zero based integer index. Must be less than 'numberOfProcessors' |
 | toolchainPrefix | string | Both | This setting can be used to override the toolchainPrefix user setting for a particular launch configuration. Default = "arm-none-eabi" |

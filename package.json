@@ -1,5 +1,5 @@
 {
-    "version": "1.12.1-pre1",
+    "version": "1.12.1-pre2",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -678,10 +678,10 @@
                                 "type": "string"
                             },
                             "symbolFiles": {
-                                "description": "List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
+                                "description": "Array of ELF files to load symbols from instead of the executable file. Each item in the array cab be a string or an object. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
                                 "items": {
-                                    "type": "object",
+                                    "type": ["object", "string"],
                                     "properties": {
                                         "file": {
                                             "type": "string",
@@ -1782,10 +1782,10 @@
                                 "default": null
                             },
                             "symbolFiles": {
-                                "description": "List of ELF files to load symbols from instead of the executable file. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
+                                "description": "Array of ELF files to load symbols from instead of the executable file. Each item in the array cab be a string or an object. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
                                 "items": {
-                                    "type": "object",
+                                    "type": ["object", "string"],
                                     "properties": {
                                         "file": {
                                             "type": "string",

@@ -351,7 +351,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). ` +
             'Usage info: https://github.com/Marus/cortex-debug#usage');
 
-        if (this.args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+        if (this.args.showDevDebugOutput) {
             this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
         }
 

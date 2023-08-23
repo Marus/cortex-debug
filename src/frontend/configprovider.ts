@@ -269,7 +269,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         // Right now, we don't consider a bad executable as fatal. Technically, you don't need an executable but
         // users will get a horrible debug experience ... so many things don't work.
         const def = defSymbolFile(config.executable);
-        const symFiles: SymbolFile[] = config.symbolFiles || [def];
+        const symFiles: SymbolFile[] = config.symbolFiles?.map((v) => { return typeof v === 'string' ? defSymbolFile(v) : v}) || [def];
         if (!symFiles || (symFiles.length === 0)) {
             vscode.window.showWarningMessage('No "executable" or "symbolFiles" specified. We will try to run program without symbols');
         } else {
@@ -310,6 +310,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 fName = path.normalize(fName).replace(/\\/g, '/');
                 config.loadFiles[ix] = fName;
             }
+        } else if (config.executable && config.symbolFiles) {
+            // This is a special case when you have symbol files, we don't pass anything to gdb on the command line
+            // and a target load will fail. Create a loadFiles from the executable if it exists.
+            config.loadFiles = [ config.executable ];
         }
     }
 
