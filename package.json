@@ -3026,7 +3026,7 @@
         "url": "https://github.com/Marus/cortex-debug/issues"
     },
     "scripts": {
-        "vscode:prepublish": "webpack --mode production && node dist/docgen.js",
+        "vscode:prepublish": "npm run lint && webpack --mode production && node dist/docgen.js",
         "watch": "webpack --mode development --watch",
         "compile": "webpack --mode development && node dist/docgen.js",
         "test-compile": "tsc -p ./",
