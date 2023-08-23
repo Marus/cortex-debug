@@ -2839,17 +2839,6 @@
                         "label": "Cortex Debug: ST-Util"
                     }
                 ],
-                "initialConfigurations": [
-                    {
-                        "name": "Cortex Debug",
-                        "cwd": "${workspaceFolder}",
-                        "executable": "./bin/executable.elf",
-                        "request": "launch",
-                        "type": "cortex-debug",
-                        "runToEntryPoint": "main",
-                        "servertype": "jlink"
-                    }
-                ],
                 "label": "Cortex Debug",
                 "program": "./dist/debugadapter.js",
                 "runtime": "node",
