@@ -208,7 +208,6 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
 }
 
 const traceThreads = false;
-
 export class GDBDebugSession extends LoggingDebugSession {
     private server: GDBServer;
     public args: ConfigurationArguments;
@@ -327,17 +326,24 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendResponse(response);
     }
 
-    private setupLogger(enable: boolean, args: ConfigurationArguments) {
-        const level = enable && (args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop;
-        const showTimes = (enable && (args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE)) && args.showDevDebugTimestamps;
-        logger.setup(level, false, showTimes);
-    }
     private launchAttachInit(args: ConfigurationArguments) {
         // make sure to 'Stop' the buffered logging if 'trace' is not set
         args.pvtShowDevDebugOutput = args.showDevDebugOutput;
-        this.setupLogger(true, args);
         if (args.showDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+            logger.setup(Logger.LogLevel.Verbose , false, false);
             args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
+        }
+
+        if (args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+            logger.init((ev: OutputEvent) => {
+                // This callback is called with every msg. We don't want to create a recursive
+                // callback to output a single message. Turn off logging, print and then turn it
+                // back on.
+                logger.setup(Logger.LogLevel.Stop, false, false);
+                const msg = this.wrapTimeStamp(ev.body.output);
+                this.sendEvent(new OutputEvent(msg, ev.body.category));
+                logger.setup(Logger.LogLevel.Verbose, false, false);
+            });
         }
 
         this.args = this.normalizeArguments(args);
@@ -1624,12 +1630,16 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected timeStart = Date.now();
     protected wrapTimeStamp(str: string): string {
         if (this.args.showDevDebugOutput && this.args.showDevDebugTimestamps) {
-            const elapsed = Date.now() - this.timeStart;
-            const elapsedStr = elapsed.toString().padStart(10, '0');
-            return elapsedStr + ': ' + str;
+            return this.wrapTimeStampRaw(str);
         } else {
             return str;
         }
+    }
+
+    private wrapTimeStampRaw(str: string) {
+        const elapsed = Date.now() - this.timeStart;
+        const elapsedStr = elapsed.toString().padStart(10, '0');
+        return elapsedStr + ': ' + str;
     }
 
     private serverControllerEvent(event: DebugProtocol.Event) {
@@ -1645,15 +1655,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
         if (type === 'target') { type = 'stdout'; }
         if (type === 'log') { type = 'stderr'; }
-        msg = this.wrapTimeStamp(msg);
-        if (this.args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
-            // Suppress output prevents so it does not flood the Debug Console with duplicate stuff.
-            this.setupLogger(false, this.args);
-            this.sendEvent(new OutputEvent(msg, type));
-            this.setupLogger(true, this.args);
-        } else {
-            this.sendEvent(new OutputEvent(msg, type));
-        }
+        this.sendEvent(new OutputEvent(msg, type));
     }
 
     protected handleRunning(info: MINode) {
