@@ -169,7 +169,7 @@ export class VariablesHandler {
                                     if (forceNoFrameId || (args.frameId === undefined)) {
                                         varObj = await miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
                                     } else {
-                                        varObj = await miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
+                                        varObj = await miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
                                     }
                                     const varId = this.findOrCreateVariable(varObj);
                                     varObj.exp = exp;

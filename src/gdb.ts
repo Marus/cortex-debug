@@ -3211,7 +3211,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                                     // We always create a floating variable so it will be updated in the context of the current frame
                                     // Technicall, we should be able to bind this to this frame but for some reason gdb gets confused
                                     // from previous stack frames and returns the wrong results or says nothing changed when in fact it has
-                                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                                    if (args.frameId === undefined) {
+                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                                    } else {
+                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
+                                    }
+
                                     const varId = findOrCreateVariable(varObj);
                                     varObj.exp = exp;
                                     varObj.id = varId;
