@@ -1,4 +1,8 @@
 # ChangeLog
+# V1.12.1
+* Fix for [#923: Local variables with same name between functions not tracking or updating context](https://github.com/Marus/cortex-debug/issues/923)
+* Tag VSCode generated debug lines with a timestamp when `showDevDebugTimestamps` is set to true
+* For `symbolFIles`, you can simply specify a elf file or specify an object that has other options like offsets. If you do not need any special options, `symbolFiles` is now a simple array of elf-file-names
 
 # V1.12.0
 
