@@ -331,10 +331,6 @@ export class GDBDebugSession extends LoggingDebugSession {
         args.pvtShowDevDebugOutput = args.showDevDebugOutput;
         if (args.showDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             logger.setup(Logger.LogLevel.Verbose , false, false);
-            args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
-        }
-
-        if (args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
             logger.init((ev: OutputEvent) => {
                 // This callback is called with every msg. We don't want to create a recursive
                 // callback to output a single message. Turn off logging, print and then turn it
@@ -344,6 +340,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.sendEvent(new OutputEvent(msg, ev.body.category));
                 logger.setup(Logger.LogLevel.Verbose, false, false);
             });
+            args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
         }
 
         this.args = this.normalizeArguments(args);
@@ -1655,7 +1652,14 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
         if (type === 'target') { type = 'stdout'; }
         if (type === 'log') { type = 'stderr'; }
-        this.sendEvent(new OutputEvent(msg, type));
+        msg = this.wrapTimeStamp(msg);
+        if (this.args.pvtShowDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
+            logger.setup(Logger.LogLevel.Stop, false, false);
+            this.sendEvent(new OutputEvent(msg, type));
+            logger.setup(Logger.LogLevel.Verbose, false, false);
+        } else {
+            this.sendEvent(new OutputEvent(msg, type));
+        }
     }
 
     protected handleRunning(info: MINode) {
@@ -3204,11 +3208,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                         catch (err) {
                             if (!this.isBusy() && (outOfScope || ((err instanceof MIError && err.message === 'Variable object not found')))) {
                                 try {
-                                    if (args.frameId === undefined) {
-                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
-                                    } else {
-                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '*', threadId, frameId);
-                                    }
+                                    // We always create a floating variable so it will be updated in the context of the current frame
+                                    // Technicall, we should be able to bind this to this frame but for some reason gdb gets confused
+                                    // from previous stack frames and returns the wrong results or says nothing changed when in fact it has
+                                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
                                     const varId = findOrCreateVariable(varObj);
                                     varObj.exp = exp;
                                     varObj.id = varId;
