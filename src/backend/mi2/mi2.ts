@@ -973,8 +973,8 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     public static getThreadFrameStr(threadId: number, frameId: number): string {
-        const th = threadId > 0 ? `--thread ${threadId} ` : '';
-        const fr = frameId >= 0 ? `--frame ${frameId}` : '';
+        const th = ((threadId !== undefined) && (threadId > 0)) ? `--thread ${threadId} ` : '';
+        const fr = ((frameId !== undefined) && (frameId >= 0)) ? `--frame ${frameId}` : '';
         return th + fr;
     }
 

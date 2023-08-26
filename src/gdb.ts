@@ -1891,9 +1891,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             const isReg = (varRef >= HandleRegions.REG_HANDLE_START && varRef < HandleRegions.REG_HANDLE_FINISH);
             const globOrStatic = !isReg && this.getFloatingVariable(varRef, name);
             if (isReg) {
-                const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*');
-                name = varObj.name;
                 [threadId, frameId] = decodeReference(varRef);
+                const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*', threadId, frameId);
+                name = varObj.name;
             } else if (globOrStatic) {
                 name = globOrStatic.name;
             } else if (varRef >= HandleRegions.VAR_HANDLES_START) {
@@ -1908,7 +1908,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 [threadId, frameId] = decodeReference(varRef);
             }
             const res = await this.miDebugger.varAssign(name, args.value, threadId, frameId);
-            // TODO: Need to check for errors
+            // TODO: Need to check for errors? Currently handled by outer try/catch
             response.body = {
                 value: res.result('value')
             };
@@ -2662,7 +2662,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         if (isFloating) {
                             varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName);
                         } else {
-                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '*', threadId, frameId);
+                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '@', threadId, frameId);
                         }
                         const varId = this.findOrCreateVariable(varObj);
                         varObj.exp = symOrExpr;
