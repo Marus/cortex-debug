@@ -279,7 +279,7 @@ function padLeft(str: string, len: number, chr = ' '): string {
     if (str.length >= len) {
         return str;
     }
-    str = chr.repeat(len - str.length) + str;
+    str = str.padStart(len, chr);
     return str;
 }
 
