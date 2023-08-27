@@ -661,6 +661,10 @@ export class HrTimer {
         return this.start;
     }
 
+    public static getNow(): bigint {
+        return process.hrtime.bigint();
+    }
+
     public deltaNs(): string {
         return (process.hrtime.bigint() - this.start).toString();
     }

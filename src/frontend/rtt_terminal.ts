@@ -12,7 +12,8 @@ export class RTTTerminal {
     protected binaryFormatter: BinaryFormatter;
     private source: SocketRTTSource;
     public inUse = true;
-    protected logFd: number;
+    protected logFd: number = -1;
+    private startOfNewLine = true;
     protected hrTimer: HrTimer = new HrTimer();
     public get terminal(): vscode.Terminal {
         return this.ptyTerm ? this.ptyTerm.terminal : null;
@@ -26,7 +27,6 @@ export class RTTTerminal {
         this.createTerminal();
         this.sanitizeEncodings(this.options);
         this.connectToSource(src);
-        this.openLogFile();
     }
 
     private connectToSource(src: SocketRTTSource) {
@@ -51,9 +51,11 @@ export class RTTTerminal {
             magentaWrite(`${src.connError.message}\n`, this.ptyTerm);
         } else if (src.connected) {
             this.source = src;
+            this.openLogFile();
         } else {
             src.once('connected', () => {
                 this.source = src;
+                this.openLogFile();
             });
         }
     }
@@ -62,19 +64,19 @@ export class RTTTerminal {
         this.source = null;
         this.inUse = false;
         if (!this.options.noclear && (this.logFd >= 0)) {
-            try { fs.closeSync(this.logFd); } catch { }
+            this.closeLogFd(false);
+        } else if ((this.logFd >= 0) && !this.startOfNewLine) {
+            this.writeLogFile(Buffer.from('\n'));
+            this.startOfNewLine = true;
         }
-        this.logFd = -1;
         this.ptyTerm.write(RESET + '\n');
         magentaWrite(`RTT connection on TCP port ${this.options.tcpPort} ended. Waiting for next connection...`, this.ptyTerm);
     }
 
     private onData(data: Buffer) {
         try {
-            if (this.logFd >= 0) {
-                fs.writeSync(this.logFd, data);
-            }
             if (this.options.type === 'binary') {
+                this.writeLogFile(data);
                 this.binaryFormatter.writeBinary(data);
             } else {
                 this.writeNonBinary(data);
@@ -86,8 +88,7 @@ export class RTTTerminal {
     }
 
     private openLogFile() {
-        this.logFd = -1;
-        if (this.options.logfile) {
+        if ((this.logFd < 0) && this.options.logfile) {
             try {
                 this.logFd = fs.openSync(this.options.logfile, 'w');
             }
@@ -96,14 +97,58 @@ export class RTTTerminal {
                 console.error(msg);
                 magentaWrite(msg, this.ptyTerm);
             }
+        } else if ((this.logFd >= 0) && !this.options.logfile) {
+            // It is already open but new connection does not want logging anymore
+            this.closeLogFd(false);
         }
     }
 
+    private writeLogFile(data: Buffer) {
+        if (this.logFd >= 0) {
+            fs.writeSync(this.logFd, data);
+        }
+    }
+
+    private writeNonBinaryChunk(data: Buffer | string, ts: string) {
+        if (this.logFd >= 0) {
+            let str: string;
+            if ((typeof data !== 'string') && !(data instanceof String)) {
+                str = data.toString('utf8');
+            } else {
+                str = data as string;
+            }
+            if (ts) {
+                // We emulate what the terminal does adding a timestamp after all new lines 
+                if (this.startOfNewLine) {
+                    this.writeLogFile(Buffer.from(ts));
+                }
+                this.startOfNewLine = false;
+                if (str.endsWith('\n')) {
+                    str = str.slice(0, str.length - 1);
+                    this.startOfNewLine = true;         // Get it the next time something is written
+                }
+                str = str.replace(/\n/g, '\n' + ts);
+                this.writeLogFile(Buffer.from(this.startOfNewLine ? str + '\n' : str));
+            } else {
+                this.writeLogFile(Buffer.from(str));
+            }
+        }
+
+        this.ptyTerm.writeWithHeader(data, ts);
+    }
+
+    private lastTime: bigint = BigInt(-1);
+    private lastTimeStr: string = '';
     private writeNonBinary(buf: Buffer) {
         let start = 0;
         let time = '';
         if (this.options.timestamp) {
-            time = this.hrTimer.createDateTimestamp() + ' ';
+            const now = HrTimer.getNow();
+            if (now !== this.lastTime) {
+                this.lastTime = now;
+                this.lastTimeStr = this.hrTimer.createDateTimestamp() + ' ';
+            }
+            time = this.lastTimeStr;
         }
 
         for (let ix = 1; ix < buf.length; ix++ ) {
@@ -111,16 +156,16 @@ export class RTTTerminal {
             const chr = buf[ix];
             if (((chr >= 48) && (chr <= 57)) || ((chr >= 65) && (chr <= 90))) {
                 if (ix >= 1) {
-                    this.ptyTerm.writeWithHeader(buf.slice(start, ix - 1), time);
+                    this.writeNonBinaryChunk(buf.slice(start, ix - 1), time);
                 }
-                this.ptyTerm.write(`<switch to vTerm#${String.fromCharCode(chr)}>\n`);
+                this.writeNonBinaryChunk(`<switch to vTerm#${String.fromCharCode(chr)}>\n`, '');
                 buf = buf.slice(ix + 1);
                 ix = 0;
                 start = 0;
             }
         }
         if (buf.length > 0) {
-            this.ptyTerm.writeWithHeader(buf, time);
+            this.writeNonBinaryChunk(buf, time);
         }
     }
 
@@ -182,6 +227,22 @@ export class RTTTerminal {
         obj.iencoding = getTextEncoding(obj.iencoding);
     }
 
+    private closeLogFd(reopen: boolean) {
+        if (this.logFd >= 0) {
+            try {
+                fs.closeSync(this.logFd);
+            }
+            catch (e) {
+                magentaWrite(`Error: closing fille ${e}\n`, this.ptyTerm);
+            }
+            this.logFd = -1;
+            this.startOfNewLine = true;
+            if (reopen) {
+                this.openLogFile();
+            }
+        }
+    }
+
     // If all goes well, this will reset the terminal options. Label for the VSCode terminal has to match
     // since there no way to rename it. If successful, tt will reset the Terminal options and mark it as
     // used (inUse = true) as well
@@ -193,16 +254,7 @@ export class RTTTerminal {
             this.inUse = true;
             if (!this.options.noclear || (this.options.type !== options.type)) {
                 this.ptyTerm.clearTerminalBuffer();
-                try {
-                    if (this.logFd >= 0) {
-                        fs.closeSync(this.logFd);
-                        this.logFd = -1;
-                    }
-                    this.openLogFile();
-                }
-                catch (e) {
-                    magentaWrite(`Error: closing fille ${e}\n`, this.ptyTerm);
-                }
+                this.closeLogFd(true);
             }
             this.options = options;
             this.ptyOptions = this.createTermOptions(newTermName);
@@ -215,10 +267,7 @@ export class RTTTerminal {
 
     public dispose() {
         this.ptyTerm.dispose();
-        if (this.logFd >= 0) {
-            try { fs.closeSync(this.logFd); } catch {}
-            this.logFd = -1;
-        }
+        this.closeLogFd(false);
     }
 }
 
