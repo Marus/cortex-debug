@@ -2634,7 +2634,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             let varObj: VariableObject;
             let varId = this.variableHandlesReverse[gdbVarName];
             let createNewVar = varId === undefined;
-            let updateError = undefined;
+            let updateError;
             if (!createNewVar) {
                 try {
                     const changes = await this.miDebugger.varUpdate(gdbVarName, threadId, frameId);
@@ -3190,7 +3190,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         let varObj: VariableObject;
                         let varId = this.variableHandlesReverse[varObjName];
                         let createNewVar = varId === undefined;
-                        let updateError = undefined;
+                        let updateError;
                         if (!createNewVar) {
                             try {
                                 const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
@@ -3228,7 +3228,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
                             }
 
-                            const varId = findOrCreateVariable(varObj);
+                            varId = findOrCreateVariable(varObj);
                             varObj.exp = exp;
                             varObj.id = varId;
                         } else if (!varObj) {

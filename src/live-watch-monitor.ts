@@ -126,7 +126,7 @@ export class VariablesHandler {
                         let varObj: VariableObject;
                         let varId = this.variableHandlesReverse[varObjName];
                         let forceCreate = varId === undefined;
-                        let updateError = undefined;
+                        let updateError;
                         if (!forceCreate) {
                             try {
                                 const cachedChange = this.cachedChangeList && this.cachedChangeList[varObjName];
@@ -174,7 +174,7 @@ export class VariablesHandler {
                             } else {
                                 varObj = await miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
                             }
-                            const varId = this.findOrCreateVariable(varObj);
+                            varId = this.findOrCreateVariable(varObj);
                             varObj.exp = exp;
                             varObj.id = varId;
                         } else if (!varObj) {
