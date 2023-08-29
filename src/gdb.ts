@@ -98,6 +98,7 @@ enum SessionMode {
     RESET = 'reset'
 }
 
+const VarNotFoundMsg = 'Variable object not found';
 export class ExtendedVariable {
     constructor(public name, public options) {
     }
@@ -2631,58 +2632,64 @@ export class GDBDebugSession extends LoggingDebugSession {
         threadId: number, frameId: number, isFloating: boolean): Promise<DebugProtocol.Variable> {
         try {
             let varObj: VariableObject;
-            let outOfScope = false;
-            try {
-                const changes = await this.miDebugger.varUpdate(gdbVarName, threadId, frameId);
-                const changelist = changes.result('changelist');
-                for (const change of changelist || []) {
-                    const inScope = MINode.valueOf(change, 'in_scope');
-                    if (inScope === 'true') {
-                        const name = MINode.valueOf(change, 'name');
-                        const vId = this.variableHandlesReverse[name];
-                        const v = this.variableHandles.get(vId) as any;
-                        v.applyChanges(change /*, variable.valueStr*/);
-                    } else {
-                        const msg = `${symOrExpr} currently not in scope`;
-                        await this.miDebugger.sendCommand(`var-delete ${gdbVarName}`);
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
-                        }
-                        outOfScope = true;
-                        throw new Error(msg);
-                    }
-                }
-                const varId = this.variableHandlesReverse[gdbVarName];
-                varObj = this.variableHandles.get(varId) as any;
-            }
-            catch (err) {
+            let varId = this.variableHandlesReverse[gdbVarName];
+            let createNewVar = varId === undefined;
+            let updateError = undefined;
+            if (!createNewVar) {
                 try {
-                    if (outOfScope || (err instanceof MIError && err.message === 'Variable object not found')) {
-                        // Create variable in current frame/thread context. Matters when we have to set the variable */
-                        if (isFloating) {
-                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName);
+                    const changes = await this.miDebugger.varUpdate(gdbVarName, threadId, frameId);
+                    const changelist = changes.result('changelist');
+                    for (const change of changelist || []) {
+                        const inScope = MINode.valueOf(change, 'in_scope');
+                        if (inScope === 'true') {
+                            const name = MINode.valueOf(change, 'name');
+                            const vId = this.variableHandlesReverse[name];
+                            const v = this.variableHandles.get(vId) as any;
+                            v.applyChanges(change /*, variable.valueStr*/);
                         } else {
-                            varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '@', threadId, frameId);
+                            const msg = `${symOrExpr} currently not in scope`;
+                            await this.miDebugger.sendCommand(`var-delete ${gdbVarName}`);
+                            if (this.args.showDevDebugOutput) {
+                                this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
+                            }
+                            createNewVar = true;
+                            throw new Error(msg);
                         }
-                        const varId = this.findOrCreateVariable(varObj);
-                        varObj.exp = symOrExpr;
-                        varObj.id = varId;
-                    } else if (isFloating) {
-                        throw err;
                     }
+                    varObj = this.variableHandles.get(varId) as any;
                 }
                 catch (err) {
-                    if (isFloating) {
-                        if (this.args.showDevDebugOutput) {
-                            this.handleMsg('stderr', `Could not create global/static variable ${symOrExpr}\n`);
-                            this.handleMsg('stderr', `Error: ${err}\n`);
-                        }
-                        varObj = null;
-                    } else {
-                        throw err;
-                    }
+                    updateError = err;
                 }
             }
+
+            try {
+                if (createNewVar || (updateError instanceof MIError && updateError.message === VarNotFoundMsg)) {
+                    // Create variable in current frame/thread context. Matters when we have to set the variable
+                    if (isFloating) {
+                        varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '@');
+                    } else {
+                        varObj = await this.miDebugger.varCreate(parentVarReference, symOrExpr, gdbVarName, '@', threadId, frameId);
+                    }
+                    varId = this.findOrCreateVariable(varObj);
+                    varObj.exp = symOrExpr;
+                    varObj.id = varId;
+                } else if (!varObj) {
+                    throw updateError || new Error('updateOrCreateVariable: unknown error');
+                }
+            }
+            catch (err) {
+                if (isFloating) {
+                    if (this.args.showDevDebugOutput) {
+                        this.handleMsg('stderr', `Could not create global/static variable ${symOrExpr}\n`);
+                        this.handleMsg('stderr', `Error: ${err}\n`);
+                    }
+                    varObj = null;
+                } else {
+                    throw err;
+                }
+            }
+            
             if (isFloating && varObj) {
                 this.putFloatingVariable(parentVarReference, symOrExpr, varObj);
             }
@@ -3181,54 +3188,52 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const exprName = hasher.digest('hex');
                         const varObjName = `${args.context}_${exprName}`;
                         let varObj: VariableObject;
-                        let outOfScope = false;
-                        try {
-                            const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
-                            const changelist = changes.result('changelist');
-                            for (const change of changelist || []) {
-                                const inScope = MINode.valueOf(change, 'in_scope');
-                                if (inScope === 'true') {
-                                    const name = MINode.valueOf(change, 'name');
-                                    const vId = this.variableHandlesReverse[name];
-                                    const v = this.variableHandles.get(vId) as any;
-                                    v.applyChanges(change);
-                                } else {
-                                    const msg = `${exp} currently not in scope`;
-                                    await this.miDebugger.sendCommand(`var-delete ${varObjName}`);
-                                    if (this.args.showDevDebugOutput) {
-                                        this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
-                                    }
-                                    outOfScope = true;
-                                    throw new Error(msg);
-                                }
-                            }
-                            const varId = this.variableHandlesReverse[varObjName];
-                            varObj = this.variableHandles.get(varId) as any;
-                        }
-                        catch (err) {
-                            if (!this.isBusy() && (outOfScope || ((err instanceof MIError && err.message === 'Variable object not found')))) {
-                                try {
-                                    // We always create a floating variable so it will be updated in the context of the current frame
-                                    // Technicall, we should be able to bind this to this frame but for some reason gdb gets confused
-                                    // from previous stack frames and returns the wrong results or says nothing changed when in fact it has
-                                    if (args.frameId === undefined) {
-                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                        let varId = this.variableHandlesReverse[varObjName];
+                        let createNewVar = varId === undefined;
+                        let updateError = undefined;
+                        if (!createNewVar) {
+                            try {
+                                const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
+                                const changelist = changes.result('changelist');
+                                for (const change of changelist || []) {
+                                    const inScope = MINode.valueOf(change, 'in_scope');
+                                    if (inScope === 'true') {
+                                        const name = MINode.valueOf(change, 'name');
+                                        const vId = this.variableHandlesReverse[name];
+                                        const v = this.variableHandles.get(vId) as any;
+                                        v.applyChanges(change);
                                     } else {
-                                        varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
+                                        const msg = `${exp} currently not in scope`;
+                                        await this.miDebugger.sendCommand(`var-delete ${varObjName}`);
+                                        if (this.args.showDevDebugOutput) {
+                                            this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
+                                        }
+                                        createNewVar = true;
+                                        throw new Error(msg);
                                     }
-
-                                    const varId = findOrCreateVariable(varObj);
-                                    varObj.exp = exp;
-                                    varObj.id = varId;
                                 }
-                                catch (e) {
-                                    throw e;
-                                }
-                            } else {
-                                throw err;
+                                varObj = this.variableHandles.get(varId) as any;
+                            }
+                            catch (err) {
+                                updateError = err;
                             }
                         }
+                        if (!this.isBusy() && (createNewVar || ((updateError instanceof MIError && updateError.message === VarNotFoundMsg)))) {
+                            // We always create a floating variable so it will be updated in the context of the current frame
+                            // Technicall, we should be able to bind this to this frame but for some reason gdb gets confused
+                            // from previous stack frames and returns the wrong results or says nothing changed when in fact it has
+                            if (args.frameId === undefined) {
+                                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                            } else {
+                                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
+                            }
 
+                            const varId = findOrCreateVariable(varObj);
+                            varObj.exp = exp;
+                            varObj.id = varId;
+                        } else if (!varObj) {
+                            throw updateError || new Error('evaluateRequest: unknown error');
+                        }
                         response.body = varObj.toProtocolEvaluateResponseBody();
                         this.sendResponse(response);
                     }
