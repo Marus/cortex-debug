@@ -1626,6 +1626,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected timeStart = Date.now();
+    protected timeLast = this.timeStart;
     protected wrapTimeStamp(str: string): string {
         if (this.args.showDevDebugOutput && this.args.showDevDebugTimestamps) {
             return this.wrapTimeStampRaw(str);
@@ -1635,8 +1636,11 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private wrapTimeStampRaw(str: string) {
-        const elapsed = Date.now() - this.timeStart;
-        const elapsedStr = elapsed.toString().padStart(10, '0');
+        const now = Date.now();
+        const elapsed = now - this.timeStart;
+        const delta = now - this.timeLast;
+        this.timeLast = now;
+        const elapsedStr = elapsed.toString().padStart(10, '0') + '+' + delta.toString().padStart(5, '0');
         return elapsedStr + ': ' + str;
     }
 
@@ -2464,7 +2468,11 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
         return new Promise<void>(async (resolve) => {
             try {
-                const maxDepth = await this.miDebugger.getStackDepth(args.threadId);
+                // GDB can take a long time if the stack is malformed to report depth. Instead, we just keep asking
+                // for chunks of stack trace until GDB runs out of them
+                const useMaxDepth = false;
+                const defMaxDepth = 1000;
+                const maxDepth = useMaxDepth ? await this.miDebugger.getStackDepth(args.threadId, defMaxDepth) : defMaxDepth;
                 const highFrame = Math.min(maxDepth, args.startFrame + args.levels) - 1;
                 const stack = await this.miDebugger.getStack(args.threadId, args.startFrame, highFrame);
                 const ret: StackFrame[] = [];
@@ -2478,7 +2486,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 }
                 response.body = {
                     stackFrames: ret,
-                    totalFrames: maxDepth
+                    totalFrames: useMaxDepth ? maxDepth : undefined
                 };
                 this.sendResponse(response);
                 resolve();
@@ -2824,7 +2832,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         const variables: DebugProtocol.Variable[] = [];
         let stack: Variable[];
         try {
-            await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
+            // Don't think we need the following anymore after gdb 9.x
+            // await this.miDebugger.sendCommand(`stack-select-frame --thread ${threadId} ${frameId}`);
             stack = await this.miDebugger.getStackVariables(threadId, frameId);
             for (const variable of stack) {
                 const varObjName = this.createStackVarName(variable.name, args.variablesReference);

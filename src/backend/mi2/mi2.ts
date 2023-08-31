@@ -809,12 +809,12 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public getStackDepth(threadId: number): Thenable<number> {
+    public getStackDepth(threadId: number, maxDepth: number = 1000): Thenable<number> {
         if (trace) {
             this.log('stderr', 'getStackDepth');
         }
         return new Promise((resolve, reject) => {
-            this.sendCommand(`stack-info-depth --thread ${threadId} 1000`).then((result) => {
+            this.sendCommand(`stack-info-depth --thread ${threadId} ${maxDepth}`).then((result) => {
                 const depth = result.result('depth');
                 const ret = parseInt(depth);
                 resolve(ret);
