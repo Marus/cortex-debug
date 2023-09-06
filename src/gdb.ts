@@ -2779,6 +2779,10 @@ export class GDBDebugSession extends LoggingDebugSession {
             hasher.update(file || '');
             const fHash = hasher.digest('hex');
 
+            if (os.platform() === 'win32') {
+                file = file.replace(/\\/g, '/');
+            }
+
             for (const displayName of staticNames) {
                 const exprName = `'${file}'::${displayName}`;
                 const varObjName = this.createStaticVarName(fHash, exprName);
