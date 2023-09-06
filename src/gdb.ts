@@ -2781,7 +2781,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
             for (const displayName of staticNames) {
                 const exprName = `'${file}'::${displayName}`;
-                const varObjName = this.createStaticVarName(fHash, exprName);
+                const varObjName = this.createStaticVarName(fHash, displayName);
                 const tmp = await this.updateOrCreateVariable(displayName, exprName, varObjName, args.variablesReference, threadId, frameId, true);
                 statics.push(tmp);
             }
