@@ -215,14 +215,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.liveWatch?.enabled) {
             const supportedList = ['openocd', 'jlink', 'stlink'];
             if (supportedList.indexOf(config.servertype) < 0) {
-                let str = '';
-                for (const s of supportedList) {
-                    str += (str ? ', ' : '') + `'${s}'`;
-                }
-                // config.liveWatch.enabled = false;
-                vscode.window.showWarningMessage(
-                    `Live watch is not supported for servertype '${config.servertype}'. Only ${str} supported/tested.\n` +
-                    `Report back to us if it works with '${config.servertype}'`);
+                const str = supportedList.join(', ');
+                vscode.window.showInformationMessage(
+                    `Live watch is not officially supported for servertype '${config.servertype}'. ` +
+                    `Only ${str} are supported and tested. ` +
+                    `Report back to us if it works with your servertype '${config.servertype}'.\n \n` +
+                    'If you are using an "external" servertype and it is working for you, then you can safely ignore this message. ');
             }
         }
 
