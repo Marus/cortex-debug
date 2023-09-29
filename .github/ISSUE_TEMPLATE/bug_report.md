@@ -7,6 +7,11 @@ assignees: ''
 
 ---
 ### Please make you search through our existing [issues](https://github.com/Marus/cortex-debug/issues?q=type:issue) (both open and closed)
+Please visit the correct repo to file an issue. If this is an issue with
+* Peripherals/SVD Viewer: [https://github.com/mcu-debug/peripheral-viewer](https://github.com/mcu-debug/peripheral-viewer)
+* Memory Viewer: [https://github.com/mcu-debug/memview](https://github.com/mcu-debug/memview)
+* RTOS Viewer: [https://github.com/mcu-debug/rtos-views](https://github.com/mcu-debug/rtos-views)
+* the debugger itself, continue below
 
 **Describe the bug**
 A clear and concise description of what the bug is.

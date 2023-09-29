@@ -1583,7 +1583,7 @@
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
-                                "type": "string | number",
+                                "type": ["string", "number"],
                                 "anyOf": [
                                     {
                                         "type": "string"
@@ -2732,6 +2732,7 @@
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
+                                "type": ["string", "number"],
                                 "anyOf": [
                                     {
                                         "type": "string"
