@@ -13,9 +13,14 @@ Please visit the correct repo to file an issue. If this is an issue with
 * RTOS Viewer: [https://github.com/mcu-debug/rtos-views](https://github.com/mcu-debug/rtos-views)
 * the debugger itself, continue below
 
+Please read our documentation as well. You have a lot of control over how Cortex-Debug works. Besides the top level [README.md](https://github.com/Marus/cortex-debug/blob/master/README.md), we have the following
+
+https://github.com/Marus/cortex-debug/wiki
+https://github.com/Marus/cortex-debug/wiki/Cortex-Debug-Under-the-hood
+https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md
+
 **Describe the bug**
 A clear and concise description of what the bug is.
-
 **To Reproduce**
 Steps to reproduce the behavior:
 1. Start debug session
