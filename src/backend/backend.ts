@@ -58,6 +58,7 @@ export interface IBackend {
 
 export class VariableObject {
     public name: string;
+    public curDisplayName: string;
     public exp: string;
     public numchild: number;
     public type: string;
@@ -74,6 +75,7 @@ export class VariableObject {
     constructor(p: number, node: any) {
         this.parent = p;
         this.name = MINode.valueOf(node, 'name');
+        this.curDisplayName = this.name;
         this.exp = MINode.valueOf(node, 'exp');
         this.numchild = parseInt(MINode.valueOf(node, 'numchild'));
         this.type = MINode.valueOf(node, 'type');
@@ -137,6 +139,7 @@ export class VariableObject {
             variablesReference: this.id
         };
         this.tryAddMemoryReference(res);
+        this.curDisplayName = res.name;
 
         res.type = this.createToolTip(res.name, res.value);      // This ends up becoming a tool-tip
         return res;
