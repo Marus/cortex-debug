@@ -216,6 +216,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     private serverController: GDBServerController;
     public symbolTable: SymbolTable;
     private usingParentServer = false;
+    private debugLogFd = -1;
 
     protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(HandleRegions.VAR_HANDLES_START);
     protected variableHandlesReverse: { [id: string]: number } = {};
@@ -360,6 +361,40 @@ export class GDBDebugSession extends LoggingDebugSession {
             // Reserve it and neighboring ports
             for (let count = 0; count < 4; count++) {
                 TcpPortScanner.AvoidPorts.add(p + count);
+            }
+        }
+
+        let logFName = args?.pvtDebugOptions?.file;
+        if (typeof logFName === 'string') {
+            logFName = logFName.replace('${PID}', process.pid.toString());
+            try {
+                const dir = path.dirname(logFName);
+                if (dir) {
+                    fs.mkdirSync(dir, { recursive: true });
+                }
+                this.debugLogFd = fs.openSync(logFName, 'a');
+                this.handleMsg('log', `Opened special debug dump file in append mode "${logFName}"\n`);
+            }
+            catch (e) {
+                this.handleMsg('stderr', `Failed to open dump file open '${logFName}'\n`);
+            }
+        }
+    }
+
+    public isDebugLoggingAvailable() {
+        return (this.debugLogFd >= 0);
+    }
+
+    public writeToDebugLog(str: string, wantTs: boolean = false) {
+        if (this.isDebugLoggingAvailable()) {
+            if (wantTs) {
+                str = this.wrapTimeStampRaw(str);
+            }
+            try {
+                fs.writeSync(this.debugLogFd, str);
+            }
+            finally {
+                // Do nothing
             }
         }
     }
@@ -1894,13 +1929,28 @@ export class GDBDebugSession extends LoggingDebugSession {
             let frameId = -1;
             const varRef = args.variablesReference;
             const isReg = (varRef >= HandleRegions.REG_HANDLE_START && varRef < HandleRegions.REG_HANDLE_FINISH);
-            const globOrStatic = !isReg && this.getFloatingVariable(varRef, name);
+            const isGlobalOrStatic = this.isVarRefGlobalOrStatic(varRef, undefined);
+            const globOrStatic = !isReg && isGlobalOrStatic === 'global' || isGlobalOrStatic === 'static';
             if (isReg) {
                 [threadId, frameId] = decodeReference(varRef);
                 const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*', threadId, frameId);
-                name = varObj.name;
-            } else if (globOrStatic) {
-                name = globOrStatic.name;
+                name = varObj?.name;
+            } else if (globOrStatic) {      // We have to resolve to the gdb variable name
+                const map = this.floatingVariableMap[varRef];
+                if (map) {
+                    const obj = map[name];
+                    if (obj) {
+                        name = obj.name;        // This is a true global
+                    } else {                    // These are most likely statics
+                        for (const key of Object.keys(map)) {
+                            const val = map[key];
+                            if (val.curDisplayName === name) {
+                                name = val.name;
+                                break;
+                            }
+                        }
+                    }
+                }
             } else if (varRef >= HandleRegions.VAR_HANDLES_START) {
                 const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
                 const fullName = parent.children[name];
