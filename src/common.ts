@@ -309,6 +309,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     pvtAvoidPorts: number[];
     pvtVersion: string;                       // Version from package.json
     pvtOpenOCDDebug: boolean;
+    pvtDebugOptions: DebugOptions | undefined;
 
     numberOfProcessors: number;
     targetProcessor: number;
@@ -924,4 +925,9 @@ export function getPathRelative(base: string, target: string) {
     }
     const ret = targetElts.join('/');
     return ret;
+}
+
+class DebugOptions {
+    public file: string = '';
+    public disassembly: boolean = false;
 }
