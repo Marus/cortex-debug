@@ -65,7 +65,7 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
 
     public graphData(data: number, id: string) {
         const message: GrapherDataMessage = { type: 'data', data: data, id: id };
-        this.emit('data', message);
+        this.emit('message', message);
     }
 
     public dispose() {
