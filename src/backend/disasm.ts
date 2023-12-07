@@ -968,23 +968,41 @@ export class GdbDisassembler {
         const endAddress = symbol.address + symbol.length;
 
         // tslint:disable-next-line:max-line-length
-        const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(endAddress)} -- 2`);
+        const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(endAddress)} -- 5`);
         const rawInstructions = result.result('asm_insns');
-        const instructions: DisassemblyInstruction[] = rawInstructions.map((ri) => {
-            const address = MINode.valueOf(ri, 'address');
-            const functionName = MINode.valueOf(ri, 'func-name');
-            const offset = parseInt(MINode.valueOf(ri, 'offset'));
-            const inst = MINode.valueOf(ri, 'inst');
-            const opcodes = MINode.valueOf(ri, 'opcodes');
+        const instructions: DisassemblyInstruction[] = [];
+        
+        // add every raw instruction group we have
+        for (const ri of rawInstructions) {
+            // get the information about the instruction group
+            const srcAndAsm = ((ri.length > 1) && (ri[0] === 'src_and_asm_line')) ? ri[1] : undefined;
 
-            return {
-                address: address,
-                functionName: functionName,
-                offset: offset,
-                instruction: inst,
-                opcodes: opcodes
-            };
-        });
+            // extract all the info from the src and asm
+            const line = MINode.valueOf(srcAndAsm, 'line');
+            const lineAsm = MINode.valueOf(srcAndAsm, 'line_asm_insn');
+
+            // get the assembly info if line_asm_insn is defined
+            if (lineAsm !== undefined) {
+                for (const asm of lineAsm) {
+                    const address = MINode.valueOf(asm, 'address');
+                    const functionName = MINode.valueOf(asm, 'func-name');
+                    const offset = parseInt(MINode.valueOf(asm, 'offset'));
+                    const inst = MINode.valueOf(asm, 'inst');
+                    const opcodes = MINode.valueOf(asm, 'opcodes');
+
+                    // add the assembly to the array
+                    instructions.push({
+                        line: line,
+                        address: address,
+                        functionName: functionName,
+                        offset: offset,
+                        instruction: inst,
+                        opcodes: opcodes
+                    });
+                }
+            }
+        }
+
         symbol.instructions = instructions;
         return symbol;
     }

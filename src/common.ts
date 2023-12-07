@@ -348,6 +348,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
 }
 
 export interface DisassemblyInstruction {
+    line: number;
     address: string;
     functionName: string;
     offset: number;
