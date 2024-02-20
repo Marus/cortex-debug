@@ -57,7 +57,7 @@
 	},
 	"dependencies": {
 		"command-exists": "^1.2.9",
-		"ip": "^1.1.5",
+		"ip": "^1.1.9",
 		"vscode-jsonrpc": "^6.0.0"
 	}
 }
