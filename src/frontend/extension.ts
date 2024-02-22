@@ -12,7 +12,7 @@ import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
 import { CortexDebugConfigurationProvider } from './configprovider';
-import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource, PeMicroSocketSource } from './swo/sources/socket';
+import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource, PeMicroSocketSource, DefmtSocketRTTSource } from './swo/sources/socket';
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
@@ -770,7 +770,7 @@ export class CortexDebugExtension {
     private receivedRTTConfigureEvent(e: vscode.DebugSessionCustomEvent) {
         if (e.body.type === 'socket') {
             const decoder: RTTCommonDecoderOpts = e.body.decoder;
-            if ((decoder.type === 'console') || (decoder.type === 'binary')) {
+            if ((decoder.type === 'console') || (decoder.type === 'binary') || (decoder.type === 'defmt')) {
                 Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
                 this.rttCreateTerninal(e, decoder as RTTConsoleDecoderOpts);
             } else {
@@ -793,6 +793,7 @@ export class CortexDebugExtension {
     // state.
     private createRTTSource(e: vscode.DebugSessionCustomEvent, tcpPort: string, channel: number): Promise<SocketRTTSource> {
         const mySession = CDebugSession.GetSession(e.session);
+        const wsPath = e.session.workspaceFolder.uri.fsPath;
         return new Promise((resolve, reject) => {
             let src = mySession.rttPortMap[channel];
             if (src) {
@@ -801,6 +802,8 @@ export class CortexDebugExtension {
             }
             if (mySession.config.servertype === 'jlink') {
                 src = new JLinkSocketRTTSource(tcpPort, channel);
+            } else if (e.body.decoder.type === 'defmt') {
+                src = new DefmtSocketRTTSource(tcpPort, channel, e.body.executable, wsPath);
             } else {
                 src = new SocketRTTSource(tcpPort, channel);
             }
