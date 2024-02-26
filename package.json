@@ -560,6 +560,11 @@
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the beginning of the restart sequence (after interrupting execution)."
                             },
+                            "gdbPort": {
+                                "default": 50000,
+                                "type": "number",
+                                "description": "Port to use for internal GDB server"
+                            },
                             "postRestartCommands": {
                                 "default": [],
                                 "type": "array",
@@ -1631,6 +1636,11 @@
                                     "qemu",
                                     "external"
                                 ]
+                            },
+                            "gdbPort": {
+                                "default": 50000,
+                                "type": "number",
+                                "description": "Port to use for internal GDB server"
                             },
                             "cwd": {
                                 "description": "Directory to run commands from",
