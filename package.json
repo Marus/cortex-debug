@@ -784,6 +784,56 @@
                                     "samplesPerSecond": 4
                                 }
                             },
+                            "pemicro": {
+                                "properties":{
+                                    "exception_catching":{
+                                        "properties": {
+                                            "hardfault": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable HardFault Catch"
+                                            },
+                                            "exception_entry_or_return": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable Exception Entry/Return Catch"
+                                            },
+                                            "busfault": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable BusFault Catch"
+                                            },
+                                            "state_info_error": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable StateInformation Error Catch"
+                                            },
+                                            "checking_error": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable Checking Error Catch"
+                                            },
+                                            "no_coprocessor": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable No-Coproessor Catch"
+                                            },
+                                            "memmanage": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable MemManage Catch"
+                                            },
+                                            "reset_vector": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable Reset Vector Catch"
+                                            }
+                                        },
+                                        "description": "Set catching of hardware exceptions" 
+                                    }
+                                },
+                                "description": "PEMicro GDB server specific configuration"
+                            },
                             "chainedConfigurations": {
                                 "description": "An object describing how additional configurations should be launched",
                                 "properties": {
@@ -1631,6 +1681,127 @@
                                     "qemu",
                                     "external"
                                 ]
+                            },
+                            "pemicro": {
+                                "properties":{
+                                    "preserve_ranges": {
+                                        "properties" : {
+                                            "preserve0" : {
+                                                "properties" :{ 
+                                                    "enable": {
+                                                        "type": "boolean",
+                                                        "description": "Set to true to retain data in memory area"
+                                                    },
+                                                    "start": {
+                                                        "type": "number",
+                                                        "description": "Start address of memory range"
+                                                    }, 
+                                                    "stop":{
+                                                        "type": "number",
+                                                        "description": "End address of memory range"
+                                                    }
+                                                },
+                                                "description": "Memory area 0 conf",
+                                                "default": {
+                                                    "enable": false,
+                                                    "start":0, 
+                                                    "stop":0
+                                                }
+                                            },
+                                            "preserve1" : {
+                                                "properties" :{ 
+                                                    "enable": {
+                                                        "type": "boolean",
+                                                        "description": "Set to true to retain data in memory area"
+                                                    },
+                                                    "start": {
+                                                        "type": "number",
+                                                        "description": "Start address of memory range"
+                                                    }, 
+                                                    "stop":{
+                                                        "type": "number",
+                                                        "description": "End address of memory range"
+                                                    }
+                                                },
+                                                "description": "Memory area 1 conf",
+                                                "default": {
+                                                    "enable": false,
+                                                    "start":0, 
+                                                    "stop":0
+                                                }
+                                            },
+                                            "preserve2" : {
+                                                "properties" :{ 
+                                                    "enable": {
+                                                        "type": "boolean",
+                                                        "description": "Set to true to retain data in memory area"
+                                                    },
+                                                    "start": {
+                                                        "type": "number",
+                                                        "description": "Start address of memory range"
+                                                    }, 
+                                                    "stop":{
+                                                        "type": "number",
+                                                        "description": "End address of memory range"
+                                                    }
+                                                },
+                                                "description": "Memory area 2 conf",
+                                                "default": {
+                                                    "enable": false,
+                                                    "start":0, 
+                                                    "stop":0
+                                                }
+                                            }
+                                        },
+                                        "description": "Allows setting up to 3 memory areas to retain during reflashing"
+                                    },
+                                    "exception_catching":{
+                                        "properties": {
+                                            "hardfault": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable HardFault Catch"
+                                            },
+                                            "exception_entry_or_return": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable Exception Entry/Return Catch"
+                                            },
+                                            "busfault": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable BusFault Catch"
+                                            },
+                                            "state_info_error": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable StateInformation Error Catch"
+                                            },
+                                            "checking_error": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable Checking Error Catch"
+                                            },
+                                            "no_coprocessor": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable No-Coproessor Catch"
+                                            },
+                                            "memmanage": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable MemManage Catch"
+                                            },
+                                            "reset_vector": {
+                                                "type":"boolean",
+                                                "default" : true,
+                                                "description": "Enable Reset Vector Catch"
+                                            }
+                                        },
+                                        "description": "Set catching of hardware exceptions" 
+                                    }
+                                },
+                                "description": "PEMicro GDB server specific configuration"
                             },
                             "cwd": {
                                 "description": "Directory to run commands from",
@@ -3033,6 +3204,6 @@
         "test-compile": "tsc -p ./",
         "package": "node ./release.js --package",
         "publish": "node ./release.js --publish --vsx-also",
-        "lint": "./node_modules/tslint/bin/tslint --project ."
+        "lint": "node ./node_modules/tslint/bin/tslint --project ."
     }
 }
