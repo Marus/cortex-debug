@@ -344,6 +344,37 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cpu: string;
     machine: string;
 
+    // PEMicro specific
+    pemicro: {
+        preserve_ranges: {
+            preserve0: {
+                enable: boolean,
+                start: number,
+                stop: number
+            },
+            preserve1: {
+                enable: boolean,
+                start: number,
+                stop: number
+            },
+            preserve2: {
+                enable: boolean,
+                start: number,
+                stop: number
+            }
+        },
+        exception_catching: {
+            hardfault: boolean,
+            exception_entry_or_return: boolean,
+            busfault: boolean,
+            state_info_error: boolean,
+            checking_error: boolean,
+            no_coprocessor: boolean,
+            memmanage: boolean,
+            reset_vector: boolean
+        }
+    };
+
     // External 
     gdbTarget: string;
 }
