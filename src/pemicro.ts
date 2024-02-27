@@ -36,9 +36,60 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         ];
     }
 
+    public preserveRanges(): string[] {
+        const allowedRanges = ['preserve0', 'preserve1', 'preserve2'];
+        const ranges = this.args.pemicro.preserve_ranges;
+        const preserveRangesCmds = [];
+        for (const range of allowedRanges)
+        {
+            try {
+                const tmp = `interpreter-exec console "monitor ${range} ${ranges[range].enable ? 1 : 0} ${ranges[range].start} ${ranges[range].stop}"`;
+                preserveRangesCmds.push(tmp);
+            }
+            catch (err) {
+                // nop
+            }
+        }
+        return preserveRangesCmds;
+    }
+
+    public setExceptionCatching(): string {
+        const exceptionBitOffsets = {
+            hardfault: 10,
+            exception_entry_or_return: 9,
+            busfault: 8,
+            state_info_error: 7,
+            checking_error: 6,
+            no_coprocessor: 5,
+            memmanage: 4,
+            reset_vector: 0
+        };
+        const conf = this.args.pemicro.exception_catching;
+        let enableBits = 0;
+        for (const exception of Object.keys(exceptionBitOffsets))
+        {
+            try{
+                enableBits |= conf[exception] ?  1 << exceptionBitOffsets[exception] : 0;
+            }
+            catch (err)
+            {
+                // nop
+            }
+        }
+        return `interpreter-exec console "monitor setexceptioncatching ${enableBits}"`;
+    }
+
     public launchCommands(): string[] {
+        const extraLaunchCmds = [];
+
+        extraLaunchCmds.push(this.setExceptionCatching());
+        extraLaunchCmds.push(...this.preserveRanges());
+
         const commands = [
-            ...genDownloadCommands(this.args, ['interpreter-exec console "monitor _reset"']),
+            'interpreter-exec console "monitor _reset"',
+            'interpreter-exec console "monitor startmultiload"',
+            ...genDownloadCommands(this.args, extraLaunchCmds),
+            'interpreter-exec console "monitor endmultiload"',
             'interpreter-exec console "monitor _reset"'
         ];
 
