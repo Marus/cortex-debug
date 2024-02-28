@@ -108,35 +108,42 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         }
     }
 
+    private logFileWrite(text: string) {
+        if ( (this.logFd < 0) || (text === '') ) {
+            return;
+        }
+        try {
+            fs.writeSync(this.logFd, text);
+        }
+        catch (e) {
+            const msg = `Could not write to file ${this.logfile}. ${e.toString()}`;
+            vscode.window.showErrorMessage(msg);
+            try { fs.closeSync(this.logFd); } catch {}
+            this.logFd = -1;
+        }
+    }
+
     public softwareEvent(packet: Packet) {
         if (packet.port !== this.port) { return; }
+        let text = '';
         const letters = packet.data.toString(this.encoding);
-
-        if (this.logFd >= 0) {
-            try {
-                fs.writeSync(this.logFd, letters);
-            }
-            catch (e) {
-                const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
-                vscode.window.showErrorMessage(msg);
-                try { fs.closeSync(this.logFd); } catch {}
-                this.logFd = -1;
-            }
-        }
-
         for (const letter of letters) {
             if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
 
             if (letter === '\n') {
+                text += '\n';
                 this.pushOutput('\n');
                 this.position = 0;
                 continue;
             }
 
             if (this.position === 0) {
-                this.pushOutput(this.createDateHeaderUs());
+                const timestampHeader = this.createDateHeaderUs();
+                text += timestampHeader;
+                this.pushOutput(timestampHeader);
             }
 
+            text += letter;
             this.pushOutput(letter);
             this.position += 1;
 
@@ -145,12 +152,14 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
                     clearTimeout(this.timeout);
                 }
                 this.timeout = setTimeout(() => {
+                    text += '\n';
                     this.pushOutput('\n');
                     this.position = 0;
                     this.timeout = null;
                 }, 5000);
             }
         }
+        this.logFileWrite(text);
     }
 
     public hardwareEvent(event: Packet) {}
