@@ -78,7 +78,7 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | serialNumber | string | Both | J-Link or ST-LINK Serial Number - only needed if multiple J-Links/ST-LINKs are connected to the computer |
 | serverArgs | string[] | Both | Additional arguments to pass to GDB Server command line |
 | serverpath | string | Both | This setting can be used to override the GDB Server path user/workspace setting for a particular launch configuration. It is the full pathname to the executable or name of executable if it is in your PATH |
-| servertype | string | Both | GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external. For "external", [please read our Wiki](https://github.com/Marus/cortex-debug/wiki/External-gdb-server-configuration) |
+| servertype | string | Both | GDB Server type - supported types are jlink, openocd, pyocd, pe, stlink, stutil, qemu, bmp and external. For "external", [please read our Wiki](https://github.com/Marus/cortex-debug/wiki/External-gdb-server-configuration). By default it uses the executable in your PATH, but a custom path can be selected by using serverpath |
 | showDevDebugOutput | string | Both | Used to debug this extension. Prints all GDB responses to the console. 'raw' prints gdb responses, 'parsed' prints results after parsing, 'both' prints both. 'vscode' shows raw and VSCode interactions |
 | showDevDebugTimestamps | boolean | Both | Show timestamps when 'showDevDebugOutput' is enabled |
 | stlinkPath | string | Both | Path to the ST-LINK_gdbserver executable. If not set then ST-LINK_gdbserver (ST-LINK_gdbserver.exe on Windows) must be on the system path. |
