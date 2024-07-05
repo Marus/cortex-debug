@@ -421,7 +421,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 const tclPortName = createPortName(0, 'tclPort');
                 const tclPortNum = this.ports[tclPortName];
                 const obj = {
-                    host: 'localhost',
+                    host: '127.0.0.1',
                     port: tclPortNum
                 };
                 this.tclSocket = net.createConnection(obj, () => {
