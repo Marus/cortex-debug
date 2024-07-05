@@ -268,14 +268,11 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     preAttachCommands: string[];
     postAttachCommands: string[];
     overrideAttachCommands: string[];
-    preRestartCommands: string[];
-    postRestartCommands: string[];
-    overrideRestartCommands: string[];
     preResetCommands: string[];
     postResetCommands: string[];
     overrideResetCommands: string[];
     postStartSessionCommands: string[];
-    postRestartSessionCommands: string[];
+    postResetSessionCommands: string[];
     overrideGDBServerStartedRegex: string;
     breakAfterReset: boolean;
     svdFile: string;
@@ -302,14 +299,14 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     variableUseNaturalFormat: boolean;
     chainedConfigurations: ChainedConfigurations;
 
-    pvtRestartOrReset: boolean;
+    pvtIsReset: boolean;
     pvtPorts: { [name: string]: number; };
     pvtParent: ConfigurationArguments;
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
     pvtAvoidPorts: number[];
     pvtVersion: string;                       // Version from package.json
     pvtOpenOCDDebug: boolean;
-    pvtDebugOptions: DebugOptions | undefined;
+    pvtAdapterDebugOptions: DebugOptions | undefined;
 
     numberOfProcessors: number;
     targetProcessor: number;
@@ -372,7 +369,7 @@ export interface GDBServerController extends EventEmitter {
     initCommands(): string[];
     launchCommands(): string[];
     attachCommands(): string[];
-    restartCommands(): string[];
+    resetCommands(): string[];
     allocateRTTPorts(): Promise<void>;
     swoAndRTTCommands(): string[];
     serverExecutable(): string;

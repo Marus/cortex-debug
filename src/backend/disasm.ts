@@ -193,6 +193,7 @@ export class GdbDisassembler {
     public memoryRegions: MemoryRegion[];
 
     constructor(public gdbSession: GDBDebugSession, public launchArgs: ConfigurationArguments) {
+        GdbDisassembler.debug = this.gdbSession.isDebugLoggingAvailable();
         if (launchArgs.showDevDebugOutput && (launchArgs.showDevDebugOutput !== ADAPTER_DEBUG_MODE.NONE)) {
             GdbDisassembler.debug = true;       // Can't turn it off, once enabled. Intentional
         }
@@ -529,9 +530,9 @@ export class GdbDisassembler {
                         const ret = this.parseDisassembleResults(result, validationAddr, entireRangeGood, cmd);
                         const foundIx = ret.foundAt;
                         if (foundIx < 0) {
-                            if (GdbDisassembler.debug) {
-                                const msg = `Could not disassemble at this address Looking for ${hexFormat(validationAddr)}: ${cmd} `;
-                                console.log(msg, ret.instructions);
+                            if (this.gdbSession.isDebugLoggingAvailable()) {
+                                const msg = `Could not disassemble at this address Looking for ${hexFormat(validationAddr)}: ${cmd}`;
+                                this.debugDump(msg, ret.instructions);
                             }
                             if ((startAddress >= this.instrMultiple) && (iter < maxTries)) {
                                 iter++;
@@ -563,10 +564,9 @@ export class GdbDisassembler {
     private findInCache(startAddr: number, endAddr: number): InstructionRange {
         for (const old of this.cache) {
             if (old.isInsideRange(startAddr, endAddr)) {
-                if (GdbDisassembler.debug) {
-                    console.log('Instruction cache hit: ',
-                        {startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}, old);
-                }
+                this.debugDump('Instruction cache hit: ' +
+                    JSON.stringify({startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}) + '\n',
+                    old.instructions);
                 return old;
             }
         }
@@ -624,7 +624,9 @@ export class GdbDisassembler {
         const seq = request?.seq;
         return new Promise((resolve, reject) => {
             if (GdbDisassembler.debug) {
-                this.handleMsg('log', `Debug-${seq}: Enqueuing ${JSON.stringify(request)}\n`);
+                const msg = `Debug-${seq}: Enqueuing ${JSON.stringify(request)}\n`;
+                this.handleMsg('log', msg);
+                this.debugDump(msg);
             }
             const req: DisasmRequest = {
                 response: response,
@@ -664,6 +666,16 @@ export class GdbDisassembler {
         }
     }
 
+    private findNearestSymbolStart(addr: number, max: number): number {
+        // If possible, find something in the range that looks like the start of a symbol.
+        // Perhaps we should filter out symbols that are not functions
+        const symbols = this.gdbSession.symbolTable.symbolsAsIntervalTree.search(addr, max);
+        if (symbols && (symbols.length > 0)) {
+            return symbols[0].symbol.address;
+        }
+        return addr;
+    }
+
     private disassembleProtocolRequest2(
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
@@ -674,8 +686,9 @@ export class GdbDisassembler {
                 await this.getMemoryRegions();
                 const seq = request?.seq;
                 if (GdbDisassembler.debug) {
-                    this.handleMsg('log', `Debug-${seq}: Dequeuing...\n`);
-                    console.log('disassembleRequest: ', args);
+                    const msg = `Debug-${seq}: Dequeuing... `;
+                    this.handleMsg('log', msg + '\n');
+                    this.debugDump(msg + JSON.stringify(args));
                 }
 
                 const baseAddress = parseInt(args.memoryReference);
@@ -686,7 +699,7 @@ export class GdbDisassembler {
                 if (offset !== 0) {
                     throw (new Error('VSCode using non-zero disassembly offset? Don\'t know how to handle this yet. Please report this problem'));
                 }
-                const startAddr = Math.max(0, Math.min(baseAddress, baseAddress + (instrOffset * this.maxInstrSize)));
+                const startAddr = this.findNearestSymbolStart(Math.max(0, Math.min(baseAddress, baseAddress + (instrOffset * this.maxInstrSize))), baseAddress);
                 const endAddr = baseAddress + (args.instructionCount + instrOffset) * this.maxInstrSize;
                 // this.handleMsg('log', 'Start: ' + ([startAddr, baseAddress, baseAddress - startAddr].map((x) => hexFormat(x))).join(',') + '\n');
                 // this.handleMsg('log', 'End  : ' + ([baseAddress, endAddr, endAddr - baseAddress].map((x) => hexFormat(x))).join(',') + '\n');
@@ -724,12 +737,14 @@ export class GdbDisassembler {
                 let instrs = all.instructions;
                 let foundIx = all.findInstrIndex(baseAddress);
                 if (GdbDisassembler.debug) {
-                    console.log(`Found ${instrs.length}. baseInstrIndex = ${foundIx}.`);
+                    this.debugDump(`Found ${instrs.length}. baseInstrIndex = ${foundIx}.`);
                     // console.log(instrs[foundIx]);
                     // console.log(instrs.map((x) => x.address));
                 }
                 if (foundIx < 0) {
-                    throw new Error('Could not find an instruction at the baseAddress. Something is not right. Please report this problem');
+                    const msg = 'Could not find an instruction at the baseAddress. Something is not right. Please report this problem';
+                    this.debugDump(msg, instrs);
+                    throw new Error(msg);
                 }
                 // Spec says must have exactly `count` instructions. Kinda harsh but...gotta do it
                 // These are corner cases that are hard to test. This would happen if we are falling
@@ -762,15 +777,12 @@ export class GdbDisassembler {
                     instrs.splice(args.instructionCount);
                 }
 
-                if (GdbDisassembler.debug) {
-                    console.log(`Returning ${instrs.length} instructions of ${all.instructions.length} queried. baseInstrIndex = ${foundIx}.`);
-                    // console.log(instrs.map((x) => x.address));
-                    // console.log(instrs);
+                if (this.gdbSession.isDebugLoggingAvailable()) {
+                    this.debugDump(`Returning ${instrs.length} instructions of ${all.instructions.length} queried. baseInstrIndex = ${foundIx}.`);
                     if ((foundIx >= 0) && (foundIx < instrs.length)) {
-                        console.log(instrs[foundIx]);
+                        this.debugDump('', [instrs[foundIx]]);
                     } else if ((foundIx !== instrOffset) && (foundIx !== -instrOffset) && (foundIx !== (instrs.length + instrOffset))) {
-                        console.error(`This may be a problem. Referenced index should be exactly ${instrOffset} off`);
-                        console.log(instrs);
+                        this.debugDump(`This may be a problem. Referenced index should be exactly ${instrOffset} off`, instrs);
                     }
                 }
                 this.cleaupAndCheckInstructions(instrs);
@@ -782,13 +794,18 @@ export class GdbDisassembler {
                     const ms = timer.createPaddedMs(3);
                     this.handleMsg('log', `Debug-${seq}: Elapsed time for Disassembly Request: ${ms} ms\n`);
                 }
+                if (this.gdbSession.isDebugLoggingAvailable()) {
+                    const respObj = { ... response, body: {} };   // Make a shallow copy, replace instructions
+                    this.gdbSession.writeToDebugLog('Dumping disassembly response to VSCode\n', true);
+                    this.debugDump(JSON.stringify(respObj), instrs);
+                }
                 this.gdbSession.sendResponse(response);
                 resolve();
             }
             catch (e) {
                 const msg = `Unable to disassemble: ${e.toString()}: ${JSON.stringify(request)}`;
                 if (GdbDisassembler.debug) {
-                    console.log(msg + '\n');
+                    this.debugDump(msg);
                 }
                 this.gdbSession.sendErrorResponsePub(response, 1, msg);
                 resolve();
@@ -804,23 +821,39 @@ export class GdbDisassembler {
         }
     }
 
+    private debugDump(header: string, instrs?: ProtocolInstruction[]) {
+        if (header) {
+            if (!header.endsWith('\n')) {
+                header = header + '\n';
+            }
+            this.gdbSession.writeToDebugLog(header, true);
+        }
+        if (instrs && (instrs.length > 0)) {
+            let count = 0;
+            for (const instr of instrs) {
+                this.gdbSession.writeToDebugLog(count.toString().padStart(4) + ': ' + JSON.stringify(instr) + '\n', false);
+                count++;
+            }
+        }
+    }
+
     // We would love to do disassembly on a whole range. But frequently, GDB gives wrong 
     // information when there are gaps between functions. There is also a problem with functions
     // that do not have a size
     private findDisasmRanges(trueStart: number, trueEnd: number, referenceAddress: number): DisasmRange[] {
-        const doDbgPrint = false;
+        const doDbgPrint = this.gdbSession.isDebugLoggingAvailable();
         const printFunc = (item: SymbolNode) => {
             if (doDbgPrint) {
                 const file = item.symbol.file || '<unknown-file>';
-                const msg = `(${hexFormat(item.low)}, ${item.low}), (${hexFormat(item.high)}, ${item.high}) ${item.symbol.name} ${file}`;
-                this.handleMsg('stdout', msg + '\n');
-                console.log(msg);
+                const msg = `(${hexFormat(item.low)}, ${item.low}), (${hexFormat(item.high)}, ${item.high}) ${item.symbol.name} ${file}\n`;
+                this.gdbSession.writeToDebugLog(msg, true);
             }
         };
 
         if (doDbgPrint) {
-            this.handleMsg('stdout', `${hexFormat(trueStart)}, ${hexFormat(trueEnd)} Search range\n`);
-            this.handleMsg('stdout', '-'.repeat(80) + '\n');
+            this.gdbSession.writeToDebugLog(
+                `start:${hexFormat(trueStart)}, end:${hexFormat(trueEnd)}, ref:${hexFormat(referenceAddress)} Search range\n`, true);
+            this.gdbSession.writeToDebugLog('-'.repeat(80) + '\n', true);
         }
         trueStart = this.clipLow(referenceAddress, trueStart);
         trueEnd = this.clipHigh(referenceAddress, trueEnd);
@@ -868,7 +901,13 @@ export class GdbDisassembler {
             // For the last one, try to get until the end
             range.qEnd = Math.max(range.qEnd, trueEnd);
         }
-        console.table(ret);
+        if (doDbgPrint) {
+            this.gdbSession.writeToDebugLog('Search ranges:\n', false);
+            for (const item of ret) {
+                const msg = `s:(${hexFormat(item.qStart)}, ${item.qStart}), e:(${hexFormat(item.qEnd)}, ${item.qEnd}), v:(${hexFormat(item.verify)}, ${item.verify}) ${item.symNode?.symbol.name}\n`;
+                this.gdbSession.writeToDebugLog(msg, false);
+            }
+        }
         return ret;
     }
 

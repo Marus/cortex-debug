@@ -255,5 +255,7 @@ process.on('exit', (code, signal) => {
         for (const p of [...currentServers]) {
             p.exit();
         }
+    } else {
+        ServerConsoleLog(`Debug Adapter exiting code=${code} signal=${signal}`);
     }
 });

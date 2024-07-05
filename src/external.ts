@@ -63,7 +63,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
         return [];
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor reset halt"'
         ];

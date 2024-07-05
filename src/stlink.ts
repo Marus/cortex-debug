@@ -127,7 +127,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         return commands;
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor reset"'
         ];

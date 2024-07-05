@@ -52,7 +52,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         return commands;
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor reset"'
         ];

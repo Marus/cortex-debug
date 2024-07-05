@@ -94,7 +94,6 @@ const SERVER_TYPE_MAP = {
 enum SessionMode {
     LAUNCH = 'entry',
     ATTACH = 'attach',
-    RESTART = 'restart',
     RESET = 'reset'
 }
 
@@ -315,7 +314,12 @@ export class GDBDebugSession extends LoggingDebugSession {
         response.body.supportsFunctionBreakpoints = true;
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
-        response.body.supportsRestartRequest = true;
+
+        // We no longer support a 'Restart' request. However, VSCode will implement a replacement by terminating the
+        // current session and starting a new one from scratch. But, we still have to support the launch.json
+        // properties related to Restart but for Reset. This way, we don't break functionality.
+        response.body.supportsRestartRequest = false;
+
         response.body.supportsGotoTargetsRequest = true;
         response.body.supportSuspendDebuggee = true;
         response.body.supportTerminateDebuggee = true;
@@ -364,7 +368,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
         }
 
-        let logFName = args?.pvtDebugOptions?.file;
+        let logFName = args?.pvtAdapterDebugOptions?.file;
         if (typeof logFName === 'string') {
             logFName = logFName.replace('${PID}', process.pid.toString());
             try {
@@ -1029,11 +1033,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         let commands: string[] = [];
         let shouldContinue = false;
         switch (mode) {
-            case SessionMode.RESTART:
-                commands = this.args.postRestartSessionCommands || [];
-                break;
             case SessionMode.RESET:
-                commands = this.args.postRestartSessionCommands || [];
+                commands = this.args.postResetSessionCommands || [];
                 break;
             default:
                 commands = this.args.postStartSessionCommands || [];
@@ -1049,7 +1050,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         return new Promise<boolean>((resolve, reject) => {
             const doResolve = async () => {
                 if (this.args.noDebug || (shouldContinue && this.isMIStatusStopped())) {
-                    if ((mode === SessionMode.RESET) || (mode === SessionMode.RESTART)) {
+                    if (mode === SessionMode.RESET) {
                         this.sendDummyStackTrace = true;
                         this.onInternalEvents.once('stack-trace-request', () => {
                             this.sendDummyStackTrace = false;
@@ -1574,30 +1575,24 @@ export class GDBDebugSession extends LoggingDebugSession {
     //
     // https://github.com/microsoft/debug-adapter-protocol/issues/73
     //
+    // We have no remmoved support for a Restart and the following is used only for a Reset. We still support
+    // the old launch.json properties for a Restart
+    //
     private sendDummyStackTrace = false;
-    protected restartRequest(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): Promise<void> {
+    protected doResetDevice(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): Promise<void> {
         return new Promise<void>((resolve) => {
-            const mode: SessionMode = (args === 'reset') ? SessionMode.RESET : SessionMode.RESTART;
+            const mode: SessionMode = SessionMode.RESET;
             const restartProcessing = () => {
                 const commands = [];
-                this.args.pvtRestartOrReset = true;
+                this.args.pvtIsReset = true;
                 this.disableSendStoppedEvents = false;
                 this.continuing = false;
 
-                if (mode === SessionMode.RESTART) {
-                    commands.push(...this.args.preRestartCommands.map(COMMAND_MAP));
-                    const restartCommands = this.args.overrideRestartCommands ?
-                        this.args.overrideRestartCommands.map(COMMAND_MAP) : this.serverController.restartCommands();
-                    commands.push(...restartCommands);
-                    commands.push(...this.args.postRestartCommands.map(COMMAND_MAP));
-                } else {
-                    commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
-                    const resetCommands = this.args.overrideResetCommands ? this.args.overrideResetCommands.map(COMMAND_MAP) :
-                                          this.args.overrideRestartCommands ? this.args.overrideRestartCommands.map(COMMAND_MAP) :
-                                          this.serverController.restartCommands();
-                    commands.push(...resetCommands);
-                    commands.push(...this.args.postResetCommands.map(COMMAND_MAP));
-                }
+                commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
+                const resetCommands = this.args.overrideResetCommands ? this.args.overrideResetCommands.map(COMMAND_MAP) :
+                                      this.serverController.resetCommands();
+                commands.push(...resetCommands);
+                commands.push(...this.args.postResetCommands.map(COMMAND_MAP));
 
                 let finishCalled = false;
                 const callFinish = () => {
@@ -1649,13 +1644,12 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected getResetCommands(): string[] {
         return this.args.overrideResetCommands != null ? this.args.overrideResetCommands.map(COMMAND_MAP) :
-               this.args.overrideRestartCommands != null ? this.args.overrideRestartCommands.map(COMMAND_MAP) :
-               this.serverController.restartCommands();
+               this.serverController.resetCommands();
     }
 
     protected async resetDevice(response: DebugProtocol.Response, args: any) {
         try {
-            await this.restartRequest(response, args);
+            await this.doResetDevice(response, args);
         }
         catch (e) {}
     }

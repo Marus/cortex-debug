@@ -53,7 +53,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         return commands;
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor _reset"'
         ];

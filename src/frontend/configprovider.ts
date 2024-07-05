@@ -104,10 +104,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.postLaunchCommands) { config.postLaunchCommands = []; }
         if (!config.preAttachCommands) { config.preAttachCommands = []; }
         if (!config.postAttachCommands) { config.postAttachCommands = []; }
-        if (!config.preRestartCommands) { config.preRestartCommands = []; }
-        if (!config.postRestartCommands) { config.postRestartCommands = []; }
-        if (!config.preResetCommands) { config.preResetCommands = config.preRestartCommands; }
-        if (!config.postResetCommands) { config.postResetCommands = config.postRestartCommands; }
+        if (!config.preResetCommands) { config.preResetCommands = config.preRestartCommands || []; }
+        if (!config.postResetCommands) { config.postResetCommands = config.postRestartCommands || []; }
+        if (!config.postResetSessionCommands) { config.postResetSessionCommands = config.postRestartSessionCommands || null; }
         if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); }
         else if (config.runToMain) {
             config.runToEntryPoint = 'main';
@@ -154,6 +153,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
+        if (config.pvtAdapterDebugOptions === undefined) {
+            config.pvtAdapterDebugOptions = configuration.get('pvtAdapterDebugOptions', {});
+        }
+        if (typeof config.pvtAdapterDebugOptions !== 'object') {
+            config.pvtAdapterDebugOptions = {};
+        }
         if (config.showDevDebugOutput === undefined) {
             config.showDevDebugOutput = configuration.get(CortexDebugKeys.DEV_DEBUG_MODE, ADAPTER_DEBUG_MODE.NONE);
         }

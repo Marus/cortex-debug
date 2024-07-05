@@ -47,7 +47,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
         return commands;
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor stop"',
             'interpreter-exec console "monitor system_reset"'

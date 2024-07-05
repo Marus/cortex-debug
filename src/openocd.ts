@@ -116,7 +116,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         return commands;
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor reset halt"'
         ];
@@ -134,7 +134,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public rttCommands(): string[] {
         const commands = [];
-        if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
+        if (this.args.rttConfig.enabled && !this.args.pvtIsReset) {
             const cfg = this.args.rttConfig;
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
@@ -176,7 +176,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     private SWOConfigurationCommands(): string[] {
         const commands: string[] = [];
 
-        if (!this.args.pvtRestartOrReset) {
+        if (!this.args.pvtIsReset) {
             const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
             const swoFrequency = this.args.swoConfig.swoFrequency;
             const cpuFrequency = this.args.swoConfig.cpuFrequency;

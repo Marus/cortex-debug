@@ -55,7 +55,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         return commands;
     }
 
-    public restartCommands(): string[] {
+    public resetCommands(): string[] {
         const commands: string[] = [
             'interpreter-exec console "monitor halt"',
             'interpreter-exec console "monitor reset"'
@@ -65,7 +65,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
     public rttCommands(): string[] {
         const commands = [];
-        if (this.args.rttConfig.enabled && !this.args.pvtRestartOrReset) {
+        if (this.args.rttConfig.enabled && !this.args.pvtIsReset) {
             const cfg = this.args.rttConfig;
             if ((this.args.request === 'launch') && cfg.clearSearch) {
                 // The RTT control block may contain a valid search string from a previous run
