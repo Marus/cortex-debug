@@ -1,14 +1,15 @@
 # ChangeLog
 
 # V1.12.2-pre1
-* MAJOR Change. The `Restart` button functionality has been completely changed. This was not a stable function and VSCode kept changing its definition over the years multiple times. However they provide a default functionality, so the `Restart` button still works but very differently. As of today, VSCode seems to do the following (and this extension is not involved)
+* MAJOR Change. The `Restart` button functionality has been completely changed. This was not a stable function and VSCode kept changing its definition over the years multiple times. However they provide a default functionality, so the `Restart` button still works but very differently from our implementation. As of today, VSCode seems to do the following (and this extension is not involved)
   * It Stops the current session. This means the current GDB and any GDB-server (openocd, stlink, etc. are also terminated)
   * If then Starts a new session using the same configuration.
-    * But, we are not sure it re-reads your launch.json
     * If you have a `preLaunchTask`, it will be executed
     * Since to us, this looks like a brand new session, both GDB and the GDB-server are re-started. Just like any other 'Start' the symbols are re-read and device may get re-programmed
     * All of this can be slow but this is VSCode desires and there is no point us trying to duplicate what they have done or are going to do in the future
-  * This is the reason why we implemented the 'Reset' button.
+    * It is not clear what (should) happens when you use the `Restart` button when multiple debuggers are active at the same time. For instance in a multi-core session. It may work, but we have not tested it.
+  * This is the reason why we implemented the `Reset` button a while ago because VSCode `Restart` meant different (undocumented) behaviors at different times.
+  * As a result, all the Restart related launch.json properties no longer apply. But, for compatibility reasons, they still exist and used by the `Reset` functionality when a `Reset` specific property does not exist. This is what used to happen in the previous releases.
 
 # V1.12.1
 * Fix for [#923: Local variables with same name between functions not tracking or updating context](https://github.com/Marus/cortex-debug/issues/923)
