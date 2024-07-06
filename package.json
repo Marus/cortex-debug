@@ -1,5 +1,5 @@
 {
-    "version": "1.12.2-pre",
+    "version": "1.12.2-pre1",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
