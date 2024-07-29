@@ -23,7 +23,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 ![](images/gdb-server.png)
 * Support for SEGGER Real Time Trace (RTT) using OpenOCD and J-Link gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT. See image above for console style output. SWO output also creates another section.
 * Globals and Static scopes in the variables view
-* Initial support for Rust code (most functionality is working; report any issues
+* Initial support for Rust code (most functionality is working; report any issues)
 * RTOS Thread Support in `CALL STACK` window (J-Link, OpenOCD, pyOCD - RTOS supported depend on GDB server)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 * Live Watch with supported GDB servers (tested with OpenOCD, J-Link, STLink so far - since V1.6)
