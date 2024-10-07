@@ -25,7 +25,8 @@ const extensionConfig = {
   devtool: 'source-map',
   externals: {
     vscode: 'vscode',
-    serialport: 'serialport'
+    serialport: 'serialport',
+    usb: 'usb'
   },
   resolve: {
     extensions: ['.ts', '.js']
@@ -57,7 +58,8 @@ const adapterConfig = {
   devtool: 'source-map',
   externals: {
     vscode: 'vscode',
-    serialport: 'serialport'
+    serialport: 'serialport',
+    usb: 'usb',
   },
   resolve: {
     extensions: ['.ts', '.js']

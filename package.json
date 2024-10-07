@@ -2493,12 +2493,12 @@
                                     "swoPath": {
                                         "type": "string",
                                         "default": "",
-                                        "description": "Path name when source is \"file\" or \"serial\". Typically a /path-name or a serial-port-name"
+                                        "description": "Path name when source is \"file\" or \"serial\", device name regex match when source is \"probe\" for BMP. Typically a /path-name or a serial-port-name"
                                     },
                                     "swoPort": {
                                         "type": "string",
                                         "default": "",
-                                        "description": "When server is \"external\" && source is \"socket\", port to connect to. Format [host:]port"
+                                        "description": "When server is \"external\" && source is \"socket\", port to connect to. Format [host:]port. For BMP, specifies the regex match of the USB interface contianing raw SWO data."
                                     },
                                     "decoders": {
                                         "description": "SWO Decoder Configuration",
@@ -3009,6 +3009,7 @@
         "stream-json": "^1.7.3",
         "tmp": "^0.2.1",
         "universal-analytics": "^0.5.3",
+        "usb": "^2.14.0",
         "uuid": "^8.3.2",
         "vscode-jsonrpc": "^6.0.0"
     },

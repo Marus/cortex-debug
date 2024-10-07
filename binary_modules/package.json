@@ -11,6 +11,7 @@
     "electron-rebuild": "^3.2.8"
   },
   "dependencies": {
-    "serialport": "^10.4.0"
+    "serialport": "^10.4.0",
+    "usb": "^2.14.0"
   }
 }

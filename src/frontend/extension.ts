@@ -16,6 +16,7 @@ import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource, PeMicroSocketSo
 import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
+import { UsbSWOSource } from './swo/sources/usb';
 import { SymbolInformation, SymbolScope } from '../symbols';
 import { RTTTerminal } from './rtt_terminal';
 import { GDBServerConsole } from './server_console';
@@ -762,6 +763,10 @@ export class CortexDebugExtension {
         else if (e.body.type === 'serial') {
             mySession.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate);
             Reporting.sendEvent('SWO', 'Source', 'Serial');
+        }
+        else if (e.body.type === 'usb') {
+            mySession.swoSource = new UsbSWOSource(e.body.device, e.body.port);
+            Reporting.sendEvent('SWO', 'Source', 'USB');
         }
 
         this.initializeSWO(e.session, e.body.args);

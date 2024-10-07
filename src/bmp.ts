@@ -109,6 +109,10 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         );
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+
+        if (this.args.swoConfig.source === 'probe') {
+            commands.push('monitor traceswo');
+        }
         
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
@@ -131,13 +135,22 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
     public serverLaunchStarted(): void {}
     public serverLaunchCompleted(): void {
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            this.emit('event', new SWOConfigureEvent({
-                type: 'serial',
-                args: this.args,
-                device: this.args.swoConfig.source,
-                baudRate: this.args.swoConfig.swoFrequency
-            }));
+        if (this.args.swoConfig.enabled) {
+            if (this.args.swoConfig.source === 'probe') {
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'usb',
+                    args: this.args,
+                    device: this.args.swoConfig.swoPath || 'Black Magic Probe',
+                    port: this.args.swoConfig.swoPort || 'Black Magic Trace Capture'
+                }));
+            } else {
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'serial',
+                    args: this.args,
+                    device: this.args.swoConfig.source,
+                    baudRate: this.args.swoConfig.swoFrequency
+                }));
+            }
         }
     }
     
