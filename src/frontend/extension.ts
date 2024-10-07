@@ -760,7 +760,7 @@ export class CortexDebugExtension {
             Reporting.sendEvent('SWO', 'Source', 'File');
         }
         else if (e.body.type === 'serial') {
-            mySession.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate, this.context.extensionPath);
+            mySession.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate);
             Reporting.sendEvent('SWO', 'Source', 'Serial');
         }
 

@@ -3005,6 +3005,7 @@
         "prebuild-install": "^7.0.1",
         "ringbufferjs": "^1.1.0",
         "safe-buffer": "^5.2.1",
+        "serialport": "^10.4.0",
         "stream-json": "^1.7.3",
         "tmp": "^0.2.1",
         "universal-analytics": "^0.5.3",
@@ -3057,7 +3058,7 @@
         "url": "https://github.com/Marus/cortex-debug/issues"
     },
     "scripts": {
-        "vscode:prepublish": "npm run lint && webpack --mode production && node dist/docgen.js",
+        "vscode:prepublish": "npm run lint && webpack --mode production && node dist/docgen.js && npm ci -C binary_modules --omit dev && cp -a binary_modules/node_modules dist/",
         "watch": "webpack --mode development --watch",
         "compile": "webpack --mode development && node dist/docgen.js",
         "test-compile": "tsc -p ./",
