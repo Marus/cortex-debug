@@ -1,3 +1,14 @@
+# The following are ARM CoreSight blocks but the Silicon Vendors are free to chose
+# alternate base addresses. Check with your vendor documentation
+set language c
+set $ITM_BASE = 0xE0000000
+set $DWT_BASE = 0xE0001000
+set $SCS_BASE = 0xE000E000
+set $SCB_BASE = $SCS_BASE + 0xD00
+set $DCB_BASE = $SCB_BASE + 0xF0
+set $TPI_BASE = 0xE0040000
+set language auto
+
 #
 # Help needed: There are many useful functions here but most of them use hardcoded addresses
 # that may not be the same for all devices. Wish we can port all these functions to something
@@ -5,225 +16,251 @@
 #
 define EnableITMAccess
 	set language c
-	set *0xE000EDFC |= 0x1000000
-	set *0xE0000FB0 = 0xC5ACCE55
+	set *($DCB_BASE + 0xC) |= 0x1000000
+	set *($ITM_BASE + 0xFB0) = 0xC5ACCE55
 	set language auto
 end
 
 define BaseSWOSetup
 	set language c
-	set *0xE0040304 = 0x100
-	set *0xE00400F0 = 2
-	set *0xE0040010 = $arg0
-	set *0xE0001000 &= ~(0x8000)
-	set *0xE0001000 |= 0xBFF
+
+	# NRZ is the default format
+	set $format = 2
+	if $argc > 1
+		# format specified explicitly
+		set $format = $arg1
+	end
+
+	set *($TPI_BASE + 0x304) = 0x100
+	set *($TPI_BASE + 0x0F0) = $format
+	set *($TPI_BASE + 0x010) = $arg0
+	set *($DWT_BASE) &= ~(0x8000)
+	set *($DWT_BASE) |= 0xBFF
 	set language auto
 end
 
 define SetITMTimestampFrequency
 	set language c
-	set *0xE0000E80 &= ~(0x3 << 10)
-	set *0xE0000E80 |= ($arg0 << 10)
+	set *($ITM_BASE + 0xE80) &= ~(0x3 << 10)
+	set *($ITM_BASE + 0xE80) |= ($arg0 << 10)
 	set language auto
 end
 
 define SetITMTimestampPrescale
 	set language c
-	set *0xE0000E80 &= ~(0x3 << 8)
-	set *0xE0000E80 |= ($arg0 << 8)
+	set *($ITM_BASE + 0xE80) &= ~(0x3 << 8)
+	set *($ITM_BASE + 0xE80) |= ($arg0 << 8)
 	set language auto
 end
 
 define EnableITMPorts
 	set language c
-	set *0xE0000E00 |= $arg0
+	set *($ITM_BASE + 0xE00) |= $arg0
 	set language auto
 end
 
 define DisableITMPorts
 	set language c
-	set *0xE0000E00 &= ~($arg0)
+	set *($ITM_BASE + 0xE00) &= ~($arg0)
 	set language auto
 end
 
 define SetITMId
 	set language c
-	set *0xE0000E80 &= ~(0x7F << 16)
-	set *0xE0000E80 |= ($arg0 << 16)
+	set *($ITM_BASE + 0xE80) &= ~(0x7F << 16)
+	set *($ITM_BASE + 0xE80) |= ($arg0 << 16)
 	set language auto
 end
 
 define ITMGlobalEnable
 	set language c
-	set $busy = ((*0xE0000E80 & 0x800000))
+	set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	while ($busy)
-		set $busy = ((*0xE0000E80 & 0x800000))
+		set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	end
 
-	set *0xE0000E80 |= 0x1
+	set *($ITM_BASE + 0xE80) |= 0x1
 
-	set $busy = ((*0xE0000E80 & 0x800000))
+	set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	while ($busy)
-		set $busy = ((*0xE0000E80 & 0x800000))
+		set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	end
 	set language auto
 end
 
 define ITMGlobalDisable
 	set language c
-	set $busy = ((*0xE0000E80 & 0x800000))
+	set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	while ($busy)
-		set $busy = ((*0xE0000E80 & 0x800000))
+		set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	end
 
-	set *0xE0000E80 &= ~(0x1)
+	set *($ITM_BASE + 0xE80) &= ~(0x1)
 
-	set $busy = ((*0xE0000E80 & 0x800000))
+	set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	while ($busy)
-		set $busy = ((*0xE0000E80 & 0x800000))
+		set $busy = ((*($ITM_BASE + 0xE80) & 0x800000))
 	end
 	set language auto
 end
 
 define ITMTimestampEnable
 	set language c
-	set *0xE0000E80 |= 0x302
+	set *($ITM_BASE + 0xE80) |= 0x302
 	set language auto
 end
 
 define ITMTimestampDisable
 	set language c
-	set *0xE0000E80 &= ~(0x2)
+	set *($ITM_BASE + 0xE80) &= ~(0x2)
 	set language auto
 end
 
 define ITMSyncEnable
 	set language c
-	set *0xE0000E80 |= 0x4
+	set *($ITM_BASE + 0xE80) |= 0x4
 	set language auto
 end
 
 define ITMSyncDisable
 	set language c
-	set *0xE0000E80 &= ~(0x4)
+	set *($ITM_BASE + 0xE80) &= ~(0x4)
 	set language auto
 end
 
 define ITMDWTTransferEnable
 	set language c
-	set *0xE0000E80 |= 0x8
+	set *($ITM_BASE + 0xE80) |= 0x8
 	set language auto
 end
 
 define ITMDWTTransferDisable
 	set language c
-	set *0xE0000E80 &= (~0x8)
+	set *($ITM_BASE + 0xE80) &= (~0x8)
 	set language auto
 end
 
 define EnableDWTSync
 	set language c
-	set *0xE0001000 |= 0x800
+	set *($DWT_BASE) |= 0x800
 	set language auto
 end
 
 define DisableDWTSync
 	set language c
-	set *0xE0001000 &= ~(0x800)
+	set *($DWT_BASE) &= ~(0x800)
 	set language auto
 end
 
 define EnablePCSample
 	set language c
-	set *0xE0001004 = 0x0
-	set *0xE0001000 |= 0x1201
+	set *($DWT_BASE + 0x004) = 0x0
+	set *($DWT_BASE) |= 0x1201
 	set language auto
 end
 
 define DisablePCSample
 	set language c
-	set *0xE0001000 &= ~(0x1000)
+	set *($DWT_BASE) &= ~(0x1000)
 	set language auto
 end
 
 define EnableCycleCountEvent
 	set language c
-	set *0xE0001000 |= 0x400000
+	set *($DWT_BASE) |= 0x400000
 	set language auto
 end
 
 define DisableCycleCountEvent
 	set language c
-	set *0xE0001000 &= ~(0x400000)
+	set *($DWT_BASE) &= ~(0x400000)
 	set language auto
 end
 
 define EnableFoldedEvent
 	set language c
-	set *0xE0001000 |= 0x200000
+	set *($DWT_BASE) |= 0x200000
 	set language auto
 end
 
 define DisableFoldedEvent
 	set language c
-	set *0xE0001000 &= ~(0x200000)
+	set *($DWT_BASE) &= ~(0x200000)
 	set language auto
 end
 
 define EnableLSUCountEvent
 	set language c
-	set *0xE0001000 |= 0x100000
+	set *($DWT_BASE) |= 0x100000
 	set language auto
 end
 
 define DisableLSUCountEvent
 	set language c
-	set *0xE0001000 &= ~(0x100000)
+	set *($DWT_BASE) &= ~(0x100000)
 	set language auto
 end
 
 define EnableSleepCountEvent
 	set language c
-	set *0xE0001000 |= 0x80000
+	set *($DWT_BASE) |= 0x80000
 	set language auto
 end
 
 define DisableSleepCountEvent
 	set language c
-	set *0xE0001000 &= ~(0x80000)
+	set *($DWT_BASE) &= ~(0x80000)
 	set language auto
 end
 
 define EnableInterruptOverheadEvent
 	set language c
-	set *0xE0001000 |= 0x40000
+	set *($DWT_BASE) |= 0x40000
 	set language auto
 end
 
 define DisableInterruptOverheadEvent
 	set language c
-	set *0xE0001000 &= ~(0x40000)
+	set *($DWT_BASE) &= ~(0x40000)
 	set language auto
 end
 
 define EnableCPICountEvent
 	set language c
-	set *0xE0001000 |= 0x20000
+	set *($DWT_BASE) |= 0x20000
 	set language auto
 end
 
 define DisableCPICountEvent
 	set language c
-	set *0xE0001000 &= ~(0x20000)
+	set *($DWT_BASE) &= ~(0x20000)
 	set language auto
 end
 
 define SoftwareReset
 	set language c
+
+	set $halt = 0
+
+	if $argc
+		set $halt = $arg0
+	end
+
+	if $halt
+		set $demcr = *($DCB_BASE + 0xC)
+		set *($DCB_BASE + 0xC) |= 1
+	end
+
 	set *0xE000ED0C = 0x05FA0004
 	set $busy = (*0xE000ED0C & 0x4)
 	while ($busy)
 		set $busy = (*0xE000ED0C & 0x4)
 	end
+
+	if $halt
+		# restore DEMCR value
+		set *($DCB_BASE + 0xC) = $demcr
+	end
+
 	set language auto
 end

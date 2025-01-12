@@ -27,15 +27,6 @@
 # $swoPortMask -- The ITM ports to enable, calculated based on ports used in swoConfig (launch.json)
 #
 
-# The following are ARM CoreSight blocks but the Silicon Vendors are free to chose
-# alternate base addresses. Check with your vendor documentation
-set language c
-set $ITM_BASE = 0xE0000000
-set $DWT_BASE = 0xE0001000
-set $DCB_BASE = 0xE000EDF0
-set $TPI_BASE = 0xE0040000
-set language auto
-
 # We wish we could do this whole thing in python some sane language but python is not enabled
 # in many distributions of gdb
 

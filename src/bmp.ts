@@ -61,7 +61,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
     public launchCommands(): string[] {
         const commands = [
             ...genDownloadCommands(this.args, []),
-            'interpreter-exec console "SoftwareReset"'
+            'interpreter-exec console "SoftwareReset 1"'
         ];
         return commands;
     }
@@ -93,12 +93,13 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const cpuFrequency = this.args.swoConfig.cpuFrequency;
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+        const encoding = this.args.swoConfig.source === 'probe' ? 1 : 2;
         
         const commands: string[] = [];
 
         commands.push(
             'EnableITMAccess',
-            `BaseSWOSetup ${ratio}`,
+            `BaseSWOSetup ${ratio} ${encoding}`,
             'SetITMId 1',
             'ITMDWTTransferEnable',
             'DisableITMPorts 0xFFFFFFFF',
@@ -109,6 +110,10 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         );
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
+
+        if (this.args.swoConfig.source === 'probe') {
+            commands.push('monitor traceswo');
+        }
         
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
@@ -131,13 +136,22 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
     public serverLaunchStarted(): void {}
     public serverLaunchCompleted(): void {
-        if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
-            this.emit('event', new SWOConfigureEvent({
-                type: 'serial',
-                args: this.args,
-                device: this.args.swoConfig.source,
-                baudRate: this.args.swoConfig.swoFrequency
-            }));
+        if (this.args.swoConfig.enabled) {
+            if (this.args.swoConfig.source === 'probe') {
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'usb',
+                    args: this.args,
+                    device: this.args.swoConfig.swoPath || 'Black Magic Probe',
+                    port: this.args.swoConfig.swoPort || 'Black Magic Trace Capture'
+                }));
+            } else {
+                this.emit('event', new SWOConfigureEvent({
+                    type: 'serial',
+                    args: this.args,
+                    device: this.args.swoConfig.source,
+                    baudRate: this.args.swoConfig.swoFrequency
+                }));
+            }
         }
     }
     
