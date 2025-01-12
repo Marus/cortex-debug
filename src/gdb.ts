@@ -15,7 +15,8 @@ import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
-    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative
+    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative,
+    SWOConfigureEvent
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -266,6 +267,9 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected suppressRadixMsgs = false;
 
     protected tcpPortAllocatedListner = this.tcpPortsAllocated.bind(this);
+
+    private swoLaunchPromise = Promise.resolve();
+    private swoLaunched?: () => void;
 
     public constructor(debuggerLinesStartAt1: boolean, public readonly isServer: boolean = false, threadID: number = 1) {
         super(undefined, debuggerLinesStartAt1, isServer);     // Use if deriving from LogDebugSession
@@ -659,6 +663,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                         await symbolsPromise;
                         if (showTimes) { this.handleMsg('log', 'Debug Time: objdump and nm done...\n'); }
                         if (showTimes) { this.handleMsg('log', 'Debug Time: All pending items done, proceed to gdb connect...\n'); }
+
+                        // if SWO launch was requested by the server controller, we wait for it to connect before starting actual debug
+                        await this.swoLaunchPromise;
 
                         // This is the last of the place where ports are allocated
                         this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
@@ -1211,6 +1218,11 @@ export class GDBDebugSession extends LoggingDebugSession {
                 }
                 break;
             }
+            case 'swo-connected': {
+                this.swoLaunched?.();
+                this.swoLaunched = undefined;
+                break;
+            }
             default:
                 response.body = { error: 'Invalid command.' };
                 this.sendResponse(response);
@@ -1674,6 +1686,16 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private serverControllerEvent(event: DebugProtocol.Event) {
+        if (event instanceof SWOConfigureEvent) {
+            this.swoLaunchPromise = new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('Timeout waiting for SWV connection')), 1000);
+                this.swoLaunched = () => {
+                    clearTimeout(timeout);
+                    resolve();
+                };
+            });
+        }
+
         this.sendEvent(event);
     }
 
