@@ -134,8 +134,34 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         return commands;
     }
 
-    public swoAndRTTCommands(): string[] {
-        return [];
+    public swoAndRTTCommands(): string[]{
+        const commands = [];
+        if (this.args.swoConfig.enabled) {
+            const swocommands = this.SWOConfigurationCommands();
+            commands.push(...swocommands);
+        }
+        return commands;
+    }
+
+    private SWOConfigurationCommands(): string[] {
+        const { decoders, swoFrequency, cpuFrequency } = this.args.swoConfig;
+        const portMask = '0x' + calculatePortMask(decoders).toString(16);
+        const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+
+        const commands = [
+            'EnableITMAccess',
+            `BaseSWOSetup ${ratio}`,
+            'SetITMId 1',
+            'ITMDWTTransferEnable',
+            'DisableITMPorts 0xFFFFFFFF',
+            `EnableITMPorts ${portMask}`,
+            'EnableDWTSync',
+            this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample',
+            'ITMSyncEnable',
+            'ITMGlobalEnable'
+        ];
+
+        return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
     public serverExecutable(): string {
@@ -176,6 +202,17 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             serverargs.push('--swd');
         }
 
+        if (this.args.swoConfig.enabled)
+        {
+            const swoport = this.ports['swoPort'];
+            serverargs.push('--swo-port', swoport.toString());
+
+            const { cpuFrequency, swoFrequency } = this.args.swoConfig;
+
+            serverargs.push('--cpu-clock', cpuFrequency.toString());
+            serverargs.push('--swo-clock-div', Math.floor(cpuFrequency / swoFrequency).toString());
+        }
+
         if (this.args.serialNumber) {
             serverargs.push('--serial-number', this.args.serialNumber);
         }
@@ -196,8 +233,16 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     public serverLaunchStarted(): void {}
-    public serverLaunchCompleted(): void {}
-    
+    public serverLaunchCompleted(): void {
+        if (this.args.swoConfig.enabled) {
+            this.emit('event', new SWOConfigureEvent({
+                type: 'socket',
+                args: this.args,
+                port: this.ports['swoPort'].toString()
+            }));
+        }
+    }
+
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}
 }
