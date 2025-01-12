@@ -61,7 +61,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
     public launchCommands(): string[] {
         const commands = [
             ...genDownloadCommands(this.args, []),
-            'interpreter-exec console "SoftwareReset"'
+            'interpreter-exec console "SoftwareReset 1"'
         ];
         return commands;
     }
@@ -93,12 +93,13 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const cpuFrequency = this.args.swoConfig.cpuFrequency;
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+        const encoding = this.args.swoConfig.source === 'probe' ? 1 : 2;
         
         const commands: string[] = [];
 
         commands.push(
             'EnableITMAccess',
-            `BaseSWOSetup ${ratio}`,
+            `BaseSWOSetup ${ratio} ${encoding}`,
             'SetITMId 1',
             'ITMDWTTransferEnable',
             'DisableITMPorts 0xFFFFFFFF',
