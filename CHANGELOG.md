@@ -10,6 +10,7 @@
     * It is not clear what (should) happens when you use the `Restart` button when multiple debuggers are active at the same time. For instance in a multi-core session. It may work, but we have not tested it.
   * This is the reason why we implemented the `Reset` button a while ago because VSCode `Restart` meant different (undocumented) behaviors at different times.
   * As a result, all the Restart related launch.json properties no longer apply. But, for compatibility reasons, they still exist and used by the `Reset` functionality when a `Reset` specific property does not exist. This is what used to happen in the previous releases.
+* ST-LINK GDB server (*not* st-util) now supports SWO functionality, using standard configuration options.
 
 # V1.12.1
 * Fix for [#923: Local variables with same name between functions not tracking or updating context](https://github.com/Marus/cortex-debug/issues/923)
@@ -27,9 +28,9 @@ This is a major release. It has been in pre-release for quite a while and some o
   * [RTOS Views](https://marketplace.visualstudio.com/items?itemName=mcu-debug.rtos-views)
   * [Memory View](https://marketplace.visualstudio.com/items?itemName=mcu-debug.memory-view)
   * [Peripheral Viewer](https://marketplace.visualstudio.com/items?itemName=mcu-debug.peripheral-viewer)
- 
+
  *Note: Please install this extension using VSCode with a working internet connection. Do not try to install it manually. If you install it manually, then also make sure all the other dependent extensions are installed.*
-  
+
 # V1.11.3
 * Issue #861: Potential fix
 * Issue #867: STLink make it so that user has to enable `-shared` if needed. Before it was automatically added to the command-line and there was no (good) way to remove it
