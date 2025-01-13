@@ -10,6 +10,9 @@
     * It is not clear what (should) happens when you use the `Restart` button when multiple debuggers are active at the same time. For instance in a multi-core session. It may work, but we have not tested it.
   * This is the reason why we implemented the `Reset` button a while ago because VSCode `Restart` meant different (undocumented) behaviors at different times.
   * As a result, all the Restart related launch.json properties no longer apply. But, for compatibility reasons, they still exist and used by the `Reset` functionality when a `Reset` specific property does not exist. This is what used to happen in the previous releases.
+* Native external dependencies have been integrated into the extension once again (`serialport` and `usb` packages),
+  so the extension no longer depends on other extensions to provide related functionality.
+* Black Magic Probe now supports SWO via the dedicated USB endpoint.
 * ST-LINK GDB server (*not* st-util) now supports SWO functionality, using standard configuration options.
 
 # V1.12.1
