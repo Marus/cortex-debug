@@ -93,7 +93,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const cpuFrequency = this.args.swoConfig.cpuFrequency;
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-        const encoding = this.args.swoConfig.source === 'probe' ? 1 : 2;
+        const encoding = this.args.swoConfig.swoEncoding === 'manchester' ? 1 : 2;
         
         const commands: string[] = [];
 
@@ -112,7 +112,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
 
         if (this.args.swoConfig.source === 'probe') {
-            commands.push('monitor traceswo');
+            commands.push(encoding === 2 ? `monitor traceswo ${swoFrequency}` : 'monitor traceswo');
         }
         
         return commands.map((c) => `interpreter-exec console "${c}"`);

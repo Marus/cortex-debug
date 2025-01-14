@@ -87,6 +87,7 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | swoConfig<br>.decoders | {object} | Both | SWO Decoder Configuration |
 | swoConfig<br>.enabled | boolean | Both | Enable SWO decoding. |
 | swoConfig<br>.source | string | Both | Source for SWO data. Can either be "probe" to get directly from debug probe, or a serial port device to use a serial port external to the debug probe. |
+| swoConfig<br>.swoEncoding | string | Both | BMP only: SWO encoding data used at the line level. Depends on the probe hardware, native (the original one) supports only Manchester (self-clocked, but slower rates) while most other platforms (e.g. ST-LINK with BMP firmware) support only UART (frequency/baud rate has to match to within ~2%). |
 | swoConfig<br>.swoFrequency | number | Both | SWO frequency in Hz. |
 | swoConfig<br>.swoPath | string | Both | Path name when source is "file" or "serial", device name regex match when source is "probe" for BMP. Typically a /path-name or a serial-port-name |
 | swoConfig<br>.swoPort | string | Both | When server is "external" && source is "socket", port to connect to. Format [host:]port. For BMP, specifies the regex match of the USB interface contianing raw SWO data. |
