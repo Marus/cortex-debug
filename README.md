@@ -5,7 +5,7 @@
 Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
 * Highly configurable. See https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md
-* Support J-Link, OpenOCD GDB Server, STMicroelectronic's ST-LINK GDB server (no SWO support yet), pyOCD
+* Support J-Link, OpenOCD GDB Server, STMicroelectronic's ST-LINK GDB server, pyOCD
 * Initial support for the Black Magic Probe (This has not been as heavily tested; SWO can only be captured via a serial port)
 * Partial support textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
 * Multi-core and multi-session debugging. See https://github.com/Marus/cortex-debug/wiki/Multi-core-debugging
