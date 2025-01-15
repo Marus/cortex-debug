@@ -289,9 +289,14 @@ export class SWOCore extends SWORTTCoreBase {
         }, (error) => {
             this.functionSymbols = [];
         });
-        
-        if (this.source.connected) { this.connected = true; }
-        else { this.source.on('connected', () => { this.connected = true; }); }
+
+        const onConnected = () => {
+            this.connected = true;
+            session.customRequest('swo-connected');
+        };
+
+        if (this.source.connected) { onConnected(); }
+        else { this.source.on('connected', onConnected); }
         this.source.on('data', this.handleData.bind(this));
         this.source.on('disconnected', this.handleDisconnected.bind(this));
 

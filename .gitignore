@@ -1,7 +1,7 @@
 out
 /node_modules
 /webview/node_modules
-/binary_modules/*/node_modules
+/binary_modules/**/node_modules
 *.vsix
 .vscode-test
 .DS_Store

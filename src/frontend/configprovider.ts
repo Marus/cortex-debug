@@ -589,12 +589,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             return 'The ST-Link GDB Server does not have support for the rtos option.';
         }
 
-        if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
-            vscode.window.showWarningMessage('SWO support is not available from the probe when using the ST-Link GDB server. Disabling SWO.');
-            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
-            config.graphConfig = [];
-        }
-
         return null;
     }
 
@@ -620,12 +614,6 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (config.rtos) {
             return 'The Black Magic Probe GDB Server does not have support for the rtos option.';
-        }
-
-        if (config.swoConfig.enabled && config.swoConfig.source === 'probe') {
-            vscode.window.showWarningMessage('SWO support is not available from the probe when using the BMP GDB server. Disabling SWO.');
-            config.swoConfig = { enabled: false, ports: [], cpuFrequency: 0, swoFrequency: 0 };
-            config.graphConfig = [];
         }
 
         return null;

@@ -5,7 +5,7 @@
 Debugging support for ARM Cortex-M Microcontrollers with the following features:
 
 * Highly configurable. See https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md
-* Support J-Link, OpenOCD GDB Server, STMicroelectronic's ST-LINK GDB server (no SWO support yet), pyOCD
+* Support J-Link, OpenOCD GDB Server, STMicroelectronic's ST-LINK GDB server, pyOCD
 * Initial support for the Black Magic Probe (This has not been as heavily tested; SWO can only be captured via a serial port)
 * Partial support textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)
 * Multi-core and multi-session debugging. See https://github.com/Marus/cortex-debug/wiki/Multi-core-debugging
@@ -23,7 +23,7 @@ Debugging support for ARM Cortex-M Microcontrollers with the following features:
 ![](images/gdb-server.png)
 * Support for SEGGER Real Time Trace (RTT) using OpenOCD and J-Link gdb-servers. All the features supported for SWO (text, binary, graphing) are also supported with RTT. See image above for console style output. SWO output also creates another section.
 * Globals and Static scopes in the variables view
-* Initial support for Rust code (most functionality is working; report any issues
+* Initial support for Rust code (most functionality is working; report any issues)
 * RTOS Thread Support in `CALL STACK` window (J-Link, OpenOCD, pyOCD - RTOS supported depend on GDB server)
     * As a general rule do not try to use stepping instructions before the scheduler of your RTOS has started - in many cases this tends to crash the GDB servers or leave it in an inconsistent state.
 * Live Watch with supported GDB servers (tested with OpenOCD, J-Link, STLink so far - since V1.6)
