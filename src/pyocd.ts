@@ -1,7 +1,9 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, createPortName, genDownloadCommands } from './common';
-import * as os from 'os';
 import { EventEmitter } from 'events';
+import { calculatePortMask, createPortName, genDownloadCommands } from './common';
+import { GDBServerController } from './gdb.interfaces';
+import { SWOConfigureEvent } from '@common/events';
+import { ConfigurationArguments } from '@common/types';
 
 export class PyOCDServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'PyOCD';

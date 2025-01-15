@@ -4,7 +4,7 @@
 import * as assert from 'assert';
 import * as http from 'http';
 import os = require('os');
-import { TcpPortScanner } from '../../src/tcpportscanner';
+import { TcpPortScanner } from '../../src/common/util/tcpportscanner';
 
 /**
  * Sorry, this is a slow test because we are testing timeouts. Hate anything time related

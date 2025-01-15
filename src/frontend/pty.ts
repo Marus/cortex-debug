@@ -1,8 +1,9 @@
 import EventEmitter = require('events');
 import * as os from 'os';
 import * as vscode from 'vscode';
-import { ResettableTimeout, TerminalInputMode } from '../common';
 import { BR_MAGENTA_FG, CSI, RESET } from './ansi-helpers';
+import { TerminalInputMode } from '@common/types';
+import { ResettableTimeout } from '@common/util';
 
 const KEYS = {
     enter       : '\r',

@@ -1,15 +1,14 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import {
-    GDBServerController, ConfigurationArguments, SWOConfigureEvent,
-    calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands, CTIAction
-} from './common';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as net from 'net';
 import * as path from 'path';
 import { EventEmitter } from 'events';
-import { MI2 } from './backend/mi2/mi2';
 import { GDBDebugSession } from './gdb';
+import { calculatePortMask, createPortName, genDownloadCommands, RTTServerHelper } from './common';
+import { CTIAction, GDBServerController } from './gdb.interfaces';
+import { SWOConfigureEvent } from '@common/events';
+import { ConfigurationArguments } from '@common/types';
 
 function getLogPath() {
     try {

@@ -1,17 +1,13 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as crypto from 'crypto';
-import { SpawnLineReader, SymbolFile, validateELFHeader } from '../common';
 import { IntervalTree, Interval } from 'node-interval-tree';
-import JsonStreamStringify from 'json-stream-stringify';
-const StreamArray = require('stream-json/streamers/StreamArray');
-import * as zlib from 'zlib';
 
-import { SymbolType, SymbolScope, SymbolInformation as SymbolInformation } from '../symbols';
 import { GDBDebugSession } from '../gdb';
 import { hexFormat } from '../frontend/utils';
 import { MINode } from './mi_parse';
+import { SymbolFile, SymbolInformation, SymbolScope, SymbolType } from '@common/types';
+import { SpawnLineReader, validateELFHeader } from '@common/util';
 
 const OBJDUMP_SYMBOL_RE = RegExp(/^([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\t([0-9a-f]+)\s(.*)$/);
 const NM_SYMBOL_RE = RegExp(/^([0-9a-f]+).*\t(.+):[0-9]+/);     // For now, we only need two things

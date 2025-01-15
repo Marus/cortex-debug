@@ -1,6 +1,7 @@
 import * as d3 from 'd3';
-import { Graph, XYGraphConfiguration, GraphPoint } from './types';
+import { Graph, GraphPoint } from './types';
 import { GraphDataSource } from './datasource';
+import { XYGraphConfiguration } from '@common/types';
 
 declare const window: Window;
 declare global {

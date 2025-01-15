@@ -1,8 +1,9 @@
 import { TimeseriesGraph } from './timeseriesgraph';
 import { XYGraph } from './xygraph';
 import { ProgramStatsGraph } from './programstatsgraph';
-import { Graph, GrapherConfigurationMessage, TimeseriesGraphConfiguration, XYGraphConfiguration, GrapherMessage, GrapherDataMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './types';
+import { Graph } from './types';
 import { GraphDataSource } from './datasource';
+import { GrapherConfigurationMessage, GrapherDataMessage, GrapherMessage, GrapherProgramCounterMessage, GrapherStatusMessage } from '@common/types';
 
 interface VSCodeAPI {
     postMessage(msg: any): void;
@@ -26,14 +27,14 @@ function init() {
     function processConfiguration(message: GrapherConfigurationMessage) {
         window.datasource = new GraphDataSource();
 
-        message.graphs.forEach((config: any) => {
+        message.graphs.forEach((config) => {
             if (config.type === 'realtime') {
-                const graph = new TimeseriesGraph(config as TimeseriesGraphConfiguration, window.datasource);
+                const graph = new TimeseriesGraph(config, window.datasource);
                 graphs.push(graph);
                 if (message.status === 'stopped' || message.status === 'terminated') { graph.stop(); }
             }
             else if (config.type === 'x-y-plot') {
-                const graph = new XYGraph(config as XYGraphConfiguration, window.datasource);
+                const graph = new XYGraph(config, window.datasource);
                 graphs.push(graph);
                 if (message.status === 'stopped' || message.status === 'terminated') { graph.stop(); }
             }
@@ -67,16 +68,16 @@ function init() {
         const message: GrapherMessage = event.data;
         switch (message.type) {
             case 'configure':
-                processConfiguration(message as GrapherConfigurationMessage);
+                processConfiguration(message);
                 break;
             case 'data':
-                processData(message as GrapherDataMessage);
+                processData(message);
                 break;
             case 'status':
-                processStatus(message as GrapherStatusMessage);
+                processStatus(message);
                 break;
             case 'program-counter':
-                processProgramCounter(message as GrapherProgramCounterMessage);
+                processProgramCounter(message);
                 break;
             default:
                 console.log(`Got unrecognized message type: ${message.type}`);

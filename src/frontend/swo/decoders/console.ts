@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 import { SWORTTDecoder } from './common';
-import { SWOConsoleDecoderConfig } from '../common';
-import { Packet } from '../common';
 import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
-import { HrTimer, TerminalInputMode, TextEncoding } from '../../../common';
+import { Packet, SWOConsoleDecoderConfig, TerminalInputMode, TextEncoding } from '@common/types';
+import { HrTimer } from '@common/util';
 
 export class SWOConsoleProcessor implements SWORTTDecoder {
     private positionCount: number;
@@ -27,7 +26,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         this.port = config.port;
         this.encoding = config.encoding || TextEncoding.UTF8;
         this.timestamp = !!config.timestamp;
-        this.useTerminal = 'useTerminal' in config ? (config as any).useTerminal : true;   // TODO: Remove
+        this.useTerminal = 'useTerminal' in config ? !!config.useTerminal : true;   // TODO: Remove
         if (this.useTerminal) {
             this.createVSCodeTerminal(config);
         } else {

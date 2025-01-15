@@ -1,7 +1,10 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { GDBServerController, ConfigurationArguments, createPortName, SWOConfigureEvent, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
+import { createPortName, genDownloadCommands } from './common';
+import { GDBServerController } from './gdb.interfaces';
+import { SWOConfigureEvent } from '@common/events';
+import { ConfigurationArguments } from '@common/types';
 
 const commandExistsSync = require('command-exists').sync;
 

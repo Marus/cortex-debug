@@ -1,4 +1,5 @@
-import { GraphPoint, GrapherDataMessage, GrapherProgramCounterMessage } from './types';
+import { GrapherDataMessage, GrapherProgramCounterMessage } from '@common/types';
+import { GraphPoint } from './types';
 
 export class GraphDataSource {
     private data: {

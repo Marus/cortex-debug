@@ -1,4 +1,10 @@
-import { DisassemblyInstruction } from './common';
+export interface DisassemblyInstruction {
+    address: string;
+    functionName: string;
+    offset: number;
+    instruction: string;
+    opcodes: string;
+}
 
 export enum SymbolType {
     Function,

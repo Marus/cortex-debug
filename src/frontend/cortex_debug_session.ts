@@ -1,6 +1,6 @@
 import { assert } from 'console';
 import * as vscode from 'vscode';
-import { ConfigurationArguments, ChainedConfig } from '../common';
+import { ConfigurationArguments, ChainedConfig } from '@common/types';
 import { RTTCore, SWOCore } from './swo/core';
 import { SWORTTSource } from './swo/sources/common';
 import { SocketRTTSource } from './swo/sources/socket';
@@ -90,20 +90,20 @@ export class CDebugSession {
         }
     }
 
-    public static FindSession(session: vscode.DebugSession) {
+    public static FindSession(session: vscode.DebugSession): CDebugSession {
         return CDebugSession.FindSessionById(session.id);
     }
-    public static FindSessionById(id: string) {
+    public static FindSessionById(id: string): CDebugSession {
         const ret = CDebugSession.CurrentSessions.find((x) => x.session.id === id);
         return ret;
     }
-    public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments | undefined): CDebugSession {
+    public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments): CDebugSession {
         const prev = CDebugSession.FindSessionById(session.id);
         if (prev) {
             prev.config = config || prev.config;
             return prev;
         }
-        return new CDebugSession(session, config || session.configuration);
+        return new CDebugSession(session, config || session.configuration as any as ConfigurationArguments);
     }
 
     // Call this method after session actually started. It inserts new session into the session tree

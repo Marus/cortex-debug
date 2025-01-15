@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { RTTConsoleDecoderOpts, TerminalInputMode, TextEncoding, BinaryEncoding, HrTimer } from '../common';
 import { IPtyTerminalOptions, magentaWrite, PtyTerminal } from './pty';
 import { decoders as DECODER_MAP } from './swo/decoders/utils';
 import { SocketRTTSource } from './swo/sources/socket';
 import { RESET } from './ansi-helpers';
+import { BinaryEncoding, RTTDecoderOpts, RTTTerminalDecoderOpts, TerminalInputMode, TextEncoding } from '@common/types';
+import { HrTimer } from '@common/util';
 
 export class RTTTerminal {
     protected ptyTerm: PtyTerminal;
@@ -21,7 +22,7 @@ export class RTTTerminal {
 
     constructor(
         protected context: vscode.ExtensionContext,
-        public options: RTTConsoleDecoderOpts,
+        public options: RTTTerminalDecoderOpts,
         src: SocketRTTSource) {
         this.ptyOptions = this.createTermOptions(null);
         this.createTerminal();
@@ -31,7 +32,9 @@ export class RTTTerminal {
 
     private connectToSource(src: SocketRTTSource) {
         this.hrTimer = new HrTimer();
-        this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
+        if (this.options.type === 'binary') {
+            this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
+        }
         src.once('disconnected', () => { this.onClose(); });
         src.on('error', (e) => {
             const code: string = (e as any).code;
@@ -61,6 +64,7 @@ export class RTTTerminal {
     }
 
     private onClose() {
+        const tcpPort = this.source?.tcpPort;
         this.source = null;
         this.inUse = false;
         if (!this.options.noclear && (this.logFd >= 0)) {
@@ -70,7 +74,7 @@ export class RTTTerminal {
             this.startOfNewLine = true;
         }
         this.ptyTerm.write(RESET + '\n');
-        magentaWrite(`RTT connection on TCP port ${this.options.tcpPort} ended. Waiting for next connection...`, this.ptyTerm);
+        magentaWrite(`RTT connection on TCP port ${tcpPort} ended. Waiting for next connection...`, this.ptyTerm);
     }
 
     private onData(data: Buffer) {
@@ -140,6 +144,10 @@ export class RTTTerminal {
     private lastTime: bigint = BigInt(-1);
     private lastTimeStr: string = '';
     private writeNonBinary(buf: Buffer) {
+        if (this.options.type === 'binary') {
+            return;
+        }
+        
         let start = 0;
         let time = '';
         if (this.options.timestamp) {
@@ -180,15 +188,15 @@ export class RTTTerminal {
 
     protected createTerminal() {
         this.ptyTerm = new PtyTerminal(this.createTermOptions(null));
-        this.ptyTerm.on('data', this.sendData.bind(this));
-        this.ptyTerm.on('close', this.terminalClosed.bind(this));
+        this.ptyTerm.on('data', (data) => this.sendData(data));
+        this.ptyTerm.on('close', () => this.terminalClosed());
     }
 
     protected createPrompt(): string {
         return this.options.noprompt ? '' : this.options.prompt || `RTT:${this.options.port}> `;
     }
 
-    protected static createTermName(options: RTTConsoleDecoderOpts, existing: string | null): string {
+    protected static createTermName(options: RTTTerminalDecoderOpts, existing: string | null): string {
         const suffix = options.type === 'binary' ? `enc:${getBinaryEncoding(options.encoding)}` : options.type;
         const orig = options.label || `RTT Ch:${options.port} ${suffix}`;
         let ret = orig;
@@ -211,8 +219,9 @@ export class RTTTerminal {
         if (this.source) {
             try {
                 if (((typeof str === 'string') || (str instanceof String)) &&
+                    (this.options.type === 'console') &&
                     (this.options.inputmode === TerminalInputMode.COOKED)) {
-                    str = Buffer.from(str as string, this.options.iencoding);
+                    str = Buffer.from(str as string, this.options.encoding);
                 }
                 this.source.write(str);
             }
@@ -222,9 +231,15 @@ export class RTTTerminal {
         }
     }
 
-    private sanitizeEncodings(obj: RTTConsoleDecoderOpts) {
-        obj.encoding = getBinaryEncoding(obj.encoding);
-        obj.iencoding = getTextEncoding(obj.iencoding);
+    private sanitizeEncodings(obj: RTTDecoderOpts) {
+        switch (obj.type) {
+            case 'console':
+                obj.encoding = getTextEncoding(obj.encoding);
+                break;
+            case 'binary':
+                obj.encoding = getBinaryEncoding(obj.encoding);
+                break;
+        }
     }
 
     private closeLogFd(reopen: boolean) {
@@ -246,7 +261,7 @@ export class RTTTerminal {
     // If all goes well, this will reset the terminal options. Label for the VSCode terminal has to match
     // since there no way to rename it. If successful, tt will reset the Terminal options and mark it as
     // used (inUse = true) as well
-    public tryReuse(options: RTTConsoleDecoderOpts, src: SocketRTTSource): boolean {
+    public tryReuse(options: RTTTerminalDecoderOpts, src: SocketRTTSource): boolean {
         if (!this.ptyTerm || !this.ptyTerm.terminal) { return false; }
         this.sanitizeEncodings(this.options);
         const newTermName = RTTTerminal.createTermName(options, this.ptyOptions.name);

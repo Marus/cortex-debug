@@ -5,10 +5,10 @@ import { MI2, parseReadMemResults } from './mi2/mi2';
 import { MINode } from './mi_parse';
 import * as path from 'path';
 import { GDBDebugSession } from '../gdb';
-import { DisassemblyInstruction, ConfigurationArguments, ADAPTER_DEBUG_MODE, HrTimer } from '../common';
-import { SymbolInformation, SymbolType } from '../symbols';
 import { assert } from 'console';
 import { MemoryRegion, SymbolNode } from './symbols';
+import { ADAPTER_DEBUG_MODE, ConfigurationArguments, DisassemblyInstruction, SymbolInformation } from '@common/types';
+import { HrTimer } from '@common/util';
 
 enum TargetArchitecture {
     X64, X86, ARM64, ARM, XTENSA, UNKNOWN

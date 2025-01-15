@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { SWORTTDecoder } from './common';
-import { SWOBinaryDecoderConfig } from '../common';
 import { decoders as DECODER_MAP } from './utils';
-import { Packet } from '../common';
 import { IPtyTerminalOptions, PtyTerminal } from '../../pty';
-import { HrTimer, TerminalInputMode } from '../../../common';
+import { Packet, SWOBinaryDecoderConfig, TerminalInputMode } from '@common/types';
+import { HrTimer } from '@common/util';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
     return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
@@ -27,7 +26,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         this.port = config.port;
         this.scale = config.scale || 1;
         this.encoding = (config.encoding || 'unsigned').replace('.', '_');
-        this.useTerminal = 'useTerminal' in config ? (config as any).useTerminal : true;   // TODO: Remove
+        this.useTerminal = 'useTerminal' in config ? !!config.useTerminal : true;   // TODO: Remove
 
         if (this.useTerminal) {
             this.createVSCodeTerminal(config);

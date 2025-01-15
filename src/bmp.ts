@@ -1,7 +1,10 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
+import { calculatePortMask, genDownloadCommands } from './common';
+import { GDBServerController } from './gdb.interfaces';
+import { SWOConfigureEvent } from '@common/events';
+import { ConfigurationArguments } from '@common/types';
 
 export class BMPServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'BMP';
