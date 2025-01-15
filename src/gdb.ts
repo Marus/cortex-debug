@@ -908,11 +908,11 @@ export class GDBDebugSession extends LoggingDebugSession {
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
-        if (!this.args.symbolFiles) {
-            if (!path.isAbsolute(this.args.executable)) {
-                this.args.executable = path.join(this.args.cwd, this.args.executable);
-            }
-        }
+        // if (!this.args.symbolFiles) {
+        //     if (!path.isAbsolute(this.args.executable)) {
+        //         this.args.executable = path.join(this.args.cwd, this.args.executable);
+        //     }
+        // }
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
@@ -952,6 +952,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             if (this.gdbInitCommands.length === 0) {
                 this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
+            }
+            if (this.args.executable) {
+                this.gdbInitCommands.push(`file-exec-file "${this.args.executable}"`);
             }
         } else {
             this.gdbInitCommands.push(`file-exec-and-symbols "${this.args.executable}"`);

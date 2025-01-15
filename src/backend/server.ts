@@ -196,7 +196,7 @@ export class GDBServer extends EventEmitter {
                 }
             });
             socket.once('close', () => {
-                this.consoleSocket = null;
+                this.disconnectConsole();
             });
             socket.on  ('error', (e) => {
                 const code: string = (e as any).code;
@@ -208,10 +208,9 @@ export class GDBServer extends EventEmitter {
                     if (!this.consoleSocket) {  // We were already connected
                         reject(e);
                     }
-                } else if (this.consoleSocket) {
-                    // Adapter died/crashed
-                    this.consoleSocket.destroy();
-                    this.consoleSocket = null;
+                } else {
+                    // Adapter died/crashed/exited
+                    this.disconnectConsole();
                 }
             });
 
