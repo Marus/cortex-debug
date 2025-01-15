@@ -1,6 +1,6 @@
 import { MINode } from './mi_parse';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { toStringDecHexOctBin } from '../common';
+import { toStringDecHexOctBin } from '@common/util';
 import { hexFormat } from '../frontend/utils';
 
 export interface OurSourceBreakpoint extends DebugProtocol.SourceBreakpoint {

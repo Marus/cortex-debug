@@ -1,7 +1,7 @@
 import { SWORTTSource } from './common';
 import { EventEmitter } from 'events';
 import * as net from 'net';
-import { parseHostPort } from '../../../common';
+import { parseHostPort } from '@common/util';
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import { setFlagsFromString } from 'v8';

@@ -3,9 +3,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments, validateELFHeader, SymbolFile, defSymbolFile } from '../common';
 import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
+import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, ConfigurationArguments, CortexDebugKeys, SymbolFile } from '@common/types';
+import { defSymbolFile, validateELFHeader } from '@common/util';
 
 // Please confirm these names with OpenOCD source code. Their docs are incorrect as to case
 const OPENOCD_VALID_RTOS: string[] = [
@@ -43,7 +44,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     
     public resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
-        config: vscode.DebugConfiguration,
+        config: vscode.DebugConfiguration & ConfigurationArguments,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
         if (GDBServerConsole.BackendPort <= 0) {
@@ -162,7 +163,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.showDevDebugOutput === undefined) {
             config.showDevDebugOutput = configuration.get(CortexDebugKeys.DEV_DEBUG_MODE, ADAPTER_DEBUG_MODE.NONE);
         }
-        if (!sanitizeDevDebug(config)) {
+        if (!this.sanitizeDevDebug(config)) {
             const modes = Object.values(ADAPTER_DEBUG_MODE);
             vscode.window.showInformationMessage(`launch.json: "showDevDebugOutput" muse be one of ${modes}. Setting to "${config.showDevDebugOutput}"`);
         }
@@ -426,6 +427,24 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 delete launch.overrides;
             }
         }
+    }
+
+    private sanitizeDevDebug(config: ConfigurationArguments | any): boolean {
+        const modes = Object.values(ADAPTER_DEBUG_MODE);
+        let val = config.showDevDebugOutput;
+        if (typeof(val) === 'string') {
+            val = val.toLowerCase().trim();
+            config.showDevDebugOutput = val;
+        }
+        if ((val === false) || (val === 'false') || (val === '') || (val === 'none')) {
+            delete config.showDevDebugOutput;
+        } else if ((val === true) || (val === 'true)')) {
+            config.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
+        } else if (modes.indexOf(val) < 0) {
+            config.showDevDebugOutput = ADAPTER_DEBUG_MODE.VSCODE;
+            return false;       // Meaning, needed adjustment
+        }
+        return true;
     }
 
     private setOsSpecficConfigSetting(config: vscode.DebugConfiguration, dstName: string, propName: string = '') {

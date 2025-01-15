@@ -1,8 +1,11 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { GDBServerController, ConfigurationArguments, calculatePortMask,
-    createPortName, SWOConfigureEvent, parseHexOrDecInt, RTTServerHelper, genDownloadCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
+import { calculatePortMask, createPortName, genDownloadCommands, RTTServerHelper } from './common';
+import { GDBServerController } from './gdb.interfaces';
+import { SWOConfigureEvent } from '@common/events';
+import { ConfigurationArguments } from '@common/types';
+import { parseHexOrDecInt } from '@common/util';
 
 const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['JLinkGDBServerCLExe', 'JLinkGDBServerCL', 'JLinkGDBServer'];

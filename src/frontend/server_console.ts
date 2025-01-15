@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { IPtyTerminalOptions, magentaWrite, PtyTerminal } from './pty';
-import { getAnyFreePort, TerminalInputMode } from '../common';
+import { TerminalInputMode } from '@common/types';
+import { getAnyFreePort } from '@common/util';
 
 //      vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name: 'myName' });
 

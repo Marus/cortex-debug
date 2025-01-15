@@ -3,8 +3,7 @@ import * as fs from 'fs';
 import { SWORTTDecoder } from './common';
 import { decoders as DECODER_MAP } from './utils';
 import { EventEmitter } from 'events';
-import { SWOGraphDecoderConfig, GrapherDataMessage } from '../common';
-import { Packet } from '../common';
+import { GraphDecoderConfig, GrapherDataMessage, Packet } from '@common/types';
 
 function parseEncoded(buffer: Buffer, encoding: string) {
     return DECODER_MAP[encoding] ? DECODER_MAP[encoding](buffer) : DECODER_MAP.unsigned(buffer);
@@ -19,7 +18,7 @@ export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder 
     private logFd: number = -1;
     private logfile: string;
 
-    constructor(config: SWOGraphDecoderConfig) {
+    constructor(config: GraphDecoderConfig) {
         super();
         // core.socketServer.registerProcessor(this);
         this.port = config.port;

@@ -1,4 +1,4 @@
-import { Packet } from '../common';
+import { Packet } from '@common/types';
 
 export interface SWORTTDecoder {
     format: string;

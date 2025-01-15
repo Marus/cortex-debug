@@ -1,6 +1,7 @@
 import * as d3 from 'd3';
-import { TimeseriesGraphConfiguration, GraphPoint, Graph } from './types';
+import { GraphPoint, Graph } from './types';
 import { GraphDataSource } from './datasource';
+import { TimeseriesGraphConfiguration } from '@common/types';
 
 declare const window: Window;
 declare global {
@@ -171,7 +172,7 @@ export class TimeseriesGraph implements Graph {
     public updateGraph() {
         if (!this.stopped) {
             const now = new Date().getTime();
-            this.x.domain([now - this.span, now]);
+            this.x.domain([ now - this.span, now ]);
             this.xAxis.call(d3.axisBottom(this.x));
 
             const visAnnotations = this.annotations.filter((a) => a.timestamp >= now - this.span && a.timestamp <= now);

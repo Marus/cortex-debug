@@ -5,9 +5,6 @@ import * as path from 'path';
 import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
 
 import { RTTCore, SWOCore } from './swo/core';
-import {
-    ConfigurationArguments, RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
-    CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE, ChainedConfig } from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
 import Reporting from '../reporting';
 
@@ -17,11 +14,13 @@ import { FifoSWOSource } from './swo/sources/fifo';
 import { FileSWOSource } from './swo/sources/file';
 import { SerialSWOSource } from './swo/sources/serial';
 import { UsbSWOSource } from './swo/sources/usb';
-import { SymbolInformation, SymbolScope } from '../symbols';
+import { SymbolInformation, SymbolScope } from '../common/types/symbols';
 import { RTTTerminal } from './rtt_terminal';
 import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import { ServerConsoleLog } from '../backend/server';
+import { ADAPTER_DEBUG_MODE, ChainedConfig, ChainedEvents, ConfigurationArguments, CortexDebugKeys, RTTDecoderOpts, RTTTerminalDecoderOpts } from '@common/types';
+import { DebugProtocol } from '@vscode/debugprotocol';
 
 const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
@@ -534,7 +533,7 @@ export class CortexDebugExtension {
     }
 
     private async startChainedConfigs(e: vscode.DebugSessionCustomEvent, evType: ChainedEvents) {
-        const adapterArgs = e?.body?.info as ConfigurationArguments;
+        const adapterArgs = e?.body?.info as (ConfigurationArguments & DebugProtocol.LaunchRequestArguments);
         const cDbgParent = CDebugSession.GetSession(e.session, adapterArgs);
         if (!adapterArgs || !adapterArgs.chainedConfigurations?.enabled) { return; }
         const unique = adapterArgs.chainedConfigurations.launches.filter((x, ix) => {
@@ -774,13 +773,13 @@ export class CortexDebugExtension {
 
     private receivedRTTConfigureEvent(e: vscode.DebugSessionCustomEvent) {
         if (e.body.type === 'socket') {
-            const decoder: RTTCommonDecoderOpts = e.body.decoder;
+            const decoder: RTTDecoderOpts = e.body.decoder;
             if ((decoder.type === 'console') || (decoder.type === 'binary')) {
                 Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
-                this.rttCreateTerninal(e, decoder as RTTConsoleDecoderOpts);
+                this.rttCreateTerninal(e, decoder);
             } else {
                 Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
-                if (!decoder.ports) {
+                if (decoder.type !== 'advanced') {
                     this.createRTTSource(e, decoder.tcpPort, decoder.port);
                 } else {
                     for (let ix = 0; ix < decoder.ports.length; ix = ix + 1) {
@@ -830,7 +829,7 @@ export class CortexDebugExtension {
         });
     }
 
-    private rttCreateTerninal(e: vscode.DebugSessionCustomEvent, decoder: RTTConsoleDecoderOpts) {
+    private rttCreateTerninal(e: vscode.DebugSessionCustomEvent, decoder: RTTTerminalDecoderOpts) {
         this.createRTTSource(e, decoder.tcpPort, decoder.port).then((src: SocketRTTSource) => {
             for (const terminal of this.rttTerminals) {
                 const success = !terminal.inUse && terminal.tryReuse(decoder, src);

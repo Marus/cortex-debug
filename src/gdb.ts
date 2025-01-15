@@ -13,14 +13,9 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { MI2, parseReadMemResults } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
-import {
-    TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
-    createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative,
-    SWOConfigureEvent
-} from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
-import { expandValue, isExpandable } from './backend/gdb_expansion';
+import { expandValue } from './backend/gdb_expansion';
 import { GdbDisassembler } from './backend/disasm';
 import * as os from 'os';
 import * as path from 'path';
@@ -41,9 +36,12 @@ import { PEServerController } from './pemicro';
 import { QEMUServerController } from './qemu';
 import { ExternalServerController } from './external';
 import { SymbolTable } from './backend/symbols';
-import { SymbolInformation, SymbolScope } from './symbols';
-import { TcpPortScanner } from './tcpportscanner';
 import { LiveWatchMonitor } from './live-watch-monitor';
+import { createPortName } from './common';
+import { CTIAction, GDBServerController } from './gdb.interfaces';
+import { GenericCustomEvent, StoppedEvent, SWOConfigureEvent, TelemetryEvent } from '@common/events';
+import { ADAPTER_DEBUG_MODE, ConfigurationArguments, SymbolFile, SymbolInformation } from '@common/types';
+import { defSymbolFile, getPathRelative, quoteShellCmdLine, TcpPortScanner, toStringDecHexOctBin } from '@common/util';
 
 // returns [threadId, frameId]
 // We use 3 nibbles for frameId (max of 4K) and 2 nibbles for ThreadId (max of 256).
@@ -211,6 +209,7 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
 const traceThreads = false;
 export class GDBDebugSession extends LoggingDebugSession {
     private server: GDBServer;
+    private noDebug = false;    // if launched using 'Run Without Debugging'
     public args: ConfigurationArguments;
     private ports: { [name: string]: number };
     private serverController: GDBServerController;
@@ -463,12 +462,13 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    protected launchRequest(response: DebugProtocol.LaunchResponse, args: ConfigurationArguments): void {
+    protected launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments & ConfigurationArguments): void {
+        this.noDebug = args.noDebug;
         this.launchAttachInit(args);
         this.processLaunchAttachRequest(response, false);
     }
 
-    protected attachRequest(response: DebugProtocol.AttachResponse, args: ConfigurationArguments): void {
+    protected attachRequest(response: DebugProtocol.AttachResponse, args: DebugProtocol.AttachRequestArguments & ConfigurationArguments): void {
         this.launchAttachInit(args);
         this.processLaunchAttachRequest(response, true);
     }
@@ -817,7 +817,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.disableSendStoppedEvents = false;
         this.continuing = false;
         this.stopped = this.miDebugger.status !== 'running';        // Set to real status
-        if (sendStoppedEvents && !this.args.noDebug && this.stopped) {
+        if (sendStoppedEvents && !this.noDebug && this.stopped) {
             this.stoppedReason = mode;
             this.stoppedThreadId = this.currentThreadId;
             // We have to fake a continue and then stop, since we may already be in stopped mode in VSCode's view
@@ -854,7 +854,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.handleMsg('stderr', msg);
                 this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
             }
-            if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
+            if (!this.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
                 this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
                     this.miDebugger.once('generic-stopped', () => {
                         resolve();
@@ -1048,7 +1048,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 break;
         }
 
-        if ((mode !== SessionMode.ATTACH) && this.args.noDebug) {
+        if ((mode !== SessionMode.ATTACH) && this.noDebug) {
             shouldContinue = true;
         } else if (!this.args.breakAfterReset && (mode !== SessionMode.ATTACH) && (commands.length === 0)) {
             shouldContinue = true;
@@ -1056,7 +1056,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         return new Promise<boolean>((resolve, reject) => {
             const doResolve = async () => {
-                if (this.args.noDebug || (shouldContinue && this.isMIStatusStopped())) {
+                if (this.noDebug || (shouldContinue && this.isMIStatusStopped())) {
                     if (mode === SessionMode.RESET) {
                         this.sendDummyStackTrace = true;
                         this.onInternalEvents.once('stack-trace-request', () => {
@@ -1896,7 +1896,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.stopped = true;
             this.stoppedReason = reason;
             this.findPausedThread(info);
-            if ((reason === 'entry') && this.args.noDebug) {
+            if ((reason === 'entry') && this.noDebug) {
                 // Do not notify the front-end if no-debug is active and it is the entry point. Or else, pass it on
             } else {
                 this.notifyStoppedConditional();

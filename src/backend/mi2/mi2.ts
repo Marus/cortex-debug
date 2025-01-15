@@ -7,7 +7,7 @@ import { posix } from 'path';
 import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
-import { ADAPTER_DEBUG_MODE } from '../../common';
+import { ADAPTER_DEBUG_MODE } from '@common/types';
 const path = posix;
 
 export interface ReadMemResults {
@@ -239,14 +239,14 @@ export class MI2 extends EventEmitter implements IBackend {
         }
     }
 
-    private onOutputStderr(lines) {
-        lines = lines.split('\n') as string[];
+    private onOutputStderr(text: string) {
+        const lines = text.split('\n');
         lines.forEach((line) => {
             this.log('stderr', line);
         });
     }
 
-    private onOutputPartial(line) {
+    private onOutputPartial(line: string) {
         if (couldBeOutput(line)) {
             this.logNoNewLine('stdout', line);
             return true;

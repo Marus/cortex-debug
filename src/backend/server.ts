@@ -5,8 +5,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import { setTimeout } from 'timers';
-import { quoteShellCmdLine } from '../common';
 import { greenFormat } from '../frontend/ansi-helpers';
+import { quoteShellCmdLine } from '@common/util';
 
 export let GdbPid = -1;
 export function ServerConsoleLog(str: string, usePid?: number) {

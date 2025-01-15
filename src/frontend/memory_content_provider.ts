@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseHexOrDecInt } from '../common';
+import { parseHexOrDecInt } from '@common/util';
 import { CortexDebugExtension } from './extension';
 import { hexFormat } from './utils';
 

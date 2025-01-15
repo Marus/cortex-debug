@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { SWORTTDecoder } from './common';
-import { SWOAdvancedDecoderConfig, AdvancedDecoder, GrapherDataMessage } from '../common';
 import { EventEmitter } from 'events';
-import { Packet } from '../common';
+import { AdvancedDecoder, GrapherDataMessage, Packet, SWOAdvancedDecoderConfig } from '@common/types';
 
 declare function __webpack_require__();
 declare const __non_webpack_require__: NodeRequire;

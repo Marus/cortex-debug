@@ -1,9 +1,12 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { ConfigurationArguments, GDBServerController, SWOConfigureEvent, calculatePortMask, genDownloadCommands } from './common';
 import * as os from 'os';
 import * as tmp from 'tmp';
 import { EventEmitter } from 'events';
 import * as ChildProcess from 'child_process';
+import { genDownloadCommands } from './common';
+import { GDBServerController } from './gdb.interfaces';
+import { ConfigurationArguments } from '@common/types';
+import { SWOConfigureEvent } from '@common/events';
 
 export class ExternalServerController extends EventEmitter implements GDBServerController {
     public readonly name: string = 'External';

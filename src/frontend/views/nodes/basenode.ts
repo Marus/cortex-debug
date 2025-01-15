@@ -1,6 +1,13 @@
 import { Command, TreeItem, DebugSession } from 'vscode';
-import { NumberFormat, NodeSetting } from '../../../common';
+import { NumberFormat } from '@common/types';
 import { AddrRange } from '../../addrranges';
+
+export interface NodeSetting {
+    node: string;
+    expanded?: boolean;
+    format?: NumberFormat;
+    pinned?: boolean;
+}
 
 export abstract class BaseNode {
     public expanded: boolean;

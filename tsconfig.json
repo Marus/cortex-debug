@@ -10,7 +10,10 @@
 		"rootDir": ".",
 		"plugins": [
 			{ "name": "typescript-tslint-plugin" }
-		]
+		],
+		"paths": {
+			"@common/*": ["./src/common/*"],
+		}
 	},
 	"exclude": [
 		"node_modules",

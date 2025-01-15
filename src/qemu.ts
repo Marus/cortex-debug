@@ -1,7 +1,8 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { GDBServerController, ConfigurationArguments, createPortName } from './common';
-import * as os from 'os';
 import { EventEmitter } from 'events';
+import { createPortName } from './common';
+import { GDBServerController } from './gdb.interfaces';
+import { ConfigurationArguments } from '@common/types';
 
 const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['qemu-system-arm'];

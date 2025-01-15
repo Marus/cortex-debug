@@ -3,6 +3,7 @@
 const path = require('path');
 const child_process = require('child_process');
 const webpack = require('webpack'); //to access built-in plugins
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
 const gitStatus = child_process
   .execSync('git status --short')
@@ -13,56 +14,13 @@ const commitHash = child_process
   .toString()
   .trim() + (gitStatus === '' ? '' : '+dirty');
 
-const extensionConfig = {
-  target: 'node',
-  entry: './src/frontend/extension.ts',
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'extension.js',
-    libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../[resource-path]'
-  },
+const commonConfig = {
   devtool: 'source-map',
-  externals: {
-    vscode: 'vscode',
-    serialport: 'serialport',
-    usb: 'usb'
-  },
   resolve: {
-    extensions: ['.ts', '.js']
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
-  }
-};
-
-const adapterConfig = {
-  target: 'node',
-  entry: './src/gdb.ts',
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'debugadapter.js',
-    libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../[resource-path]'
-  },
-  devtool: 'source-map',
-  externals: {
-    vscode: 'vscode',
-    serialport: 'serialport',
-    usb: 'usb',
-  },
-  resolve: {
-    extensions: ['.ts', '.js']
+    extensions: ['.ts', '.js'],
+    plugins: [
+      new TsconfigPathsPlugin(),
+    ],
   },
   module: {
     rules: [
@@ -81,10 +39,48 @@ const adapterConfig = {
     new webpack.DefinePlugin({
       __COMMIT_HASH__: JSON.stringify(commitHash)
     })
-  ]
+  ],
+};
+
+const extensionConfig = {
+  ...commonConfig,
+  name: 'extension',
+  target: 'node',
+  entry: './src/frontend/extension.ts',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'extension.js',
+    libraryTarget: 'commonjs2',
+    devtoolModuleFilenameTemplate: '../[resource-path]'
+  },
+  externals: {
+    vscode: 'vscode',
+    serialport: 'serialport',
+    usb: 'usb'
+  },
+};
+
+const adapterConfig = {
+  ...commonConfig,
+  name: 'adapter',
+  target: 'node',
+  entry: './src/gdb.ts',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: 'debugadapter.js',
+    libraryTarget: 'commonjs2',
+    devtoolModuleFilenameTemplate: '../[resource-path]'
+  },
+  externals: {
+    vscode: 'vscode',
+    serialport: 'serialport',
+    usb: 'usb',
+  },
 }
 
 const grapherConfig = {
+  ...commonConfig,
+  name: 'grapher',
   target: 'web',
   entry: {
     'grapher': './src/grapher/main.ts'
@@ -94,60 +90,23 @@ const grapherConfig = {
     filename: '[name].bundle.js',
     devtoolModuleFilenameTemplate: '../[resource-path]'
   },
-  devtool: 'source-map',
   externals: {
     vscode: 'vscode',
     serialport: 'serialport'
   },
-  resolve: {
-    extensions: ['.ts', '.js']
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
-  }
 };
 
 const docgenConfig = {
+  ...commonConfig,
   target: 'node',
   entry: './src/docgen.ts',
+  name: 'docgen',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'docgen.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../[resource-path]'
   },
-  devtool: 'source-map',
-  resolve: {
-    extensions: ['.ts', '.js']
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
-  },
-  plugins: [
-    new webpack.DefinePlugin({
-      __COMMIT_HASH__: JSON.stringify(commitHash)
-    })
-  ]  
 }
 
 module.exports = [extensionConfig, adapterConfig, grapherConfig, docgenConfig];

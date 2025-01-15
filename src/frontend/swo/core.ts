@@ -7,17 +7,15 @@ import { SWOBinaryProcessor } from './decoders/binary';
 import { SWORTTGraphProcessor } from './decoders/graph';
 import { SWORTTDecoder } from './decoders/common';
 import { SWORTTSource } from './sources/common';
-import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig,
-    SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
-    SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage,
-    GrapherProgramCounterMessage} from './common';
 import { SWORTTAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
-import { PacketType, Packet } from './common';
 import { parseUnsigned } from './decoders/utils';
-import { SymbolInformation } from '../../symbols';
-import { getNonce, RTTCommonDecoderOpts } from '../../common';
 import { SocketRTTSource, SocketSWOSource } from './sources/socket';
+import {
+    GraphConfiguration, GrapherMessage, GrapherProgramCounterMessage, GrapherStatusMessage,
+    Packet, PacketType, RTTConfiguration, SWOConfiguration, SWODecoderConfig, SymbolInformation
+} from '@common/types';
+import { getNonce } from '@common/util';
 
 const RingBuffer = require('ringbufferjs');
 
@@ -178,14 +176,8 @@ class ITMDecoder extends EventEmitter {
 
 interface ConfigurationArguments {
     executable: string;
-    swoConfig: {
-        enabled: boolean,
-        decoders: SWODecoderConfig[]
-    };
-    rttConfig: {
-        enabled: boolean,
-        decoders: RTTCommonDecoderOpts[]
-    };
+    swoConfig: SWOConfiguration;
+    rttConfig: RTTConfiguration;
     graphConfig: GraphConfiguration[];
 }
 
@@ -309,19 +301,19 @@ export class SWOCore extends SWORTTCoreBase {
 
             switch (conf.type) {
                 case 'console':
-                    this.processors.push(new SWOConsoleProcessor(conf as SWOConsoleDecoderConfig));
+                    this.processors.push(new SWOConsoleProcessor(conf));
                     break;
                 case 'binary':
-                    this.processors.push(new SWOBinaryProcessor(conf as SWOBinaryDecoderConfig));
+                    this.processors.push(new SWOBinaryProcessor(conf));
                     break;
                 case 'graph':
-                    processor = new SWORTTGraphProcessor(conf as SWOGraphDecoderConfig);
+                    processor = new SWORTTGraphProcessor(conf);
                     if (this.webview) { this.webview.registerProcessors(processor); }
                     this.processors.push(processor);
                     break;
                 case 'advanced':
                     try {
-                        processor = new SWORTTAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
+                        processor = new SWORTTAdvancedProcessor(conf);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
                     }
@@ -406,14 +398,12 @@ export class SWOCore extends SWORTTCoreBase {
         let mask: number = 0;
         configuration.forEach((c) => {
             if (c.type === 'advanced') {
-                const ac = c as SWOAdvancedDecoderConfig;
-                for (const port of ac.ports) {
+                for (const port of c.ports) {
                     mask = (mask | (1 << port)) >>> 0;
                 }
             }
             else {
-                const bc = c as SWOBasicDecoderConfig;
-                mask = (mask | (1 << bc.port)) >>> 0;
+                mask = (mask | (1 << c.port)) >>> 0;
             }
         });
         return mask;
@@ -456,7 +446,7 @@ class RTTDecoder extends EventEmitter {
     }
 
     public onData(input: string | Buffer) {
-        const data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ;
+        const data: Buffer = (typeof input === 'string') ? Buffer.from(input) : input;
         for (const elt of data) {
             this.buffer[this.bytesRead] = elt;
             this.bytesRead = this.bytesRead + 1;
@@ -491,7 +481,7 @@ export class RTTCore extends SWORTTCoreBase {
             switch (conf.type) {
                 case 'graph':
                     this.addRTTDecoder(this.sources[conf.port]);
-                    const processor = new SWORTTGraphProcessor(conf as any as SWOGraphDecoderConfig);
+                    const processor = new SWORTTGraphProcessor(conf);
                     if (this.webview) { this.webview.registerProcessors(processor); }
                     this.processors.push(processor);
                     break;
@@ -500,7 +490,7 @@ export class RTTCore extends SWORTTCoreBase {
                         for (const p of conf.ports) {
                             this.addRTTDecoder(this.sources[p]);
                         }
-                        const processor = new SWORTTAdvancedProcessor(conf as any as SWOAdvancedDecoderConfig);
+                        const processor = new SWORTTAdvancedProcessor(conf);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
                         break;
