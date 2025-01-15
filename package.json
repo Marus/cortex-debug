@@ -151,7 +151,7 @@
                                 "default": false,
                                 "description": "Enable disassembly debug"
                             }
-                        }                   
+                        }
                     }
                 }
             },
@@ -701,7 +701,10 @@
                                 "description": "Array of ELF files to load symbols from instead of the executable file. Each item in the array cab be a string or an object. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
                                 "items": {
-                                    "type": ["object", "string"],
+                                    "type": [
+                                        "object",
+                                        "string"
+                                    ],
                                     "properties": {
                                         "file": {
                                             "type": "string",
@@ -1612,7 +1615,10 @@
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
-                                "type": ["string", "number"],
+                                "type": [
+                                    "string",
+                                    "number"
+                                ],
                                 "anyOf": [
                                     {
                                         "type": "string"
@@ -1738,13 +1744,13 @@
                                 "type": "array",
                                 "items": "string",
                                 "deprecated": true,
-                                "description": "Deprecated: Restart is now handled by VSCode and it is the same as Start. If you are using the Reset button, use postResetSessionCommands instead"                                
+                                "description": "Deprecated: Restart is now handled by VSCode and it is the same as Start. If you are using the Reset button, use postResetSessionCommands instead"
                             },
                             "postResetSessionCommands": {
                                 "default": [],
                                 "type": "array",
                                 "items": "string",
-                                "description": "Additional GDB Commands to be executed at the end of the reset sequence"                                
+                                "description": "Additional GDB Commands to be executed at the end of the reset sequence"
                             },
                             "overrideGDBServerStartedRegex": {
                                 "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.",
@@ -1824,7 +1830,10 @@
                                 "description": "Array of ELF files to load symbols from instead of the executable file. Each item in the array cab be a string or an object. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
                                 "items": {
-                                    "type": ["object", "string"],
+                                    "type": [
+                                        "object",
+                                        "string"
+                                    ],
                                     "properties": {
                                         "file": {
                                             "type": "string",
@@ -2780,7 +2789,10 @@
                             },
                             "targetId": {
                                 "description": "On BMP this is the ID number that should be passed to the attach command (defaults to 1); for PyOCD this is the target identifier (only needed for custom hardware)",
-                                "type": ["string", "number"],
+                                "type": [
+                                    "string",
+                                    "number"
+                                ],
                                 "anyOf": [
                                     {
                                         "type": "string"
