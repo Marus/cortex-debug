@@ -204,9 +204,12 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
-        let cwd = config.cwd || folder.uri.fsPath;
-        if (!path.isAbsolute(cwd)) {
+        let cwd = config.cwd || folder?.uri.fsPath || '.';
+        const isAbsCwd = path.isAbsolute(cwd);
+        if (!isAbsCwd && folder) {
             cwd = path.join(folder.uri.fsPath, cwd);
+        } else if (!isAbsCwd) {
+            cwd = path.resolve(cwd);
         }
         config.cwd = cwd;
         if (!fs.existsSync(cwd)) {
