@@ -200,6 +200,7 @@ export interface SWOConfiguration {
     enabled: boolean;
     cpuFrequency: number;
     swoFrequency: number;
+    swoEncoding: 'manchester' | 'uart';
     decoders: any[];
     profile: boolean;
     source: string;

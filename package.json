@@ -1524,6 +1524,15 @@
                                         "default": 0,
                                         "description": "SWO frequency in Hz; 0 will attempt to automatically calculate.",
                                         "type": "number"
+                                    },
+                                    "swoEncoding": {
+                                        "default": "uart",
+                                        "description": "BMP only: SWO encoding data used at the line level. Depends on the probe hardware, native (the original one) supports only Manchester (self-clocked, but slower rates) while most other platforms (e.g. ST-LINK with BMP firmware) support only UART (frequency/baud rate has to match to within ~2%).",
+                                        "type": "string",
+                                        "enum": [
+                                            "uart",
+                                            "manchester"
+                                        ]
                                     }
                                 },
                                 "required": [],
@@ -2683,6 +2692,15 @@
                                         "default": 0,
                                         "description": "SWO frequency in Hz.",
                                         "type": "number"
+                                    },
+                                    "swoEncoding": {
+                                        "default": "uart",
+                                        "description": "BMP only: SWO encoding data used at the line level. Depends on the probe hardware, native (the original one) supports only Manchester (self-clocked, but slower rates) while most other platforms (e.g. ST-LINK with BMP firmware) support only UART (frequency/baud rate has to match to within ~2%).",
+                                        "type": "string",
+                                        "enum": [
+                                            "uart",
+                                            "manchester"
+                                        ]
                                     }
                                 },
                                 "required": [],
