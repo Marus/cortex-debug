@@ -5,6 +5,8 @@ import { parseHostPort } from '../../../common';
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import { setFlagsFromString } from 'v8';
+import * as ChildProcess from 'child_process';
+import * as Path from 'path';
 
 const TimerInterval = 250;
 export class SocketSWOSource extends EventEmitter implements SWORTTSource {
@@ -133,6 +135,39 @@ export class SocketRTTSource extends SocketSWOSource {
             throw e;
         }
     }
+}
+
+export class DefmtSocketRTTSource extends SocketRTTSource {
+    private process: ChildProcess.ChildProcess;
+    private executable: string;
+    private cwd: string;
+
+    protected processData(buffer: Buffer): void {
+        this.process.stdin.write(buffer);
+    }
+
+    public start(timeout = (1000 * 60 * 5)): Promise<void> {
+        this.process = ChildProcess.spawn(
+            'defmt-print',['-e', this.executable], { cwd: this.cwd }
+        );
+
+        this.process.on('error', (e) => {
+            (e as any).message = `Failed to launch defmt-print (is it installed?)`; 
+            this.emit('error', e);
+            this.dispose();
+        });
+
+        this.process.stdout.on('data', (buffer) => this.emit('data', buffer));
+
+        return super.start(timeout);
+    }
+
+    constructor(tcpPort: string, public readonly channel: number, executable: string, wsPath: string) {
+        super(tcpPort, channel);
+
+        this.cwd = wsPath;
+        this.executable = Path.relative(wsPath, executable);
+    }    
 }
 
 export class JLinkSocketRTTSource extends SocketRTTSource {
