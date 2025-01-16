@@ -93,7 +93,9 @@ export class RegisterNode extends BaseNode {
                     this.currentValue = tmp;
                 }
                 let cv = this.currentValue.toString(16);
-                while (cv.length < 8) { cv = '0' + cv; }
+                while (cv.length < 8) {
+                    cv = '0' + cv;
+                }
                 this.currentNaturalValue = '0x' + cv;
             }
         }

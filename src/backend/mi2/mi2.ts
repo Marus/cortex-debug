@@ -451,7 +451,9 @@ export class MI2 extends EventEmitter implements IBackend {
                     timer = undefined;
                 }
             };
-            this.process.on('exit', (code) => { destroyTimer(); });
+            this.process.on('exit', (code) => {
+                destroyTimer();
+            });
             // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
             // program is in paused state
             try {
@@ -602,7 +604,9 @@ export class MI2 extends EventEmitter implements IBackend {
                     resolve(true);
                 } else {
                     const command = commands[0];
-                    this.sendCommand(command).then((r) => { nextCommand(commands.slice(1)); }, reject);
+                    this.sendCommand(command).then((r) => {
+                        nextCommand(commands.slice(1));
+                    }, reject);
                 }
             }).bind(this);
 

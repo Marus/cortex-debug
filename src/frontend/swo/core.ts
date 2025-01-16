@@ -209,7 +209,9 @@ class SWOWebview {
 
         const title = `SWO/RTT Graphs [${time}]`;
         this.viewPanel = vscode.window.createWebviewPanel('cortex-debug.grapher', title, showOptions, viewOptions);
-        this.viewPanel.webview.onDidReceiveMessage((msg) => { this.onMessage(msg); });
+        this.viewPanel.webview.onDidReceiveMessage((msg) => {
+            this.onMessage(msg);
+        });
         this.viewPanel.webview.html = this.getHTML();
     }
 
@@ -447,11 +449,19 @@ class RTTDecoder extends EventEmitter {
         super();
         this.buffer = Buffer.alloc(bytesNeeded);
 
-        if (this.source.connected) { this.connected = true; }
-        else { this.source.on('connected', () => { this.connected = true; }); }
+        if (this.source.connected) {
+            this.connected = true;
+        }
+        else {
+            this.source.on('connected', () => {
+                this.connected = true;
+            });
+        }
 
         this.source.on('data', this.onData.bind(this));
-        this.source.on('disconnected', () => { this.connected = false; });
+        this.source.on('disconnected', () => {
+            this.connected = false;
+        });
     }
 
     public onData(input: string | Buffer) {

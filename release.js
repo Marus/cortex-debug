@@ -109,9 +109,7 @@ function runProg(args, cb) {
 
 function run() {
     let isPkg = true;
-    const argv = [...process.argv];
-    prog = argv[1];
-    argv.shift(); argv.shift();
+    const [, prog, ...argv] = process.argv;
     while (argv.length) {
         switch (argv[0]) {
             case '-h':

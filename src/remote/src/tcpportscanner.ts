@@ -200,7 +200,7 @@ export class TcpPortScanner {
         let error: any = null;
         logEnable = logEnable || doLog;
         if (needed <= 0) {
-            return new Promise((resolve) => { resolve(freePorts); });
+            return freePorts;
         }
         for (let port = min; port <= max; port++) {
             if (needed <= 0) {

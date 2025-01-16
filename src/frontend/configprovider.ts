@@ -58,10 +58,21 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
-            case 'darwin': Object.assign(config, config.osx); delete config.osx; break;
-            case 'win32': Object.assign(config, config.windows); delete config.windows; break;
-            case 'linux': Object.assign(config, config.linux); delete config.linux; break;
-            default: console.log(`Unknown platform ${os.platform()}`);
+            case 'darwin':
+                Object.assign(config, config.osx);
+                delete config.osx;
+                break;
+            case 'win32':
+                Object.assign(config, config.windows);
+                delete config.windows;
+                break;
+            case 'linux':
+                Object.assign(config, config.linux);
+                delete config.linux;
+                break;
+            default:
+                console.log(`Unknown platform ${os.platform()}`);
+                break;
         }
         this.sanitizeChainedConfigs(config);
         if (config.debugger_args && !config.debuggerArgs) {

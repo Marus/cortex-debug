@@ -73,7 +73,10 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
                     let lineend = '';
 
-                    for (let i = 0; i < offset; i++) { output += '   '; lineend += ' '; }
+                    for (let i = 0; i < offset; i++) {
+                        output += '   ';
+                        lineend += ' ';
+                    }
 
                     for (let i = 0; i < length; i++) {
                         const byte = bytes[i];
@@ -97,7 +100,9 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                     const endaddress = address + length;
                     const extra = (16 - (endaddress % 16)) % 16;
 
-                    for (let i = 0; i < extra; i++) { output += '   '; }
+                    for (let i = 0; i < extra; i++) {
+                        output += '   ';
+                    }
                     output += '  ' + lineend;
                     output += '\n';
 

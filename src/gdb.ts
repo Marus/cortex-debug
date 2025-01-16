@@ -723,7 +723,10 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         this.onInternalEvents.once('config-done', async () => {
                             // Let the gdb server settle down. They are sometimes still creating/delteting threads
-                            await new Promise<void>((r) => setTimeout(() => { this.startComplete(mode), r(); }, 100));
+                            await new Promise<void>((r) => setTimeout(() => {
+                                this.startComplete(mode);
+                                r();
+                            }, 100));
                             // We wait for all other initialization to complete so we don't create race conditions.
                             // This is such a piece of shit/fragile code. Not sure how what VSCode is doing but it hangs when we send an appropriate
                             // busy error.
@@ -2103,7 +2106,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         } else {
             this.disableSendStoppedEvents = true;
             pendContinue.shouldContinue = true;
-            this.miDebugger.once('generic-stopped', () => { createBreakpoints(); });
+            this.miDebugger.once('generic-stopped', () => {
+                createBreakpoints();
+            });
             this.miDebugger.sendCommand('exec-interrupt');
         }
     }

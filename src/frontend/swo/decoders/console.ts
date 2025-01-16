@@ -118,7 +118,9 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         catch (e) {
             const msg = `Could not write to file ${this.logfile}. ${e.toString()}`;
             vscode.window.showErrorMessage(msg);
-            try { fs.closeSync(this.logFd); } catch {}
+            try {
+                fs.closeSync(this.logFd);
+            } catch {}
             this.logFd = -1;
         }
     }
@@ -128,7 +130,10 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         let text = '';
         const letters = packet.data.toString(this.encoding);
         for (const letter of letters) {
-            if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
+            if (this.timeout) {
+                clearTimeout(this.timeout);
+                this.timeout = null;
+            }
 
             if (letter === '\n') {
                 text += '\n';

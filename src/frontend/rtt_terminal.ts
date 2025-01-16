@@ -32,7 +32,9 @@ export class RTTTerminal {
     private connectToSource(src: SocketRTTSource) {
         this.hrTimer = new HrTimer();
         this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
-        src.once('disconnected', () => { this.onClose(); });
+        src.once('disconnected', () => {
+            this.onClose();
+        });
         src.on('error', (e) => {
             const code: string = (e as any).code;
             if (code === 'ECONNRESET') {
@@ -44,7 +46,9 @@ export class RTTTerminal {
                 magentaWrite(`${e}\n`, this.ptyTerm);
             }
         });
-        src.on('data', (data) => { this.onData(data); });
+        src.on('data', (data) => {
+            this.onData(data);
+        });
 
         if (src.connError) {
             this.source = src;

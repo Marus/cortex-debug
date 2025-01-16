@@ -110,7 +110,9 @@ function endSession(id: string) {
         const time = (endTime.getTime() - startTime.getTime()) / 1000;
         delete sessionStarts[id];
 
-        setTimeout(() => { analytics.event('Session', 'Completed', '', Math.round(time), { sessionControl: 'end' }).send(); }, 500);
+        setTimeout(() => {
+            analytics.event('Session', 'Completed', '', Math.round(time), { sessionControl: 'end' }).send();
+        }, 500);
     }
 }
 

@@ -89,8 +89,12 @@ export class GDBServerConsoleInstance {
         this.ptyOptions.name = GDBServerConsoleInstance.createTermName(this.ptyOptions.name, null);
         this.ptyTerm = new PtyTerminal(this.ptyOptions);
         this.ptyTerm.terminal.show();
-        this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
-        this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
+        this.ptyTerm.on('close', () => {
+            this.onTerminalClosed();
+        });
+        this.ptyTerm.on('data', (data) => {
+            this.sendToBackend(data);
+        });
         if (this.toBackend === null) {
             magentaWrite('Waiting for gdb server to start...', this.ptyTerm);
             this.ptyTerm.pause();

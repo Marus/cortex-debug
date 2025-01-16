@@ -454,7 +454,8 @@ export class GdbDisassembler {
                 // and you get something quite different in schema is not documented
                 // parseIntruction(srcLineVal, undefined, undefined);
                 parseIntruction(srcLineVal);
-                lastPath = ''; lastLine = 0;
+                lastPath = '';
+                lastLine = 0;
                 asmCount++;
             } else {
                 const props = srcLineVal[1];

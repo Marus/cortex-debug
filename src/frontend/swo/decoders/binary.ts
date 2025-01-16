@@ -94,7 +94,9 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
             catch (e) {
                 const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
-                try { fs.closeSync(this.logFd); } catch {}
+                try {
+                    fs.closeSync(this.logFd);
+                } catch {}
                 this.logFd = -1;
             }
         }

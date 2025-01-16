@@ -35,6 +35,9 @@ export default tseslint.config(
                 code: 160,
                 ignoreTrailingComments: true,
             }],
+            '@stylistic/max-statements-per-line': ['error', {
+                ignoredNodes: ['IfStatement'],
+            }],
             '@stylistic/member-delimiter-style': ['error', {
                 multiline: { delimiter: 'semi' },
                 singleline: { delimiter: 'semi' },
@@ -90,7 +93,6 @@ export default tseslint.config(
 
             '@stylistic/indent': 'off',                         // 450 instances
             '@stylistic/brace-style': 'off',                    // 349 instances
-            '@stylistic/max-statements-per-line': 'off',        // 178 instances
         }
     },
     {
