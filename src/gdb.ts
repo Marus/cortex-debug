@@ -534,7 +534,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.ports = this.args.pvtPorts = this.args.pvtParent.pvtPorts;
                 this.serverController.setPorts(this.ports);
                 if (this.args.showDevDebugOutput) {
-                    this.handleMsg('log', JSON.stringify({configFromParent: this.args.pvtMyConfigFromParent}, undefined, 4) + '\n');
+                    this.handleMsg('log', JSON.stringify({ configFromParent: this.args.pvtMyConfigFromParent }, undefined, 4) + '\n');
                 }
                 return resolve();
             }
@@ -860,7 +860,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             catch (e) {
                 const msg = `SWO/RTT Initialization failed: ${e}`;
                 this.handleMsg('stderr', msg);
-                this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
+                this.sendEvent(new GenericCustomEvent('popup', { type: 'error', message: msg }));
             }
             if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
                 this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
@@ -935,7 +935,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 + 'here. Very helpful to debug issues or report problems\n');
         }
         if (this.args.showDevDebugOutput && this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
-            const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
+            const str = JSON.stringify({ chainedConfigurations: this.args.chainedConfigurations }, null, 4);
             this.handleMsg('log', str + '\n');
         }
 
@@ -1089,7 +1089,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     doResolve();
                 }, (e) => {
                     const msg = `Error running post start/restart/reset commands ${e}`;
-                    this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
+                    this.sendEvent(new GenericCustomEvent('popup', { type: 'error', message: msg }));
                     doResolve();
                 });
             } else {
@@ -1743,7 +1743,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         // Once we get this, from here on, nothing really works with gdb.
         const msg = 'Error: A serious error occurred with gdb, unable to continue or interrupt We may not be able to recover '
             + 'from this point. You can try continuing or ending session. Must address root cause though';
-        this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
+        this.sendEvent(new GenericCustomEvent('popup', { type: 'error', message: msg }));
         this.handleMsg('stderr', msg + '\n');
         this.continuing = false;
         this.stopped = true;

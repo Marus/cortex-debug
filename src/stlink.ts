@@ -50,7 +50,7 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
             if (match) {
                 const fullPath = path.join(dir, match[0], suffix, executable);
                 if (fs.existsSync(fullPath)) {
-                    if (!resolvedDir || (resolvedDir.localeCompare(fullPath, undefined, {sensitivity: 'base', numeric: true})) < 0) {
+                    if (!resolvedDir || (resolvedDir.localeCompare(fullPath, undefined, { sensitivity: 'base', numeric: true })) < 0) {
                         resolvedDir = fullPath;     // Many times, multiple versions exist. Take latest. Hopefully!!
                     }
                 }

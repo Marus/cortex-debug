@@ -566,7 +566,7 @@ export class GdbDisassembler {
         for (const old of this.cache) {
             if (old.isInsideRange(startAddr, endAddr)) {
                 this.debugDump('Instruction cache hit: '
-                    + JSON.stringify({startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}) + '\n',
+                    + JSON.stringify({ startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr) }) + '\n',
                     old.instructions);
                 return old;
             }

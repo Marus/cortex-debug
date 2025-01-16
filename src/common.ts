@@ -849,7 +849,7 @@ export class SpawnLineReader extends EventEmitter {
         if (this.promise) { throw new Error('SpawnLineReader: can\'t reuse this object'); }
         this.callback = cb;
         this.promise = new Promise<boolean>((resolve) => {
-            const readStream = fs.createReadStream(filename, options || {flags: 'r'});
+            const readStream = fs.createReadStream(filename, options || { flags: 'r' });
             readStream.on('error', (e) => {
                 this.emit('error', e);
                 resolve(false);

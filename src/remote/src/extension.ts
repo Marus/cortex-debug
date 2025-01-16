@@ -3,7 +3,7 @@
 import { openStdin } from 'process';
 import * as vscode from 'vscode';
 import * as os from 'os';
-import {Server} from './server';
+import { Server } from './server';
 import * as Interfaces from './interfaces';
 
 export class CortexDebugRemote {

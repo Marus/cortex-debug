@@ -46,18 +46,18 @@ enum chThreadState {
 const colNumType = RTOSCommon.ColTypeEnum.colTypeNumeric;
 const ChibiOSItems: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
 
-ChibiOSItems[DisplayFields[DisplayFields.ID]] = { width: 2, headerRow1: '', headerRow2: 'id', colType: colNumType};
-ChibiOSItems[DisplayFields[DisplayFields.THREAD_DESCRIPTION]] = { width: 14, headerRow1: '', headerRow2: 'Thread', colGapBefore: 1};
-ChibiOSItems[DisplayFields[DisplayFields.FLAGS]] = {width: 2, headerRow1: '', headerRow2: 'Flags', colGapAfter: 1};
-ChibiOSItems[DisplayFields[DisplayFields.REFS]] = {width: 4, headerRow1: '', headerRow2: 'Refs', colGapBefore: 1};
-ChibiOSItems[DisplayFields[DisplayFields.TIME]] = {width: 3, headerRow1: '', headerRow2: 'Time', colType: colNumType};
-ChibiOSItems[DisplayFields[DisplayFields.WTOBJP]] = {width: 4, headerRow1: 'Wait', headerRow2: 'Obj/Msg', colGapBefore: 1};
-ChibiOSItems[DisplayFields[DisplayFields.STATS_N]] = {width: 4, headerRow1: 'Stats', headerRow2: 'Switches', colType: colNumType};
-ChibiOSItems[DisplayFields[DisplayFields.STATS_WORST]] = {width: 4, headerRow1: '', headerRow2: 'Worst Path', colType: colNumType};
-ChibiOSItems[DisplayFields[DisplayFields.STATS_CUMULATIVE]] = {width: 4, headerRow1: '', headerRow2: 'Cumulative Time', colType: colNumType};
-ChibiOSItems[DisplayFields[DisplayFields.STACK_TOP]] = {width: 4, headerRow1: 'Stack', headerRow2: 'Top', colGapBefore: 1};
-ChibiOSItems[DisplayFields[DisplayFields.STACK_END]] = {width: 4, headerRow1: '', headerRow2: 'End', colGapBefore: 1};
-ChibiOSItems[DisplayFields[DisplayFields.STACK_MIN_FREE]] = {width: 3, headerRow1: '', headerRow2: 'Min. free', colType: colNumType};
+ChibiOSItems[DisplayFields[DisplayFields.ID]] = { width: 2, headerRow1: '', headerRow2: 'id', colType: colNumType };
+ChibiOSItems[DisplayFields[DisplayFields.THREAD_DESCRIPTION]] = { width: 14, headerRow1: '', headerRow2: 'Thread', colGapBefore: 1 };
+ChibiOSItems[DisplayFields[DisplayFields.FLAGS]] = { width: 2, headerRow1: '', headerRow2: 'Flags', colGapAfter: 1 };
+ChibiOSItems[DisplayFields[DisplayFields.REFS]] = { width: 4, headerRow1: '', headerRow2: 'Refs', colGapBefore: 1 };
+ChibiOSItems[DisplayFields[DisplayFields.TIME]] = { width: 3, headerRow1: '', headerRow2: 'Time', colType: colNumType };
+ChibiOSItems[DisplayFields[DisplayFields.WTOBJP]] = { width: 4, headerRow1: 'Wait', headerRow2: 'Obj/Msg', colGapBefore: 1 };
+ChibiOSItems[DisplayFields[DisplayFields.STATS_N]] = { width: 4, headerRow1: 'Stats', headerRow2: 'Switches', colType: colNumType };
+ChibiOSItems[DisplayFields[DisplayFields.STATS_WORST]] = { width: 4, headerRow1: '', headerRow2: 'Worst Path', colType: colNumType };
+ChibiOSItems[DisplayFields[DisplayFields.STATS_CUMULATIVE]] = { width: 4, headerRow1: '', headerRow2: 'Cumulative Time', colType: colNumType };
+ChibiOSItems[DisplayFields[DisplayFields.STACK_TOP]] = { width: 4, headerRow1: 'Stack', headerRow2: 'Top', colGapBefore: 1 };
+ChibiOSItems[DisplayFields[DisplayFields.STACK_END]] = { width: 4, headerRow1: '', headerRow2: 'End', colGapBefore: 1 };
+ChibiOSItems[DisplayFields[DisplayFields.STACK_MIN_FREE]] = { width: 3, headerRow1: '', headerRow2: 'Min. free', colType: colNumType };
 
 const DisplayFieldNames: string[] = Object.keys(ChibiOSItems);
 

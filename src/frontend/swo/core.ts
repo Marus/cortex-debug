@@ -10,7 +10,7 @@ import { SWORTTSource } from './sources/common';
 import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig,
     SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
     SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage,
-    GrapherProgramCounterMessage} from './common';
+    GrapherProgramCounterMessage } from './common';
 import { SWORTTAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
 import { PacketType, Packet } from './common';

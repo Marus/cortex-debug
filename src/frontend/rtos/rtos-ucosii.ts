@@ -18,7 +18,7 @@ enum DisplayFields {
 }
 
 const RTOSUCOS2Items: { [key: string]: RTOSCommon.DisplayColumnItem } = {};
-RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colType: RTOSCommon.ColTypeEnum.colTypeNumeric};
+RTOSUCOS2Items[DisplayFields[DisplayFields.ID]] = { width: 1, headerRow1: '', headerRow2: 'ID', colType: RTOSCommon.ColTypeEnum.colTypeNumeric };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Address]] = { width: 2, headerRow1: '', headerRow2: 'Address', colGapBefore: 1 };
 RTOSUCOS2Items[DisplayFields[DisplayFields.TaskName]] = { width: 4, headerRow1: '', headerRow2: 'Name', colGapBefore: 1 };
 RTOSUCOS2Items[DisplayFields[DisplayFields.Status]] = {

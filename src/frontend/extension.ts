@@ -903,7 +903,7 @@ export class CortexDebugExtension {
         const expr = arg.variable?.evaluateName;
         if (parent && expr) {
             const varRef = parent.variablesReference;
-            mySession.session.customRequest('is-global-or-static', {varRef: varRef}).then((result) => {
+            mySession.session.customRequest('is-global-or-static', { varRef: varRef }).then((result) => {
                 if (!result.success) {
                     vscode.window.showErrorMessage(`Cannot add ${expr} to Live Watch. Must be a global or static variable`);
                 } else {

@@ -281,7 +281,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         // This is the order we want stuff in
                         const display: { [key: string]: RTOSCommon.DisplayRowItem } = {};
                         const mySetter = (x: DisplayFields, text: string, value?: any) => {
-                            display[DisplayFieldNames[x]] = {text, value};
+                            display[DisplayFieldNames[x]] = { text, value };
                         };
 
                         mySetter(DisplayFields.ID, thInfo['uxTCBNumber-val'] || '??');
@@ -378,7 +378,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
         return stackInfo;
     }
 
-    public lastValidHtmlContent: RTOSCommon.HtmlInfo = {html: '', css: ''};
+    public lastValidHtmlContent: RTOSCommon.HtmlInfo = { html: '', css: '' };
     public getHTML(): RTOSCommon.HtmlInfo {
         const htmlContent: RTOSCommon.HtmlInfo = {
             html: '', css: ''

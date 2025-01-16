@@ -1,4 +1,4 @@
-import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, ProviderResult} from 'vscode';
+import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, ProviderResult } from 'vscode';
 import * as vscode from 'vscode';
 
 import { getPathRelative, LiveWatchConfig } from '../../common';
