@@ -17,9 +17,9 @@ export class GDBServerConsoleInstance {
 
     private constructor() {
         this.ptyOptions = {
-            name      : 'gdb-server',
-            prompt    : '',             // Can't have a prompt since the gdb-server or semihosting may have one
-            inputMode : TerminalInputMode.COOKED
+            name: 'gdb-server',
+            prompt: '',             // Can't have a prompt since the gdb-server or semihosting may have one
+            inputMode: TerminalInputMode.COOKED
         };
     }
 

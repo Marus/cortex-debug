@@ -89,7 +89,7 @@ function runProg(args, cb) {
     const cmd = args.join(' ');
     const arg0 = args.shift();
     const prog = child_process.spawn(arg0, args, {
-        stdio:'inherit'
+        stdio: 'inherit'
     });
     prog.on('error', (error) => {
         console.error(`Error running '${cmd}': ${error.message}`);

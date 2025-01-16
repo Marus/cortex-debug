@@ -103,7 +103,6 @@ export default tseslint.config(
             '@stylistic/quotes': 'off',                         // 17 instances
             '@stylistic/padded-blocks': 'off',                  // 17 instances
             '@stylistic/space-in-parens': 'off',                // 11 instances
-            '@stylistic/key-spacing': 'off',                    // 10 instances
         }
     },
     {

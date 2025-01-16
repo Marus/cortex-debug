@@ -5,9 +5,9 @@ import { ResettableTimeout, TerminalInputMode } from '../common';
 import { BR_MAGENTA_FG, CSI, RESET } from './ansi-helpers';
 
 const KEYS = {
-    enter       : '\r',
-    del         : '\x7f',
-    bs          : '\x08'
+    enter: '\r',
+    del: '\x7f',
+    bs: '\x08'
 };
 export interface IPtyTerminalOptions {
     name: string;       // Name of the terminal

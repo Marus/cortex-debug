@@ -549,9 +549,9 @@ export class CortexDebugExtension {
         for (const launch of filtered) {
             count--;
             const childOptions: vscode.DebugSessionOptions = {
-                consoleMode              : vscode.DebugConsoleMode.Separate,
-                noDebug                  : adapterArgs.noDebug,
-                compact                  : false
+                consoleMode: vscode.DebugConsoleMode.Separate,
+                noDebug: adapterArgs.noDebug,
+                compact: false
             };
             if (launch.lifecycleManagedByParent) {
                 // VSCode 'lifecycleManagedByParent' does not work as documented. The fact that there
