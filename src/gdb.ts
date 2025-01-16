@@ -925,7 +925,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
-        this.miDebugger.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
+        this.miDebugger.debugOutput = this.args.showDevDebugOutput;
         this.miDebugger.on('launcherror', (err) => {
             const msg = 'Could not start GDB process, does the program exist in filesystem?\n' + err.toString() + '\n';
             this.launchErrorResponse(response, 103, msg);
@@ -967,7 +967,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, true);
         liveGdb.setupEvents(mi2);
         const commands = [...this.gdbInitCommands];
-        mi2.debugOutput = this.args.showDevDebugOutput as ADAPTER_DEBUG_MODE;
+        mi2.debugOutput = this.args.showDevDebugOutput;
         commands.push('interpreter-exec console "set stack-cache off"');
         commands.push('interpreter-exec console "set remote interrupt-on-connect off"');
         if (this.serverController?.initCommands) {
@@ -2277,7 +2277,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             return undefined;
         }
         if (id instanceof VariableObject) {
-            const pRef = (id as VariableObject).parent;
+            const pRef = id.parent;
             const parent = this.variableHandles.get(pRef);
             return this.isVarRefGlobalOrStatic(pRef, parent);
         }
@@ -2972,7 +2972,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 return this.variableMembersRequest(id, response, args);
             } else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
-                    const pVar = id as VariableObject;
+                    const pVar = id;
 
                     // Variable members
                     let children: VariableObject[];

@@ -258,7 +258,7 @@ export class VariablesHandler {
         id = this.variableHandles.get(args.variablesReference);
         if (typeof id === 'object') {
             if (id instanceof VariableObject) {
-                const pVar = id as VariableObject;
+                const pVar = id;
 
                 // Variable members
                 let children: VariableObject[];

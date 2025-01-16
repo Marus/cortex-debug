@@ -36,7 +36,7 @@ export class RTTTerminal {
             this.onClose();
         });
         src.on('error', (e) => {
-            const code: string = (e as any).code;
+            const code: string = e.code;
             if (code === 'ECONNRESET') {
                 // Server closed the connection. We are done with this session
             } else if (code === 'ECONNREFUSED') {

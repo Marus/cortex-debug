@@ -84,7 +84,6 @@ export default tseslint.config(
             '@typescript-eslint/require-await': 'off',                  // 11 instances
             'no-prototype-builtins': 'off',                             // 10 instances
             '@typescript-eslint/no-unsafe-enum-comparison': 'off',      // 9 instances
-            '@typescript-eslint/no-unnecessary-type-assertion': 'off',  // 8 instances
         }
     },
     {

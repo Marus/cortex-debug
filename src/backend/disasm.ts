@@ -726,7 +726,7 @@ export class GdbDisassembler {
                     if (!(r instanceof DisassemblyReturn)) {
                         throw new Error(`Disassembly failed completely for ${hexFormat(range.qStart)} - ${hexFormat(range.qEnd)}`);
                     }
-                    const tmp = new InstructionRange((r as DisassemblyReturn).instructions);
+                    const tmp = new InstructionRange(r.instructions);
                     if (!all) {
                         all = tmp;
                     } else {

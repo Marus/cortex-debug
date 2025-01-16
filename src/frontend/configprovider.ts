@@ -280,7 +280,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (val) {
             let isIntString = false;
             if (typeof val === 'string') {
-                val = (val as string).trim();
+                val = val.trim();
                 isIntString = (val.match(/^0[x][0-9a-f]+/i) || val.match(/^[0-9]+/));
             }
             if (isIntString) {
