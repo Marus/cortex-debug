@@ -115,7 +115,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             if (os.platform() === 'win32') {
                 return 'JLinkGDBServerCL.exe';
             } else {
-                for (const name in EXECUTABLE_NAMES) {
+                for (const name of EXECUTABLE_NAMES) {
                     if (commandExistsSync(name)) { return name; }
                 }
                 return 'JLinkGDBServer';

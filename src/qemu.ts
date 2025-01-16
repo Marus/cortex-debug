@@ -64,7 +64,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
         if (this.args.serverpath) {
             return this.args.serverpath;
         }
-        for (const name in EXECUTABLE_NAMES) {
+        for (const name of EXECUTABLE_NAMES) {
             if (commandExistsSync(name)) { return name; }
         }
         return 'qemu-system-arm';
