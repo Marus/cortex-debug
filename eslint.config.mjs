@@ -100,7 +100,6 @@ export default tseslint.config(
             '@stylistic/spaced-comment': 'off',                 // 24 instances
             '@stylistic/lines-between-class-members': 'off',    // 19 instances
             '@stylistic/max-len': 'off',                        // 19 instances
-            '@stylistic/quotes': 'off',                         // 17 instances
         }
     },
     {

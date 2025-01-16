@@ -6,7 +6,7 @@ import { TcpPortScanner, InterfaceIpsSet } from './tcpportscanner';
 import * as Interfaces from './interfaces';
 
 export class Server {
-    public readonly ipAddr: string = "";
+    public readonly ipAddr: string = '';
     public readonly allIps: InterfaceIpsSet;
     public port: number = -1;
     private server: net.Server | undefined;

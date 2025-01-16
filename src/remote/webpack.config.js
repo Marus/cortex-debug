@@ -42,7 +42,7 @@ const extensionConfig = {
   },
   devtool: 'nosources-source-map',
   infrastructureLogging: {
-    level: "log", // enables logging required for problem matchers
+    level: 'log', // enables logging required for problem matchers
   },
 };
 module.exports = [extensionConfig];

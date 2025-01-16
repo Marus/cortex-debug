@@ -97,7 +97,7 @@ function runProg(args, cb) {
             cb(-1);
         }
     });
-    prog.on("close", (code) => {
+    prog.on('close', (code) => {
         if (!isDryRun) {
             console.log(`'${cmd}' ... exited with code ${code}`);
         }
