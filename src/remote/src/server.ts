@@ -39,8 +39,7 @@ export class Server {
                     this.server?.listen(this.port, this.useHost);
                 });
                 this.server.listen(this.port, this.useHost);
-            }
-            catch (e: any) {
+            } catch (e: any) {
                 reject(e);
             }
         });

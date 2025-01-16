@@ -34,8 +34,7 @@ const GCC_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.gnu-tools-for-st
  * Resolves the path location of a STM32CubeIDE plugin irrespective of version number.
  * Works for most recent version STM32CubeIDE_1.4.0 and STM32CubeIDE_1.5.0.
  */
-function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, executable = '')
-{
+function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, executable = '') {
     const dir = path.join(...dirSegments);
     let resolvedDir: string;
     try {
@@ -56,8 +55,7 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
                 }
             }
         }
-    }
-    catch (error) {
+    } catch (error) {
         // Ignore
     }
     return resolvedDir ? resolvedDir : executable;
@@ -204,8 +202,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             serverargs.push('--swd');
         }
 
-        if (this.args.swoConfig.enabled)
-        {
+        if (this.args.swoConfig.enabled) {
             const swoport = this.ports['swoPort'];
             serverargs.push('--swo-port', swoport.toString());
 

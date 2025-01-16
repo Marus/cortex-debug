@@ -91,8 +91,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 this.status = 'initialized';
             }
             return this;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof RTOSCommon.ShouldRetry) {
                 console.error(e.message);
             } else {
@@ -125,8 +124,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     this.helpHtml = '<button class="help-button">Hints to get more out of the embOS RTOS View</button>\n'
                         + `<div class="help"><p>\n${ret}\n</p></div>\n`;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }
@@ -154,8 +152,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
                     if (this.OSGlobalVal.hasOwnProperty('IsRunning-val')) {
                         isRunning = this.OSGlobalVal['IsRunning-val'];
-                    }
-                    else {
+                    } else {
                         /* older embOS versions do not have IsRunning struct member */
                         isRunning = '1';
                     }
@@ -165,8 +162,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                         if (undefined !== taskList && (0 !== parseInt(taskList))) {
                             if (this.OSGlobalVal['pCurrentTask-val']) {
                                 this.pCurrentTaskVal = parseInt(this.OSGlobalVal['pCurrentTask-val']);
-                            }
-                            else {
+                            } else {
                                 this.pCurrentTaskVal = Number.MAX_SAFE_INTEGER;
                             }
 
@@ -178,20 +174,17 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                                 - parseInt(b.display[DisplayFieldNames[DisplayFields.ID_Address]].text));
 
                             this.finalThreads = [...this.foundThreads];
-                        }
-                        else {
+                        } else {
                             this.finalThreads = [];
                         }
-                    }
-                    else {
+                    } else {
                         this.finalThreads = [];
                     }
 
                     this.stale = false;
                     this.timeInfo += ' in ' + timer.deltaMs() + ' ms';
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     resolve();
                     console.error('RTOSEMBOS.refresh() failed: ', e);
                 }
@@ -227,8 +220,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                         if (curTaskObj.hasOwnProperty('sName-val')) {
                             const matchName = curTaskObj['sName-val'].match(/"([^*]*)"$/);
                             thName = matchName ? matchName[1] : curTaskObj['sName-val'];
-                        }
-                        else if (curTaskObj.hasOwnProperty('Name-val')) { /* older embOS versions used Name */
+                        } else if (curTaskObj.hasOwnProperty('Name-val')) { /* older embOS versions used Name */
                             const matchName = curTaskObj['Name-val'].match(/"([^*]*)"$/);
                             thName = matchName ? matchName[1] : curTaskObj['Name-val'];
                         }
@@ -257,8 +249,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                             const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
                             const stackPercentText = `${stackPercentVal} % (${stackInfo.stackUsed} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPercent, stackPercentText, stackPercentVal);
-                        }
-                        else {
+                        } else {
                             mySetter(DisplayFields.StackPercent, '?? %');
                         }
 
@@ -266,8 +257,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                             const stackPeakPercentVal = Math.round((stackInfo.stackPeak / stackInfo.stackSize) * 100);
                             const stackPeakPercentText = `${stackPeakPercentVal.toString().padStart(3)} % (${stackInfo.stackPeak} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPeakPercent, stackPeakPercentText, stackPeakPercentVal);
-                        }
-                        else {
+                        } else {
                             mySetter(DisplayFields.StackPeakPercent, '?? %');
                         }
 
@@ -293,8 +283,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     this.taskCount = threadCount;
 
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('RTOSEMBOS.getThreadInfo() error', e);
                 }
             }, (e) => {
@@ -325,8 +314,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
             case OsTaskPendingState.READY:
                 if (pendTimeout) {
                     return new TaskDelayed(pendTimeout);
-                }
-                else {
+                } else {
                     return new TaskReady();
                 }
 
@@ -386,8 +374,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
         if (thInfo.hasOwnProperty('pStackBase-val')) {
             EndOfStack = thInfo['pStackBase-val'];
-        }
-        else {
+        } else {
             /* older embOS versions used pStackBot instead of pStackBase */
             EndOfStack = thInfo['pStackBot-val'];
         }
@@ -396,12 +383,10 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
         if (EndOfStack && StackSize) {
             if (this.stackIncrements < 0) {
                 Stack = parseInt(EndOfStack) + parseInt(StackSize);
-            }
-            else {
+            } else {
                 Stack = parseInt(EndOfStack) - parseInt(StackSize);
             }
-        }
-        else {
+        } else {
             /* As stackStart is mandatory, we need to set it to some reasonable value */
             Stack = parseInt(TopOfStack);
         }
@@ -419,8 +404,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 const stackDelta = stackInfo.stackStart - stackInfo.stackTop;
                 stackInfo.stackFree = stackInfo.stackSize - stackDelta;
                 stackInfo.stackUsed = stackDelta;
-            }
-            else {
+            } else {
                 const stackDelta = stackInfo.stackTop - stackInfo.stackStart;
                 stackInfo.stackFree = stackDelta;
                 stackInfo.stackUsed = stackInfo.stackSize - stackDelta;
@@ -446,8 +430,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     peak++;
                 }
                 stackInfo.stackPeak = stackInfo.stackSize - peak;
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }

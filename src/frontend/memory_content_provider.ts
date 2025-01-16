@@ -83,8 +83,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                         output += hexFormat(byte, 2, false).toUpperCase() + ' ';
                         if (byte <= 32 || (byte >= 127 && byte <= 159)) {
                             lineend += '.';
-                        }
-                        else {
+                        } else {
                             lineend += String.fromCharCode(bytes[i]);
                         }
 

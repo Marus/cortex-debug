@@ -178,8 +178,7 @@ export class RequestQueue<RespType, ArgsType> {
                     const p = obj.functor(obj.response, obj.args, this.pendedContinue, ...obj.extra);
                     await p;
                     obj.resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     if (this.alwaysResolve) {
                         obj.resolve();
                     } else {
@@ -390,8 +389,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 }
                 this.debugLogFd = fs.openSync(logFName, 'a');
                 this.handleMsg('log', `Opened special debug dump file in append mode "${logFName}"\n`);
-            }
-            catch (e) {
+            } catch (e) {
                 this.handleMsg('stderr', `Failed to open dump file open '${logFName}'\n`);
             }
         }
@@ -408,8 +406,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             try {
                 fs.writeSync(this.debugLogFd, str);
-            }
-            finally {
+            } finally {
                 // Do nothing
             }
         }
@@ -694,8 +691,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             commands.push(...launchCommands);
                             commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                         }
-                    }
-                    catch (err) {
+                    } catch (err) {
                         const msg = err.toString() + '\n' + err.stack.toString();
                         this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `Failed to generate gdb commands: ${msg}`));
                         this.launchErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
@@ -752,8 +748,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         try {
                             this.miDebugger.stop();     // This should also kill the server if there is one
                             this.server.exit();
-                        }
-                        finally {
+                        } finally {
                             doResolve();
                         }
                     });
@@ -853,14 +848,12 @@ export class GDBDebugSession extends LoggingDebugSession {
                             await this.startGdbForLiveWatch(liveGdb);
                             this.handleMsg('stdout', 'Started live-monitor-gdb session\n');
                             this.miLiveGdb = liveGdb;
-                        }
-                        catch (e) {
+                        } catch (e) {
                             this.handleMsg('stderr', `Failed to start live-monitor-gdb session. Error: ${e}\n`);
                         }
                     }
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `SWO/RTT Initialization failed: ${e}`;
                 this.handleMsg('stderr', msg);
                 this.sendEvent(new GenericCustomEvent('popup', { type: 'error', message: msg }));
@@ -913,8 +906,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.launchErrorResponse(response, 103, gdbMissingMsg);
                 return null;
             }
-        }
-        else if (!hasbin.sync(gdbExePath.replace(/\.exe$/i, ''))) {
+        } else if (!hasbin.sync(gdbExePath.replace(/\.exe$/i, ''))) {
             this.launchErrorResponse(response, 103, gdbMissingMsg);
             return null;
         }
@@ -1251,8 +1243,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 if (this.miLiveGdb?.miDebugger) {
                     await this.miLiveGdb.miDebugger.sendCommand(cmd);
                 }
-            }
-            catch {}
+            } catch {}
         }
         if (this.stopped) {
             // We are already stopped but this fakes a stop again which refreshes all debugger windows
@@ -1399,8 +1390,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         });
                         return val;
                     });
-                }
-                else {
+                } else {
                     response.body = {
                         error: 'Unable to parse response'
                     };
@@ -1426,8 +1416,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     });
                 }
             }
-        }
-        catch {
+        } catch {
             this.suppressRadixMsgs = false;
         }
     }
@@ -1442,8 +1431,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     }
                 });
                 response.body = registerNames;
-            }
-            else {
+            } else {
                 response.body = { error: node.resultRecords.results };
             }
             this.sendResponse(response);
@@ -1524,8 +1512,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         try {
             await this.miDebugger.sendCommand('break-delete');
             return true;
-        }
-        catch (e) {
+        } catch (e) {
             this.handleMsg('log', `Could not delete all breakpoints. ${e}\n`);
             return false;
         }
@@ -1579,8 +1566,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     });
                     try {
                         await this.miDebugger.sendCommand('exec-interrupt');
-                    }
-                    catch (e) {
+                    } catch (e) {
                         // The timeout will take care of it...
                         this.handleMsg('log', `Could not interrupt program. Trying to end session anyways ${e}\n`);
                     }
@@ -1661,8 +1647,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.disableSendStoppedEvents = true;
             if (this.stopped) {
                 restartProcessing();
-            }
-            else {
+            } else {
                 this.miDebugger.once('generic-stopped', restartProcessing);
                 this.miDebugger.sendCommand('exec-interrupt');
             }
@@ -1678,8 +1663,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected async resetDevice(response: DebugProtocol.Response, args: any) {
         try {
             await this.doResetDevice(response, args);
-        }
-        catch (e) {}
+        } catch (e) {}
     }
 
     protected timeStart = Date.now();
@@ -1940,8 +1924,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             try {
                 this.sendEvent(new TerminatedEvent());
                 this.serverConsoleLog('quitEvent: sending VSCode TerminatedEvent');
-            }
-            catch (e) {
+            } catch (e) {
             }
         }, 10);
     }
@@ -2000,8 +1983,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 value: res.result('value')
             };
             this.sendResponse(response);
-        }
-        catch (err) {
+        } catch (err) {
             this.sendErrorResponse(response, 11, `Could not set variable: ${err}`);
         }
     }
@@ -2075,8 +2057,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             breakpoints: finalBrks
                         };
                         this.sendResponse(response);
-                    }
-                    catch (msg) {
+                    } catch (msg) {
                         this.sendErrorResponse(response, 10, msg.toString());
                     }
 
@@ -2145,8 +2126,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             if (parts.length === 2) {
                                 func = parts[1];
                                 file = parts[0];
-                            }
-                            else {
+                            } else {
                                 func = parts[0];
                             }
 
@@ -2174,8 +2154,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                     }
                                 });
                             }
-                        }
-                        else {
+                        } else {
                             args.breakpoints.forEach((brk) => {
                                 const arg: OurSourceBreakpoint = {
                                     ...brk,
@@ -2216,8 +2195,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                         this.breakpointMap.set(args.source.path, bpts);
                         this.sendResponse(response);
-                    }
-                    catch (msg) {
+                    } catch (msg) {
                         this.sendErrorResponse(response, 9, msg.toString());
                     }
 
@@ -2274,8 +2252,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         };
 
                         this.sendResponse(response);
-                    }
-                    catch (msg) {
+                    } catch (msg) {
                         this.sendErrorResponse(response, 9, msg.toString());
                     }
 
@@ -2387,8 +2364,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         };
 
                         this.sendResponse(response);
-                    }
-                    catch (msg) {
+                    } catch (msg) {
                         this.sendErrorResponse(response, 9, msg.toString());
                     }
 
@@ -2457,8 +2433,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         // they do with OpenOCD bit later. In general, this only happens with buggy gdb-servers
                         await this.miDebugger.sendCommand(`thread-select ${this.currentThreadId}`);
                     }
-                }
-                else {
+                } else {
                     this.currentThreadId = parseInt(currentThread);
                     if (traceThreads) {
                         this.handleMsg('log', `**** thread-list-ids: current thread = ${this.currentThreadId}\n`);
@@ -2496,8 +2471,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
 
                         return new Thread(id, name);
-                    }
-                    else {
+                    } else {
                         return null;
                     }
                 }).filter((t) => t !== null);
@@ -2507,8 +2481,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 };
                 this.sendResponse(response);
                 resolve();
-            }
-            catch (e) {
+            } catch (e) {
                 if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
                     this.sendErrorResponse(response, 1, `Unable to get thread information: ${e}`);
                 } else {
@@ -2578,8 +2551,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 };
                 this.sendResponse(response);
                 resolve();
-            }
-            catch (err) {
+            } catch (err) {
                 if (isBusy()) {     // Between the time we asked for a info, a continue occurred
                     this.sendErrorResponse(response, 12, `Failed to get Stack Trace: ${err.toString()}`);
                 } else {
@@ -2616,13 +2588,11 @@ export class GDBDebugSession extends LoggingDebugSession {
         try {
             const frame = await this.miDebugger.getFrame(threadId, frameId);
             file = getPathRelative(this.args.cwd, frame?.file || '');
-        }
-        catch {
+        } catch {
             // Do Nothing. If you hit step/next really really fast, this can fail our/gdb/gdb-server/vscode are out of synch.
             // Side effect is statics won't show up but only during the fast transitions.
             // Objective is just not to crash
-        }
-        finally {
+        } finally {
             const staticId = HandleRegions.STATIC_HANDLES_START + args.frameId;
             scopes.push(new Scope(`Static: ${file}`, staticId, false));
             this.floatingVariableMap[staticId] = {};         // Clear any previously stored stuff for this scope
@@ -2655,8 +2625,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     });
                 }
             }
-        }
-        catch (error) {
+        } catch (error) {
             this.sendErrorResponse(response, 116, `Unable to read register list: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Reading Register List', ''));
             return;
@@ -2713,8 +2682,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             } else {
                 throw new Error('Unable to parse response for reg. values');
             }
-        }
-        catch (error) {
+        } catch (error) {
             this.sendErrorResponse(response, 115, `Unable to read registers: ${error.toString()}`);
             this.sendEvent(new TelemetryEvent('Error', 'Reading Registers', ''));
             return;
@@ -2753,8 +2721,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                     }
                     varObj = this.variableHandles.get(varId) as any;
-                }
-                catch (err) {
+                } catch (err) {
                     updateError = err;
                 }
             }
@@ -2773,8 +2740,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 } else if (!varObj) {
                     throw updateError || new Error('updateOrCreateVariable: unknown error');
                 }
-            }
-            catch (err) {
+            } catch (err) {
                 if (isFloating) {
                     if (this.args.showDevDebugOutput) {
                         this.handleMsg('stderr', `Could not create global/static variable ${symOrExpr}\n`);
@@ -2790,8 +2756,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.putFloatingVariable(parentVarReference, symOrExpr, varObj);
             }
             return varObj?.toProtocolVariable(displayName || varObj.name);
-        }
-        catch (err) {
+        } catch (err) {
             const ret: DebugProtocol.Variable = {
                 name: symOrExpr,
                 value: `<${err}>`,
@@ -2813,8 +2778,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
             response.body = { variables: globals };
             this.sendResponse(response);
-        }
-        catch (err) {
+        } catch (err) {
             this.sendErrorResponse(response, 1, `Could not get global variable information: ${err}`);
         }
     }
@@ -2880,8 +2844,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
             response.body = { variables: statics };
             this.sendResponse(response);
-        }
-        catch (err) {
+        } catch (err) {
             this.sendErrorResponse(response, 1, `Could not get static variable information: ${err}`);
         }
     }
@@ -2889,8 +2852,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     private createVariable(arg, options?): number {
         if (options) {
             return this.variableHandles.create(new ExtendedVariable(arg, options));
-        }
-        else {
+        } else {
             return this.variableHandles.create(arg);
         }
     }
@@ -2899,8 +2861,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         let id: number;
         if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
             id = this.variableHandlesReverse[varObj.name];
-        }
-        else {
+        } else {
             id = this.createVariable(varObj);
             this.variableHandlesReverse[varObj.name] = id;
         }
@@ -2936,8 +2897,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 variables: variables
             };
             this.sendResponse(response);
-        }
-        catch (err) {
+        } catch (err) {
             if (this.isMIStatusStopped()) {     // Between the time we asked for a info, a continue occurred
                 this.sendErrorResponse(response, 1, `Could not get stack variables: ${err}`);
             } else {
@@ -2955,8 +2915,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 let expanded = expandValue(this.createVariable.bind(this), variable.result('value'), id, variable);
                 if (!expanded) {
                     this.sendErrorResponse(response, 2, 'Could not expand variable');
-                }
-                else {
+                } else {
                     if (typeof expanded[0] === 'string') {
                         expanded = [
                             {
@@ -2971,12 +2930,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                     };
                     this.sendResponse(response);
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 this.sendErrorResponse(response, 2, `Could not expand variable: ${e}`);
             }
-        }
-        catch (err) {
+        } catch (err) {
             this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
         }
     }
@@ -3022,8 +2979,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
             if (typeof id === 'string') {
                 return this.variableMembersRequest(id, response, args);
-            }
-            else if (typeof id === 'object') {
+            } else if (typeof id === 'object') {
                 if (id instanceof VariableObject) {
                     const pVar = id as VariableObject;
 
@@ -3037,8 +2993,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             child.id = varId;
                             if (/^\d+$/.test(child.exp)) {
                                 child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
-                            }
-                            else {
+                            } else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
                                 if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
                                     const prev = childMap[child.exp];
@@ -3062,12 +3017,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                             variables: vars
                         };
                         this.sendResponse(response);
-                    }
-                    catch (err) {
+                    } catch (err) {
                         this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
                     }
-                }
-                else if (id instanceof ExtendedVariable) {
+                } else if (id instanceof ExtendedVariable) {
                     const variables: DebugProtocol.Variable[] = [];
 
                     const varReq = id;
@@ -3087,14 +3040,15 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 const expanded = expandValue(this.createVariable.bind(this), variable.result('value'), varReq.name, variable);
                                 if (!expanded) {
                                     this.sendErrorResponse(response, 15, 'Could not expand variable');
-                                }
-                                else {
+                                } else {
                                     if (typeof expanded === 'string') {
                                         if (expanded === '<nullptr>') {
-                                            if (argsPart) { argsPart = false; }
-                                            else { return submit(); }
-                                        }
-                                        else if (expanded[0] !== '"') {
+                                            if (argsPart) {
+                                                argsPart = false;
+                                            } else {
+                                                return submit();
+                                            }
+                                        } else if (expanded[0] !== '"') {
                                             strArr.push({
                                                 name: '[err]',
                                                 value: expanded,
@@ -3108,8 +3062,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                             variablesReference: 0
                                         });
                                         addOne();
-                                    }
-                                    else {
+                                    } else {
                                         strArr.push({
                                             name: '[err]',
                                             value: expanded,
@@ -3118,25 +3071,21 @@ export class GDBDebugSession extends LoggingDebugSession {
                                         submit();
                                     }
                                 }
-                            }
-                            catch (e) {
+                            } catch (e) {
                                 this.sendErrorResponse(response, 14, `Could not expand variable: ${e}`);
                             }
                         };
                         addOne();
-                    }
-                    else {
+                    } else {
                         this.sendErrorResponse(response, 13, `Unimplemented variable request options: ${JSON.stringify(varReq.options)}`);
                     }
-                }
-                else {
+                } else {
                     response.body = {
                         variables: id
                     };
                     this.sendResponse(response);
                 }
-            }
-            else {
+            } else {
                 response.body = {
                     variables: []
                 };
@@ -3153,8 +3102,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const done = await this.miDebugger.interrupt();
             }
             this.sendResponse(response);
-        }
-        catch (msg) {
+        } catch (msg) {
             this.sendErrorResponse(response, 3, `Could not pause: ${msg}`);
         }
     }
@@ -3168,8 +3116,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             response.body = { allThreadsContinued: true };
             this.sendResponse(response);
-        }
-        catch (msg) {
+        } catch (msg) {
             this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
         }
     }
@@ -3179,8 +3126,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             const assemblyMode = args.granularity === 'instruction';
             const done = await this.miDebugger.step(args.threadId, assemblyMode);
             this.sendResponse(response);
-        }
-        catch (msg) {
+        } catch (msg) {
             this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);
         }
     }
@@ -3189,8 +3135,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         try {
             const done = await this.miDebugger.stepOut(args.threadId);
             this.sendResponse(response);
-        }
-        catch (msg) {
+        } catch (msg) {
             this.sendErrorResponse(response, 5, `Could not step out: ${msg}`);
         }
     }
@@ -3200,8 +3145,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             const assemblyMode = args.granularity === 'instruction';
             const done = await this.miDebugger.next(args.threadId, assemblyMode);
             this.sendResponse(response);
-        }
-        catch (msg) {
+        } catch (msg) {
             this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);
         }
     }
@@ -3252,8 +3196,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const createVariable = (arg, options?) => {
                     if (options) {
                         return this.variableHandles.create(new ExtendedVariable(arg, options));
-                    }
-                    else {
+                    } else {
                         return this.variableHandles.create(arg);
                     }
                 };
@@ -3262,8 +3205,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     let id: number;
                     if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
                         id = this.variableHandlesReverse[varObj.name];
-                    }
-                    else {
+                    } else {
                         id = createVariable(varObj);
                         this.variableHandlesReverse[varObj.name] = id;
                     }
@@ -3314,8 +3256,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                     }
                                 }
                                 varObj = this.variableHandles.get(varId) as any;
-                            }
-                            catch (err) {
+                            } catch (err) {
                                 updateError = err;
                             }
                         }
@@ -3337,8 +3278,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                         response.body = varObj.toProtocolEvaluateResponseBody();
                         this.sendResponse(response);
-                    }
-                    catch (err) {
+                    } catch (err) {
                         if (this.isBusy()) {
                             this.busyError(response, args);
                         } else {
@@ -3352,8 +3292,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             }
                         }
                         // this.sendErrorResponse(response, 7, err.toString());
-                    }
-                    finally {
+                    } finally {
                         resolve();
                     }
                 } else {        // This is an 'repl'
@@ -3371,8 +3310,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                     result: '',
                                     variablesReference: 0
                                 };
-                            }
-                            else {
+                            } else {
                                 response.body = {
                                     result: JSON.stringify(output),
                                     variablesReference: 0
@@ -3384,8 +3322,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             this.sendErrorResponse(response, 8, msg.toString());
                             resolve();
                         });
-                    }
-                    catch (e) {
+                    } catch (e) {
                         this.sendErrorResponse(response, 8, e.toString());
                         resolve();
                     }
@@ -3412,8 +3349,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 };
                 this.sendResponse(response);
             }
-        }
-        catch (msg) {
+        } catch (msg) {
             this.sendErrorResponse(response, 16, `Could not jump to: ${msg ? msg : ''} ${args.source.path}:${args.line}`);
         }
     }
@@ -3423,12 +3359,10 @@ function prettyStringArray(strings) {
     if (typeof strings === 'object') {
         if (strings.length !== undefined) {
             return strings.join(', ');
-        }
-        else {
+        } else {
             return JSON.stringify(strings);
         }
-    }
-    else { return strings; }
+    } else { return strings; }
 }
 
 function initTwoCharsToIntMap(): object {

@@ -129,8 +129,7 @@ export class XYGraph implements Graph {
 
                     this.path.datum(this.points).attr('d', this.line);
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log('Error Updating Plot: ', e);
             }
         }

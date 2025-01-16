@@ -28,8 +28,7 @@ function isPreRelease() {
     try {
         const txt = fs.readFileSync(path);
         obj = JSON.parse(txt.toString());
-    }
-    catch (e) {
+    } catch (e) {
         errExit(`Could not open/read file ${path}`, e);
     }
     const version = obj.version;

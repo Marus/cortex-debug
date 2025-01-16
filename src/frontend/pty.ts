@@ -177,8 +177,7 @@ export class PtyTerminal extends EventEmitter {
                     }
                     break;
             }
-        }
-        catch (e) {
+        } catch (e) {
             console.error(`MyPtyTerminal: handleInput: ${e}`);
         }
     }
@@ -516,8 +515,7 @@ export class PtyTerminal extends EventEmitter {
             } else if (this.promptTimer) {
                 this.promptTimer.kill();
             }
-        }
-        catch (e) {
+        } catch (e) {
             console.error(`MyPtyTerminal: write: ${e}`);
         }
     }

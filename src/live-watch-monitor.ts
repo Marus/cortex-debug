@@ -30,8 +30,7 @@ export class VariablesHandler {
             this.cachedChangeList = {};
             try {
                 await Promise.allSettled(poromises);
-            }
-            catch (e) {
+            } catch (e) {
             }
         }
     }
@@ -158,8 +157,7 @@ export class VariablesHandler {
                                     }
                                 }
                                 varObj = this.variableHandles.get(varId) as any;
-                            }
-                            catch (err) {
+                            } catch (err) {
                                 updateError = err;
                             }
                         }
@@ -182,8 +180,7 @@ export class VariablesHandler {
                         response.body = varObj.toProtocolEvaluateResponseBody();
                         response.success = true;
                         session.sendResponse(response);
-                    }
-                    catch (err) {
+                    } catch (err) {
                         if (this.isBusy()) {
                             this.busyError(response, args);
                         } else {
@@ -197,8 +194,7 @@ export class VariablesHandler {
                             }
                         }
                         // this.sendErrorResponse(response, 7, err.toString());
-                    }
-                    finally {
+                    } finally {
                         resolve();
                     }
                 } else {        // This is an 'repl'
@@ -209,8 +205,7 @@ export class VariablesHandler {
                                     result: '',
                                     variablesReference: 0
                                 };
-                            }
-                            else {
+                            } else {
                                 response.body = {
                                     result: JSON.stringify(output),
                                     variablesReference: 0
@@ -222,8 +217,7 @@ export class VariablesHandler {
                             session.sendErrorResponsePub(response, 8, msg.toString());
                             resolve();
                         });
-                    }
-                    catch (e) {
+                    } catch (e) {
                         session.sendErrorResponsePub(response, 8, e.toString());
                         resolve();
                     }
@@ -284,8 +278,7 @@ export class VariablesHandler {
                             child.id = varId;
                             if (/^\d+$/.test(child.exp)) {
                                 child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
-                            }
-                            else {
+                            } else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
                                 if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
                                     const prev = childMap[child.exp];
@@ -310,8 +303,7 @@ export class VariablesHandler {
                         variables: vars
                     };
                     session.sendResponse(response);
-                }
-                catch (err) {
+                } catch (err) {
                     session.sendErrorResponsePub(response, 1, `Could not expand variable: ${err}`);
                 }
             } else if (id instanceof ExtendedVariable) {
@@ -334,14 +326,15 @@ export class VariablesHandler {
                             const expanded = expandValue(this.createVariable.bind(this), variable.result('value'), varReq.name, variable);
                             if (!expanded) {
                                 session.sendErrorResponsePub(response, 15, 'Could not expand variable');
-                            }
-                            else {
+                            } else {
                                 if (typeof expanded === 'string') {
                                     if (expanded === '<nullptr>') {
-                                        if (argsPart) { argsPart = false; }
-                                        else { return submit(); }
-                                    }
-                                    else if (expanded[0] !== '"') {
+                                        if (argsPart) {
+                                            argsPart = false;
+                                        } else {
+                                            return submit();
+                                        }
+                                    } else if (expanded[0] !== '"') {
                                         strArr.push({
                                             name: '[err]',
                                             value: expanded,
@@ -355,8 +348,7 @@ export class VariablesHandler {
                                         variablesReference: 0
                                     });
                                     addOne();
-                                }
-                                else {
+                                } else {
                                     strArr.push({
                                         name: '[err]',
                                         value: expanded,
@@ -365,25 +357,21 @@ export class VariablesHandler {
                                     submit();
                                 }
                             }
-                        }
-                        catch (e) {
+                        } catch (e) {
                             session.sendErrorResponsePub(response, 14, `Could not expand variable: ${e}`);
                         }
                     };
                     addOne();
-                }
-                else {
+                } else {
                     session.sendErrorResponsePub(response, 13, `Unimplemented variable request options: ${JSON.stringify(varReq.options)}`);
                 }
-            }
-            else {
+            } else {
                 response.body = {
                     variables: id
                 };
                 session.sendResponse(response);
             }
-        }
-        else {
+        } else {
             response.body = {
                 variables: []
             };
@@ -474,8 +462,7 @@ export class LiveWatchMonitor {
                 this.quitting = true;
                 this.miDebugger.detach();
             }
-        }
-        catch {}
+        } catch {}
     }
 }
 

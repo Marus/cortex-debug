@@ -106,22 +106,19 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
                     args: this.args,
                     path: this.swoPath
                 }));
-            }
-            else if (this.args.swoConfig.source === 'socket') {
+            } else if (this.args.swoConfig.source === 'socket') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'socket',
                     args: this.args,
                     port: this.args.swoConfig.swoPort
                 }));
-            }
-            else if (this.args.swoConfig.source === 'file') {
+            } else if (this.args.swoConfig.source === 'file') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'file',
                     args: this.args,
                     path: this.args.swoConfig.swoPath
                 }));
-            }
-            else if (this.args.swoConfig.source === 'serial') {
+            } else if (this.args.swoConfig.source === 'serial') {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
                     args: this.args,

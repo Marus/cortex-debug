@@ -74,8 +74,7 @@ export function packageJSONtoMd(path: string, outPath: string) {
     try {
         const txt = fs.readFileSync(path);
         obj = JSON.parse(txt.toString());
-    }
-    catch (e) {
+    } catch (e) {
         console.error(`Error: Could not open/read file ${path}`, e);
         return 1;
     }
@@ -145,8 +144,7 @@ export function packageJSONtoMd(path: string, outPath: string) {
                 } else if (obj.items) {
                 }
             }
-        }
-        catch (e) {
+        } catch (e) {
             console.error(`Could not write to file ${outPath}`);
         }
         break;

@@ -97,25 +97,27 @@ class ITMDecoder extends EventEmitter {
         if (this.checkSync(byte)) { // check for completed sync
             newStatus = Status.IDLE;
             this.emit('synchronized');
-        }
-        else {
+        } else {
             switch (this.status) {
                 case Status.IDLE:
                     if (byte === 0x00) { break; } // Sync Packet
-                    else if (byte === 0b01110000) { this.emit('overflow'); }
-                    else if ((byte & TIMESTAMP_MASK) === 0x00) {
+                    if (byte === 0b01110000) {
+                        this.emit('overflow');
+                        break;
+                    }
+                    if ((byte & TIMESTAMP_MASK) === 0x00) {
                         this.timestamp = 0;
                         this.resetRxPacket(-1, 5, PacketType.TIMESTAMP);
                         this.rxWriteByte(byte);
 
                         if (byte & 0x80) {
                             newStatus = Status.TIMESTAMP;
-                        }
-                        else {
+                        } else {
                             this.emit('timestamp', this.getRxPacket());
                         }
+                        break;
                     }
-                    else if ((byte & LENGTH_MASK) !== 0x00) {
+                    if ((byte & LENGTH_MASK) !== 0x00) {
                         let count = byte & 0x03;
                         if (count === 3) { count = 4; }
 
@@ -124,17 +126,16 @@ class ITMDecoder extends EventEmitter {
                         if ((byte & HARDWARE_MASK) !== 0) {
                             this.resetRxPacket(port, count, PacketType.HARDWARE);
                             newStatus = Status.HARDWARE_EVENT;
-                        }
-                        else {
+                        } else {
                             this.resetRxPacket(port, count, PacketType.SOFTWARE);
                             newStatus = Status.SOFTWARE_EVENT;
                         }
+                        break;
                     }
-                    else {
-                        newStatus = Status.RESERVED;
-                        this.emit('lost-synchronization');
-                    }
+                    newStatus = Status.RESERVED;
+                    this.emit('lost-synchronization');
                     break;
+
                 case Status.TIMESTAMP:
                     const receivedMax = this.rxWriteByte(byte);
                     // Check if the continuation bit is false.
@@ -296,8 +297,11 @@ export class SWOCore extends SWORTTCoreBase {
             session.customRequest('swo-connected');
         };
 
-        if (this.source.connected) { onConnected(); }
-        else { this.source.on('connected', onConnected); }
+        if (this.source.connected) {
+            onConnected();
+        } else {
+            this.source.on('connected', onConnected);
+        }
         this.source.on('data', this.handleData.bind(this));
         this.source.on('disconnected', this.handleDisconnected.bind(this));
 
@@ -325,8 +329,7 @@ export class SWOCore extends SWORTTCoreBase {
                         processor = new SWORTTAdvancedProcessor(conf as SWOAdvancedDecoderConfig);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
-                    }
-                    catch (e) {
+                    } catch (e) {
                         vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
                     }
                     break;
@@ -361,8 +364,7 @@ export class SWOCore extends SWORTTCoreBase {
     private processPacket(packet: Packet) {
         if (packet.type === PacketType.SOFTWARE) {
             this.processors.forEach((p) => p.softwareEvent(packet));
-        }
-        else if (packet.type === PacketType.HARDWARE) {
+        } else if (packet.type === PacketType.HARDWARE) {
             this.processors.forEach((p) => p.hardwareEvent(packet));
             if (packet.port === 2) {
                 if (this.webview) {
@@ -376,8 +378,7 @@ export class SWOCore extends SWORTTCoreBase {
                     };
                     this.webview.sendMessage(message);
                 }
-            }
-            else {
+            } else {
                 // tslint:disable-next-line:no-console
                 console.log('Received Other Hardware Packet: ', packet);
             }
@@ -411,8 +412,7 @@ export class SWOCore extends SWORTTCoreBase {
                 for (const port of ac.ports) {
                     mask = (mask | (1 << port)) >>> 0;
                 }
-            }
-            else {
+            } else {
                 const bc = c as SWOBasicDecoderConfig;
                 mask = (mask | (1 << bc.port)) >>> 0;
             }
@@ -451,8 +451,7 @@ class RTTDecoder extends EventEmitter {
 
         if (this.source.connected) {
             this.connected = true;
-        }
-        else {
+        } else {
             this.source.on('connected', () => {
                 this.connected = true;
             });
@@ -513,8 +512,7 @@ export class RTTCore extends SWORTTCoreBase {
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
                         break;
-                    }
-                    catch (e) {
+                    } catch (e) {
                         vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
                     }
                 default:
@@ -528,8 +526,7 @@ export class RTTCore extends SWORTTCoreBase {
             const dec = new RTTDecoder(src, src.channel, 4);
             dec.on('software-event', this.onPacket.bind(this));
             this.decoders.push(dec);
-        }
-        else {
+        } else {
             console.error('Null source?');
         }
     }

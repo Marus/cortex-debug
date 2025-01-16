@@ -111,12 +111,10 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     }
 
     public serverExecutable() {
-        if (this.args.serverpath) { return this.args.serverpath; }
-        else {
+        if (this.args.serverpath) { return this.args.serverpath; } else {
             if (os.platform() === 'win32') {
                 return 'JLinkGDBServerCL.exe';
-            }
-            else {
+            } else {
                 for (const name in EXECUTABLE_NAMES) {
                     if (commandExistsSync(name)) { return name; }
                 }
@@ -163,8 +161,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
         if (this.args.serialNumber) {
             cmdargs.push('-select', `usb=${this.args.serialNumber}`);
-        }
-        else if (this.args.ipAddress) {
+        } else if (this.args.ipAddress) {
             cmdargs.push('-select', `ip=${this.args.ipAddress}`);
         }
 
@@ -197,8 +194,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
                     args: this.args,
                     port: this.ports[swoPortNm].toString(10)
                 }));
-            }
-            else {
+            } else {
                 this.emit('event', new SWOConfigureEvent({
                     type: 'serial',
                     args: this.args,

@@ -92,7 +92,6 @@ export default tseslint.config(
             'no-self-assign': 'off',                                    // 1 instance
 
             '@stylistic/indent': 'off',                         // 450 instances
-            '@stylistic/brace-style': 'off',                    // 349 instances
         }
     },
     {

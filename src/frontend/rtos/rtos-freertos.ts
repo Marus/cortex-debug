@@ -98,8 +98,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 this.status = 'initialized';
             }
             return this;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof RTOSCommon.ShouldRetry) {
                 console.error(e.message);
             } else {
@@ -145,8 +144,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         + `<div class="help"><p>\n${ret}\n</p></div>\n`;
                     this.helpHtml = ret;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }
@@ -231,8 +229,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                     this.stale = false;
                     this.timeInfo += ' in ' + timer.deltaMs() + ' ms';
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     resolve();
                     console.error('FreeRTOS.refresh() failed: ', e);
                 }
@@ -294,8 +291,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
 
                         if (thInfo['uxBasePriority-val']) {
                             mySetter(DisplayFields.Priority, `${thInfo['uxPriority-val']},${thInfo['uxBasePriority-val']}`);
-                        }
-                        else {
+                        } else {
                             mySetter(DisplayFields.Priority, `${thInfo['uxPriority-val']}`);
                         }
 
@@ -318,8 +314,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         curRef = element['pxPrevious-ref'];
                     }
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('FreeRTOS read thread info error', e);
                 }
             }, (e) => {
@@ -370,8 +365,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                     peak++;
                 }
                 stackInfo.stackPeak = stackInfo.stackSize - peak;
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }

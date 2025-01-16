@@ -192,8 +192,7 @@ export class TimeseriesGraph implements Graph {
                 try {
                     const data = this.datasource.getData(path.graphId, now - this.span, now, true);
                     path.path.datum(data).attr('d', this.line);
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('Error Updating Plot: ', e);
                 }
             });
@@ -212,8 +211,7 @@ export class TimeseriesGraph implements Graph {
                 try {
                     const data = this.datasource.sampleData(path.graphId, this.width, startTime, now);
                     path.path.datum(data).attr('d', this.sline);
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('Error Updating Plot: ', e);
                 }
             });

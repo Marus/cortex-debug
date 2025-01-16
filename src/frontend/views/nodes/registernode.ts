@@ -35,8 +35,7 @@ export class RegisterNode extends BaseNode {
                 new FieldNode('ICI/IT', 10, 6, this),
                 new FieldNode('Thumb State (T)', 24, 1, this)
             ];
-        }
-        else if (name.toUpperCase() === 'CONTROL') {
+        } else if (name.toUpperCase() === 'CONTROL') {
             this.fields = [
                 new FieldNode('FPCA', 2, 1, this),
                 new FieldNode('SPSEL', 1, 1, this),

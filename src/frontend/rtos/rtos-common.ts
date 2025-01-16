@@ -97,8 +97,7 @@ export abstract class RTOSBase {
                     console.log(`${c} RTOS: result <- ${JSON.stringify(result)}`);
                 }
                 resolve(result);
-            }
-            catch (e) {
+            } catch (e) {
                 if (traceVars) {
                     console.log(`${c} RTOS: exception <- ${e}`);
                 }
@@ -146,8 +145,7 @@ export abstract class RTOSBase {
                 throw new Error(`Failed to evaluate ${expr}`);
             }
             return result ? result.variablesReference : 0;
-        }
-        catch (e) {
+        } catch (e) {
             throw e;
         }
     }
@@ -163,8 +161,7 @@ export abstract class RTOSBase {
             const result = await this.customRequest('evaluate', arg);
             const ret = result?.result;
             return ret;
-        }
-        catch (e) {
+        } catch (e) {
             throw e;
         }
     }
@@ -236,8 +233,7 @@ export abstract class RTOSBase {
                 return null;
             }
             return tmp;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof ShouldRetry) {
                 throw e;
             }
@@ -273,8 +269,7 @@ export abstract class RTOSBase {
                 const vars = await this.getExprValChildren(expr, frameId);
                 const obj = RTOSVarHelper.varsToObj(vars);
                 resolve(obj);
-            }
-            catch (e) {
+            } catch (e) {
                 resolve(e);
             }
         });
@@ -444,8 +439,7 @@ export class RTOSVarHelper {
             this.value = result.result;
             this.varReference = result.variablesReference;
             return true;
-        }
-        catch (e) {
+        } catch (e) {
             const msg = e?.message as string;
             if (msg) {
                 if ((msg === 'Busy')                        // Cortex-Debug

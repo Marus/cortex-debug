@@ -580,8 +580,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                 this.saveState();
                 this.fire();
             }
-        }
-        catch (e) {
+        } catch (e) {
             // Sometimes we get a garbage node if this is called while we are (aggressively) polling
             console.error('Failed to remove node. Invalid node?', node);
         }

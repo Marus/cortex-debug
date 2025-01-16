@@ -485,8 +485,7 @@ export function calculatePortMask(decoders: any[]) {
             for (const port of d.ports) {
                 mask = (mask | (1 << port)) >>> 0;
             }
-        }
-        else {
+        } else {
             mask = (mask | (1 << d.port)) >>> 0;
         }
     });
@@ -764,8 +763,7 @@ export function validateELFHeader(exe: string, cb?: (str: string, fatal: boolean
             return false;
         }
         return true;
-    }
-    catch (e) {
+    } catch (e) {
         if (cb) {
             cb(`Could not read file "executable": "${exe}" ${e ? e.toString() : ''}`, true);
         }
@@ -828,8 +826,7 @@ export class SpawnLineReader extends EventEmitter {
                     // read-line will resolve. Not us
                 });
                 this.doReadline(child.stdout, resolve);
-            }
-            catch (e) {
+            } catch (e) {
                 this.emit('error', e);
             }
         });
@@ -885,8 +882,7 @@ export class SpawnLineReader extends EventEmitter {
                 this.emit('close');
                 resolve(true);
             });
-        }
-        catch (e) {
+        } catch (e) {
             this.emit('error', e);
         }
     }

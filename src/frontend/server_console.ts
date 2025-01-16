@@ -163,8 +163,7 @@ export class GDBServerConsole {
         if (consoleLogFd >= 0) {
             try {
                 fs.closeSync(consoleLogFd);
-            }
-            finally {
+            } finally {
                 consoleLogFd = -1;
             }
         }
@@ -181,8 +180,7 @@ export class GDBServerConsole {
                 this.logFName = `${tmpdir}/gdb-server-console-${process.pid}.log`;
             }
             consoleLogFd = fs.openSync(this.logFName, 'w');
-        }
-        catch (error) {
+        } catch (error) {
             if (showErr) {
                 vscode.window.showErrorMessage(`Could not open log file: ${this.logFName}\n${error}`);
             }
@@ -203,8 +201,7 @@ export class GDBServerConsole {
                 magentaWrite(msg, ptyTerm);
             }
             GDBServerConsole.logDataStatic(ptyTerm, msg);
-        }
-        finally {}
+        } finally {}
     }
 
     // Create a server for the GDBServer running in the adapter process. Any data
@@ -251,8 +248,7 @@ export class GDBServerConsole {
                 fs.writeFileSync(consoleLogFd, data.toString());
                 fs.fdatasyncSync(consoleLogFd);
             }
-        }
-        catch (e) {
+        } catch (e) {
             consoleLogFd = -1;
         }
     }

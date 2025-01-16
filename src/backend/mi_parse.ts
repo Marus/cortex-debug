@@ -39,15 +39,13 @@ function parseString(str: string): string {
                 if (m) {
                     ret.writeUInt8(parseInt(m[0], 8), bufIndex++);
                     i += 2;
-                }
-                else {
+                } else {
                     bufIndex += ret.write(str[i], bufIndex);
                 }
             }
         } else if (str[i] === '"') {
             throw new Error('Not a valid string');
-        }
-        else {
+        } else {
             bufIndex += ret.write(str[i], bufIndex);
         }
     }
@@ -82,37 +80,29 @@ export class MINode implements MIInfo {
                     }
                     if (found.length > 1) {
                         current = found;
-                    }
-                    else if (found.length === 1) {
+                    } else if (found.length === 1) {
                         current = found[0];
-                    }
-                    else {
+                    } else {
                         return undefined;
                     }
-                }
-                else {
+                } else {
                     return undefined;
                 }
-            }
-            else if (path[0] === '@') {
+            } else if (path[0] === '@') {
                 current = [current];
                 path = path.substr(1);
-            }
-            else {
+            } else {
                 target = indexRegex.exec(path);
                 if (target) {
                     path = path.substr(target[0].length);
                     const i = parseInt(target[1]);
                     if (current.length && typeof current !== 'string' && i >= 0 && i < current.length) {
                         current = current[i];
-                    }
-                    else if (i === 0) {
-                    }
-                    else {
+                    } else if (i === 0) {
+                    } else {
                         return undefined;
                     }
-                }
-                else {
+                } else {
                     return undefined;
                 }
             }
@@ -197,11 +187,9 @@ export function parseMI(output: string): MINode {
         while (inString) {
             if (escaped) {
                 escaped = false;
-            }
-            else if (remaining[0] === '\\') {
+            } else if (remaining[0] === '\\') {
                 escaped = true;
-            }
-            else if (remaining[0] === '"') {
+            } else if (remaining[0] === '"') {
                 inString = false;
             }
 
@@ -211,8 +199,7 @@ export function parseMI(output: string): MINode {
         let str;
         try {
             str = parseString(output.substr(0, stringEnd));
-        }
-        catch (e) {
+        } catch (e) {
             str = output.substr(0, stringEnd);
         }
         output = output.substr(stringEnd);
@@ -265,11 +252,9 @@ export function parseMI(output: string): MINode {
     parseValue = () => {
         if (output[0] === '"') {
             return parseCString();
-        }
-        else if (output[0] === '{' || output[0] === '[') {
+        } else if (output[0] === '{' || output[0] === '[') {
             return parseTupleOrList();
-        }
-        else {
+        } else {
             return undefined;
         }
     };
@@ -322,8 +307,7 @@ export function parseMI(output: string): MINode {
                 asyncRecord.output.push(result);
             }
             outOfBandRecord.push(asyncRecord);
-        }
-        else if (match[3]) {
+        } else if (match[3]) {
             const streamRecord = {
                 isStream: true,
                 type: streamRecordType[match[3]],

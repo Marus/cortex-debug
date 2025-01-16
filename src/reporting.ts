@@ -37,8 +37,7 @@ function getUUID(): string {
             const data = fs.readFileSync(settingspath, 'utf8');
             const settings: UserSettings = JSON.parse(data);
             uuid = settings.uuid;
-        }
-        else {
+        } else {
             uuid = uuidv4();
             const settings: UserSettings = { uuid: uuid };
             fs.writeFileSync(settingspath, JSON.stringify(settings), 'utf8');

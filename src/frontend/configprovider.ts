@@ -86,8 +86,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (!config.swoConfig) {
             config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: 'probe' };
-        }
-        else {
+        } else {
             if (config.swoConfig.ports && !config.swoConfig.decoders) {
                 config.swoConfig.decoders = config.swoConfig.ports;
             }
@@ -98,8 +97,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                     if (d.ports === undefined && d.number !== undefined) {
                         d.ports = [d.number];
                     }
-                }
-                else {
+                } else {
                     if (d.port === undefined && d.number !== undefined) {
                         d.port = d.number;
                     }
@@ -108,8 +106,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
         if (!config.rttConfig) {
             config.rttConfig = { enabled: false, decoders: [] };
-        }
-        else if (!config.rttConfig.decoders) {
+        } else if (!config.rttConfig.decoders) {
             config.rttConfig.decoders = [];
         }
 
@@ -121,8 +118,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.preResetCommands) { config.preResetCommands = config.preRestartCommands || []; }
         if (!config.postResetCommands) { config.postResetCommands = config.postRestartCommands || []; }
         if (!config.postResetSessionCommands) { config.postResetSessionCommands = config.postRestartSessionCommands || null; }
-        if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); }
-        else if (config.runToMain) {
+        if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); } else if (config.runToMain) {
             config.runToEntryPoint = 'main';
             vscode.window.showWarningMessage(
                 'launch.json: "runToMain" has been deprecated and will not work in future versions of Cortex-Debug. Please use "runToEntryPoint" instead');
@@ -567,8 +563,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                         + `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}.`
                         + ' A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
                 }
-            }
-            else {
+            } else {
                 config.rtos = `GDBServer/RTOSPlugin_${config.rtos}` + defaultExt();
             }
         }
@@ -679,8 +674,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 vscode.window.showWarningMessage('SWO source type "socket" requires a "swoPort". Disabling SWO support.');
                 config.swoConfig = { enabled: false };
                 config.graphConfig = [];
-            }
-            else if (config.swoConfig.source !== 'socket' && !config.swoConfig.swoPath) {
+            } else if (config.swoConfig.source !== 'socket' && !config.swoConfig.swoPath) {
                 vscode.window.showWarningMessage(`SWO source type "${config.swoConfig.source}" requires a "swoPath". Disabling SWO support.`);
                 config.swoConfig = { enabled: false };
                 config.graphConfig = [];

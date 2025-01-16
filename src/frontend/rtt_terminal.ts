@@ -85,8 +85,7 @@ export class RTTTerminal {
             } else {
                 this.writeNonBinary(data);
             }
-        }
-        catch (e) {
+        } catch (e) {
             magentaWrite(`Error writing data: ${e}\n`, this.ptyTerm);
         }
     }
@@ -95,8 +94,7 @@ export class RTTTerminal {
         if ((this.logFd < 0) && this.options.logfile) {
             try {
                 this.logFd = fs.openSync(this.options.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${this.options.logfile} for writing. ${e.toString()}`;
                 console.error(msg);
                 magentaWrite(msg, this.ptyTerm);
@@ -219,8 +217,7 @@ export class RTTTerminal {
                     str = Buffer.from(str as string, this.options.iencoding);
                 }
                 this.source.write(str);
-            }
-            catch (e) {
+            } catch (e) {
                 console.error(`RTTTerminal:sendData failed ${e}`);
             }
         }
@@ -235,8 +232,7 @@ export class RTTTerminal {
         if (this.logFd >= 0) {
             try {
                 fs.closeSync(this.logFd);
-            }
-            catch (e) {
+            } catch (e) {
                 magentaWrite(`Error: closing fille ${e}\n`, this.ptyTerm);
             }
             this.logFd = -1;

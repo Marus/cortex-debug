@@ -31,8 +31,11 @@ const COLORS: string[] = [
 ];
 
 function hashStringToColor(str: string): string {
-    if (!str || str === '**Other**') { return '#CCCCCC'; }
-    else { return COLORS[Math.abs(djb2(str)) % COLORS.length]; }
+    if (!str || str === '**Other**') {
+        return '#CCCCCC';
+    }
+
+    return COLORS[Math.abs(djb2(str)) % COLORS.length];
 }
 
 export class ProgramStatsGraph implements Graph {
@@ -66,8 +69,8 @@ export class ProgramStatsGraph implements Graph {
 
         counts.sort((a, b) => {
             if (a.count < b.count) { return 1; }
-            else if (a.count > b.count) { return -1; }
-            else { return 0; }
+            if (a.count > b.count) { return -1; }
+            return 0;
         });
 
         if (counts.length > 10) {

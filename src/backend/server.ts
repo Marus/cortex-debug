@@ -25,8 +25,7 @@ export function ServerConsoleLog(str: string, usePid?: number) {
             }
             fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
         }
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }
 }
@@ -56,8 +55,7 @@ export class GDBServer extends EventEmitter {
                 this.initReject = reject;
                 try {
                     await this.connectToConsole();
-                }
-                catch (e) {
+                } catch (e) {
                     ServerConsoleLog('GDBServer: Could not connect to console: ' + e);
                     reject(e);
                 }
@@ -90,8 +88,7 @@ export class GDBServer extends EventEmitter {
                         }
                     }, 100);
                 }
-            }
-            else { // For servers like BMP that are always running directly on the probe
+            } else { // For servers like BMP that are always running directly on the probe
                 resolve(true);
             }
         });
@@ -113,8 +110,7 @@ export class GDBServer extends EventEmitter {
                 ServerConsoleLog(`GDBServer(${this.pid}): forcing an exit with kill()`);
                 this.killInProgress = true;
                 this.process.kill();
-            }
-            catch (e) {
+            } catch (e) {
                 ServerConsoleLog(`GDBServer(${this.pid}): Trying to force and exit failed ${e}`);
             }
         }
@@ -145,8 +141,11 @@ export class GDBServer extends EventEmitter {
     private onStdout(data) {
         this.sendToConsole(data);        // Send it without any processing or buffering
         if (this.initResolve) {
-            if (typeof data === 'string') { this.outBuffer += data; }
-            else { this.outBuffer += data.toString('utf8'); }
+            if (typeof data === 'string') {
+                this.outBuffer += data;
+            } else {
+                this.outBuffer += data.toString('utf8');
+            }
 
             if (this.initResolve && this.initMatch && this.initMatch.test(this.outBuffer)) {
                 // console.log(`********* Got initmatch on stdout ${Date.now() - this.startTime}ms`);
@@ -166,8 +165,11 @@ export class GDBServer extends EventEmitter {
     private onStderr(data) {
         this.sendToConsole(data);        // Send it without any processing or buffering
         if (this.initResolve) {
-            if (typeof data === 'string') { this.errBuffer += data; }
-            else { this.errBuffer += data.toString('utf8'); }
+            if (typeof data === 'string') {
+                this.errBuffer += data;
+            } else {
+                this.errBuffer += data.toString('utf8');
+            }
 
             if (this.initResolve && this.initMatch && this.initMatch.test(this.errBuffer)) {
                 // console.log(`********* Got initmatch on stderr ${Date.now() - this.startTime}ms`);
@@ -190,8 +192,7 @@ export class GDBServer extends EventEmitter {
             socket.on('data', (data) => {
                 try {
                     this.process.stdin.write(data, 'utf8');
-                }
-                catch (e) {
+                } catch (e) {
                     console.error(`stdin write failed ${e}`);
                 }
             });
@@ -238,8 +239,7 @@ export class GDBServer extends EventEmitter {
                 this.consoleSocket.destroy();
                 this.consoleSocket = null;
             }
-        }
-        catch (e) {}
+        } catch (e) {}
     }
 }
 

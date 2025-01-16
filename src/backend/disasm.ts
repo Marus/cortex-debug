@@ -47,8 +47,7 @@ class InstructionRange {
     public endAddress: number;          // Exclusive
     // Definition of start and end to be consistent with gdb
     constructor(
-        public instructions: ProtocolInstruction[])
-    {
+        public instructions: ProtocolInstruction[]) {
         this.instructions = Array.from(instructions);   // Make a shallow copy
         this.adjustBoundaries();
     }
@@ -550,8 +549,7 @@ export class GdbDisassembler {
                             this.addToCache(instrRange);
                             resolve(ret);
                         }
-                    }
-                    catch (e) {
+                    } catch (e) {
                         resolve(e);
                     }
                 }, (e) => {
@@ -617,8 +615,7 @@ export class GdbDisassembler {
     public disassembleProtocolRequest(
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
-        request?: DebugProtocol.Request): Promise<void>
-    {
+        request?: DebugProtocol.Request): Promise<void> {
         if (args.memoryReference === undefined) {
             // This is our own request.
             return this.customDisassembleRequest(response, args);
@@ -681,8 +678,7 @@ export class GdbDisassembler {
     private disassembleProtocolRequest2(
         response: DebugProtocol.DisassembleResponse,
         args: DebugProtocol.DisassembleArguments,
-        request?: DebugProtocol.Request): Promise<void>
-    {
+        request?: DebugProtocol.Request): Promise<void> {
         return new Promise(async (resolve, reject) => {
             try {
                 await this.getMemoryRegions();
@@ -803,8 +799,7 @@ export class GdbDisassembler {
                 }
                 this.gdbSession.sendResponse(response);
                 resolve();
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Unable to disassemble: ${e.toString()}: ${JSON.stringify(request)}`;
                 if (GdbDisassembler.debug) {
                     this.debugDump(msg);
@@ -965,13 +960,11 @@ export class GdbDisassembler {
                     length: funcInfo.length
                 };
                 this.gdbSession.sendResponse(response);
-            }
-            catch (e) {
+            } catch (e) {
                 this.gdbSession.sendErrorResponsePub(response, 1, `Unable to disassemble: ${e.toString()}`);
             }
             return;
-        }
-        else if (args.startAddress) {
+        } else if (args.startAddress) {
             try {
                 let funcInfo = this.gdbSession.symbolTable.getFunctionAtAddress(args.startAddress);
                 if (funcInfo) {
@@ -984,19 +977,16 @@ export class GdbDisassembler {
                         length: funcInfo.length
                     };
                     this.gdbSession.sendResponse(response);
-                }
-                else {
+                } else {
                     const instructions: DisassemblyInstruction[] = await this.getDisassemblyForAddresses(args.startAddress, args.length || 256);
                     response.body = { instructions: instructions };
                     this.gdbSession.sendResponse(response);
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 this.gdbSession.sendErrorResponsePub(response, 1, `Unable to disassemble: ${e.toString()}`);
             }
             return;
-        }
-        else {
+        } else {
             this.gdbSession.sendErrorResponsePub(response, 1, 'Unable to disassemble; invalid parameters.');
         }
     }

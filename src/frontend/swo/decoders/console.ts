@@ -37,8 +37,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             this.logfile = config.logfile;
             try {
                 this.logFd = fs.openSync(config.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
             }
@@ -114,8 +113,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         }
         try {
             fs.writeSync(this.logFd, text);
-        }
-        catch (e) {
+        } catch (e) {
             const msg = `Could not write to file ${this.logfile}. ${e.toString()}`;
             vscode.window.showErrorMessage(msg);
             try {

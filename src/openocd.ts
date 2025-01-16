@@ -16,8 +16,7 @@ function getLogPath() {
         const tmpDirName = os.tmpdir();
         const fsPath = path.join(tmpDirName, 'cortex-debug-openocd.log');
         return fsPath;
-    }
-    catch {
+    } catch {
         return '';
     }
 }
@@ -43,8 +42,7 @@ function OpenOCDLog(str: string) {
                 fs.appendFileSync(logFsPath, str);
             }
         }
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }
 }
@@ -203,10 +201,11 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public serverExecutable(): string {
-        if (this.args.serverpath) { return this.args.serverpath; }
-        else {
-            return os.platform() === 'win32' ? 'openocd.exe' : 'openocd';
+        if (this.args.serverpath) {
+            return this.args.serverpath;
         }
+
+        return os.platform() === 'win32' ? 'openocd.exe' : 'openocd';
     }
 
     public allocateRTTPorts(): Promise<void> {
@@ -379,8 +378,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     OpenOCDLog('Sending command "rtt start"');
                     const result = await this.tclCommand('capture "rtt start"');
                     OpenOCDLog(`${this.dbgPollCounter}-OpenOCD TCL output: '${result}'`);
-                }
-                catch (e) {
+                } catch (e) {
                     OpenOCDLog(`OpenOCD TCL error: ${e}`);
                 }
             }

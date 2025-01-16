@@ -104,8 +104,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                 this.client = null;
                 saved.destroy();
             }
-        }
-        catch (e) {
+        } catch (e) {
             // For debug only
             console.log(`Socked destroy error ${e}`);
         }
@@ -128,8 +127,7 @@ export class SocketRTTSource extends SocketSWOSource {
     public write(data) {
         try {
             this.client.write(data);
-        }
-        catch (e) {
+        } catch (e) {
             throw e;
         }
     }
@@ -199,8 +197,7 @@ class PeMicroHeader {
         cls.type = header[2];
         cls.sequence = header[3];
         const messageLength = header[4];
-        if (messageLength < PeMicroHeader.headerLength)
-        {
+        if (messageLength < PeMicroHeader.headerLength) {
             throw new Error('Message length smaller than header');
         }
         cls.dataLength = messageLength - PeMicroHeader.headerLength;
@@ -359,8 +356,7 @@ export class PeMicroSocketSource extends SocketSWOSource {
             const header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
             this.client.write(header.getTxString() + data);
             this.sequence = this.sequence + 1;
-        }
-        catch (e) {
+        } catch (e) {
             throw e;
         }
     }

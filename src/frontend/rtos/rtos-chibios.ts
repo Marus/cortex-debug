@@ -136,8 +136,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
                 this.status = 'initialized';
             }
             return this;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof RTOSCommon.ShouldRetry) {
                 console.error(e.message);
             } else {
@@ -184,8 +183,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
                     this.stale = false;
                     this.timeInfo += ' in ' + timer.deltaMs() + ' ms';
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     resolve();
                     console.error('ChibiOS.refresh() failed: ', e);
                 }
@@ -290,8 +288,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
                     }
 
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('ChibiOS.getThreadInfo() error', e);
                 }
             }, (e) => {
@@ -339,8 +336,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
                 while ((stackInfo.stackPeak < bytes.length) && (bytes[stackInfo.stackPeak] === 0x55)) {
                   stackInfo.stackPeak++;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }

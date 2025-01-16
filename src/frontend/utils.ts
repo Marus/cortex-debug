@@ -44,13 +44,13 @@ export function parseInteger(value: string): number {
     if ((/^0b([01]+)$/i).test(value)) {
         return parseInt(value.substring(2), 2);
     }
-    else if ((/^0x([0-9a-f]+)$/i).test(value)) {
+    if ((/^0x([0-9a-f]+)$/i).test(value)) {
         return parseInt(value.substring(2), 16);
     }
-    else if ((/^[0-9]+/i).test(value)) {
+    if ((/^[0-9]+/i).test(value)) {
         return parseInt(value, 10);
     }
-    else if ((/^#[0-1]+/i).test(value)) {
+    if ((/^#[0-1]+/i).test(value)) {
         return parseInt(value.substring(1), 2);
     }
     return undefined;

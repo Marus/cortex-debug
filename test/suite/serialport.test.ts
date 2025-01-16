@@ -5,8 +5,7 @@ suite('Serial Port tests', () => {
         let SerialPort;
         try {
             SerialPort = module.require('serialport').SerialPort;
-        }
-        catch (e) {
+        } catch (e) {
             assert.fail(e);
         }
 
@@ -17,8 +16,7 @@ suite('Serial Port tests', () => {
                     console.log('\tFound port: ' + port.path);
                 }
             }
-        }
-        catch (e) {
+        } catch (e) {
             assert.fail(e);
         }
     });

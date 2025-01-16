@@ -96,8 +96,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 this.status = 'initialized';
             }
             return this;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof RTOSCommon.ShouldRetry) {
                 console.error(e.message);
             } else {
@@ -130,8 +129,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     this.helpHtml = '<button class="help-button">Hints to get more out of the uC/OS-II RTOS View</button>\n'
                         + `<div class="help"><p>\n${ret}\n</p></div>\n`;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }
@@ -180,26 +178,22 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
 
                                 if (this.foundThreads[0].display['ID'].text !== '???') {
                                     this.foundThreads.sort((a, b) => parseInt(a.display['ID'].text) - parseInt(b.display['ID'].text));
-                                }
-                                else {
+                                } else {
                                     this.foundThreads.sort((a, b) => parseInt(a.display['Address'].text) - parseInt(b.display['Address'].text));
                                 }
                             }
                             this.finalThreads = [...this.foundThreads];
-                        }
-                        else {
+                        } else {
                             this.finalThreads = [];
                         }
-                    }
-                    else {
+                    } else {
                         this.finalThreads = [];
                     }
 
                     this.stale = false;
                     this.timeInfo += ' in ' + timer.deltaMs() + ' ms';
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     resolve();
                     console.error('RTOSUCOS2.refresh() failed: ', e);
                 }
@@ -260,8 +254,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             const stackPercentVal = Math.round((stackInfo.stackUsed / stackInfo.stackSize) * 100);
                             const stackPercentText = `${stackPercentVal} % (${stackInfo.stackUsed} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPercent, stackPercentText, stackPercentVal);
-                        }
-                        else {
+                        } else {
                             mySetter(DisplayFields.StackPercent, '?? %');
                         }
 
@@ -269,8 +262,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             const stackPeakPercentVal = Math.round((stackInfo.stackPeak / stackInfo.stackSize) * 100);
                             const stackPeakPercentText = `${stackPeakPercentVal.toString().padStart(3)} % (${stackInfo.stackPeak} / ${stackInfo.stackSize})`;
                             mySetter(DisplayFields.StackPeakPercent, stackPeakPercentText, stackPeakPercentVal);
-                        }
-                        else {
+                        } else {
                             mySetter(DisplayFields.StackPeakPercent, '?? %');
                         }
 
@@ -294,8 +286,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     } while (0 !== thAddress);
 
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('RTOSUCOS2.getThreadInfo() error', e);
                 }
             }, (e) => {
@@ -422,12 +413,10 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
         if (EndOfStack && StackSize) {
             if (this.stackIncrements < 0) {
                 Stack = parseInt(EndOfStack) + (parseInt(StackSize) * this.stackEntrySize);
-            }
-            else {
+            } else {
                 Stack = parseInt(EndOfStack) - (parseInt(StackSize) * this.stackEntrySize);
             }
-        }
-        else {
+        } else {
             /* As stackStart is mandatory, we need to set it to some reasonable value */
             Stack = parseInt(TopOfStack);
         }
@@ -445,8 +434,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                 const stackDelta = stackInfo.stackStart - stackInfo.stackTop;
                 stackInfo.stackFree = stackInfo.stackSize - stackDelta;
                 stackInfo.stackUsed = stackDelta;
-            }
-            else {
+            } else {
                 const stackDelta = stackInfo.stackTop - stackInfo.stackStart;
                 stackInfo.stackFree = stackDelta;
                 stackInfo.stackUsed = stackInfo.stackSize - stackDelta;
@@ -472,8 +460,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                     peak++;
                 }
                 stackInfo.stackPeak = stackInfo.stackSize - peak;
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }

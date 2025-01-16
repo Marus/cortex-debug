@@ -68,14 +68,13 @@ export class PEServerController extends EventEmitter implements GDBServerControl
 
     public serverExecutable() {
         console.log('Getting Exec');
-        if (this.args.serverpath) { return this.args.serverpath; }
-        else {
-            if (os.platform() === 'win32') {
-                return 'pegdbserver_console.exe';
-            }
-            else {
-                return 'pegdbserver_console';
-            }
+        if (this.args.serverpath) {
+            return this.args.serverpath;
+        }
+        if (os.platform() === 'win32') {
+            return 'pegdbserver_console.exe';
+        } else {
+            return 'pegdbserver_console';
         }
     }
 

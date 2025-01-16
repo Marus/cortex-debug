@@ -38,8 +38,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
             this.logfile = config.logfile;
             try {
                 this.logFd = fs.openSync(config.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
             }
@@ -90,8 +89,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         if (this.logFd >= 0) {
             try {
                 fs.writeSync(this.logFd, packet.data);
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
                 try {

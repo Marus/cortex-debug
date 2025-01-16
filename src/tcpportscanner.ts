@@ -117,8 +117,7 @@ export class TcpPortScanner {
                         resolve(true);
                         return;
                     }
-                }
-                catch (e) {
+                } catch (e) {
                     resolve(true);
                     return;
                 }

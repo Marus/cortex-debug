@@ -296,8 +296,7 @@ export class SymbolTable {
                 this.categorizeSymbols();
                 this.sortGlobalVars();
                 resolve();
-            }
-            catch (e) {
+            } catch (e) {
                 // We treat this is non-fatal, but why did it fail?
                 this.gdbSession.handleMsg('log', `Error: objdump failed! statics/globals/functions may not be properly classified: ${e.toString()}\n`);
                 this.gdbSession.handleMsg('log', '    ENOENT means program not found. If that is not the issue, please report this problem.\n');
@@ -549,8 +548,7 @@ export class SymbolTable {
                         args: [nmProg, ...nmArgs],
                         promise: nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this, symbolFile))
                     });
-                }
-                catch (e) {
+                } catch (e) {
                     if (!rejected) {
                         rejected = true;
                         reject(e);
@@ -571,8 +569,7 @@ export class SymbolTable {
         for (const p of promises) {
             try {
                 await p.promise;
-            }
-            catch (e) {
+            } catch (e) {
                 this.gdbSession.handleMsg('log', `Failed running: ${[p.args.join(' ')]}.\n    ${e}`);
             }
         }
@@ -602,11 +599,9 @@ export class SymbolTable {
                         console.error('Unknown symbol address. Need to investigate', hexFormat(item[0]), item);
                     }
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 // console.log('???');
-            }
-            finally {
+            } finally {
                 this.addressToFileOrig.clear();
                 this.nmPromises = [];
             }
@@ -728,8 +723,7 @@ export class SymbolTable {
                 fs.writeSync(outFd, '\n');
             });
             fs.closeSync(outFd);
-        }
-        catch (e) {
+        } catch (e) {
             console.log('printSymsToFile: failed' + e);
         }
     }

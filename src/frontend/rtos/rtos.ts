@@ -302,8 +302,7 @@ export class RTOSTracker
             }
             try {
                 await this.update();
-            }
-            catch { }
+            } catch { }
         }
     }
 
@@ -493,8 +492,7 @@ function writeHtmlToTmpDir(str: string) {
             console.log(`Write HTML to file ${fname}`);
             fs.writeFileSync(fname, str);
         }
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }
 }
@@ -509,8 +507,7 @@ function appendMsgToTmpDir(str: string) {
             }
             fs.appendFileSync(fname, str);
         }
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }
 }
