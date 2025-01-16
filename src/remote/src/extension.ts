@@ -20,9 +20,9 @@ export class CortexDebugRemote {
         this.server.startServer().then((p) => {
             vscode.window.showInformationMessage(`CortexDebugRemote: Started server @ ${this.server.ipAddr}:${p}`);
             this.port = p;
-        }), (e: any) => {
+        }, (e: any) => {
             vscode.window.showErrorMessage(`CortexDebugRemote: Error starting server: ${e.toString()}`);
-        };
+        });
     }
 
     public hello(arg: string): Interfaces.helloReturn {

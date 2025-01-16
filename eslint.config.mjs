@@ -85,7 +85,6 @@ export default tseslint.config(
             '@typescript-eslint/no-redundant-type-constituents': 'off', // 3 instances
             'no-fallthrough': 'off',                                    // 2 instances
             '@typescript-eslint/no-unsafe-function-type': 'off',        // 2 instances
-            '@typescript-eslint/no-unused-expressions': 'off',          // 2 instances
             '@typescript-eslint/no-for-in-array': 'off',                // 2 instances
         }
     },
