@@ -839,7 +839,7 @@ export class SpawnLineReader extends EventEmitter {
     public startWithStream(rStream: stream.Readable, cb: (line: string) => boolean = null): Promise<boolean> {
         if (this.promise) { throw new Error('SpawnLineReader: can\'t reuse this object'); }
         this.callback = cb;
-        this.promise =  new Promise<boolean>((resolve) => {
+        this.promise = new Promise<boolean>((resolve) => {
             this.doReadline(rStream, resolve);
         });
         return this.promise;

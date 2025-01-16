@@ -58,6 +58,7 @@ export function encodeReference(threadId: number, frameId: number): number {
 }
 
 enum HandleRegions {
+    /* eslint-disable @stylistic/no-multi-spaces */
     GLOBAL_HANDLE_ID      = 0xFFFFFFFF,
     STACK_HANDLES_START   = encodeReference(0x01, 0x000),
     STACK_HANDLES_FINISH  = encodeReference(0xFF, 0xFFF),
@@ -67,7 +68,7 @@ enum HandleRegions {
     REG_HANDLE_FINISH     = REG_HANDLE_START + RegionSize,
     VAR_HANDLES_START     = REG_HANDLE_FINISH + 1,
     rest = 0xFFFFFFFF - VAR_HANDLES_START
-
+    /* eslint-enable */
 }
 
 if (false) {
@@ -1530,7 +1531,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected disconnectRequest2(
         response: DebugProtocol.DisconnectResponse | DebugProtocol.Response,
         args: DebugProtocol.DisconnectArguments): Promise<void> {
-        this.disconnectingPromise =  new Promise<void>(async (resolve) => {
+        this.disconnectingPromise = new Promise<void>(async (resolve) => {
             this.serverConsoleLog('Begin disconnectRequest');
             const doDisconnectProcessing = async () => {
                 if (this.miLiveGdb) {

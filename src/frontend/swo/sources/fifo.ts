@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { SWORTTSource } from './common';
 
-export class FifoSWOSource extends EventEmitter implements SWORTTSource  {
+export class FifoSWOSource extends EventEmitter implements SWORTTSource {
     private stream: fs.ReadStream;
     public connected: boolean = false;
 

@@ -187,7 +187,7 @@ export class GDBServer extends EventEmitter {
     protected connectToConsole(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const socket = new net.Socket();
-            socket.on  ('data', (data) => {
+            socket.on('data', (data) => {
                 try {
                     this.process.stdin.write(data, 'utf8');
                 }
@@ -198,7 +198,7 @@ export class GDBServer extends EventEmitter {
             socket.once('close', () => {
                 this.disconnectConsole();
             });
-            socket.on  ('error', (e) => {
+            socket.on('error', (e) => {
                 const code: string = (e as any).code;
                 if (code !== 'ECONNRESET') {
                     // Can happen if extension exited while we are still running. Rare, generally a bug in VSCode or frontend

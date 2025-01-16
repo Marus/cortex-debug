@@ -20,7 +20,7 @@ enum TargetArchitecture {
 ** The former is new and unproven but has more features and not mature even for VSCode. The latter is more
 ** mature and limited in functionality
 */
-interface  ProtocolInstruction extends DebugProtocol.DisassembledInstruction {
+interface ProtocolInstruction extends DebugProtocol.DisassembledInstruction {
     pvtAddress: number;
     pvtInstructionBytes?: string;
     pvtIsData?: boolean;
@@ -133,7 +133,7 @@ class InstructionRange {
         }
 
         // They partially overlap
-        const left  = (this.startAddress <= other.startAddress) ? this : other;
+        const left = (this.startAddress <= other.startAddress) ? this : other;
         const right = (this.startAddress <= other.startAddress) ? other : this;
         const lx = left.instructions.length - 1;
         const leftEnd = left.instructions[lx].pvtAddress;

@@ -942,7 +942,7 @@ export class MI2 extends EventEmitter implements IBackend {
 
         let result = createResp.result('');
         if (overrideVal) {
-            result = result.map((r: string[]) => r[0] === 'value' ?  ['value', overrideVal] : r);
+            result = result.map((r: string[]) => r[0] === 'value' ? ['value', overrideVal] : r);
         }
         return new VariableObject(parent, result);
     }

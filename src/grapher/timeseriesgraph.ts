@@ -35,7 +35,7 @@ export class TimeseriesGraph implements Graph {
     private xAxis: any;
     private paths: Path[] = [];
 
-    private height: number =  275;
+    private height: number = 275;
     private width: number = 700;
     private margins = {
         top: 30,

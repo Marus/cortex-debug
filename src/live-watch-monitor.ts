@@ -44,7 +44,7 @@ export class VariablesHandler {
                 const name = MINode.valueOf(change, 'name');
                 this.cachedChangeList[name] = change;
                 const inScope = MINode.valueOf(change, 'in_scope');
-                const typeChanged  = MINode.valueOf(change, 'type_changed');
+                const typeChanged = MINode.valueOf(change, 'type_changed');
                 if ((inScope === 'false') || (typeChanged === 'true')) {
                     // If one of these conditions happened, abandon the entire cache. TODO: Optimize later
                     this.cachedChangeList = undefined;

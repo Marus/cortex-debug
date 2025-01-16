@@ -135,7 +135,7 @@ function run() {
             }
             case '--vsx-also': {
                 vsxAlso = true;
-                openVsxPat =  process.env.OPEN_VSX_PAT;
+                openVsxPat = process.env.OPEN_VSX_PAT;
                 if (!openVsxPat) {
                     errExit('Environment variable OPEN_VSX_PAT not found');
                 }

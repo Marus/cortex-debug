@@ -27,6 +27,7 @@ for (let ix = zero; ix <= 'Z'.charCodeAt(0); ix++) {
 }
 
 class ACTIONS {
+    /* eslint-disable @stylistic/no-multi-spaces */
     public static cursorUp(n = 1)       { return n > 0 ? CSI + n.toString() + 'A' : ''; }
     public static cursorDown(n = 1)     { return n > 0 ? CSI + n.toString() + 'B' : ''; }
     public static cursorForward(n = 1)  { return n > 0 ? CSI + n.toString() + 'C' : ''; }
@@ -39,6 +40,7 @@ class ACTIONS {
     public static killLineForward()     { return CSI + 'K'; }
     public static killLine(n = 0)       { return ACTIONS.cursorBack(n) + ACTIONS.killLineForward(); }
     public static killEntireLine()      { return CSI + '2K'; }
+    /* eslint-enable */
 }
 
 /*
@@ -67,7 +69,7 @@ export class PtyTerminal extends EventEmitter {
     protected pendingWrites: any[] = [];
     private suspendPrompting: boolean = false;
 
-    private static oldOnes: { [name: string]: PtyTerminal }  = {};
+    private static oldOnes: { [name: string]: PtyTerminal } = {};
 
     private readonly pty: vscode.Pseudoterminal = {
         onDidWrite: this.writeEmitter.event,
@@ -123,7 +125,7 @@ export class PtyTerminal extends EventEmitter {
         this.terminal = null;
     }
 
-    public static findExisting(name: string): PtyTerminal  {
+    public static findExisting(name: string): PtyTerminal {
         return PtyTerminal.oldOnes[name];
     }
 

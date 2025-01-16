@@ -284,15 +284,15 @@ function padLeft(str: string, len: number, chr = ' '): string {
 }
 
 function getBinaryEncoding(enc: string): BinaryEncoding {
-    enc =  enc ? enc.toLowerCase() : '';
-    if (!(enc in  BinaryEncoding)) {
+    enc = enc ? enc.toLowerCase() : '';
+    if (!(enc in BinaryEncoding)) {
         enc = BinaryEncoding.UNSIGNED;
     }
     return enc as BinaryEncoding;
 }
 
 function getTextEncoding(enc: string): TextEncoding {
-    enc =  enc ? enc.toLowerCase() : '';
+    enc = enc ? enc.toLowerCase() : '';
     if (!(enc in TextEncoding)) {
         return TextEncoding.UTF8;
     }

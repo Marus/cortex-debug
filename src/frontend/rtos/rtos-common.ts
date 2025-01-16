@@ -20,11 +20,13 @@ export interface RTOSStackInfo {
 // Note: The table we produce should still look good when expanding/shrinking in the horz direction.. Things
 // should not run into each other. Not easy, but do your best and test it
 export enum ColTypeEnum {
+    /* eslint-disable @stylistic/no-multi-spaces */
     colTypeNormal      = 0,        // Will be left justified. Use for Text fields, fixed width hex values, etc.
     colTypePercentage  = 1 << 0,   // Will be centered with a % bar
     colTypeNumeric     = 1 << 1,   // Will be right justified
     colTypeLink        = 1 << 2,   // TODO: mark it as a link to do something additional. Not totally functional
     colTypeCollapse    = 1 << 3    // Items will be collapsible
+    /* eslint-enable */
 }
 
 export interface DisplayColumnItem {
