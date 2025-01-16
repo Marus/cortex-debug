@@ -184,7 +184,7 @@ export interface ChainedConfig {
     detached: boolean;
     lifecycleManagedByParent: boolean;
     folder: string;
-    overrides: {[key: string]: any};
+    overrides: { [key: string]: any };
     inherits: string[];
 }
 
@@ -195,7 +195,7 @@ export interface ChainedConfigurations {
     detached: boolean;
     lifecycleManagedByParent: boolean;
     delayMs: number;
-    overrides: {[key: string]: any};
+    overrides: { [key: string]: any };
     inherits: string[];
 }
 
@@ -232,7 +232,7 @@ export interface SymbolFile {
     offset?: number;
     textaddress?: number;
     sections: ElfSection[];
-    sectionMap: {[name: string]: ElfSection};
+    sectionMap: { [name: string]: ElfSection };
 }
 
 export interface LiveWatchConfig {
@@ -406,7 +406,7 @@ export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds:
 
 export class RTTServerHelper {
     // Channel numbers previously used on the localhost
-    public rttLocalPortMap: {[channel: number]: string} = {};
+    public rttLocalPortMap: { [channel: number]: string } = {};
     public allocDone = false;
 
     // For openocd, you cannot have have duplicate ports and neither can

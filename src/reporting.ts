@@ -24,7 +24,7 @@ const NODE_VERSION_DIMENSION = 'cd8';
 let analytics: any;
 
 let uuid: string = null;
-const sessionStarts: {[id: string]: Date} = {};
+const sessionStarts: { [id: string]: Date } = {};
 
 interface UserSettings {
     uuid: string;

@@ -25,7 +25,7 @@ export interface helloReturn {
     version: string;
     hostname: string;
     mySessionId: string;
-    mySettings: {[key: string]: any};
+    mySettings: { [key: string]: any };
 }
 
 export interface findFreePortsArgs {

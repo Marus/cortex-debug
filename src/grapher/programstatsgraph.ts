@@ -56,7 +56,7 @@ export class ProgramStatsGraph implements Graph {
 
     private stopped: boolean = false;
 
-    private processData(data: {[name: string]: number}) {
+    private processData(data: { [name: string]: number }) {
         let counts: FunctionStat[] = [];
 
         // tslint:disable-next-line:forin

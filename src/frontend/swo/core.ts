@@ -479,7 +479,7 @@ export class RTTCore extends SWORTTCoreBase {
     private processors: SWORTTDecoder[] = [];
     protected decoders: RTTDecoder[] = [];
 
-    constructor(private sources: {[channel: number]: SocketRTTSource}, args: ConfigurationArguments, extensionPath: string) {
+    constructor(private sources: { [channel: number]: SocketRTTSource }, args: ConfigurationArguments, extensionPath: string) {
         super();
 
         if (args.graphConfig.length >= 1) {

@@ -116,16 +116,16 @@ export class SymbolTable {
     // on large executables since most of our searches are linear. Or, to avoid a search entirely if possible
     // Case sensitivity for path names is an issue: We follow just what gcc records so inherently case-sensitive
     // or case-preserving. We don't try to re-interpret/massage those path-names (but we do Normalize).
-    private staticsByFile: {[file: string]: SymbolInformation[]} = {};
+    private staticsByFile: { [file: string]: SymbolInformation[] } = {};
     private globalVars: SymbolInformation[] = [];
-    private globalFuncsMap: {[key: string]: SymbolInformation} = {};    // Key is function name
+    private globalFuncsMap: { [key: string]: SymbolInformation } = {};    // Key is function name
     private staticVars: SymbolInformation[] = [];
-    private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
-    private fileMap: {[key: string]: string[]} = {};                    // Potential list of file aliases we found
+    private staticFuncsMap: { [key: string]: SymbolInformation[] } = {};  // Key is function name
+    private fileMap: { [key: string]: string[] } = {};                    // Potential list of file aliases we found
     public symbolsAsIntervalTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
     public symbolsByAddress: AddressToSym = new AddressToSym();
     public symbolsByAddressOrig: AddressToSym = new AddressToSym();
-    private varsByFile: {[path: string]: VariablesInFile} = null;
+    private varsByFile: { [path: string]: VariablesInFile } = null;
     private nmPromises: ExecPromise[] = [];
 
     private objdumpPath: string;

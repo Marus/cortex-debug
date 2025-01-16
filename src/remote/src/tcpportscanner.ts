@@ -17,7 +17,7 @@ export interface InterfaceIps {
 }
 
 export interface InterfaceIpsSet {
-    ifaces: { [name: string]: InterfaceIps};
+    ifaces: { [name: string]: InterfaceIps };
     defaultIp: string | undefined;
 }
 
