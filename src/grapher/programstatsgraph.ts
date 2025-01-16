@@ -24,8 +24,11 @@ function djb2(str: string): number {
     return hash;
 }
 
-// tslint:disable-next-line:max-line-length
-const COLORS: string[] = ['#C0392B', '#9B59B6', '#2980B9', '#1ABC9C', '#16A085', '#F1C40F', '#E67E22', '#D35400', '#E74C3C', '#8E44AD', '#3498DB', '#2ECC71', '#F39C12'];
+const COLORS: string[] = [
+    '#C0392B', '#9B59B6', '#2980B9', '#1ABC9C', '#16A085',
+    '#F1C40F', '#E67E22', '#D35400', '#E74C3C', '#8E44AD',
+    '#3498DB', '#2ECC71', '#F39C12',
+];
 
 function hashStringToColor(str: string): string {
     if (!str || str === '**Other**') { return '#CCCCCC'; }

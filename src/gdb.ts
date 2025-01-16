@@ -286,8 +286,13 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.sendEvent(new GenericCustomEvent('ports-allocated', ports));
     }
 
-    // tslint:disable-next-line: max-line-length
-    public sendErrorResponsePub(response: DebugProtocol.Response, codeOrMessage: number | DebugProtocol.Message, format?: string, variables?: any, dest?: any): void {
+    public sendErrorResponsePub(
+        response: DebugProtocol.Response,
+        codeOrMessage: number | DebugProtocol.Message,
+        format?: string,
+        variables?: any,
+        dest?: any,
+    ): void {
         this.sendErrorResponse(response, codeOrMessage, format, variables, dest);
     }
 
@@ -756,8 +761,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                         'Launching Server',
                         `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: ${error.toString()}`
                     ));
-                    // tslint:disable-next-line: max-line-length
-                    this.launchErrorResponse(response, 103, `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: ${error.toString()}`);
+                    this.launchErrorResponse(response, 103,
+                        `Failed to launch ${this.serverController.name || this.args.servertype} GDB Server: ${error.toString()}`);
                     doResolve();
                     this.server.exit();
                 });

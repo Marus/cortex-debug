@@ -32,6 +32,7 @@ export default tseslint.config(
         rules: {
             '@stylistic/max-len': ['error', {
                 code: 160,
+                ignoreTrailingComments: true,
             }],
             '@stylistic/member-delimiter-style': ['error', {
                 multiline: { delimiter: 'semi' },
@@ -99,7 +100,6 @@ export default tseslint.config(
             '@stylistic/block-spacing': 'off',                  // 34 instances
             '@stylistic/spaced-comment': 'off',                 // 24 instances
             '@stylistic/lines-between-class-members': 'off',    // 19 instances
-            '@stylistic/max-len': 'off',                        // 19 instances
         }
     },
     {

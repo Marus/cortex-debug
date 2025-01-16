@@ -336,8 +336,10 @@ export class CortexDebugExtension {
                         Reporting.sendEvent('Examine Memory', 'Valid', `${address}-${length}`);
                         const timestamp = new Date().getTime();
                         const addrEnc = encodeURIComponent(`${address}`);
-                        // tslint:disable-next-line:max-line-length
-                        const uri =  vscode.Uri.parse(`examinememory:///Memory%20[${addrEnc},${length}].cdmem?address=${addrEnc}&length=${length}&timestamp=${timestamp}`);
+                        const uri = vscode.Uri.parse(
+                            `examinememory:///Memory%20[${addrEnc},${length}].cdmem` +
+                            `?address=${addrEnc}&length=${length}&timestamp=${timestamp}`
+                        );
                         this.memoryProvider.PreRegister(uri);
                         vscode.workspace.openTextDocument(uri)
                             .then((doc) => {

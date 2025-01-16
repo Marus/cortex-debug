@@ -904,7 +904,11 @@ export class GdbDisassembler {
         if (doDbgPrint) {
             this.gdbSession.writeToDebugLog('Search ranges:\n', false);
             for (const item of ret) {
-                const msg = `s:(${hexFormat(item.qStart)}, ${item.qStart}), e:(${hexFormat(item.qEnd)}, ${item.qEnd}), v:(${hexFormat(item.verify)}, ${item.verify}) ${item.symNode?.symbol.name}\n`;
+                const msg =
+                    `s:(${hexFormat(item.qStart)}, ${item.qStart}), ` +
+                    `e:(${hexFormat(item.qEnd)}, ${item.qEnd}), ` +
+                    `v:(${hexFormat(item.verify)}, ${item.verify}) ` +
+                    `${item.symNode?.symbol.name}\n`;
                 this.gdbSession.writeToDebugLog(msg, false);
             }
         }
@@ -980,7 +984,6 @@ export class GdbDisassembler {
                     this.gdbSession.sendResponse(response);
                 }
                 else {
-                    // tslint:disable-next-line:max-line-length
                     const instructions: DisassemblyInstruction[] = await this.getDisassemblyForAddresses(args.startAddress, args.length || 256);
                     response.body = { instructions: instructions };
                     this.gdbSession.sendResponse(response);
@@ -1006,7 +1009,6 @@ export class GdbDisassembler {
         const startAddress = symbol.address;
         const endAddress = symbol.address + symbol.length;
 
-        // tslint:disable-next-line:max-line-length
         const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(endAddress)} -- 2`);
         const rawInstructions = result.result('asm_insns');
         const instructions: DisassemblyInstruction[] = rawInstructions.map((ri) => {
@@ -1031,7 +1033,6 @@ export class GdbDisassembler {
     private async getDisassemblyForAddresses(startAddress: number, length: number): Promise<DisassemblyInstruction[]> {
         const endAddress = startAddress + length;
 
-        // tslint:disable-next-line:max-line-length
         const result = await this.miDebugger.sendCommand(`data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(endAddress)} -- 2`);
         const rawInstructions = result.result('asm_insns');
         const instructions: DisassemblyInstruction[] = rawInstructions.map((ri) => {

@@ -92,7 +92,6 @@ export class VariablesHandler {
 
         const doit = (
             response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments,
-            // tslint:disable-next-line: variable-name
             _pendContinue: any, miDebugger: MI2, session: GDBDebugSession) => {
             return new Promise<void>(async (resolve) => {
                 if (this.isBusy() && (a.context !== 'repl')) {

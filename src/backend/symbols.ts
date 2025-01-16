@@ -505,10 +505,12 @@ export class SymbolTable {
                     }
                     objdumpPromises.push({
                         args: [this.objdumpPath, ...objDumpArgs],
-                        // tslint:disable-next-line: max-line-length
-                        promise: this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this, symbolFile))
-                        // tslint:disable-next-line: max-line-length
-                        // promise: this.objdumpReader.startWithFile('/Users/hdm/Downloads/objdump.txt', null, this.readObjdumpHeaderLine.bind(this, symbolFile))
+                        promise: this.objdumpReader.startWithProgram(
+                            this.objdumpPath,
+                            objDumpArgs,
+                            spawnOpts,
+                            this.readObjdumpHeaderLine.bind(this, symbolFile)
+                        ),
                     });
                     
                     const nmStart = Date.now();

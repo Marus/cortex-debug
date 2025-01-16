@@ -176,10 +176,16 @@ export class TimeseriesGraph implements Graph {
 
             const visAnnotations = this.annotations.filter((a) => a.timestamp >= now - this.span && a.timestamp <= now);
 
-            // tslint:disable-next-line:max-line-length
-            const lines = this.ag.selectAll('line.annotation').data(visAnnotations).attr('x1', (d: any) => this.x(d.timestamp)).attr('x2', (d: any) => this.x(d.timestamp));
-            // tslint:disable-next-line:max-line-length
-            lines.enter().append('line').classed('annotation', true).attr('stroke', (d: any) => d.type === 'continued' ? 'rgba(0, 255, 0, 0.25)' : 'rgba(255, 0, 0, 0.25)').attr('stroke-width', 1).attr('y1', 0).attr('y2', this.height).attr('x1', (d: any) => this.x(d.timestamp)).attr('x2', (d: any) => this.x(d.timestamp));
+             const lines = this.ag.selectAll('line.annotation').data(visAnnotations)
+                .attr('x1', (d: any) => this.x(d.timestamp))
+                .attr('x2', (d: any) => this.x(d.timestamp));
+            lines.enter().append('line').classed('annotation', true)
+                .attr('stroke', (d: any) => d.type === 'continued' ? 'rgba(0, 255, 0, 0.25)' : 'rgba(255, 0, 0, 0.25)')
+                .attr('stroke-width', 1)
+                .attr('y1', 0)
+                .attr('y2', this.height)
+                .attr('x1', (d: any) => this.x(d.timestamp))
+                .attr('x2', (d: any) => this.x(d.timestamp));
             lines.exit().remove();
 
             this.paths.forEach((path) => {

@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments, validateELFHeader, SymbolFile, defSymbolFile } from '../common';
+import {
+    ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys,
+    sanitizeDevDebug, validateELFHeader, SymbolFile, defSymbolFile 
+} from '../common';
 import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
 
@@ -147,8 +150,18 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 validationResponse = this.verifyQEMUConfiguration(folder, config);
                 break;
             default:
-                // tslint:disable-next-line:max-line-length
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stlink", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
+                const validValues = [
+                    'jlink',
+                    'openocd',
+                    'stutil',
+                    'stlink',
+                    'pyocd',
+                    'bmp',
+                    'pe',
+                    'external',
+                    'qemu'
+                ].map((s) => `"${s}"`).join(', ');
+                validationResponse = 'Invalid servertype parameters. The following values are supported: ' + validValues;
                 break;
         }
 
@@ -342,15 +355,18 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         for (const propName of props) {
             if (blackList.includes(propName) || propName.startsWith('pvt')) {
-                vscode.window.showWarningMessage(`Cannot inherit property '${propName}' for configuration '${config.name}' because it is reserved`);
+                vscode.window.showWarningMessage(
+                    `Cannot inherit property '${propName}' for configuration '${config.name}' ` +
+                    `because it is reserved`);
                 continue;
             }
             const val = parent[propName];
             if (val !== undefined) {
                 config[propName] = val;
             } else {
-                // tslint:disable-next-line: max-line-length
-                vscode.window.showWarningMessage(`Cannot inherit property '${propName}' for configuration '${config.name}' because it does not exist in parent configuration`);
+                vscode.window.showWarningMessage(
+                    `Cannot inherit property '${propName}' for configuration '${config.name}' ` +
+                    `because it does not exist in parent configuration`);
             }
         }
     }
@@ -482,8 +498,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'serverpath', 'JLinkGDBServerPath');
 
         if (!config.device) {
-            // tslint:disable-next-line:max-line-length
-            return 'Device Identifier is required for J-Link configurations. Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
+            return 'Device Identifier is required for J-Link configurations. ' +
+                'Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
         }
 
         if (((config.interface === 'jtag') || (config.interface === 'cjtag')) && config.swoConfig.enabled && config.swoConfig.source === 'probe') {

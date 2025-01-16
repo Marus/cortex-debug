@@ -636,8 +636,10 @@ export class MI2 extends EventEmitter implements IBackend {
                 else {
                     const match = numRegex.exec(breakpoint.hitCondition)[0];
                     if (match.length !== breakpoint.hitCondition.length) {
-                        // tslint:disable-next-line:max-line-length
-                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
+                        this.log('stderr', 
+                            'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. ' +
+                            'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
+                        );
                         bkptArgs += '-t ';
                     }
                     else if (parseInt(match) !== 0) {
@@ -741,8 +743,10 @@ export class MI2 extends EventEmitter implements IBackend {
                 else {
                     const match = numRegex.exec(breakpoint.hitCondition)[0];
                     if (match.length !== breakpoint.hitCondition.length) {
-                        // tslint:disable-next-line:max-line-length
-                        this.log('stderr', 'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks');
+                        this.log('stderr',
+                            'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. ' +
+                            'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
+                        );
                         bkptArgs += '-t ';
                     }
                     else if (parseInt(match) !== 0) {
