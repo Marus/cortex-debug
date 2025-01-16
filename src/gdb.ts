@@ -746,7 +746,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                             doResolve();
                         }
                     });
-
                 }, (error) => {
                     if (timeout) {
                         clearTimeout(timeout);
@@ -762,7 +761,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                     doResolve();
                     this.server.exit();
                 });
-
             }, (err) => {
                 this.sendEvent(new TelemetryEvent('Error', 'Launching Server', `Failed to find open ports: ${err.toString()}`));
                 this.launchErrorResponse(response, 103, `Failed to find open ports: ${err.toString()}`);

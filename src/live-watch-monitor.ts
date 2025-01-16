@@ -53,7 +53,6 @@ export class VariablesHandler {
                 const vId = this.variableHandlesReverse[name];
                 const v = this.variableHandles.get(vId) as any;
                 v.applyChanges(change);
-
             }
         }).finally (() => {
             resolve();

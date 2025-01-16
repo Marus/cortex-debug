@@ -288,7 +288,6 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                             console.error(`Exceeded maximum number of allowed threads (${this.maxThreads})`);
                             break;
                         }
-
                     } while ((0 !== thAddress));
 
                     this.taskCount = threadCount;

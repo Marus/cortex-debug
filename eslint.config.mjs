@@ -101,7 +101,6 @@ export default tseslint.config(
             '@stylistic/lines-between-class-members': 'off',    // 19 instances
             '@stylistic/max-len': 'off',                        // 19 instances
             '@stylistic/quotes': 'off',                         // 17 instances
-            '@stylistic/padded-blocks': 'off',                  // 17 instances
         }
     },
     {

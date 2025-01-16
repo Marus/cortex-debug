@@ -1119,7 +1119,6 @@ export class MI2 extends EventEmitter implements IBackend {
             }
         });
     }
-
 }
 
 interface SendCommaindIF {

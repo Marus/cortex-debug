@@ -91,7 +91,6 @@ function nvl(v: any, nullValue: any) {
 }
 
 export class RTOSChibiOS extends RTOSCommon.RTOSBase {
-
     // We keep a bunch of variable references (essentially pointers) that we can use to query for values
     // Since all of them are global variable, we only need to create them once per session. These are
     // similar to Watch/Hover variables
@@ -170,7 +169,6 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
             this.finalThreads = [];
 
             this.chRlistCurrent.getValue(frameId).then(async (rlistCurrentStr) => {
-
                 try {
                     this.rlistCurrent = getNumberNVL(rlistCurrentStr, 0);
 
@@ -303,7 +301,6 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
     }
 
     protected async getStackInfo(thInfo: any) {
-
         const stackInfo: RTOSCommon.RTOSStackInfo = {
             stackStart: 0,
             stackTop: 0,
@@ -378,5 +375,4 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
         // console.log(this.lastValidHtmlContent.html);
         return this.lastValidHtmlContent;
     }
-
 }

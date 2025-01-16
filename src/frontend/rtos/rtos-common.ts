@@ -283,7 +283,6 @@ export abstract class RTOSBase {
         RTOSDisplayColumn: { [key: string]: DisplayColumnItem },
         allThreads: RTOSThreadInfo[],
         timeInfo: string): HtmlInfo {
-
         const getAlignClasses = (key: string) => {
             const colType: ColTypeEnum = RTOSDisplayColumn[key].colType;
             let ret = '';

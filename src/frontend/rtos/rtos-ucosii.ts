@@ -162,10 +162,8 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                         this.OSTaskCtrVal = count ? parseInt(count) : Number.MAX_SAFE_INTEGER;
 
                         if ((this.OSTaskCtrVal > 0) && (this.OSTaskCtrVal <= this.maxThreads)) {
-
                             const OSTCBListVal = await this.OSTCBList.getValue(frameId);
                             if (OSTCBListVal && (0 !== parseInt(OSTCBListVal))) {
-
                                 if (this.stackEntrySize === 0) {
                                     /* Only get stack entry size once per session */
                                     const stackEntrySizeRef = await this.getExprVal('sizeof(OS_STK)', frameId);
@@ -293,7 +291,6 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
                             console.log('RTOSUCOS2.getThreadInfo() detected more threads in OSTCBCur linked list that OSTaskCtr states');
                             break;
                         }
-
                     } while (0 !== thAddress);
 
                     resolve();
@@ -653,7 +650,6 @@ interface EventInfo {
 }
 
 function describeEvent(event: EventInfo): string {
-
     if (event.name && event.name !== '?') {
         return event.name;
     } else {

@@ -67,7 +67,6 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     }
 
     public serverExecutable() {
-        
         console.log('Getting Exec');
         if (this.args.serverpath) { return this.args.serverpath; }
         else {

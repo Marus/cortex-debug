@@ -351,7 +351,6 @@ export class PeMicroSocketSource extends SocketSWOSource {
                 // If we couldn't decode the header, just discard the data.
                 // Its probably garbage or out of sync, so upstream would be confused anyway
             }
-            
         }
     }
 

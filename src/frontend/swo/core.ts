@@ -272,7 +272,6 @@ export class SWORTTCoreBase {
             this.webview.sendMessage(message);
         }
     }
-    
 }
 
 export class SWOCore extends SWORTTCoreBase {
