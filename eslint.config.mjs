@@ -30,6 +30,7 @@ export default tseslint.config(
         },
 
         rules: {
+            '@stylistic/indent-binary-ops': 'off',      // this is a weird rule
             '@stylistic/max-len': ['error', {
                 code: 160,
                 ignoreTrailingComments: true,
@@ -95,7 +96,6 @@ export default tseslint.config(
             '@stylistic/object-curly-spacing': 'off',           // 87 instances
             '@stylistic/operator-linebreak': 'off',             // 49 instances
             '@stylistic/no-multi-spaces': 'off',                // 49 instances
-            '@stylistic/indent-binary-ops': 'off',              // 48 instances
         }
     },
     {
