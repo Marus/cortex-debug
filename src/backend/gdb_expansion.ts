@@ -29,7 +29,7 @@ export function isExpandable(value: string): number {
 }
 
 // tslint:disable-next-line:ban-types
-export function expandValue(variableCreate: Function, value: string, root: string = '', extra?: any): any {
+export function expandValue(variableCreate: (value: string | object, opts?: { arg: boolean }) => number, value: string, root: string = '', extra?: any): any {
     const parseCString = () => {
         value = value.trim();
         if (value[0] !== '"' && value[0] !== '\'') {
@@ -65,7 +65,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
     let createValue;
     let variable = '';
 
-    const getNamespace = (variable) => {
+    const getNamespace = (variable): string => {
         let namespace = '';
         let prefix = '';
         stack.push(variable);

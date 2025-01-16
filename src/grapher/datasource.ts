@@ -7,7 +7,7 @@ export class GraphDataSource {
 
     private subscriptions: {
         // tslint:disable-next-line:ban-types
-        [graphId: string]: Function[];
+        [graphId: string]: ((p: GraphPoint) => void)[];
     } = {};
 
     private counterStats: {
