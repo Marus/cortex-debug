@@ -82,7 +82,6 @@ export default tseslint.config(
             '@typescript-eslint/restrict-template-expressions': 'off',  // 17 instances
             'prefer-const': 'off',                                      // 13 instances
             '@typescript-eslint/require-await': 'off',                  // 11 instances
-            'no-prototype-builtins': 'off',                             // 10 instances
         }
     },
     {

@@ -273,7 +273,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private static adjustStrIntProp(obj: object, prop: string, where: string) {
-        if (!obj.hasOwnProperty(prop)) {
+        if (!(prop in obj)) {
             return;
         }
         let val: any = obj[prop];

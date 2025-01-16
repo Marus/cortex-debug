@@ -213,7 +213,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     private debugLogFd = -1;
 
     protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(HandleRegions.VAR_HANDLES_START);
-    protected variableHandlesReverse: { [id: string]: number } = {};
+    protected variableHandlesReverse = new Map<string, number>();
     protected quit: boolean;
     protected attached: boolean;
     protected started: boolean;
@@ -1964,7 +1964,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 name = fullName ? fullName : `${parent.name}.${name}`;
             } else if (varRef >= HandleRegions.STACK_HANDLES_START && varRef < HandleRegions.STACK_HANDLES_FINISH) {
                 const tryName = this.createStackVarName(name, varRef);
-                if (this.variableHandlesReverse.hasOwnProperty(tryName)) {
+                if (this.variableHandlesReverse.has(tryName)) {
                     name = tryName;
                 }
                 [threadId, frameId] = decodeReference(varRef);
@@ -2689,7 +2689,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         threadId: number, frameId: number, isFloating: boolean): Promise<DebugProtocol.Variable> {
         try {
             let varObj: VariableObject;
-            let varId = this.variableHandlesReverse[gdbVarName];
+            let varId = this.variableHandlesReverse.get(gdbVarName);
             let createNewVar = varId === undefined;
             let updateError;
             if (!createNewVar) {
@@ -2700,7 +2700,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const inScope = MINode.valueOf(change, 'in_scope');
                         if (inScope === 'true') {
                             const name = MINode.valueOf(change, 'name');
-                            const vId = this.variableHandlesReverse[name];
+                            const vId = this.variableHandlesReverse.get(name);
                             const v = this.variableHandles.get(vId) as any;
                             v.applyChanges(change);
                         } else {
@@ -2851,12 +2851,10 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private findOrCreateVariable(varObj: VariableObject): number {
-        let id: number;
-        if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
-            id = this.variableHandlesReverse[varObj.name];
-        } else {
+        let id = this.variableHandlesReverse.get(varObj.name);
+        if (id === undefined) {
             id = this.createVariable(varObj);
-            this.variableHandlesReverse[varObj.name] = id;
+            this.variableHandlesReverse.set(varObj.name, id);
         }
         return varObj.isCompound() ? id : 0;
     }
@@ -3187,24 +3185,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                     resolve();
                     return;
                 }
-                const createVariable = (arg, options?) => {
-                    if (options) {
-                        return this.variableHandles.create(new ExtendedVariable(arg, options));
-                    } else {
-                        return this.variableHandles.create(arg);
-                    }
-                };
-
-                const findOrCreateVariable = (varObj: VariableObject): number => {
-                    let id: number;
-                    if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
-                        id = this.variableHandlesReverse[varObj.name];
-                    } else {
-                        id = createVariable(varObj);
-                        this.variableHandlesReverse[varObj.name] = id;
-                    }
-                    return varObj.isCompound() ? id : 0;
-                };
 
                 // Spec says if 'frameId' is specified, evaluate in the scope specified or in the global scope. Well,
                 // we don't have a way to specify global scope ... use floating variable.
@@ -3225,7 +3205,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const exprName = hasher.digest('hex');
                         const varObjName = `${args.context}_${exprName}`;
                         let varObj: VariableObject;
-                        let varId = this.variableHandlesReverse[varObjName];
+                        let varId = this.variableHandlesReverse.get(varObjName);
                         let createNewVar = varId === undefined;
                         let updateError;
                         if (!createNewVar) {
@@ -3236,7 +3216,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                     const inScope = MINode.valueOf(change, 'in_scope');
                                     if (inScope === 'true') {
                                         const name = MINode.valueOf(change, 'name');
-                                        const vId = this.variableHandlesReverse[name];
+                                        const vId = this.variableHandlesReverse.get(name);
                                         const v = this.variableHandles.get(vId) as any;
                                         v.applyChanges(change);
                                     } else {
@@ -3264,7 +3244,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                                 varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
                             }
 
-                            varId = findOrCreateVariable(varObj);
+                            varId = this.findOrCreateVariable(varObj);
                             varObj.exp = exp;
                             varObj.id = varId;
                         } else if (!varObj) {

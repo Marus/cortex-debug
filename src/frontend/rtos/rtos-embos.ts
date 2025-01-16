@@ -150,7 +150,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
                     let isRunning: any = '0';
 
-                    if (this.OSGlobalVal.hasOwnProperty('IsRunning-val')) {
+                    if ('IsRunning-val' in this.OSGlobalVal) {
                         isRunning = this.OSGlobalVal['IsRunning-val'];
                     } else {
                         /* older embOS versions do not have IsRunning struct member */
@@ -217,10 +217,10 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     do {
                         let thName = '???';
 
-                        if (curTaskObj.hasOwnProperty('sName-val')) {
+                        if (typeof curTaskObj['sName-val'] === 'string') {
                             const matchName = curTaskObj['sName-val'].match(/"([^*]*)"$/);
                             thName = matchName ? matchName[1] : curTaskObj['sName-val'];
-                        } else if (curTaskObj.hasOwnProperty('Name-val')) { /* older embOS versions used Name */
+                        } else if (typeof curTaskObj['Name-val'] === 'string') { /* older embOS versions used Name */
                             const matchName = curTaskObj['Name-val'].match(/"([^*]*)"$/);
                             thName = matchName ? matchName[1] : curTaskObj['Name-val'];
                         }
@@ -373,7 +373,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
         const StackSize = thInfo['StackSize-val'];
         let EndOfStack: any;
 
-        if (thInfo.hasOwnProperty('pStackBase-val')) {
+        if ('pStackBase-val' in thInfo) {
             EndOfStack = thInfo['pStackBase-val'];
         } else {
             /* older embOS versions used pStackBot instead of pStackBase */

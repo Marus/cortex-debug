@@ -13,7 +13,7 @@ export interface NameToVarChangeInfo {
 }
 export class VariablesHandler {
     public variableHandles = new Handles<VariableType>(256);
-    public variableHandlesReverse: { [id: string]: number } = {};
+    public variableHandlesReverse = new Map<string, number>();
     public cachedChangeList: NameToVarChangeInfo | undefined;
 
     constructor(
@@ -49,7 +49,7 @@ export class VariablesHandler {
                     this.cachedChangeList = undefined;
                     break;
                 }
-                const vId = this.variableHandlesReverse[name];
+                const vId = this.variableHandlesReverse.get(name);
                 const v = this.variableHandles.get(vId) as any;
                 v.applyChanges(change);
             }
@@ -67,12 +67,10 @@ export class VariablesHandler {
     }
 
     public findOrCreateVariable(varObj: VariableObject): number {
-        let id: number;
-        if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
-            id = this.variableHandlesReverse[varObj.name];
-        } else {
+        let id = this.variableHandlesReverse.get(varObj.name);
+        if (id === undefined) {
             id = this.createVariable(varObj);
-            this.variableHandlesReverse[varObj.name] = id;
+            this.variableHandlesReverse.set(varObj.name, id);
         }
         return varObj.isCompound() ? id : 0;
     }
@@ -121,7 +119,7 @@ export class VariablesHandler {
                         const exprName = hasher.digest('hex');
                         const varObjName = `${args.context}_${exprName}`;
                         let varObj: VariableObject;
-                        let varId = this.variableHandlesReverse[varObjName];
+                        let varId = this.variableHandlesReverse.get(varObjName);
                         let forceCreate = varId === undefined;
                         let updateError;
                         if (!forceCreate) {
@@ -140,7 +138,7 @@ export class VariablesHandler {
                                     const inScope = MINode.valueOf(change, 'in_scope');
                                     if (inScope === 'true') {
                                         const name = MINode.valueOf(change, 'name');
-                                        const vId = this.variableHandlesReverse[name];
+                                        const vId = this.variableHandlesReverse.get(name);
                                         const v = this.variableHandles.get(vId) as any;
                                         v.applyChanges(change);
                                         if (this.cachedChangeList) {
@@ -235,7 +233,7 @@ export class VariablesHandler {
         const ret = [];
         for (const key of keys) {
             const gdbVaName = pVar.children[key];
-            const childId = this.variableHandlesReverse[gdbVaName];
+            const childId = this.variableHandlesReverse.get(gdbVaName);
             if (childId === undefined) {
                 return undefined;
             }

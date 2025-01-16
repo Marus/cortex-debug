@@ -307,7 +307,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
         const currentThreadCtx = await this.getVarChildrenObj(thInfo['ctx-ref'], 'ctx');
         const currentThreadCtxRegs = await this.getVarChildrenObj(currentThreadCtx['sp-ref'], 'sp');
 
-        stackInfo.stackTop = getNumberNVL(currentThreadCtxRegs.hasOwnProperty('r13-val') ? currentThreadCtxRegs['r13-val'] : currentThreadCtx['sp-val'], 0);
+        stackInfo.stackTop = getNumberNVL('r13-val' in currentThreadCtxRegs ? currentThreadCtxRegs['r13-val'] : currentThreadCtx['sp-val'], 0);
         stackInfo.stackEnd = getNumberNVL(thInfo['wabase-val'], 0);
 
         if (stackInfo.stackTop === 0 || stackInfo.stackEnd === 0) {
