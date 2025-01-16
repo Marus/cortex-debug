@@ -314,7 +314,7 @@ export class RTOSTracker
             if (!this.enabled || !this.visible || !this.sessionMap.size) {
                 resolve();
             }
-            this.busyHtml = { html: /*html*/'<h4>Busy updating...</h4>\n', css: '' };
+            this.busyHtml = { html: /* html */'<h4>Busy updating...</h4>\n', css: '' };
             this.provider.updateHtml();
             this.updateRTOSInfo().then(() => {
                 this.busyHtml = undefined;
@@ -350,17 +350,17 @@ export class RTOSTracker
             const name = `Session Name: "${rtosSession.session.name}"`;
             if (!rtosSession.rtos) {
                 const nameAndStatus = name + ' -- No RTOS detected';
-                ret.html += /*html*/`<h4>${nameAndStatus}</h4>\n`;
+                ret.html += /* html */`<h4>${nameAndStatus}</h4>\n`;
                 if (rtosSession.triedAndFailed) {
                     const supported = Object.keys(RTOS_TYPES).join(', ');
                     ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
                         'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
                 } else {
-                    ret.html += /*html*/'<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
+                    ret.html += /* html */'<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
                 }
             } else {
                 const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' detected.' + (!rtosSession.htmlContent ? ' (No data available yet)' : '');
-                ret.html += /*html*/`<h4>${nameAndStatus}</h4>\n` + rtosSession.htmlContent.html;
+                ret.html += /* html */`<h4>${nameAndStatus}</h4>\n` + rtosSession.htmlContent.html;
                 ret.css = rtosSession.htmlContent.css;
             }
         }
@@ -431,7 +431,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             return '';
         }
         if (!this.parent.enabled) {
-            return /*html*/`
+            return /* html */`
                 <!DOCTYPE html>
                 <html lang="en">
                 <head>
@@ -457,7 +457,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         const htmlInfo = this.parent.getHtml();
         // Use a nonce to only allow a specific script to be run.
         const nonce = getNonce();
-        const ret = /*html*/`
+        const ret = /* html */`
             <!DOCTYPE html>
             <html lang="en">
             <head>

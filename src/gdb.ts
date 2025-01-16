@@ -2735,7 +2735,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             const name = MINode.valueOf(change, 'name');
                             const vId = this.variableHandlesReverse[name];
                             const v = this.variableHandles.get(vId) as any;
-                            v.applyChanges(change /*, variable.valueStr*/);
+                            v.applyChanges(change);
                         } else {
                             const msg = `${symOrExpr} currently not in scope`;
                             await this.miDebugger.sendCommand(`var-delete ${gdbVarName}`);

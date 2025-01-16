@@ -883,7 +883,7 @@ export class GdbDisassembler {
                     if (diff === 0) {
                         range.qEnd = high;      // extend the range
                     } else {
-                        range.qEnd = Math.max(range.qEnd, item.low /*- 1*/);
+                        range.qEnd = Math.max(range.qEnd, item.low);
                         // If we want to deal with gaps between functions as if they are data, this is the place to do it
                         range = {       // Start a new range
                             qStart: item.low,

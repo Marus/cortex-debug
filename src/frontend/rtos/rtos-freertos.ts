@@ -129,7 +129,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 }
 
                 if (!this.ulTotalRunTime) {
-                    ret += /*html*/`<br>Missing Runtime stats..:<br>
+                    ret += /* html */`<br>Missing Runtime stats..:<br>
                     /* To get runtime stats, modify the following macro in FreeRTOSConfig.h */<br>
                     #define ${strong('configGENERATE_RUN_TIME_STATS')}             1 /* 1: generate runtime statistics; 0: no runtime statistics */<br>
                     /* Also, add the following two macros to provide a high speed counter -- something at least 10x faster than<br>

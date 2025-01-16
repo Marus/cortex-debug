@@ -2,7 +2,7 @@
 
 const path = require('path');
 const child_process = require('child_process');
-const webpack = require('webpack'); //to access built-in plugins
+const webpack = require('webpack'); // to access built-in plugins
 
 const gitStatus = child_process
   .execSync('git status --short')

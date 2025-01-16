@@ -527,7 +527,7 @@ export function parseHexOrDecInt(str: string): number {
     return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
 }
 
-export function toStringDecHexOctBin(val: number/* should be an integer*/): string {
+export function toStringDecHexOctBin(val: number /* should be an integer */): string {
     if (Number.isNaN(val)) {
         return 'NaN: Not a number';
     }
