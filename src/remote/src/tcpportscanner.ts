@@ -50,7 +50,7 @@ export class TcpPortScanner {
      * @param host host ip address to use. This should be an alias to a localhost. Can be null or empty string
      * in which case the Node.js default rules apply.
      */
-    public static isPortInUse(port: number, host: string): Promise<boolean> {
+    public static isPortInUse(this: void, port: number, host: string): Promise<boolean> {
         ConsoleLog(`isPortInUse: testing port ${host}:${port}`);
         return new Promise((resolve, reject) => {
             const server = net.createServer((c) => {
@@ -94,7 +94,7 @@ export class TcpPortScanner {
      * @param port port to use. Must be > 0 and <= 65535
      * @param host host ip address to use. Ignored. All loopback addresses are checked
      */
-    public static isPortInUseEx(port: number, _host: string): Promise<boolean> {
+    public static isPortInUseEx(this: void, port: number, _host: string): Promise<boolean> {
         const tries = TcpPortScanner.getLocalHostAliases();
         const promises = tries.map((host) => TcpPortScanner.isPortInUse(port, host));
 

@@ -39,8 +39,7 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
         for (const dev of devs) {
             dev.open();
             const { deviceDescriptor: dd } = dev;
-            const getStringDescriptor: (index: number) => Promise<string | undefined>
-        = promisify(dev.getStringDescriptor).bind(dev);
+            const getStringDescriptor = promisify(dev.getStringDescriptor.bind(dev));
             const productName = await getStringDescriptor(dd.iProduct);
             if (productName.match(this.device)) {
                 console.info(
@@ -107,7 +106,7 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
         dev.open();
         this.dev = dev;
         console.debug('Selecting configuration', config.bConfigurationValue);
-        await promisify(dev.setConfiguration).bind(dev)(config.bConfigurationValue);
+        await promisify(dev.setConfiguration.bind(dev))(config.bConfigurationValue);
         console.debug('Claiming interface', iface.bInterfaceNumber);
         this.iface = dev.interface(iface.bInterfaceNumber);
         this.iface.claim();
@@ -137,7 +136,7 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
     public async dispose() {
         if (this.ep) {
             console.debug('Stopping polling...');
-            await promisify(this.ep.stopPoll).bind(this.ep)();
+            await promisify(this.ep.stopPoll.bind(this.ep))();
             this.ep = undefined;
             console.debug('Polling stopped');
         }
