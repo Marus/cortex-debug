@@ -363,8 +363,8 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         this.args = this.normalizeArguments(args);
         this.handleMsg('stdout',
-            `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). ` +
-            'Usage info: https://github.com/Marus/cortex-debug#usage');
+            `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). `
+            + 'Usage info: https://github.com/Marus/cortex-debug#usage');
 
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
@@ -434,8 +434,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const rttSym = this.symbolTable.getGlobalOrStaticVarByName(symName);
                         if (!rttSym) {
                             this.args.rttConfig.enabled = false;
-                            this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. ` +
-                                'Make sure you compile/link with debug ON or you can specify your own RTT address\n');
+                            this.handleMsg('stderr', `Could not find symbol '${symName}' in executable. `
+                                + 'Make sure you compile/link with debug ON or you can specify your own RTT address\n');
                         } else {
                             const searchStr = this.args.rttConfig.searchId || 'SEGGER RTT';
                             this.args.rttConfig.address = hexFormat(rttSym.address);
@@ -681,16 +681,16 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         if (attach) {
                             commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
-                            const attachCommands = this.args.overrideAttachCommands != null ?
-                                this.args.overrideAttachCommands.map(COMMAND_MAP) :
-                                this.serverController.attachCommands();
+                            const attachCommands = this.args.overrideAttachCommands != null
+                                ? this.args.overrideAttachCommands.map(COMMAND_MAP)
+                                : this.serverController.attachCommands();
                             commands.push(...attachCommands);
                             commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
                         } else {
                             commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
-                            const launchCommands = this.args.overrideLaunchCommands != null ?
-                                this.args.overrideLaunchCommands.map(COMMAND_MAP) :
-                                this.serverController.launchCommands();
+                            const launchCommands = this.args.overrideLaunchCommands != null
+                                ? this.args.overrideLaunchCommands.map(COMMAND_MAP)
+                                : this.serverController.launchCommands();
                             commands.push(...launchCommands);
                             commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                         }
@@ -872,8 +872,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                 }, (err) => {
                     // If failed to set the temporary breakpoint (e.g. function does not exist)
                     // complete the launch as if the breakpoint had not being defined
-                    this.handleMsg('log', `launch.json: Unable to set temporary breakpoint "runToEntryPoint":"${this.args.runToEntryPoint}".` +
-                        'Function may not exist or out of breakpoints? ' + err.toString() + '\n');
+                    this.handleMsg('log', `launch.json: Unable to set temporary breakpoint "runToEntryPoint":"${this.args.runToEntryPoint}".`
+                        + 'Function may not exist or out of breakpoints? ' + err.toString() + '\n');
                     if (mode === SessionMode.LAUNCH) {
                         this.args.runToEntryPoint = '';     // Don't try again. It will likely to fail
                     }
@@ -900,8 +900,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         if (this.args.toolchainPath) {
             gdbExePath = path.normalize(path.join(this.args.toolchainPath, gdbExePath));
         }
-        const gdbMissingMsg = `GDB executable "${gdbExePath}" was not found.\n` +
-            'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.';
+        const gdbMissingMsg = `GDB executable "${gdbExePath}" was not found.\n`
+            + 'Please configure "cortex-debug.armToolchainPath" or "cortex-debug.gdbPath" correctly.';
 
         if (this.args.gdbPath) {
             gdbExePath = this.args.gdbPath;
@@ -931,8 +931,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
-            this.handleMsg('stdout', '    IMPORTANT: Set "showDevDebugOutput": "raw" in "launch.json" to see verbose GDB transactions ' +
-                'here. Very helpful to debug issues or report problems\n');
+            this.handleMsg('stdout', '    IMPORTANT: Set "showDevDebugOutput": "raw" in "launch.json" to see verbose GDB transactions '
+                + 'here. Very helpful to debug issues or report problems\n');
         }
         if (this.args.showDevDebugOutput && this.args.chainedConfigurations && this.args.chainedConfigurations.enabled) {
             const str = JSON.stringify({chainedConfigurations: this.args.chainedConfigurations}, null, 4);
@@ -1612,9 +1612,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.continuing = false;
 
                 commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
-                const resetCommands = this.args.overrideResetCommands ?
-                                      this.args.overrideResetCommands.map(COMMAND_MAP) :
-                                      this.serverController.resetCommands();
+                const resetCommands = this.args.overrideResetCommands
+                                      ? this.args.overrideResetCommands.map(COMMAND_MAP)
+                                      : this.serverController.resetCommands();
                 commands.push(...resetCommands);
                 commands.push(...this.args.postResetCommands.map(COMMAND_MAP));
 
@@ -1667,9 +1667,9 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected getResetCommands(): string[] {
-        return this.args.overrideResetCommands != null ?
-               this.args.overrideResetCommands.map(COMMAND_MAP) :
-               this.serverController.resetCommands();
+        return this.args.overrideResetCommands != null
+               ? this.args.overrideResetCommands.map(COMMAND_MAP)
+               : this.serverController.resetCommands();
     }
 
     protected async resetDevice(response: DebugProtocol.Response, args: any) {
@@ -1741,8 +1741,8 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected handleContinueFailed(info: MINode) {
         // Should we call exec-interrupt here? See #561
         // Once we get this, from here on, nothing really works with gdb.
-        const msg = 'Error: A serious error occurred with gdb, unable to continue or interrupt We may not be able to recover ' +
-            'from this point. You can try continuing or ending session. Must address root cause though';
+        const msg = 'Error: A serious error occurred with gdb, unable to continue or interrupt We may not be able to recover '
+            + 'from this point. You can try continuing or ending session. Must address root cause though';
         this.sendEvent(new GenericCustomEvent('popup', {type: 'error', message: msg}));
         this.handleMsg('stderr', msg + '\n');
         this.continuing = false;
@@ -2439,9 +2439,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                 if (!currentThread) {
                     this.currentThreadId = threadIds.findIndex((x) => {
                         return x === this.stoppedThreadId;
-                    }) >= 0 ?
-                        this.stoppedThreadId :
-                        threadIds[0];
+                    }) >= 0
+                        ? this.stoppedThreadId
+                        : threadIds[0];
 
                     if (traceThreads) {
                         this.handleMsg('log', `**** thread-list-ids: no current thread, setting to ${this.currentThreadId}\n`);

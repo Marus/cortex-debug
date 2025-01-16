@@ -141,8 +141,8 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 }
                 if (ret) {
                     ret += '<br>Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
-                    ret = '<button class="help-button">Hints to get more out of the FreeRTOS viewer</button>\n' +
-                        `<div class="help"><p>\n${ret}\n</p></div>\n`;
+                    ret = '<button class="help-button">Hints to get more out of the FreeRTOS viewer</button>\n'
+                        + `<div class="help"><p>\n${ret}\n</p></div>\n`;
                     this.helpHtml = ret;
                 }
             }

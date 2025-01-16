@@ -274,8 +274,9 @@ export class GdbDisassembler {
             break;
         }
         if (!found) {
-            this.handleMsg('log', 'Warning: Unknown architecture for disassembly. Results may not be accurate at edge of memories\n' +
-                `    Gdb command "show architecture" shows "${str}"\n`);
+            this.handleMsg('log',
+                'Warning: Unknown architecture for disassembly. Results may not be accurate at edge of memories\n'
+                + `    Gdb command "show architecture" shows "${str}"\n`);
             this.Architecture = TargetArchitecture.UNKNOWN;
             this.minInstrSize = 1;
             this.maxInstrSize = 26;
@@ -564,8 +565,8 @@ export class GdbDisassembler {
     private findInCache(startAddr: number, endAddr: number): InstructionRange {
         for (const old of this.cache) {
             if (old.isInsideRange(startAddr, endAddr)) {
-                this.debugDump('Instruction cache hit: ' +
-                    JSON.stringify({startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}) + '\n',
+                this.debugDump('Instruction cache hit: '
+                    + JSON.stringify({startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr)}) + '\n',
                     old.instructions);
                 return old;
             }
@@ -904,11 +905,11 @@ export class GdbDisassembler {
         if (doDbgPrint) {
             this.gdbSession.writeToDebugLog('Search ranges:\n', false);
             for (const item of ret) {
-                const msg =
-                    `s:(${hexFormat(item.qStart)}, ${item.qStart}), ` +
-                    `e:(${hexFormat(item.qEnd)}, ${item.qEnd}), ` +
-                    `v:(${hexFormat(item.verify)}, ${item.verify}) ` +
-                    `${item.symNode?.symbol.name}\n`;
+                const msg
+                    = `s:(${hexFormat(item.qStart)}, ${item.qStart}), `
+                    + `e:(${hexFormat(item.qEnd)}, ${item.qEnd}), `
+                    + `v:(${hexFormat(item.verify)}, ${item.verify}) `
+                    + `${item.symNode?.symbol.name}\n`;
                 this.gdbSession.writeToDebugLog(msg, false);
             }
         }

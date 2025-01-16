@@ -239,10 +239,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             if (supportedList.indexOf(config.servertype) < 0) {
                 const str = supportedList.join(', ');
                 vscode.window.showInformationMessage(
-                    `Live watch is not officially supported for servertype '${config.servertype}'. ` +
-                    `Only ${str} are supported and tested. ` +
-                    `Report back to us if it works with your servertype '${config.servertype}'.\n \n` +
-                    'If you are using an "external" servertype and it is working for you, then you can safely ignore this message. ');
+                    `Live watch is not officially supported for servertype '${config.servertype}'. `
+                    + `Only ${str} are supported and tested. `
+                    + `Report back to us if it works with your servertype '${config.servertype}'.\n \n`
+                    + 'If you are using an "external" servertype and it is working for you, then you can safely ignore this message. ');
             }
         }
 
@@ -356,8 +356,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         for (const propName of props) {
             if (blackList.includes(propName) || propName.startsWith('pvt')) {
                 vscode.window.showWarningMessage(
-                    `Cannot inherit property '${propName}' for configuration '${config.name}' ` +
-                    `because it is reserved`);
+                    `Cannot inherit property '${propName}' for configuration '${config.name}' `
+                    + `because it is reserved`);
                 continue;
             }
             const val = parent[propName];
@@ -365,8 +365,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 config[propName] = val;
             } else {
                 vscode.window.showWarningMessage(
-                    `Cannot inherit property '${propName}' for configuration '${config.name}' ` +
-                    `because it does not exist in parent configuration`);
+                    `Cannot inherit property '${propName}' for configuration '${config.name}' `
+                    + `because it does not exist in parent configuration`);
             }
         }
     }
@@ -498,8 +498,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'serverpath', 'JLinkGDBServerPath');
 
         if (!config.device) {
-            return 'Device Identifier is required for J-Link configurations. ' +
-                'Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
+            return 'Device Identifier is required for J-Link configurations. '
+                + 'Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
         }
 
         if (((config.interface === 'jtag') || (config.interface === 'cjtag')) && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
@@ -516,8 +516,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 }
 
                 if ((chosenPort !== undefined) && (chosenPort !== dec.port)) {
-                    return `Port/channel ${dec.port} selected but another decoder is using port ${chosenPort}. ` +
-                        'JLink RTT only allows a single RTT port/channel per debugging session.';
+                    return `Port/channel ${dec.port} selected but another decoder is using port ${chosenPort}. `
+                        + 'JLink RTT only allows a single RTT port/channel per debugging session.';
                 } else {
                     chosenPort = dec.port;
                 }
@@ -552,9 +552,9 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 }
 
                 if (!fs.existsSync(config.rtos)) {
-                    return `JLink RTOS plugin file "${config.rtos}" not found.\n` +
-                        `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}.` +
-                        ' A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
+                    return `JLink RTOS plugin file "${config.rtos}" not found.\n`
+                        + `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}.`
+                        + ' A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
                 }
             }
             else {
@@ -570,8 +570,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'serverpath', 'openocdPath');
 
         if (config.rtos && OPENOCD_VALID_RTOS.indexOf(config.rtos) === -1) {
-            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}.` +
-                'You can always use "auto" and OpenOCD generally does the right thing';
+            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}.`
+                + 'You can always use "auto" and OpenOCD generally does the right thing';
         }
 
         if (!CDebugChainedSessionItem.FindByName(config.name)) {

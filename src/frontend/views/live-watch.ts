@@ -69,12 +69,12 @@ export class LiveVariableNode extends BaseNode {
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
-        const state = this.variablesReference || (this.children?.length > 0) ?
-            (this.children?.length > 0 ?
-                TreeItemCollapsibleState.Expanded :
-                TreeItemCollapsibleState.Collapsed
-            ) :
-            TreeItemCollapsibleState.None;
+        const state = this.variablesReference || (this.children?.length > 0)
+            ? (this.children?.length > 0
+                ? TreeItemCollapsibleState.Expanded
+                : TreeItemCollapsibleState.Collapsed
+            )
+            : TreeItemCollapsibleState.None;
         
         const parts = this.name.startsWith('\'') && this.isRootChild() ? this.name.split('\'::') : [this.name];
         const name = parts.pop();
@@ -532,8 +532,8 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
             // Technically, it is not an issue but is problematic on how to specify in the UI, which watch expression belongs
             // to which session. Same as breakpoints or Watch variables.
             vscode.window.showErrorMessage(
-                'Error: You can have live-watch enabled to only one debug session at a time. Live Watch is already enabled for ' +
-                LiveWatchTreeProvider.session.name);
+                'Error: You can have live-watch enabled to only one debug session at a time. Live Watch is already enabled for '
+                + LiveWatchTreeProvider.session.name);
             return;
         }
         LiveWatchTreeProvider.session = session;

@@ -171,8 +171,8 @@ export class TcpPortScanner {
                         busyPorts.push(port);
                         ConsoleLog(`Busy ports = ${busyPorts}`);
                     } else {
-                        if (consecutive && (freePorts.length > 0) &&
-                            (port !== (1 + freePorts[freePorts.length - 1]))) {
+                        if (consecutive && (freePorts.length > 0)
+                            && (port !== (1 + freePorts[freePorts.length - 1]))) {
                             ConsoleLog('TcpPortHelper.findFreePorts: Oops, reset for consecutive ports requirement');
                             freePorts = [];
                         }
@@ -182,8 +182,8 @@ export class TcpPortScanner {
                     if (logEnable) {
                         const ms = (endTime[1] / 1e6).toFixed(2);
                         const t = `${endTime[0]}s ${ms}ms`;
-                        ConsoleLog(`TcpPortHelper.findFreePorts Port ${host}:${port} ` +
-                            (inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ${t}`);
+                        ConsoleLog(`TcpPortHelper.findFreePorts Port ${host}:${port} `
+                            + (inUse ? 'busy' : 'free') + `, Found: ${freePorts.length} of ${needed} needed ${t}`);
                     }
                     if (freePorts.length === needed) {
                         doResolve(freePorts);
@@ -415,8 +415,8 @@ export class TcpPortScanner {
         if (TcpPortScanner.ForceClientMethod) {
             return false;
         }
-        return (!host || (host.toLowerCase() === 'localhost') ||
-            (TcpPortScanner.getLocalHostAliases().indexOf(host) >= 0));
+        return (!host || (host.toLowerCase() === 'localhost')
+            || (TcpPortScanner.getLocalHostAliases().indexOf(host) >= 0));
     }
 }
 

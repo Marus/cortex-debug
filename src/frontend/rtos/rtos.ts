@@ -152,9 +152,9 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                     // but then who is the main client for the adapter?
                     if (rsp.command === 'stackTrace') {
                         if (
-                            rsp.body?.stackFrames &&
-                            rsp.body.stackFrames.length > 0 &&
-                            this.lastFrameId === undefined
+                            rsp.body?.stackFrames
+                            && rsp.body.stackFrames.length > 0
+                            && this.lastFrameId === undefined
                         ) {
                             this.lastFrameId = rsp.body.stackFrames[0].id;
                             this.handler.onStopped(this.session, this.lastFrameId);
@@ -353,8 +353,8 @@ export class RTOSTracker
                 ret.html += /* html */`<h4>${nameAndStatus}</h4>\n`;
                 if (rtosSession.triedAndFailed) {
                     const supported = Object.keys(RTOS_TYPES).join(', ');
-                    ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
-                        'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
+                    ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). `
+                        + 'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
                 } else {
                     ret.html += /* html */'<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
                 }

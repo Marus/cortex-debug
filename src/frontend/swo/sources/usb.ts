@@ -39,8 +39,8 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
     for (const dev of devs) {
       dev.open();
       const { deviceDescriptor: dd } = dev;
-      const getStringDescriptor: (index: number) => Promise<string | undefined> =
-        promisify(dev.getStringDescriptor).bind(dev);
+      const getStringDescriptor: (index: number) => Promise<string | undefined>
+        = promisify(dev.getStringDescriptor).bind(dev);
       const productName = await getStringDescriptor(dd.iProduct);
       if (productName.match(this.device)) {
         console.info(
@@ -60,8 +60,8 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
               const interfaceName = await getStringDescriptor(alt.iInterface);
               if (interfaceName?.match(this.port)) {
                 for (const ep of alt.endpoints) {
-                  if ((ep.bmAttributes & 3) === usb.usb.LIBUSB_TRANSFER_TYPE_BULK &&
-                       ep.bEndpointAddress & usb.usb.LIBUSB_ENDPOINT_IN) {
+                  if ((ep.bmAttributes & 3) === usb.usb.LIBUSB_TRANSFER_TYPE_BULK
+                       && ep.bEndpointAddress & usb.usb.LIBUSB_ENDPOINT_IN) {
                     console.info(
                       'Matched config',
                       cfg.bConfigurationValue,

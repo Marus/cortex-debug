@@ -94,7 +94,6 @@ export default tseslint.config(
             '@stylistic/no-trailing-spaces': 'off',             // 131 instances
             '@stylistic/no-tabs': 'off',                        // 109 instances
             '@stylistic/object-curly-spacing': 'off',           // 87 instances
-            '@stylistic/operator-linebreak': 'off',             // 49 instances
         }
     },
     {

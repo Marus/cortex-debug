@@ -122,8 +122,8 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
                 if (ret) {
                     ret += 'Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
-                    this.helpHtml = '<button class="help-button">Hints to get more out of the embOS RTOS View</button>\n' +
-                        `<div class="help"><p>\n${ret}\n</p></div>\n`;
+                    this.helpHtml = '<button class="help-button">Hints to get more out of the embOS RTOS View</button>\n'
+                        + `<div class="help"><p>\n${ret}\n</p></div>\n`;
                 }
             }
             catch (e) {

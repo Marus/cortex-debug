@@ -193,8 +193,9 @@ export class MI2 extends EventEmitter implements IBackend {
 
     private gdbStartError() {
         if (!this.actuallyStarted) {
-            this.log('log', 'Error: Unable to start GDB even after 5 seconds or it couldn\'t even start ' +
-                'Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
+            this.log('log',
+                'Error: Unable to start GDB even after 5 seconds or it couldn\'t even start '
+                + 'Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
             this.log('log', '    If you cannot, it is most likely because "libncurses" or "python" is not installed. Some GDBs require these\n');
         }
     }
@@ -637,8 +638,8 @@ export class MI2 extends EventEmitter implements IBackend {
                     const match = numRegex.exec(breakpoint.hitCondition)[0];
                     if (match.length !== breakpoint.hitCondition.length) {
                         this.log('stderr', 
-                            'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. ' +
-                            'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
+                            'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. '
+                            + 'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
                         );
                         bkptArgs += '-t ';
                     }
@@ -744,8 +745,8 @@ export class MI2 extends EventEmitter implements IBackend {
                     const match = numRegex.exec(breakpoint.hitCondition)[0];
                     if (match.length !== breakpoint.hitCondition.length) {
                         this.log('stderr',
-                            'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. ' +
-                            'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
+                            'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. '
+                            + 'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
                         );
                         bkptArgs += '-t ';
                     }

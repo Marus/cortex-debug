@@ -210,15 +210,15 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
     public handleSelection(e: vscode.TextEditorSelectionChangeEvent) {
         const numLine = e.textEditor.document.lineCount;
-        if (e.selections[0].start.line + 1 === numLine ||
-            e.selections[0].end.line + 1 === numLine) {
+        if (e.selections[0].start.line + 1 === numLine
+            || e.selections[0].end.line + 1 === numLine) {
             e.textEditor.setDecorations(this.smallDecorationType, []);
             return;
         }
         const startOffset = this.getOffset(e.selections[0].start);
         const endOffset = this.getOffset(e.selections[0].end);
-        if (typeof startOffset === 'undefined' ||
-            typeof endOffset === 'undefined') {
+        if (typeof startOffset === 'undefined'
+            || typeof endOffset === 'undefined') {
             e.textEditor.setDecorations(this.smallDecorationType, []);
             return;
         }

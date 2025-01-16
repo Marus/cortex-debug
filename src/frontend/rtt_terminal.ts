@@ -210,8 +210,8 @@ export class RTTTerminal {
     public sendData(str: string | Buffer) {
         if (this.source) {
             try {
-                if (((typeof str === 'string') || (str instanceof String)) &&
-                    (this.options.inputmode === TerminalInputMode.COOKED)) {
+                if (((typeof str === 'string') || (str instanceof String))
+                    && (this.options.inputmode === TerminalInputMode.COOKED)) {
                     str = Buffer.from(str as string, this.options.iencoding);
                 }
                 this.source.write(str);

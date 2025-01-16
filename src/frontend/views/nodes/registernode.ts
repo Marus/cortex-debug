@@ -54,8 +54,8 @@ export class RegisterNode extends BaseNode {
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
-        const state = this.fields && this.fields.length > 0 ?
-            (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
+        const state = this.fields && this.fields.length > 0
+            ? (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
             : TreeItemCollapsibleState.None;
         
         const label: TreeItemLabel = {

@@ -372,8 +372,8 @@ export abstract class RTOSBase {
                         if (!isNaN(rowValueNumber)) {
                             const activeValueStr = Math.floor(rowValueNumber).toString();
                             additionalClasses += ' backgroundPercent';
-                            style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
-                                `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
+                            style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n`
+                                + `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
                         }
                     }
                 } else if (RTOSDisplayColumn[key].colType & ColTypeEnum.colTypeLink) {
@@ -448,8 +448,8 @@ export class RTOSVarHelper {
         catch (e) {
             const msg = e?.message as string;
             if (msg) {
-                if ((msg === 'Busy') ||                        // Cortex-Debug
-                    (msg.includes('process is running'))) {    // cppdbg
+                if ((msg === 'Busy')                        // Cortex-Debug
+                    || (msg.includes('process is running'))) {    // cppdbg
                     // For cppdbg, the whole message is 'Unable to perform this action because the process is running.'
                     return false;
                 }

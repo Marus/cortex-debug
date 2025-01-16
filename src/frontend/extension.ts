@@ -266,8 +266,8 @@ export class CortexDebugExtension {
         vscode.commands.executeCommand(cmd).then(() => { }, (e) => {
             const installExt = 'Install MemoryView Extension';
             vscode.window.showErrorMessage(
-                `Unable to execute ${cmd}. Perhaps the MemoryView extension is not installed. ` +
-                'Please install extension and try again. A restart may be needed', undefined,
+                `Unable to execute ${cmd}. Perhaps the MemoryView extension is not installed. `
+                + 'Please install extension and try again. A restart may be needed', undefined,
                 {
                     title: installExt
                 },
@@ -337,8 +337,8 @@ export class CortexDebugExtension {
                         const timestamp = new Date().getTime();
                         const addrEnc = encodeURIComponent(`${address}`);
                         const uri = vscode.Uri.parse(
-                            `examinememory:///Memory%20[${addrEnc},${length}].cdmem` +
-                            `?address=${addrEnc}&length=${length}&timestamp=${timestamp}`
+                            `examinememory:///Memory%20[${addrEnc},${length}].cdmem`
+                            + `?address=${addrEnc}&length=${length}&timestamp=${timestamp}`
                         );
                         this.memoryProvider.PreRegister(uri);
                         vscode.workspace.openTextDocument(uri)
@@ -678,8 +678,8 @@ export class CortexDebugExtension {
                 }
             }
             vscode.window.showInformationMessage(
-                `Chained configuration for '${childName}' specified folder is '${orig}' normalized path is '${folder}'` +
-                ' did not match any workspace folders. Using parents folder.');
+                `Chained configuration for '${childName}' specified folder is '${orig}' normalized path is '${folder}'`
+                + ' did not match any workspace folders. Using parents folder.');
         }
         return def;
     }
