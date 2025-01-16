@@ -76,9 +76,9 @@ export interface SWOConfigureBody {
 export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     public boxy: SWOConfigureBody;
     public bodyx: {
-        type: string,
-        port: string,       // [hostname:]port
-        path: string        // path to serial port, fifo, etc.
+        type: string;
+        port: string;       // [hostname:]port
+        path: string;       // path to serial port, fifo, etc.
     };
 
     public event: string;
@@ -143,7 +143,7 @@ export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
 
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
-        type: string,   // Currently, only 'socket' is supported
+        type: string;   // Currently, only 'socket' is supported
         decoder: RTTCommonDecoderOpts;
     };
 
@@ -157,10 +157,10 @@ export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
 
 export class TelemetryEvent extends Event implements DebugProtocol.Event {
     public body: {
-        category: string,
-        action: string,
-        label: string,
-        parameters: { [key: string]: string }
+        category: string;
+        action: string;
+        label: string;
+        parameters: { [key: string]: string };
     };
 
     public event: string;
@@ -304,7 +304,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     chainedConfigurations: ChainedConfigurations;
 
     pvtIsReset: boolean;
-    pvtPorts: { [name: string]: number; };
+    pvtPorts: { [name: string]: number };
     pvtParent: ConfigurationArguments;
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
     pvtAvoidPorts: number[];

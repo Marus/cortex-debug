@@ -45,8 +45,8 @@ export class TimeseriesGraph implements Graph {
     };
 
     private annotations: {
-        timestamp: number,
-        type: string
+        timestamp: number;
+        type: string;
     }[] = [];
 
     private sg: any;

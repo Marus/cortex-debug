@@ -2,7 +2,7 @@ import { GraphPoint, GrapherDataMessage, GrapherProgramCounterMessage } from './
 
 export class GraphDataSource {
     private data: {
-        [graphId: string]: GraphPoint[]
+        [graphId: string]: GraphPoint[];
     } = {};
 
     private subscriptions: {

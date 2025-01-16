@@ -179,12 +179,12 @@ class ITMDecoder extends EventEmitter {
 interface ConfigurationArguments {
     executable: string;
     swoConfig: {
-        enabled: boolean,
-        decoders: SWODecoderConfig[]
+        enabled: boolean;
+        decoders: SWODecoderConfig[];
     };
     rttConfig: {
-        enabled: boolean,
-        decoders: RTTCommonDecoderOpts[]
+        enabled: boolean;
+        decoders: RTTCommonDecoderOpts[];
     };
     graphConfig: GraphConfiguration[];
 }

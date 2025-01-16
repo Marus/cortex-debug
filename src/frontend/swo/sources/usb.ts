@@ -30,7 +30,7 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
         config: usb.ConfigDescriptor;
         iface: usb.InterfaceDescriptor;
         endpoint: usb.EndpointDescriptor;
-        productName: string
+        productName: string;
       }
     | undefined
   > {

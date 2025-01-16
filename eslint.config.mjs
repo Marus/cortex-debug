@@ -96,7 +96,6 @@ export default tseslint.config(
             '@stylistic/operator-linebreak': 'off',             // 49 instances
             '@stylistic/no-multi-spaces': 'off',                // 49 instances
             '@stylistic/indent-binary-ops': 'off',              // 48 instances
-            '@stylistic/member-delimiter-style': 'off',         // 42 instances
         }
     },
     {

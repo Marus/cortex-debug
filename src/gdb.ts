@@ -118,8 +118,8 @@ function COMMAND_MAP(c: string): string {
 let dbgResumeStopCounter = 0;
 class CustomStoppedEvent extends Event implements DebugProtocol.Event {
     public readonly body: {
-        reason: string,
-        threadID: number
+        reason: string;
+        threadID: number;
     };
 
     public readonly event: string;
@@ -1842,7 +1842,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.notifyStoppedConditional();
     }
 
-    protected handleThreadCreated(info: { threadId: number, threadGroupId: string }) {
+    protected handleThreadCreated(info: { threadId: number; threadGroupId: string }) {
         if (!this.activeThreadIds.has(info.threadId)) {
             if (traceThreads) {
                 this.handleMsg('log', `**** Thread created ${info.threadId}\n`);
@@ -1854,7 +1854,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
-    protected handleThreadExited(info: { threadId: number, threadGroupId: string }) {
+    protected handleThreadExited(info: { threadId: number; threadGroupId: string }) {
         if (traceThreads) {
             this.handleMsg('log', `**** Thread exited ${info.threadId}\n`);
         }
