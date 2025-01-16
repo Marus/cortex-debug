@@ -93,10 +93,12 @@ export class CDebugSession {
     public static FindSession(session: vscode.DebugSession) {
         return CDebugSession.FindSessionById(session.id);
     }
+
     public static FindSessionById(id: string) {
         const ret = CDebugSession.CurrentSessions.find((x) => x.session.id === id);
         return ret;
     }
+
     public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments | undefined): CDebugSession {
         const prev = CDebugSession.FindSessionById(session.id);
         if (prev) {

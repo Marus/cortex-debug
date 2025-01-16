@@ -95,9 +95,11 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
         if (this.args.serverpath) { return this.args.serverpath; }
         else { return os.platform() === 'win32' ? 'st-util.exe' : 'st-util'; }
     }
+
     public allocateRTTPorts(): Promise<void> {
         return Promise.resolve();
     }
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 

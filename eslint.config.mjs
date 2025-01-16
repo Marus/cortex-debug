@@ -99,7 +99,6 @@ export default tseslint.config(
             '@stylistic/member-delimiter-style': 'off',         // 42 instances
             '@stylistic/block-spacing': 'off',                  // 34 instances
             '@stylistic/spaced-comment': 'off',                 // 24 instances
-            '@stylistic/lines-between-class-members': 'off',    // 19 instances
         }
     },
     {

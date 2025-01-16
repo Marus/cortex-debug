@@ -132,6 +132,7 @@ export class PtyTerminal extends EventEmitter {
     public pause() {
         this.isPaused = true;
     }
+
     public resume() {
         this.isPaused = false;
     }

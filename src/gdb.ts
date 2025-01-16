@@ -121,6 +121,7 @@ class CustomStoppedEvent extends Event implements DebugProtocol.Event {
         reason: string,
         threadID: number
     };
+
     public readonly event: string;
 
     constructor(reason: string, threadID: number) {
@@ -199,6 +200,7 @@ class CustomContinuedEvent extends Event implements DebugProtocol.Event {
         threadID: number;
         allThreads: boolean;
     };
+
     public readonly event: string;
 
     constructor(threadID: number, allThreads: boolean = true) {
@@ -2011,6 +2013,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         DebugProtocol.SetBreakpointsArguments |
         DebugProtocol.SetInstructionBreakpointsArguments |
         DebugProtocol.SetDataBreakpointsArguments>();
+
     protected setFunctionBreakPointsRequest(
         r: DebugProtocol.SetFunctionBreakpointsResponse,
         a: DebugProtocol.SetFunctionBreakpointsArguments): Promise<void> {

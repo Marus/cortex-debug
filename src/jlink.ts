@@ -220,6 +220,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
          */
         return new Promise((resolve) => setTimeout(resolve, 500));
     }
+
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {
         this.rttHelper.emitConfigures(this.args.rttConfig, this);

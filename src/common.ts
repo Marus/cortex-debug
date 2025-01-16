@@ -80,6 +80,7 @@ export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
         port: string,       // [hostname:]port
         path: string        // path to serial port, fifo, etc.
     };
+
     public event: string;
 
     constructor(params: SWOConfigureBody) {
@@ -145,6 +146,7 @@ export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
         type: string,   // Currently, only 'socket' is supported
         decoder: RTTCommonDecoderOpts;
     };
+
     public event: string;
 
     constructor(params: any) {
@@ -160,6 +162,7 @@ export class TelemetryEvent extends Event implements DebugProtocol.Event {
         label: string,
         parameters: { [key: string]: string }
     };
+
     public event: string;
 
     constructor(category: string, action: string, label: string, parameters: { [key: string]: string } = {}) {
