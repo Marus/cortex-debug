@@ -104,7 +104,7 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
         }
 
         console.debug('Connecting to', productName);
-        await dev.open();
+        dev.open();
         this.dev = dev;
         console.debug('Selecting configuration', config.bConfigurationValue);
         await promisify(dev.setConfiguration).bind(dev)(config.bConfigurationValue);

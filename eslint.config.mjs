@@ -30,6 +30,8 @@ export default tseslint.config(
         },
 
         rules: {
+            '@typescript-eslint/no-base-to-string': 'off',              // 1 instance
+
             '@stylistic/indent-binary-ops': 'off',      // this is a weird rule
             '@stylistic/max-len': ['error', {
                 code: 160,
@@ -85,11 +87,6 @@ export default tseslint.config(
             '@typescript-eslint/no-unsafe-function-type': 'off',        // 2 instances
             '@typescript-eslint/no-unused-expressions': 'off',          // 2 instances
             '@typescript-eslint/no-for-in-array': 'off',                // 2 instances
-            '@typescript-eslint/no-base-to-string': 'off',              // 1 instance
-            '@typescript-eslint/no-duplicate-type-constituents': 'off', // 1 instance
-            'no-duplicate-case': 'off',                                 // 1 instance
-            '@typescript-eslint/await-thenable': 'off',                 // 1 instance
-            'no-self-assign': 'off',                                    // 1 instance
         }
     },
     {

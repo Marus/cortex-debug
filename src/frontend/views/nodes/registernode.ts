@@ -20,7 +20,7 @@ export class RegisterNode extends BaseNode {
     constructor(public name: string, public index: number) {
         super(null);
 
-        this.name = this.name;
+        this.name = name;
 
         if (name.toUpperCase() === 'XPSR' || name.toUpperCase() === 'CPSR') {
             this.fields = [

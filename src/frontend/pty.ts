@@ -348,10 +348,6 @@ export class PtyTerminal extends EventEmitter {
                     this.moveLeft();
                     break;
                 }
-                case 'D': { // kill char at cursor
-                    this.killCurrChar();
-                    break;
-                }
                 case 'H': { // kill char left of cursor
                     this.killPrevChar();
                     break;

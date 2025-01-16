@@ -99,7 +99,7 @@ export class CDebugSession {
         return ret;
     }
 
-    public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments | undefined): CDebugSession {
+    public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments): CDebugSession {
         const prev = CDebugSession.FindSessionById(session.id);
         if (prev) {
             prev.config = config || prev.config;
