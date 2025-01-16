@@ -204,7 +204,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config: vscode.DebugConfiguration,
         token?: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.DebugConfiguration> {
-        let cwd = config.cwd || folder?.uri.fsPath || vscode.workspace.workspaceFile?.fsPath || '.';
+        const wsFile = vscode.workspace.workspaceFile?.fsPath;
+        let cwd = config.cwd || folder?.uri.fsPath || (wsFile ? path.dirname(wsFile) : '.');
         const isAbsCwd = path.isAbsolute(cwd);
         if (!isAbsCwd && folder) {
             cwd = path.join(folder.uri.fsPath, cwd);
@@ -212,7 +213,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             cwd = path.resolve(cwd);
         }
         config.cwd = cwd;
-        if (!fs.existsSync(cwd)) {
+        if (!cwd || !fs.existsSync(cwd)) {
             vscode.window.showWarningMessage(`Invalid "cwd": "${cwd}". Many operations can fail. Trying to continue`);
         }
         this.validateLoadAndSymbolFiles(config, cwd);
