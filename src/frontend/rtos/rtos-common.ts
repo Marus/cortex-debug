@@ -139,15 +139,11 @@ export abstract class RTOSBase {
             expression: expr,
             context: 'hover'
         };
-        try {
-            const result = await this.customRequest('evaluate', arg, optional);
-            if (!result || (!optional && (result.variablesReference === 0))) {
-                throw new Error(`Failed to evaluate ${expr}`);
-            }
-            return result ? result.variablesReference : 0;
-        } catch (e) {
-            throw e;
+        const result = await this.customRequest('evaluate', arg, optional);
+        if (!result || (!optional && (result.variablesReference === 0))) {
+            throw new Error(`Failed to evaluate ${expr}`);
         }
+        return result ? result.variablesReference : 0;
     }
 
     protected async evalForVarValue(
@@ -157,13 +153,9 @@ export abstract class RTOSBase {
             expression: expr,
             context: 'hover'
         };
-        try {
-            const result = await this.customRequest('evaluate', arg);
-            const ret = result?.result;
-            return ret;
-        } catch (e) {
-            throw e;
-        }
+        const result = await this.customRequest('evaluate', arg);
+        const ret = result?.result;
+        return ret;
     }
 
     protected getVarChildren(varRef: number, dbg: string): Promise<DebugProtocol.Variable[]> {

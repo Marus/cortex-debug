@@ -125,11 +125,7 @@ export class SocketRTTSource extends SocketSWOSource {
     }
 
     public write(data) {
-        try {
-            this.client.write(data);
-        } catch (e) {
-            throw e;
-        }
+        this.client.write(data);
     }
 }
 
@@ -352,12 +348,8 @@ export class PeMicroSocketSource extends SocketSWOSource {
     }
 
     public write(data) {
-        try {
-            const header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
-            this.client.write(header.getTxString() + data);
-            this.sequence = this.sequence + 1;
-        } catch (e) {
-            throw e;
-        }
+        const header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
+        this.client.write(header.getTxString() + data);
+        this.sequence = this.sequence + 1;
     }
 }

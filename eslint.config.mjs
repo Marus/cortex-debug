@@ -81,7 +81,6 @@ export default tseslint.config(
             '@typescript-eslint/unbound-method': 'off',                 // 7 instances
             'no-case-declarations': 'off',                              // 6 instances
             'no-undef': 'off',                                          // 4 instances
-            'no-useless-catch': 'off',                                  // 4 instances
         }
     },
     {
