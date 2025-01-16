@@ -156,7 +156,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'qemu':
                 validationResponse = this.verifyQEMUConfiguration(folder, config);
                 break;
-            default:
+            default: {
                 const validValues = [
                     'jlink',
                     'openocd',
@@ -170,6 +170,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 ].map((s) => `"${s}"`).join(', ');
                 validationResponse = 'Invalid servertype parameters. The following values are supported: ' + validValues;
                 break;
+            }
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');

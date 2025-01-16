@@ -136,7 +136,7 @@ class ITMDecoder extends EventEmitter {
                     this.emit('lost-synchronization');
                     break;
 
-                case Status.TIMESTAMP:
+                case Status.TIMESTAMP: {
                     const receivedMax = this.rxWriteByte(byte);
                     // Check if the continuation bit is false.
                     // This indicates the last byte in a timestamp
@@ -151,6 +151,7 @@ class ITMDecoder extends EventEmitter {
                         newStatus = Status.IDLE;
                     }
                     break;
+                }
                 case Status.UNSYNCED:
                     break;
                 case Status.SOFTWARE_EVENT:
@@ -497,12 +498,13 @@ export class RTTCore extends SWORTTCoreBase {
 
         args.rttConfig.decoders.forEach((conf) => {
             switch (conf.type) {
-                case 'graph':
+                case 'graph': {
                     this.addRTTDecoder(this.sources[conf.port]);
                     const processor = new SWORTTGraphProcessor(conf as any as SWOGraphDecoderConfig);
                     if (this.webview) { this.webview.registerProcessors(processor); }
                     this.processors.push(processor);
                     break;
+                }
                 case 'advanced':
                     try {
                         for (const p of conf.ports) {

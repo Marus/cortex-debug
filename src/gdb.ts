@@ -1194,7 +1194,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             case 'disassemble':
                 this.disassember.customDisassembleRequest(response, args);
                 break;
-            case 'execute-command':
+            case 'execute-command': {
                 const cmd = COMMAND_MAP(args?.command as string);
                 if (cmd) {
                     this.miDebugger.sendCommand(cmd).then((node) => {
@@ -1206,6 +1206,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     });
                 }
                 break;
+            }
             case 'reset-device':
                 this.resetDevice(response, args);
                 break;

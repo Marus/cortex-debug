@@ -318,7 +318,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                     return new TaskReady();
                 }
 
-            case OsTaskPendingState.TASK_EVENT:
+            case OsTaskPendingState.TASK_EVENT: {
                 const resultState = new TaskPending();
                 resultState.addEventType(maskedState);
 
@@ -335,6 +335,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
                 }
 
                 return resultState;
+            }
 
             default: {
                 const resultState = new TaskPending();

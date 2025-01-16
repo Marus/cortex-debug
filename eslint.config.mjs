@@ -87,7 +87,6 @@ export default tseslint.config(
             '@typescript-eslint/no-unnecessary-type-assertion': 'off',  // 8 instances
             'no-constant-condition': 'off',                             // 8 instances
             '@typescript-eslint/unbound-method': 'off',                 // 7 instances
-            'no-case-declarations': 'off',                              // 6 instances
         }
     },
     {

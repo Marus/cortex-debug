@@ -488,7 +488,7 @@ export class CortexDebugExtension {
             case 'custom-event-session-reset':
                 this.resetOrResartChained(e, 'reset');
                 break;
-            case 'custom-event-popup':
+            case 'custom-event-popup': {
                 const msg = e.body.info?.message;
                 switch (e.body.info?.type) {
                     case 'warning':
@@ -502,6 +502,7 @@ export class CortexDebugExtension {
                         break;
                 }
                 break;
+            }
             case 'custom-event-ports-allocated':
                 this.registerPortsAsUsed(e);
                 break;

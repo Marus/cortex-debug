@@ -11,9 +11,10 @@ function get_ST_DIR() {
             return 'C:\\ST';
         case 'darwin':
             return '/Applications/STM32CubeIDE.app/Contents/Eclipse';
-        default:
+        default: {
             const dirName = (process.env.HOME || os.homedir()) + '/st';
             return fs.existsSync(dirName) ? dirName : '/opt/st';
+        }
     }
 }
 
