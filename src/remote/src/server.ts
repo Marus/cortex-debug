@@ -47,24 +47,24 @@ export class Server {
     }
 
     public hello(sessionId: string): Interfaces.helloReturn {
-		const config = vscode.workspace.getConfiguration('cortex-debug');
-		const settings: { [key: string]: any } = {};
-		for (const [key, value] of Object.entries(config)) {
-			if ((typeof value !== 'function') && (value !== null) && (value !== undefined)) {
-				settings[key] = value;
-			}
-		}
+        const config = vscode.workspace.getConfiguration('cortex-debug');
+        const settings: { [key: string]: any } = {};
+        for (const [key, value] of Object.entries(config)) {
+            if ((typeof value !== 'function') && (value !== null) && (value !== undefined)) {
+                settings[key] = value;
+            }
+        }
         const ret: Interfaces.helloReturn = {
-			port: this.port,
-			host: this.ipAddr,
-			addrs: this.allIps,
-			platform: os.platform(),
-			release: os.release(),
-			version: os.version(),
-			hostname: os.hostname(),
-			mySessionId: vscode.env.sessionId,
-			mySettings: settings
-		};
+            port: this.port,
+            host: this.ipAddr,
+            addrs: this.allIps,
+            platform: os.platform(),
+            release: os.release(),
+            version: os.version(),
+            hostname: os.hostname(),
+            mySessionId: vscode.env.sessionId,
+            mySettings: settings
+        };
         return ret;
     }
 

@@ -68,11 +68,11 @@ export class TcpPortScanner {
                         ConsoleLog(`isPortInUse: port ${host}:${port} returned code EACCES?, ${seq}`);
                     }
                     ConsoleLog(`isPortInUse: port ${host}:${port} is busy, ${seq}`);
-                    resolve(true);				// Port in use
+                    resolve(true);     // Port in use
                 } else {
                     // This should never happen so, log it always
                     ConsoleLog(`isPortInUse: port ${host}:${port} unexpected error , ${seq}`, e);
-                    reject(e);					// some other failure
+                    reject(e);         // some other failure
                 }
                 server.close();
             });
@@ -142,9 +142,9 @@ export class TcpPortScanner {
     public static findFreePorts(
         { min, max, retrieve = 1, consecutive = false, doLog = false }:
             {
-                min: number;			// Starting port number
-                max: number;			// Ending port number (inclusive)
-                retrieve?: number;		// Number of ports needed
+                min: number;            // Starting port number
+                max: number;            // Ending port number (inclusive)
+                retrieve?: number;      // Number of ports needed
                 consecutive?: boolean;
                 doLog?: boolean;
             },
@@ -196,7 +196,7 @@ export class TcpPortScanner {
                     reject(err);
                 });
             }
-            next(min, host);		// Start the hunt
+            next(min, host);      // Start the hunt
         });
     }
 
@@ -309,7 +309,7 @@ export class TcpPortScanner {
             functor(opts.port, opts.host, null)
                 .then((inUse) => {
                     // ConsoleLog(`${functor.name} returned ${inUse}`)
-                    if (inUse === opts.desiredStatus) {	// status match
+                    if (inUse === opts.desiredStatus) {  // status match
                         return resolve();
                     } else {
                         throw new Error('tryagain');
@@ -423,7 +423,7 @@ export class TcpPortScanner {
 export class PortStatusArgs {
     public startTimeMs: number = 0;
     constructor(
-        public readonly desiredStatus: boolean,	// true means looking for open
+        public readonly desiredStatus: boolean,  // true means looking for open
         public readonly port: number,
         public readonly host: string = TcpPortScanner.DefaultHost,
         public readonly checkLocalHostAliases = true,

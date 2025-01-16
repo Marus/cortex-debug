@@ -68,7 +68,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                     const offset = address - lineAddress;
 
                     let output = '';
-                    output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 	\n';
+                    output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F \t\n';
                     output += hexFormat(lineAddress, 8, false) + ': ';
 
                     let lineend = '';
@@ -82,7 +82,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                             lineend += '.';
                         }
                         else {
-                            lineend	+= String.fromCharCode(bytes[i]);
+                            lineend += String.fromCharCode(bytes[i]);
                         }
 
                         if ((address + i) % 16 === 15 && i < length - 1) {
