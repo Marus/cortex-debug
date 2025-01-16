@@ -7,7 +7,7 @@ export class MemReadUtils {
     /**
      * Make one or more memory reads and update values. For the caller, it should look like a single
      * memory read but, if one read fails, all reads are considered as failed.
-     * 
+     *
      * @param startAddr The start address of the memory region. Everything else is relative to `startAddr`
      * @param specs The chunks of memory to read and and update. Addresses should be >= `startAddr`, Can have gaps, overlaps, etc.
      * @param storeTo This is where read-results go. The first element represents item at `startAddr`

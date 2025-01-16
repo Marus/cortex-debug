@@ -30,7 +30,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
         return false;
     }
-    
+
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
@@ -96,7 +96,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
         const swoFrequency = this.args.swoConfig.swoFrequency | 0;
         const cpuFrequency = this.args.swoConfig.cpuFrequency | 0;
-        
+
         const commands: string[] = [
             `monitor SWO EnableTarget ${cpuFrequency} ${swoFrequency} ${portMask} 0`,
             'DisableITMPorts 0xFFFFFFFF',
@@ -106,7 +106,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
         ];
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -135,14 +135,14 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
             return this.rttHelper.allocateRTTPorts(this.args.rttConfig, this.defaultRttPort);
         }
     }
-    
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const swoport = this.ports['swoPort'];
         const consoleport = this.ports['consolePort'];
 
         let cmdargs = [
-            '-singlerun',   // -strict -timeout 0 
+            '-singlerun',   // -strict -timeout 0
             '-nogui',       // removed at users request, don't ever remove this line
             '-if', this.args.interface,
             '-port', gdbport.toString(),

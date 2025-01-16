@@ -28,7 +28,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
         return false;
     }
-    
+
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 

@@ -68,7 +68,7 @@ export class GDBServer extends EventEmitter {
                 this.process.stderr.on('data', this.onStderr.bind(this));
                 this.process.on('exit', this.onExit.bind(this));
                 this.process.on('error', this.onError.bind(this));
-                
+
                 if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
                     // For some reason we are not able to capture the st-util output on Windows
                     // For now assume that it will launch properly within 1/2 second and resolve the init

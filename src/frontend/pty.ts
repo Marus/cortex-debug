@@ -182,7 +182,7 @@ export class PtyTerminal extends EventEmitter {
             console.error(`MyPtyTerminal: handleInput: ${e}`);
         }
     }
-    
+
     private handleReturn(chr: string) {
         if (this.options.inputMode === TerminalInputMode.COOKED) {
             this.emit('data', this.curLine + os.EOL);

@@ -31,7 +31,7 @@ export class LiveVariableNode extends BaseNode {
     public getExpr(): string {
         return this.expr;
     }
-    
+
     public getChildren(): LiveVariableNode[] {
         if (!this.parent && (!this.children || !this.children.length)) {
             return [new LiveVariableNodeMsg(this)];
@@ -75,7 +75,7 @@ export class LiveVariableNode extends BaseNode {
                 : TreeItemCollapsibleState.Collapsed
             )
             : TreeItemCollapsibleState.None;
-        
+
         const parts = this.name.startsWith('\'') && this.isRootChild() ? this.name.split('\'::') : [this.name];
         const name = parts.pop();
         const label: vscode.TreeItemLabel = {
@@ -85,7 +85,7 @@ export class LiveVariableNode extends BaseNode {
             label.highlights = [[name.length + 2, label.label.length]];
         }
         this.prevValue = this.value;
-        
+
         const item = new TreeItem(label, state);
         item.contextValue = this.isRootChild() ? 'expression' : 'field';
         let file = parts.length ? parts[0].slice(1) : '';
@@ -685,7 +685,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                 expression = '*(unsigned long*)"abc"';
                 expectedLittle = '6513249';
                 expectedBig = '1633837824';
-            } else if (expr3.result === '8') { 
+            } else if (expr3.result === '8') {
                 expression = '*(unsigned long*)"abcdefg"';
                 expectedLittle = '29104508263162465';
                 expectedBig = '7017280452245743360';

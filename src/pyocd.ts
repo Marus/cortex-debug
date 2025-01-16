@@ -74,7 +74,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const cpuFrequency = this.args.swoConfig.cpuFrequency;
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-        
+
         const commands: string[] = [
             'EnableITMAccess',
             `BaseSWOSetup ${ratio}`,
@@ -88,7 +88,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         ];
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -174,7 +174,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             }
         }
     }
-    
+
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}
 }

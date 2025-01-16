@@ -79,7 +79,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     private createVSCodeChanne(config: SWOConsoleDecoderConfig) {
         this.output = vscode.window.createOutputChannel(this.createName(config));
 
-        // A work-around. A blank display will appear if the output is shown immediately 
+        // A work-around. A blank display will appear if the output is shown immediately
         if (config.showOnStartup) {
             this.showOutputTimer = setTimeout(() => {
                 this.output.show(true);

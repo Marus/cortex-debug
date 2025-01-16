@@ -118,7 +118,7 @@ export class RTTTerminal {
                 str = data as string;
             }
             if (ts) {
-                // We emulate what the terminal does adding a timestamp after all new lines 
+                // We emulate what the terminal does adding a timestamp after all new lines
                 if (this.startOfNewLine) {
                     this.writeLogFile(Buffer.from(ts));
                 }
@@ -333,7 +333,7 @@ class BinaryFormatter {
                 const decodedValue = parseEncoded(this.buffer, this.encoding);
                 const decodedStr = padLeft(`${decodedValue}`, 12);
                 const scaledValue = padLeft(`${decodedValue * this.scale}`, 12);
-                
+
                 this.ptyTerm.write(`${timestamp} ${chars}  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
                 this.bytesRead = 0;
             }

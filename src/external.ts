@@ -78,7 +78,7 @@ export class ExternalServerController extends EventEmitter implements GDBServerC
     public allocateRTTPorts(): Promise<void> {
         return Promise.resolve();
     }
-        
+
     public serverArguments(): string[] {
         return [];
     }

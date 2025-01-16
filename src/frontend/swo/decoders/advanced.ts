@@ -13,7 +13,7 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
     public readonly format: string = 'advanced';
     private ports: number[];
     private decoder: AdvancedDecoder;
-    
+
     constructor(config: SWOAdvancedDecoderConfig) {
         super();
         this.ports = [];

@@ -147,7 +147,7 @@ const docgenConfig = {
     new webpack.DefinePlugin({
       __COMMIT_HASH__: JSON.stringify(commitHash)
     })
-  ]  
+  ]
 };
 
 module.exports = [extensionConfig, adapterConfig, grapherConfig, docgenConfig];

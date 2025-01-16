@@ -124,7 +124,7 @@ export class SocketRTTSource extends SocketSWOSource {
     constructor(tcpPort: string, public readonly channel: number) {
         super(tcpPort);
     }
-    
+
     public write(data) {
         try {
             this.client.write(data);

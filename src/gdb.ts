@@ -233,7 +233,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected disassember: GdbDisassembler;
     // currentThreadId is the currently selected thread or where execution has stopped. It not very
     // meaningful since the current thread id in gdb can change in many ways (when you use a --thread
-    // option on certain commands) 
+    // option on certain commands)
     protected currentThreadId: number = 0;
     protected activeThreadIds = new Set<number>();      // Used for consistency check
 
@@ -991,7 +991,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         const ret = mi2.start(this.args.cwd, commands);
         return ret;
     }
-        
+
     private sendContinue(): Promise<void> {
         return new Promise<void>((resolve) => {
             this.continuing = true;
@@ -2780,7 +2780,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     throw err;
                 }
             }
-            
+
             if (isFloating && varObj) {
                 this.putFloatingVariable(parentVarReference, symOrExpr, varObj);
             }

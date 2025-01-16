@@ -66,7 +66,7 @@ suite('TcpPortScanner Tests', () => {
                 });
             }, 200);            // Enough time to get waitForPortOpen to get started and working
             if (doLog) { console.log('Waiting for http server to start...'); }
-         
+
             // See if the server started on the requested port. We do it two ways in (near) parallel
             // Both should succeed with the same timeout. See above when LISTEN starts
             TcpPortScanner.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(async () => {

@@ -297,7 +297,7 @@ export class GdbDisassembler {
             const str = miNode.output;
             let match: RegExpExecArray;
             const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
-            // Num Enb  Low Addr   High Addr  Attrs 
+            // Num Enb  Low Addr   High Addr  Attrs
             // 1   y    0x10000000 0x10100000 flash blocksize 0x200 nocache
             while (match = regex.exec(str)) {
                 const [flag, lowAddr, highAddr, attrsStr] = match.slice(1, 5);
@@ -423,14 +423,14 @@ export class GdbDisassembler {
                 instr.line = srcInfo.startLine;
                 instr.endLine = srcInfo.endLine;
             }
-    
+
             if (validationAddr === nAddress) {
                 foundIx = instructions.length;
             }
 
             instructions.push(instr);
         };
-    
+
         let srcCount = 0;
         let asmCount = 0;
         let foundIx = -1;
@@ -838,7 +838,7 @@ export class GdbDisassembler {
         }
     }
 
-    // We would love to do disassembly on a whole range. But frequently, GDB gives wrong 
+    // We would love to do disassembly on a whole range. But frequently, GDB gives wrong
     // information when there are gaps between functions. There is also a problem with functions
     // that do not have a size
     private findDisasmRanges(trueStart: number, trueEnd: number, referenceAddress: number): DisasmRange[] {

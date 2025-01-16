@@ -71,10 +71,10 @@ export class CortexDebugExtension {
 
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`,
             config.get(CortexDebugKeys.VARIABLE_DISPLAY_MODE, true));
-                  
+
         context.subscriptions.push(
             vscode.workspace.registerTextDocumentContentProvider('examinememory', this.memoryProvider),
-            
+
             vscode.commands.registerCommand('cortex-debug.varHexModeTurnOn', this.variablesNaturalMode.bind(this, false)),
             vscode.commands.registerCommand('cortex-debug.varHexModeTurnOff', this.variablesNaturalMode.bind(this, true)),
             vscode.commands.registerCommand('cortex-debug.toggleVariableHexFormat', this.toggleVariablesHexMode.bind(this)),
@@ -237,7 +237,7 @@ export class CortexDebugExtension {
             }
         }
     }
-    
+
     private getSVDFile(device: string): string {
         const entry = this.SVDDirectory.find((de) => de.expression.test(device));
         return entry ? entry.path : null;

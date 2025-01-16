@@ -19,7 +19,7 @@ export class RegisterNode extends BaseNode {
 
     constructor(public name: string, public index: number) {
         super(null);
-        
+
         this.name = this.name;
 
         if (name.toUpperCase() === 'XPSR' || name.toUpperCase() === 'CPSR') {
@@ -57,7 +57,7 @@ export class RegisterNode extends BaseNode {
         const state = this.fields && this.fields.length > 0
             ? (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
             : TreeItemCollapsibleState.None;
-        
+
         const label: TreeItemLabel = {
             label: this.name + ' ' + this.currentNaturalValue
         };
@@ -65,7 +65,7 @@ export class RegisterNode extends BaseNode {
             label.highlights = [[this.name.length + 1, label.label.length]];
         }
         this.prevNaturalValue = this.currentNaturalValue;
-        
+
         const item = new TreeItem(label, state);
         // item.description = this.currentNaturalValue;
         item.contextValue = 'register';

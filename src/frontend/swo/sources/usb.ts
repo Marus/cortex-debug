@@ -133,7 +133,7 @@ export class UsbSWOSource extends EventEmitter implements SWORTTSource {
   public get connected() {
     return !!this.ep;
   }
-  
+
   public async dispose() {
     if (this.ep) {
       console.debug('Stopping polling...');

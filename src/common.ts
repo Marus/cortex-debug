@@ -319,7 +319,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ipAddress: string;
     serialNumber: string;
     jlinkscript: string;
-    
+
     // OpenOCD Specific
     configFiles: string[];
     searchDir: string[];
@@ -329,7 +329,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     // PyOCD Specific
     boardId: string;
     cmsisPack: string;
-    
+
     // StUtil Specific
     v1: boolean;
 
@@ -344,7 +344,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cpu: string;
     machine: string;
 
-    // External 
+    // External
     gdbTarget: string;
 }
 
@@ -507,7 +507,7 @@ export function getAnyFreePort(preferred: number): Promise<number> {
                 reject(e);
             });
         }
-        
+
         if (preferred > 0) {
             TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST, TcpPortScanner.AvoidPorts).then((inuse) => {
                 if (!inuse) {

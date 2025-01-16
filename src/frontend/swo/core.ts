@@ -39,7 +39,7 @@ const TIMESTAMP_MASK = 0b00001111;
 class ITMDecoder extends EventEmitter {
     private syncBuffer = new RingBuffer(6);
     private status: Status = Status.IDLE;
-    
+
     private rxCount: number = 0;
     private rxBuffer: Buffer;
     private rxPort: number;
@@ -49,7 +49,7 @@ class ITMDecoder extends EventEmitter {
 
     constructor() {
         super();
-        
+
         this.syncBuffer.enq(0xFF);
         this.syncBuffer.enq(0xFF);
         this.syncBuffer.enq(0xFF);
@@ -107,7 +107,7 @@ class ITMDecoder extends EventEmitter {
                         this.timestamp = 0;
                         this.resetRxPacket(-1, 5, PacketType.TIMESTAMP);
                         this.rxWriteByte(byte);
-                                                
+
                         if (byte & 0x80) {
                             newStatus = Status.TIMESTAMP;
                         }
@@ -120,7 +120,7 @@ class ITMDecoder extends EventEmitter {
                         if (count === 3) { count = 4; }
 
                         const port = (byte & PORT_MASK) >>> 3;
-                        
+
                         if ((byte & HARDWARE_MASK) !== 0) {
                             this.resetRxPacket(port, count, PacketType.HARDWARE);
                             newStatus = Status.HARDWARE_EVENT;
@@ -216,7 +216,7 @@ class SWOWebview {
     private getHTML() {
         const onDiskPath = vscode.Uri.file(path.join(this.extensionPath, 'dist', 'grapher.bundle.js'));
         const scriptUri = this.viewPanel.webview.asWebviewUri(onDiskPath);
-        
+
         const nonce = getNonce();
 
         let html = fs.readFileSync(path.join(this.extensionPath, 'resources', 'grapher.html'), { encoding: 'utf8', flag: 'r' });
@@ -302,7 +302,7 @@ export class SWOCore extends SWORTTCoreBase {
         if (args.graphConfig.length >= 1) {
             this.webview = new SWOWebview(extensionPath, args.graphConfig);
         }
-        
+
         args.swoConfig.decoders.forEach((conf) => {
             let processor;
 

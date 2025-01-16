@@ -49,7 +49,7 @@ export class TcpPortScanner {
     /**
      * Checks to see if the port is in use by creating a server on that port. You should use the function
      * `isPortInUseEx()` if you want to do a more exhaustive check or a general purpose use for any host
-     * 
+     *
      * @param port port to use. Must be > 0 and <= 65535
      * @param host host ip address to use. This should be an alias to a localhost. Can be null or empty string
      * in which case the Node.js default rules apply.
@@ -91,10 +91,10 @@ export class TcpPortScanner {
     /**
      * Checks to see if the port is in use by creating a server on that port if a localhost or alias
      * or try to connect to an existing server.
-     * 
+     *
      * If we think it is a localhost, It tries to make sure it and its aliases are all free. For
      * instance 0.0.0.0, 127.0.0.1, ::1 are true aliases on some systems and distinct ones on others.
-     * 
+     *
      * @param port port to use. Must be > 0 and <= 65535
      * @param host host ip address to use. Ignored. All loopback addresses are checked
      */
@@ -132,10 +132,10 @@ export class TcpPortScanner {
      * Don't like the interface but trying to keep compatibility with `portastic.find()`. Unlike
      * `portastic` the default ports to retrieve is 1 and we also have the option of returning
      * consecutive ports
-     * 
+     *
      * Detail: While this function is async, promises are chained to find open ports recursively
-     * 
-     * @param0 
+     *
+     * @param0
      * @param host Use any string that is a valid host name or ip address
      * @return a Promise with an array of ports or null when cb is used
      */
@@ -244,10 +244,10 @@ export class TcpPortScanner {
      * to create servers or clients but use system commands to figure out if a port is open
      * On Mac, the runtime is not bad 1.5 to 2X of the time take to do it the other ways.
      * On windows, surprise!, it is an order of magnititude slower.
-     * 
+     *
      * But, it is also not bulletproof. depends on version of the OS and if some things do
      * not get installed by default. This is limited to looking for IPv4 addresses
-     * 
+     *
      * @param port look for port to be open. don't matter what
      * @param retryTimeMs retry after that many milliseconds.
      * @param timeOutMs max timeout
@@ -299,8 +299,8 @@ export class TcpPortScanner {
 
     /**
      * This is the workhorse function for all kinds of status queries on port:localhost
-     * 
-     * @param opts 
+     *
+     * @param opts
      */
     protected static waitForPortStatusEx(opts: PortStatusArgs): Promise<void> {
         opts.startTimeMs = Date.now();
@@ -335,7 +335,7 @@ export class TcpPortScanner {
     /**
      * Wait for particular port status. We always do a minium of one try regardless of timeouts, so setting a timeout
      * of 0 means only one try
-     * 
+     *
      * @param inUse true means wait for port to be ready to use. False means wait for port to close
      * @return a promise. On failure, the error is Error('timeout') for a true timeout or something else
      * for other failures
@@ -351,7 +351,7 @@ export class TcpPortScanner {
     /**
      * Wait for port to open. We always do a minium of one try regardless of timeouts, so setting a timeout
      * of 0 means only one try
-     * 
+     *
      * @return a promise. On failure, the error is Error('timeout') for a true timeout or something else
      * for other failures
      */
@@ -366,7 +366,7 @@ export class TcpPortScanner {
     /**
      * Wait for port to close. We always do a minium of one try regardless of timeouts, so setting a timeout
      * of 0 means only one try
-     * 
+     *
      * @return a promise. On failure, the error is Error('timeout') for a true timeout or something else
      * for other failures
      */
@@ -406,9 +406,9 @@ export class TcpPortScanner {
     * quick/dirty way of figuring out if this is a local host. guaranteed way would have
     * been to do a dns.resolve() or dns.lookup(). server method only works for local hosts.
     * Client method works for anything but super slow on windows.
-    * 
+    *
     * FIXME: should we use server-method only on windows?
-    * 
+    *
     * @param host an ip-address
     */
     protected static shouldUseServerMethod(host: string): boolean {

@@ -263,11 +263,11 @@ export class SymbolTable {
      * Problem statement:
      * We need a read the symbol table for multiple types of information and none of the tools so far
      * give all all we need
-     * 
+     *
      * 1. List of static variables by file
      * 2. List og globals
      * 3. Functions (global and static) with their addresses and lengths
-     * 
+     *
      * Things we tried:
      * 1.-Wi option objdump -- produces super large output (100MB+) and take minutes to produce and parse
      * 2. Using gdb: We can get variable/function to file information but no addresses -- not super fast but
@@ -277,14 +277,14 @@ export class SymbolTable {
      *    belongs to which file that is pretty accurate
      * 4. Use readelf. This went nowhere because you can't get even basic file to symbol mapping from this
      *    and it is not as universal for handling file formats as objdump.
-     * 
+     *
      * So, we are not using option 3 and fall back to option 2. We will never go back to option 1
-     * 
+     *
      * Another problem is that we may have to query for symbols using different ways -- partial file names,
      * full path names, etc. So, we keep a map of file to statics.
-     * 
+     *
      * Other uses for objdump is to get a section headers for memory regions that can be used for disassembly
-     * 
+     *
      * We avoid splitting the output(s) into lines and then parse line at a time.
      */
     public loadSymbols(): Promise<void> {
@@ -512,7 +512,7 @@ export class SymbolTable {
                             this.readObjdumpHeaderLine.bind(this, symbolFile)
                         ),
                     });
-                    
+
                     const nmStart = Date.now();
                     const nmProg = replaceProgInPath(this.objdumpPath, /objdump/i, 'nm');
                     const nmArgs = [
@@ -903,7 +903,7 @@ export class SymbolTable {
             });
         });
     }
-    
+
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }
         if (os.platform() === 'win32') {

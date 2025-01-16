@@ -18,7 +18,7 @@ export class AddressRangesUtils {
 
     /**
      * Returns a set of address ranges that have 0 < length <= maxBytes
-     * 
+     *
      * @param ranges array of ranges to check an split
      * @param maxBytes limit of each range
      * @param dbgMsg To output debug messages -- name of address space

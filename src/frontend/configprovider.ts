@@ -5,7 +5,7 @@ import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
 import {
     ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys,
-    sanitizeDevDebug, validateELFHeader, SymbolFile, defSymbolFile 
+    sanitizeDevDebug, validateELFHeader, SymbolFile, defSymbolFile
 } from '../common';
 import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
@@ -43,7 +43,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             servertype: 'jlink'
         }];
     }
-    
+
     public resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,

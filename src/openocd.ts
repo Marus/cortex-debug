@@ -198,7 +198,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             'SWO_Init'
         );
         // commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 

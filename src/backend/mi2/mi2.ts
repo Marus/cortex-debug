@@ -114,7 +114,7 @@ export class MI2 extends EventEmitter implements IBackend {
             } else {
                 this.actuallyStarted = true;
             }
-            
+
             if ((this.gdbMajorVersion !== undefined) && (this.gdbMajorVersion < 9)) {
                 this.isExiting = true;
                 const ver = this.gdbMajorVersion ? this.gdbMajorVersion.toString() : 'Unknown';
@@ -421,7 +421,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }
         }
     }
-    
+
     // stop() can get called twice ... once by the disconnect sequence and once by the server existing because
     // we called disconnect. And the sleeps don't help that cause
     private exiting = false;
@@ -637,7 +637,7 @@ export class MI2 extends EventEmitter implements IBackend {
                 else {
                     const match = numRegex.exec(breakpoint.hitCondition)[0];
                     if (match.length !== breakpoint.hitCondition.length) {
-                        this.log('stderr', 
+                        this.log('stderr',
                             'Unsupported break count expression: \'' + breakpoint.hitCondition + '\'. '
                             + 'Only supports \'X\' for breaking once after X times or \'>X\' for ignoring the first X breaks'
                         );
@@ -664,7 +664,7 @@ export class MI2 extends EventEmitter implements IBackend {
             if (breakpoint.logMessage) {
                 bkptArgs += ' ' + breakpoint.logMessage;
             }
-            
+
             this.sendCommand(`${cmd} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
@@ -700,7 +700,7 @@ export class MI2 extends EventEmitter implements IBackend {
             }
 
             bkptArgs += '*' + hexFormat(breakpoint.address);
-            
+
             this.sendCommand(`break-insert ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));

@@ -74,7 +74,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         if (packet.port !== this.port) { return; }
 
         const date = new Date();
-        
+
         const hexvalue = packet.data.toString('hex');
         const decodedValue = parseEncoded(packet.data, this.encoding);
         const scaledValue = decodedValue * this.scale;
@@ -115,7 +115,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         }
         this.close();
     }
-    
+
     public close() {
         if (this.logFd >= 0) {
             fs.closeSync(this.logFd);

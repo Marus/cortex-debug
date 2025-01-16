@@ -45,7 +45,7 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
             if (!stats.isDirectory()) {
                 continue;
             }
-            
+
             const match = subDir.match(regex);
             if (match) {
                 const fullPath = path.join(dir, match[0], suffix, executable);
@@ -70,7 +70,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
-    
+
     public static getSTMCubeIdeDir(): string {
         switch (os.platform()) {
         case 'darwin':
@@ -199,7 +199,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             }
             serverargs.push('-cp', stm32cubeprogrammer);
         }
-         
+
         if ((this.args.interface !== 'jtag') && (this.args.interface !== 'cjtag')) {       // TODO: handle ctag in when this server supports it
             serverargs.push('--swd');
         }

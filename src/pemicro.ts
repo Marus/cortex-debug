@@ -27,7 +27,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
         return false;
     }
-    
+
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
@@ -49,7 +49,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         const commands = [
             'interpreter-exec console "monitor halt"'
         ];
-        
+
         return commands;
     }
 
@@ -82,7 +82,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     public allocateRTTPorts(): Promise<void> {
         return Promise.resolve();
     }
-        
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
@@ -92,7 +92,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
         serverargs.push('-singlesession');
         serverargs.push(`-device=${this.args.device}`);
         serverargs.push(`-serverport=${gdbport}`);
-        
+
         if (this.args.ipAddress) {
             serverargs.push(`-serverip=${this.args.ipAddress}`);
         }
