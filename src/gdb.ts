@@ -159,7 +159,7 @@ class VSCodeRequest<RespType, ArgsType> {
 ** and for others, use evaluateRequest as a template
 */
 export class RequestQueue<RespType, ArgsType> {
-    private queue: Array<VSCodeRequest<RespType, ArgsType>> = [];
+    private queue: VSCodeRequest<RespType, ArgsType>[] = [];
     private queueBusy = false;
     public pendedContinue = new PendingContinue(false, this.haveMore.bind(this));
     constructor(private alwaysResolve = true) {}
@@ -2115,7 +2115,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                         this.breakpointMap.set(args.source.path, []);
 
-                        const all: Array<Promise<OurSourceBreakpoint | MIError>> = [];
+                        const all: Promise<OurSourceBreakpoint | MIError>[] = [];
                         const sourcepath = decodeURIComponent(args.source.path);
 
                         if (sourcepath.startsWith('disassembly:/')) {
@@ -2231,7 +2231,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
-                        const all: Array<Promise<OurInstructionBreakpoint | MIError>> = [];
+                        const all: Promise<OurInstructionBreakpoint | MIError>[] = [];
                         args.breakpoints.forEach((brk) => {
                             const addr = parseInt(brk.instructionReference) + brk.offset || 0;
                             const bpt: OurInstructionBreakpoint = { ...brk, number: -1, address: addr };
@@ -2339,7 +2339,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
-                        const all: Array<Promise<OurDataBreakpoint | MIError>> = [];
+                        const all: Promise<OurDataBreakpoint | MIError>[] = [];
 
                         args.breakpoints.forEach((brk) => {
                             const bkp: OurDataBreakpoint = { ...brk };

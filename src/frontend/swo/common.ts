@@ -43,11 +43,11 @@ export interface TimeseriesGraphConfiguration extends GraphConfiguration {
     minimum: number;
     maximum: number;
     timespan: number;
-    plots: Array<{
+    plots: {
         graphId: string,
         label: string,
         color: string
-    }>;
+    }[];
 }
 
 export interface XYGraphConfiguration extends GraphConfiguration {

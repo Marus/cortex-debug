@@ -382,7 +382,7 @@ export abstract class RTOSBase {
                     // txt = `<vscode-link class="threads-link-${lKey}" href="#">${v.text}</vscode-link>`;
                 } else if ((RTOSDisplayColumn[key].colType & ColTypeEnum.colTypeCollapse) && (v.value)) {
                     const length = Object.values(v.value).reduce((acc: number, cur: string[]) => acc + cur.length, 0);
-                    if (length > 1) {
+                    if (typeof length === 'number' && length > 1) {
                         const descriptions = Object.keys(v.value).map((key) => `${key}: ${v.value[key].join(', ')}`).join('<br>');
                         txt = `<button class="collapse-button">${v.text}</button><div class="collapse">${descriptions}</div>`;
                     }

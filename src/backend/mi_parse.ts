@@ -1,7 +1,7 @@
 export interface MIInfo {
     token: number;
-    outOfBandRecord: Array<{ isStream: boolean, type: string, asyncClass: string, output: Array<[string, any]>, content: string }>;
-    resultRecords: { resultClass: string, results: Array<[string, any]> };
+    outOfBandRecord: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[];
+    resultRecords: { resultClass: string, results: [string, any][] };
 }
 
 const octalMatch = /^[0-7]{3}/;
@@ -56,8 +56,8 @@ function parseString(str: string): string {
 
 export class MINode implements MIInfo {
     public token: number;
-    public outOfBandRecord: Array<{ isStream: boolean, type: string, asyncClass: string, output: Array<[string, any]>, content: string }>;
-    public resultRecords: { resultClass: string, results: Array<[string, any]> };
+    public outOfBandRecord: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[];
+    public resultRecords: { resultClass: string, results: [string, any][] };
     public output: string = '';
 
     public static valueOf(start: any, path: string): any {
@@ -123,8 +123,8 @@ export class MINode implements MIInfo {
 
     constructor(
         token: number,
-        info: Array<{ isStream: boolean, type: string, asyncClass: string, output: Array<[string, any]>, content: string }>,
-        result: { resultClass: string, results: Array<[string, any]> }
+        info: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[],
+        result: { resultClass: string, results: [string, any][] }
     ) {
         this.token = token;
         this.outOfBandRecord = info;
