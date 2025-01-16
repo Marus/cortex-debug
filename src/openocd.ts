@@ -181,8 +181,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             const swoFrequency = this.args.swoConfig.swoFrequency;
             const cpuFrequency = this.args.swoConfig.cpuFrequency;
             const source = this.args.swoConfig.source;
-            const swoOutput = (source === 'serial') ? 'external' : ':' +
-                this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
+            const swoOutput = (source === 'serial') ?
+                'external' :
+                ':' + this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
             commands.push(
                 `monitor CDSWOConfigure ${cpuFrequency} ${swoFrequency} ${swoOutput}`,
                 `set $cpuFreq = ${cpuFrequency}`,

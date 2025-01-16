@@ -962,9 +962,9 @@ export class MI2 extends EventEmitter implements IBackend {
         for (const item of children) {
             const child = new VariableObject(parent, item[1]);
             if (child.exp.startsWith('<anonymous ')) {
-                omg.push(... await this.varListChildren(parent, child.name));
+                omg.push(...await this.varListChildren(parent, child.name));
             } else if (keywords.find((x) => x === child.exp)) {
-                omg.push(... await this.varListChildren(parent, child.name));
+                omg.push(...await this.varListChildren(parent, child.name));
             } else {
                 omg.push(child);
             }

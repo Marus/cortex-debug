@@ -40,6 +40,9 @@ export default tseslint.config(
             '@stylistic/no-multi-spaces': ['error', {
                 ignoreEOLComments: true,
             }],
+            '@stylistic/quote-props': ['error', 'as-needed', {
+                unnecessary: false,
+            }],
         }
     },
     {
@@ -101,23 +104,6 @@ export default tseslint.config(
             '@stylistic/padded-blocks': 'off',                  // 17 instances
             '@stylistic/space-in-parens': 'off',                // 11 instances
             '@stylistic/key-spacing': 'off',                    // 10 instances
-            '@stylistic/semi-spacing': 'off',                   // 9 instances
-            '@stylistic/multiline-ternary': 'off',              // 9 instances
-            '@stylistic/no-mixed-operators': 'off',             // 8 instances
-            '@stylistic/semi': 'off',                           // 8 instances
-            '@stylistic/arrow-parens': 'off',                   // 5 instances
-            '@stylistic/no-multiple-empty-lines': 'off',        // 4 instances
-            '@stylistic/space-before-blocks': 'off',            // 4 instances
-            '@stylistic/quote-props': 'off',                    // 4 instances
-            '@stylistic/array-bracket-spacing': 'off',          // 4 instances
-            '@stylistic/rest-spread-spacing': 'off',            // 3 instances
-            '@stylistic/no-extra-parens': 'off',                // 3 instances
-            '@stylistic/eol-last': 'off',                       // 3 instances
-            '@stylistic/space-infix-ops': 'off',                // 2 instances
-            '@stylistic/comma-spacing': 'off',                  // 2 instances
-            '@stylistic/keyword-spacing': 'off',                // 1 instances
-            '@stylistic/space-unary-ops': 'off',                // 1 instances
-            '@stylistic/no-whitespace-before-property': 'off',  // 1 instances
         }
     },
     {

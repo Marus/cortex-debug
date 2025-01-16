@@ -21,7 +21,7 @@ export class Server {
         return new Promise<number>(async (resolve, reject) => {
             try {
                 const start = 43473 + Math.floor(Math.random() * 10);
-                const args = { min: start, max: start + 1000 }
+                const args = { min: start, max: start + 1000 };
                 const ports = await TcpPortScanner.findFreePorts(args);
                 if (!ports || ports.length < 1) {
                     throw new Error('Internal error: zero ports returned!?');
@@ -108,7 +108,7 @@ class Client {
         const arg: Interfaces.eventArgs = {
             type: Interfaces.RpcEeventNames.stdout,
             data: Buffer.from('Message from server')
-        }
+        };
         this.connection.sendNotification(notification, arg);
     }
 

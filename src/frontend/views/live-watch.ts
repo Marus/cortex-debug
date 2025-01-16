@@ -70,7 +70,11 @@ export class LiveVariableNode extends BaseNode {
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const state = this.variablesReference || (this.children?.length > 0) ?
-            (this.children?.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed) : TreeItemCollapsibleState.None;
+            (this.children?.length > 0 ?
+                TreeItemCollapsibleState.Expanded :
+                TreeItemCollapsibleState.Collapsed
+            ) :
+            TreeItemCollapsibleState.None;
         
         const parts = this.name.startsWith('\'') && this.isRootChild() ? this.name.split('\'::') : [this.name];
         const name = parts.pop();
@@ -411,7 +415,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
 
     private currentRefreshRate = LiveWatchTreeProvider.defaultRefreshRate;
     private settingsChanged(e: vscode.ConfigurationChangeEvent) {
-        if (e.  affectsConfiguration('cortex-debug.liveWatchRefreshRate')) {
+        if (e.affectsConfiguration('cortex-debug.liveWatchRefreshRate')) {
             this.setRefreshRate();
         }
     }

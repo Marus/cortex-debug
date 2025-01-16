@@ -82,7 +82,7 @@ const adapterConfig = {
       __COMMIT_HASH__: JSON.stringify(commitHash)
     })
   ]
-}
+};
 
 const grapherConfig = {
   target: 'web',
@@ -148,6 +148,6 @@ const docgenConfig = {
       __COMMIT_HASH__: JSON.stringify(commitHash)
     })
   ]  
-}
+};
 
 module.exports = [extensionConfig, adapterConfig, grapherConfig, docgenConfig];

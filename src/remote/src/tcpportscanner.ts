@@ -57,7 +57,7 @@ export class TcpPortScanner {
             });
             server.once('error', (e) => {
                 const code: string = (e as any).code;
-                if (code && (code === 'EADDRINUSE') || (code === 'EACCES')) {
+                if ((code === 'EADDRINUSE') || (code === 'EACCES')) {
                     // console.log(`port ${host}:${port} is used`, code);
                     if (code === 'EACCES') {
                         // Technically, EACCES means permission denied, so we consider it as used
@@ -99,7 +99,7 @@ export class TcpPortScanner {
         const promises = tries.map((host) => TcpPortScanner.isPortInUse(port, host));
 
         return new Promise(async (resolve, reject) => {
-            const results = await Promise.all(promises.map(p => p.then(x => x).catch(e => e)));
+            const results = await Promise.all(promises.map((p) => p.then((x) => x).catch((e) => e)));
             ConsoleLog(`isPortInUseEx: Results ${results}`);
             for (const r of results) {
                 if (r !== false) {

@@ -85,7 +85,7 @@ function replaceProgInPath(filepath: string, search: string | RegExp, replace: s
         filepath = filepath.toLowerCase().replace(/\\/g, '/');
     }
     const ix = filepath.lastIndexOf('/');
-    const prefix = (ix >= 0) ? filepath.substring(0, ix + 1) : '' ;
+    const prefix = (ix >= 0) ? filepath.substring(0, ix + 1) : '';
     const suffix = filepath.substring(ix + 1);
     const replaced = suffix.replace(search, replace);
     if (replaced === suffix) {
@@ -695,7 +695,7 @@ export class SymbolTable {
     public printSyms(cb?: (str: string) => any) {
         cb = cb || console.log;
         for (const sym of this.allSymbols) {
-            let str = sym.name ;
+            let str = sym.name;
             if (sym.type === SymbolType.Function) {
                 str += ' (f)';
             } else if (sym.type === SymbolType.Object) {

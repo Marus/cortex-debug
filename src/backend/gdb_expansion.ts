@@ -120,7 +120,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         if (newValPos2 !== -1 && newValPos2 < newValPos1) {
             newValPos = newValPos2;
         }
-        if (newValPos !== -1 && eqPos > newValPos || eqPos === -1) { // is value list
+        if ((newValPos !== -1 && eqPos > newValPos) || eqPos === -1) { // is value list
             const values = [];
             stack.push('[0]');
             let val = parseValue();

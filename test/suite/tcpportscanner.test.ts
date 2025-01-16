@@ -1,4 +1,3 @@
-
 // Author to Blame: haneefdm on github
 
 import * as assert from 'assert';

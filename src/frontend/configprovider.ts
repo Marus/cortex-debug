@@ -325,7 +325,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         } else if (config.executable && config.symbolFiles) {
             // This is a special case when you have symbol files, we don't pass anything to gdb on the command line
             // and a target load will fail. Create a loadFiles from the executable if it exists.
-            config.loadFiles = [ config.executable ];
+            config.loadFiles = [config.executable];
         }
     }
 

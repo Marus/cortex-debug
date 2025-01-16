@@ -55,7 +55,7 @@ class ACTIONS {
 ** No event is generated when dispose() is called
 */
 export class PtyTerminal extends EventEmitter {
-    protected writeEmitter = new vscode.EventEmitter<string>() ;
+    protected writeEmitter = new vscode.EventEmitter<string>();
     private didPrompt = false;
     private curLine = '';           // This input entered by the user
     private cursorPos = 1;          // This a relative position ater any prompt or output text
@@ -273,7 +273,7 @@ export class PtyTerminal extends EventEmitter {
     ** Note that Enter and Del have already been handled
     */
     protected handleSpecialChars(chars: string): boolean {
-        if (this.options.inputMode !== TerminalInputMode.COOKED){
+        if (this.options.inputMode !== TerminalInputMode.COOKED) {
             if (this.options.inputMode === TerminalInputMode.RAWECHO) {
                 this.writeEmitter.fire(chars);
             }

@@ -134,7 +134,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         return commands;
     }
 
-    public swoAndRTTCommands(): string[]{
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();

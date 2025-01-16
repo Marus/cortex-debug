@@ -559,7 +559,7 @@ export function toStringDecHexOctBin(val: number/* should be an integer*/): stri
         str = str.slice(0, -8);
     }
     ret += `\nbin: ${tmp}`;
-    return ret ;
+    return ret;
 }
 
 export function parseHostPort(hostPort: string) {
@@ -625,7 +625,7 @@ export class ResettableTimeout {
         this.timeoutId = setTimeout((...args) => {
             this.timeoutId = null;
             this.cb(...this.args);
-        } , this.interval, ...this.args);
+        }, this.interval, ...this.args);
     }
 
     public kill() {
@@ -714,7 +714,7 @@ export function quoteShellCmdLine(list: string[]): string {
 export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean {
     const modes = Object.values(ADAPTER_DEBUG_MODE);
     let val = config.showDevDebugOutput;
-    if (typeof(val) === 'string') {
+    if (typeof (val) === 'string') {
         val = val.toLowerCase().trim();
         config.showDevDebugOutput = val;
     }
@@ -847,13 +847,13 @@ export class SpawnLineReader extends EventEmitter {
         this.callback = cb;
         this.promise = new Promise<boolean>((resolve) => {
             const readStream = fs.createReadStream(filename, options || {flags: 'r'});
-            readStream.on('error', ((e) => {
+            readStream.on('error', (e) => {
                 this.emit('error', e);
                 resolve(false);
-            }));
-            readStream.on('open', (() => {
+            });
+            readStream.on('open', () => {
                 this.doReadline(readStream, resolve);
-            }));
+            });
         });
         return this.promise;
     }

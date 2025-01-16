@@ -4,7 +4,7 @@ import { openStdin } from 'process';
 import * as vscode from 'vscode';
 import * as os from 'os';
 import {Server} from './server';
-import * as Interfaces from './interfaces'
+import * as Interfaces from './interfaces';
 
 export class CortexDebugRemote {
 	private server: Server;
@@ -18,11 +18,11 @@ export class CortexDebugRemote {
 		context.subscriptions.push(disposable);
 		this.server = new Server(context);
 		this.server.startServer().then((p) => {
-			vscode.window.showInformationMessage(`CortexDebugRemote: Started server @ ${this.server.ipAddr}:${p}`)
+			vscode.window.showInformationMessage(`CortexDebugRemote: Started server @ ${this.server.ipAddr}:${p}`);
 			this.port = p;
 		}), (e: any) => {
-			vscode.window.showErrorMessage(`CortexDebugRemote: Error starting server: ${e.toString()}`)
-		}
+			vscode.window.showErrorMessage(`CortexDebugRemote: Error starting server: ${e.toString()}`);
+		};
 	}
 
 	public hello(arg: string): Interfaces.helloReturn {

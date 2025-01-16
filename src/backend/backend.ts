@@ -99,7 +99,7 @@ export class VariableObject {
         if ((/^0[xX][0-9A-Fa-f]+/.test(value)) || /^[-]?[0-9]+/.test(value)) {
             val = parseInt(value.toLowerCase());
 
-            ret += ' ' + name + ';\n' ;
+            ret += ' ' + name + ';\n';
             ret += toStringDecHexOctBin(val);
         }
         return ret;

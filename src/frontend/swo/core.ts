@@ -456,7 +456,7 @@ class RTTDecoder extends EventEmitter {
     }
 
     public onData(input: string | Buffer) {
-        const data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer) ;
+        const data: Buffer = ((typeof input) === 'string') ? Buffer.from(input) : (input as Buffer);
         for (const elt of data) {
             this.buffer[this.bytesRead] = elt;
             this.bytesRead = this.bytesRead + 1;

@@ -45,7 +45,7 @@ export class GDBServer extends EventEmitter {
 
     constructor(
         private cwd: string, private application: string, private args: string[],
-        private initMatch: RegExp, private port: number|undefined, private consolePort: number) {
+        private initMatch: RegExp, private port: number | undefined, private consolePort: number) {
         super();
     }
 
@@ -223,7 +223,7 @@ export class GDBServer extends EventEmitter {
         });
     }
 
-    private sendToConsole(data: string|Buffer) {
+    private sendToConsole(data: string | Buffer) {
         if (this.consoleSocket) {
             this.consoleSocket.write(data);
         } else {

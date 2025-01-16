@@ -45,4 +45,4 @@ const extensionConfig = {
     level: "log", // enables logging required for problem matchers
   },
 };
-module.exports = [ extensionConfig ];
+module.exports = [extensionConfig];

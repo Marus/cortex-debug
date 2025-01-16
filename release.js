@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const child_process = require('child_process');
 
@@ -112,7 +111,7 @@ function run() {
     let isPkg = true;
     const argv = [...process.argv];
     prog = argv[1];
-    argv.shift() ; argv.shift();
+    argv.shift(); argv.shift();
     while (argv.length) {
         switch (argv[0]) {
             case '-h':

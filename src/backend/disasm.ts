@@ -89,7 +89,7 @@ class InstructionRange {
 
     public findInstrIndex(address: number): number {
         const len = this.instructions.length;
-        for (let ix = 0; ix < len ; ix++ ) {
+        for (let ix = 0; ix < len; ix++ ) {
             const instr = this.instructions[ix];
             if (instr.pvtAddress === address) {
                 return ix;
@@ -105,7 +105,7 @@ class InstructionRange {
 
     public findNearbyLowerInstr(address: number, thresh: number): number {
         const lowerAddress = Math.max(0, address - thresh);
-        for (let ix = this.instructions.length - 1; ix > 0 ; ix-- ) {
+        for (let ix = this.instructions.length - 1; ix > 0; ix-- ) {
             const instrAddr = this.instructions[ix].pvtAddress;
             if ((instrAddr >= lowerAddress) && (instrAddr <= address)) {
                 return instrAddr;
@@ -795,7 +795,7 @@ export class GdbDisassembler {
                     this.handleMsg('log', `Debug-${seq}: Elapsed time for Disassembly Request: ${ms} ms\n`);
                 }
                 if (this.gdbSession.isDebugLoggingAvailable()) {
-                    const respObj = { ... response, body: {} };   // Make a shallow copy, replace instructions
+                    const respObj = { ...response, body: {} };   // Make a shallow copy, replace instructions
                     this.gdbSession.writeToDebugLog('Dumping disassembly response to VSCode\n', true);
                     this.debugDump(JSON.stringify(respObj), instrs);
                 }

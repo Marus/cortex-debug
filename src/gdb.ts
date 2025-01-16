@@ -340,7 +340,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         // make sure to 'Stop' the buffered logging if 'trace' is not set
         args.pvtShowDevDebugOutput = args.showDevDebugOutput;
         if (args.showDevDebugOutput === ADAPTER_DEBUG_MODE.VSCODE) {
-            logger.setup(Logger.LogLevel.Verbose , false, false);
+            logger.setup(Logger.LogLevel.Verbose, false, false);
             logger.init((ev: OutputEvent) => {
                 // This callback is called with every msg. We don't want to create a recursive
                 // callback to output a single message. Turn off logging, print and then turn it
@@ -674,13 +674,15 @@ export class GDBDebugSession extends LoggingDebugSession {
                         if (attach) {
                             commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
                             const attachCommands = this.args.overrideAttachCommands != null ?
-                                this.args.overrideAttachCommands.map(COMMAND_MAP) : this.serverController.attachCommands();
+                                this.args.overrideAttachCommands.map(COMMAND_MAP) :
+                                this.serverController.attachCommands();
                             commands.push(...attachCommands);
                             commands.push(...this.args.postAttachCommands.map(COMMAND_MAP));
                         } else {
                             commands.push(...this.args.preLaunchCommands.map(COMMAND_MAP));
                             const launchCommands = this.args.overrideLaunchCommands != null ?
-                                this.args.overrideLaunchCommands.map(COMMAND_MAP) : this.serverController.launchCommands();
+                                this.args.overrideLaunchCommands.map(COMMAND_MAP) :
+                                this.serverController.launchCommands();
                             commands.push(...launchCommands);
                             commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                         }
@@ -1604,7 +1606,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.continuing = false;
 
                 commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
-                const resetCommands = this.args.overrideResetCommands ? this.args.overrideResetCommands.map(COMMAND_MAP) :
+                const resetCommands = this.args.overrideResetCommands ?
+                                      this.args.overrideResetCommands.map(COMMAND_MAP) :
                                       this.serverController.resetCommands();
                 commands.push(...resetCommands);
                 commands.push(...this.args.postResetCommands.map(COMMAND_MAP));
@@ -1658,7 +1661,8 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected getResetCommands(): string[] {
-        return this.args.overrideResetCommands != null ? this.args.overrideResetCommands.map(COMMAND_MAP) :
+        return this.args.overrideResetCommands != null ?
+               this.args.overrideResetCommands.map(COMMAND_MAP) :
                this.serverController.resetCommands();
     }
 
@@ -1949,7 +1953,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             const varRef = args.variablesReference;
             const isReg = (varRef >= HandleRegions.REG_HANDLE_START && varRef < HandleRegions.REG_HANDLE_FINISH);
             const isGlobalOrStatic = this.isVarRefGlobalOrStatic(varRef, undefined);
-            const globOrStatic = !isReg && isGlobalOrStatic === 'global' || isGlobalOrStatic === 'static';
+            const globOrStatic = (!isReg && isGlobalOrStatic === 'global') || isGlobalOrStatic === 'static';
             if (isReg) {
                 [threadId, frameId] = decodeReference(varRef);
                 const varObj = await this.miDebugger.varCreate(varRef, '$' + name, '-', '*', threadId, frameId);
@@ -2314,7 +2318,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         if ((ref !== undefined) && args.name && !((ref >= HandleRegions.REG_HANDLE_START) && (ref <= HandleRegions.REG_HANDLE_FINISH))) {
             const id = this.variableHandles.get(args.variablesReference);
             response.body.canPersist = !!this.isVarRefGlobalOrStatic(args.variablesReference, id);
-            const parentObj = (id as VariableObject);
+            const parentObj = id as VariableObject;
             const fullName = (parentObj ? (parentObj.fullExp || parentObj.exp) + '.' : '') + args.name;
             response.body.dataId = fullName;
             response.body.description = fullName;       // What is displayed in the Breakpoints window
@@ -2428,7 +2432,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                 if (!currentThread) {
                     this.currentThreadId = threadIds.findIndex((x) => {
                         return x === this.stoppedThreadId;
-                    }) >= 0 ? this.stoppedThreadId : threadIds[0];
+                    }) >= 0 ?
+                        this.stoppedThreadId :
+                        threadIds[0];
+
                     if (traceThreads) {
                         this.handleMsg('log', `**** thread-list-ids: no current thread, setting to ${this.currentThreadId}\n`);
                     }
