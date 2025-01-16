@@ -44,6 +44,7 @@ import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
 import { LiveWatchMonitor } from './live-watch-monitor';
+import { HandlerResult } from 'vscode-jsonrpc';
 
 // returns [threadId, frameId]
 // We use 3 nibbles for frameId (max of 4K) and 2 nibbles for ThreadId (max of 256).
@@ -2258,7 +2259,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         return this.allBreakPointsQ.add(doit, r, a);
     }
 
-    protected isVarRefGlobalOrStatic(varRef: number, id: any): 'global' | 'static' | undefined {
+    protected isVarRefGlobalOrStatic(varRefNum: number, id: any): 'global' | 'static' | undefined {
+        const varRef = varRefNum as HandleRegions;
         if (varRef === HandleRegions.GLOBAL_HANDLE_ID) {
             return 'global';
         }
@@ -2956,14 +2958,15 @@ export class GDBDebugSession extends LoggingDebugSession {
         // but it will re-evaluate everything in the Watch window. Basically, it has no concept of a union and there is no
         // way I know of to force a refresh
         */
-        if (args.variablesReference === HandleRegions.GLOBAL_HANDLE_ID) {
+        const varRefRegion = args.variablesReference as HandleRegions;
+        if (varRefRegion === HandleRegions.GLOBAL_HANDLE_ID) {
             return this.globalVariablesRequest(response, args);
-        } else if (args.variablesReference >= HandleRegions.STATIC_HANDLES_START && args.variablesReference <= HandleRegions.STATIC_HANDLES_FINISH) {
+        } else if (varRefRegion >= HandleRegions.STATIC_HANDLES_START && varRefRegion <= HandleRegions.STATIC_HANDLES_FINISH) {
             const [threadId, frameId] = decodeReference(args.variablesReference);
             return this.staticVariablesRequest(threadId, frameId, response, args);
-        } else if (args.variablesReference >= HandleRegions.STACK_HANDLES_START && args.variablesReference <= HandleRegions.STACK_HANDLES_FINISH) {
+        } else if (varRefRegion >= HandleRegions.STACK_HANDLES_START && varRefRegion <= HandleRegions.STACK_HANDLES_FINISH) {
             return this.stackVariablesRequest(response, args);
-        } else if (args.variablesReference >= HandleRegions.REG_HANDLE_START && args.variablesReference <= HandleRegions.REG_HANDLE_FINISH) {
+        } else if (varRefRegion >= HandleRegions.REG_HANDLE_START && varRefRegion <= HandleRegions.REG_HANDLE_FINISH) {
             return this.registersRequest(response, args);
         } else {
             id = this.variableHandles.get(args.variablesReference);

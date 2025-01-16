@@ -310,7 +310,7 @@ export class RTOSEmbOS extends RTOSCommon.RTOSBase {
 
         const maskedState = (state & OS_TASK_STATE_MASK);
 
-        switch (maskedState) {
+        switch (maskedState as OsTaskPendingState) {
             case OsTaskPendingState.READY:
                 if (pendTimeout) {
                     return new TaskDelayed(pendTimeout);

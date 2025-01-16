@@ -62,7 +62,7 @@ ChibiOSItems[DisplayFields[DisplayFields.STACK_MIN_FREE]] = { width: 3, headerRo
 const DisplayFieldNames: string[] = Object.keys(ChibiOSItems);
 
 function getThreadStateName(s: number): string {
-    if (s < chThreadState._SIZE) {
+    if ((s as chThreadState) < chThreadState._SIZE) {
         return chThreadState[s];
     }
 

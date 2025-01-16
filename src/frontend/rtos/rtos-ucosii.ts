@@ -322,14 +322,14 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
     }
 
     protected async analyzeTaskState(threadAddr: number, curTaskObj: object, flagPendMap: Map<number, FlagGroup[]>, frameId: number): Promise<TaskState> {
-        const state = parseInt(curTaskObj['OSTCBStat-val']);
+        const state = parseInt(curTaskObj['OSTCBStat-val']) as OsTaskState;
         switch (state) {
             case OsTaskState.READY: return new TaskReady();
             case OsTaskState.SUSPENDED: return new TaskSuspended();
             default: {
                 const resultState = new TaskPending();
                 PendingTaskStates.forEach((candidateState) => {
-                    if ((state & candidateState) === candidateState) {
+                    if ((state & candidateState)) {
                         resultState.addEventType(getEventTypeForTaskState(candidateState));
                     }
                 });
@@ -366,7 +366,7 @@ export class RTOSUCOS2 extends RTOSCommon.RTOSBase {
             if (flagGroupPtr.variablesReference > 0 && flagGroupPtr.evaluateName) {
                 const osFlagGrp = await this.getVarChildrenObj(flagGroupPtr.variablesReference, flagGroupPtr.name);
                 // Check if we are looking at an initialized flag group
-                if (parseInt(osFlagGrp['OSFlagType-val']) === OsEventType.Flag) {
+                if (parseInt(osFlagGrp['OSFlagType-val']) as OsEventType === OsEventType.Flag) {
                     const groupAddr = parseInt(await this.getExprVal(`&(${flagGroupPtr.evaluateName})`, frameId));
                     const flagGroup: FlagGroup = { address: groupAddr };
                     const reprValue = osFlagGrp['OSFlagName-val'];
