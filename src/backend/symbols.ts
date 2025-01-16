@@ -1,12 +1,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as crypto from 'crypto';
 import { SpawnLineReader, SymbolFile, validateELFHeader } from '../common';
 import { IntervalTree, Interval } from 'node-interval-tree';
-import JsonStreamStringify from 'json-stream-stringify';
-const StreamArray = require('stream-json/streamers/StreamArray');
-import * as zlib from 'zlib';
 
 import { SymbolType, SymbolScope, SymbolInformation as SymbolInformation } from '../symbols';
 import { GDBDebugSession } from '../gdb';

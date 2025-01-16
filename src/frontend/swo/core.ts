@@ -225,7 +225,7 @@ class SWOWebview {
         return html;
     }
 
-    private processors: Array<SWORTTGraphProcessor | SWORTTAdvancedProcessor> = [];
+    private processors: (SWORTTGraphProcessor | SWORTTAdvancedProcessor)[] = [];
     public registerProcessors(processor: SWORTTGraphProcessor | SWORTTAdvancedProcessor): void {
         processor.on('message', this.sendMessage.bind(this));
         this.processors.push(processor);

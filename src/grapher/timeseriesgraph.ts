@@ -44,10 +44,10 @@ export class TimeseriesGraph implements Graph {
         bottom: 60
     };
 
-    private annotations: Array<{
+    private annotations: {
         timestamp: number,
         type: string
-    }> = [];
+    }[] = [];
 
     private sg: any;
     private sx: d3.ScaleTime<number, number>;
