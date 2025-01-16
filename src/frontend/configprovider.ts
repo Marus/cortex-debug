@@ -271,9 +271,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
     }
 
-    private validateLoadAndSymbolFiles(config: vscode.DebugConfiguration, cwd: any) {
+    private validateLoadAndSymbolFiles(config: vscode.DebugConfiguration, cwd: string) {
         // Right now, we don't consider a bad executable as fatal. Technically, you don't need an executable but
         // users will get a horrible debug experience ... so many things don't work.
+        if (config.executable) {
+            let exe = config.executable;
+            exe = path.isAbsolute(exe) ? exe : path.join(cwd || '.', exe);
+            config.executable = path.normalize(exe).replace(/\\/g, '/');           
+        }
         const def = defSymbolFile(config.executable);
         const symFiles: SymbolFile[] = config.symbolFiles?.map((v) => typeof v === 'string' ? defSymbolFile(v) : v) || [def];
         if (!symFiles || (symFiles.length === 0)) {
