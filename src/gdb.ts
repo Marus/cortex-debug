@@ -1602,8 +1602,8 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                 commands.push(...this.args.preResetCommands.map(COMMAND_MAP));
                 const resetCommands = this.args.overrideResetCommands
-                                      ? this.args.overrideResetCommands.map(COMMAND_MAP)
-                                      : this.serverController.resetCommands();
+                    ? this.args.overrideResetCommands.map(COMMAND_MAP)
+                    : this.serverController.resetCommands();
                 commands.push(...resetCommands);
                 commands.push(...this.args.postResetCommands.map(COMMAND_MAP));
 
@@ -1656,8 +1656,8 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected getResetCommands(): string[] {
         return this.args.overrideResetCommands != null
-               ? this.args.overrideResetCommands.map(COMMAND_MAP)
-               : this.serverController.resetCommands();
+            ? this.args.overrideResetCommands.map(COMMAND_MAP)
+            : this.serverController.resetCommands();
     }
 
     protected async resetDevice(response: DebugProtocol.Response, args: any) {

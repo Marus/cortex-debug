@@ -123,7 +123,7 @@ export class GDBServerConsoleInstance {
     }
 
     public logData(data: Buffer | string) {
-         GDBServerConsole.logDataStatic(this.ptyTerm, data);
+        GDBServerConsole.logDataStatic(this.ptyTerm, data);
     }
 
     public debugMsg(msg: string) {

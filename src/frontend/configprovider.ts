@@ -193,7 +193,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.toolchainPath) {
             // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
             if (!config.armToolchainPath && config.servertype === 'stlink') {
-               config.armToolchainPath = STLinkServerController.getArmToolchainPath();
+                config.armToolchainPath = STLinkServerController.getArmToolchainPath();
             }
         }
 

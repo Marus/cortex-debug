@@ -176,7 +176,7 @@ export class TimeseriesGraph implements Graph {
 
             const visAnnotations = this.annotations.filter((a) => a.timestamp >= now - this.span && a.timestamp <= now);
 
-             const lines = this.ag.selectAll('line.annotation').data(visAnnotations)
+            const lines = this.ag.selectAll('line.annotation').data(visAnnotations)
                 .attr('x1', (d: any) => this.x(d.timestamp))
                 .attr('x2', (d: any) => this.x(d.timestamp));
             lines.enter().append('line').classed('annotation', true)

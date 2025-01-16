@@ -90,8 +90,6 @@ export default tseslint.config(
             'no-duplicate-case': 'off',                                 // 1 instance
             '@typescript-eslint/await-thenable': 'off',                 // 1 instance
             'no-self-assign': 'off',                                    // 1 instance
-
-            '@stylistic/indent': 'off',                         // 450 instances
         }
     },
     {

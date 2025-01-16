@@ -177,8 +177,7 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
     }
 }
 
-export class RTOSTracker
-    implements vscode.DebugAdapterTrackerFactory, DebugStopRunEvent {
+export class RTOSTracker implements vscode.DebugAdapterTrackerFactory, DebugStopRunEvent {
     private sessionMap: Map<string, RTOSSession> = new Map<string, RTOSSession>();
     private provider: RTOSViewProvider;
     public enabled: boolean;

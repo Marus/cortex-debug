@@ -525,12 +525,12 @@ export class PtyTerminal extends EventEmitter {
         if (!this.didPrompt && !this.suspendPrompting) {
             if (this.promptTimer === null) {
                 this.promptTimer = new ResettableTimeout(() => {
-                const str = this.options.prompt + this.curLine;
-                if (str.length) {
-                    this.writeEmitter.fire(str);
-                }
-                this.cursorPos = this.curLine.length + 1;
-                this.didPrompt = true;
+                    const str = this.options.prompt + this.curLine;
+                    if (str.length) {
+                        this.writeEmitter.fire(str);
+                    }
+                    this.cursorPos = this.curLine.length + 1;
+                    this.didPrompt = true;
                 }, 100);
             } else {
                 this.promptTimer.reset();

@@ -71,12 +71,12 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public static getSTMCubeIdeDir(): string {
         switch (os.platform()) {
-        case 'darwin':
-            return ST_DIR;
-        case 'linux':
-            return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, '');
-        default:
-            return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
+            case 'darwin':
+                return ST_DIR;
+            case 'linux':
+                return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, '');
+            default:
+                return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
         }
     }
 
@@ -110,7 +110,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public launchCommands(): string[] {
         const commands = [
-           // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
+            // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
             'interpreter-exec console "monitor halt"'

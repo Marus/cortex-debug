@@ -564,9 +564,11 @@ export class GdbDisassembler {
     private findInCache(startAddr: number, endAddr: number): InstructionRange {
         for (const old of this.cache) {
             if (old.isInsideRange(startAddr, endAddr)) {
-                this.debugDump('Instruction cache hit: '
+                this.debugDump(
+                    'Instruction cache hit: '
                     + JSON.stringify({ startAddr: hexFormat(startAddr), endAddr: hexFormat(endAddr) }) + '\n',
-                    old.instructions);
+                    old.instructions
+                );
                 return old;
             }
         }

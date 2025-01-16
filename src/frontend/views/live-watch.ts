@@ -12,7 +12,7 @@ interface SaveVarState {
 }
 
 interface SaveVarStateMap {
-     [name: string]: SaveVarState;
+    [name: string]: SaveVarState;
 }
 export class LiveVariableNode extends BaseNode {
     protected session: vscode.DebugSession | undefined;        // This is transient
@@ -71,9 +71,9 @@ export class LiveVariableNode extends BaseNode {
     public getTreeItem(): TreeItem | Promise<TreeItem> {
         const state = this.variablesReference || (this.children?.length > 0)
             ? (this.children?.length > 0
-                ? TreeItemCollapsibleState.Expanded
-                : TreeItemCollapsibleState.Collapsed
-            )
+                    ? TreeItemCollapsibleState.Expanded
+                    : TreeItemCollapsibleState.Collapsed
+                )
             : TreeItemCollapsibleState.None;
 
         const parts = this.name.startsWith('\'') && this.isRootChild() ? this.name.split('\'::') : [this.name];

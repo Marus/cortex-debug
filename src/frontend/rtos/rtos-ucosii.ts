@@ -522,11 +522,13 @@ enum OsTaskState {
     PEND_FLAGGROUP = 0x20
 }
 
-const PendingTaskStates = [OsTaskState.PEND_SEMAPHORE,
-OsTaskState.PEND_MAILBOX,
-OsTaskState.PEND_QUEUE,
-OsTaskState.PEND_MUTEX,
-OsTaskState.PEND_FLAGGROUP] as const;
+const PendingTaskStates = [
+    OsTaskState.PEND_SEMAPHORE,
+    OsTaskState.PEND_MAILBOX,
+    OsTaskState.PEND_QUEUE,
+    OsTaskState.PEND_MUTEX,
+    OsTaskState.PEND_FLAGGROUP,
+];
 
 enum OsEventType {
     Mailbox = 1,

@@ -334,7 +334,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
 
                 stackInfo.stackPeak = 0;
                 while ((stackInfo.stackPeak < bytes.length) && (bytes[stackInfo.stackPeak] === 0x55)) {
-                  stackInfo.stackPeak++;
+                    stackInfo.stackPeak++;
                 }
             } catch (e) {
                 console.log(e);

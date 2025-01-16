@@ -487,15 +487,15 @@ export class TcpPortScanner {
         return results;
     }
 
-   /**
-    * quick/dirty way of figuring out if this is a local host. guaranteed way would have
-    * been to do a dns.resolve() or dns.lookup(). server method only works for local hosts.
-    * Client method works for anything but super slow on windows.
-    *
-    * FIXME: should we use server-method only on windows?
-    *
-    * @param host an ip-address
-    */
+    /**
+     * quick/dirty way of figuring out if this is a local host. guaranteed way would have
+     * been to do a dns.resolve() or dns.lookup(). server method only works for local hosts.
+     * Client method works for anything but super slow on windows.
+     *
+     * FIXME: should we use server-method only on windows?
+     *
+     * @param host an ip-address
+     */
     protected static shouldUseServerMethod(host: string): boolean {
         if (TcpPortScanner.ForceClientMethod) {
             return false;

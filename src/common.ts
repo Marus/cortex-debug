@@ -173,8 +173,8 @@ export class TelemetryEvent extends Event implements DebugProtocol.Event {
 
 export enum ChainedEvents {
     POSTSTART = 'postStart', // Default - a connection was established with the gdb-server, before initialization is done
-    POSTINIT = 'postInit'    // all init functionality has been done. Generally past programming and stopped at or
-                             // past reset-vector but depends on customizations
+    POSTINIT = 'postInit'    /* all init functionality has been done. Generally past programming and stopped at or
+                              * past reset-vector but depends on customizations */
 }
 export interface ChainedConfig {
     enabled: boolean;
