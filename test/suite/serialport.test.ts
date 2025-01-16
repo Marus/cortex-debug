@@ -11,10 +11,8 @@ suite('Serial Port tests', () => {
 
         try {
             const ports = await SerialPort.list();
-            if (true) {
-                for (const port of ports) {
-                    console.log('\tFound port: ' + port.path);
-                }
+            for (const port of ports) {
+                console.log('\tFound port: ' + port.path);
             }
         } catch (e) {
             assert.fail(e);

@@ -18,13 +18,11 @@ export function ServerConsoleLog(str: string, usePid?: number) {
             GdbPid = usePid;
         }
         str = `[${date.toISOString()}] ppid=${process.pid} pid=${GdbPid} ` + str;
-        // console.log(str);
-        if (true) {
-            if (!str.endsWith('\n')) {
-                str += '\n';
-            }
-            fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
+
+        if (!str.endsWith('\n')) {
+            str += '\n';
         }
+        fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
     } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }

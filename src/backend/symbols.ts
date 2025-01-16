@@ -882,22 +882,6 @@ export class SymbolTable {
         return null;
     }
 
-    public loadSymbolsFromGdb(waitOn: Promise<void>): Promise<boolean> {
-        return new Promise<boolean>((resolve, reject) => {
-            waitOn.then(async () => {
-                if (true) {
-                    // gdb is un-reliable for getting symbol information. Most of the time it works but we have
-                    // reports of it taking 30+ seconds to dump symbols from small executable (C++) and we have
-                    // also seen it run out of memory and crash on a well decked out Mac. Also seen asserts.
-                    resolve(true);
-                    return;
-                }
-            }, (e) => {
-                reject(e);
-            });
-        });
-    }
-
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }
         if (os.platform() === 'win32') {

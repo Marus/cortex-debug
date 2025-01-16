@@ -318,7 +318,7 @@ export abstract class RTOSBase {
                 let have2ndRow = false;
                 const commonHeaderRowPart = '  <vscode-data-grid-row row-type="header" class="threads-header-row">\n';
                 const commonHeaderCellPart = '    <vscode-data-grid-cell cell-type="columnheader" class="threads-header-cell';
-                if (true) {
+                {
                     header = commonHeaderRowPart;
                     for (const key of displayFieldNames) {
                         const txt = padText(key, RTOSDisplayColumn[key].headerRow1);

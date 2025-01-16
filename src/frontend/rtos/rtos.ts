@@ -123,7 +123,6 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
     ) { }
 
     public onDidSendMessage(msg: any): void {
-        appendMsgToTmpDir('s ' + JSON.stringify(msg));
         const message = msg as DebugProtocol.ProtocolMessage;
         if (!message) {
             return;
@@ -170,10 +169,6 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                 break;
             }
         }
-    }
-
-    public onWillReceiveMessage(msg: any) {
-        appendMsgToTmpDir('r ' + JSON.stringify(msg));
     }
 }
 
@@ -479,35 +474,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
                 <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
             </body>
             </html>`;
-        writeHtmlToTmpDir(ret);
         return ret;
-    }
-}
-
-function writeHtmlToTmpDir(str: string) {
-    try {
-        if (false) {
-            const fname = path.join(os.tmpdir(), 'rtos.html');
-            console.log(`Write HTML to file ${fname}`);
-            fs.writeFileSync(fname, str);
-        }
-    } catch (e) {
-        console.log(e ? e.toString() : 'unknown exception?');
-    }
-}
-
-function appendMsgToTmpDir(str: string) {
-    try {
-        if (false) {
-            const fname = path.join(os.tmpdir(), 'rtos-msgs.txt');
-            console.log(`Write ${str} to file ${fname}`);
-            if (!str.endsWith('\n')) {
-                str = str + '\n';
-            }
-            fs.appendFileSync(fname, str);
-        }
-    } catch (e) {
-        console.log(e ? e.toString() : 'unknown exception?');
     }
 }
 

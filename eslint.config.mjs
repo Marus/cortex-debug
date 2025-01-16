@@ -85,7 +85,6 @@ export default tseslint.config(
             'no-prototype-builtins': 'off',                             // 10 instances
             '@typescript-eslint/no-unsafe-enum-comparison': 'off',      // 9 instances
             '@typescript-eslint/no-unnecessary-type-assertion': 'off',  // 8 instances
-            'no-constant-condition': 'off',                             // 8 instances
         }
     },
     {

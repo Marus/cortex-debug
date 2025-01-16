@@ -71,15 +71,6 @@ enum HandleRegions {
     /* eslint-enable */
 }
 
-if (false) {
-    for (const nm of Object.keys(HandleRegions)) {
-        if (isNaN(Number(nm))) {
-            const v = HandleRegions[nm];
-            console.log(nm.padStart(25, ' '), '0x' + v.toString(16).padStart(8, '0'), v.toString().padStart(10, ' '));
-        }
-    }
-}
-
 const SERVER_TYPE_MAP = {
     jlink: JLinkServerController,
     openocd: OpenOCDServerController,
@@ -583,7 +574,6 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             const symbolsPromise = this.loadSymbols();      // This is totally async and in most cases, done while gdb is starting
             const gdbPromise = this.startGdb(response);
-            // const gdbInfoVariables = this.symbolTable.loadSymbolsFromGdb(gdbPromise);
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
             this.getTCPPorts(this.usingParentServer).then(async () => {
                 await this.serverController.allocateRTTPorts();     // Must be done before serverArguments()

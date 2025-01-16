@@ -114,28 +114,6 @@ export class CortexDebugExtension {
                 this.liveWatchProvider.saveState();
             })
         );
-
-        this.testSVDParser();
-    }
-
-    private testSVDParser() {
-        try {
-            if (false) {
-                const session: vscode.DebugSession = {
-                    id: 'blah',
-                    type: 'cortex-debug',
-                    name: 'blah',
-                    workspaceFolder: undefined,
-                    configuration: undefined,
-                    customRequest: (command: string, args?: any): Thenable<any> => {
-                        throw new Error('Function not implemented.');
-                    },
-                    getDebugProtocolBreakpoint: (breakpoint: any): Thenable<any> => {
-                        throw new Error('Function not implemented.');
-                    }
-                };
-            }
-        } catch (e) {}
     }
 
     private textDocsClosed(e: vscode.TextDocument) {
