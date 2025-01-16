@@ -116,6 +116,7 @@ function run() {
                 console.log(`Usage: node ${prog} [--dryrun] [--package] [--publish] [--vsx-also]`);
                 console.log('\t--package is by default, true');
                 process.exit(0);
+                break;
             }
             case '--dryrun': {
                 isDryRun = true;

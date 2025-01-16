@@ -83,7 +83,6 @@ export default tseslint.config(
             'no-undef': 'off',                                          // 4 instances
             'no-useless-catch': 'off',                                  // 4 instances
             '@typescript-eslint/no-redundant-type-constituents': 'off', // 3 instances
-            'no-fallthrough': 'off',                                    // 2 instances
         }
     },
     {

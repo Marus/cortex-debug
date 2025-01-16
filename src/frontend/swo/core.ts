@@ -511,10 +511,10 @@ export class RTTCore extends SWORTTCoreBase {
                         const processor = new SWORTTAdvancedProcessor(conf as any as SWOAdvancedDecoderConfig);
                         if (this.webview) { this.webview.registerProcessors(processor); }
                         this.processors.push(processor);
-                        break;
                     } catch (e) {
                         vscode.window.showErrorMessage(`Error Initializing Advanced Decoder: ${e.toString()}`);
                     }
+                    break;
                 default:
                     break;
             }
