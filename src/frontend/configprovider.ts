@@ -277,7 +277,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.executable) {
             let exe = config.executable;
             exe = path.isAbsolute(exe) ? exe : path.join(cwd || '.', exe);
-            config.executable = path.normalize(exe).replace(/\\/g, '/');           
+            config.executable = path.normalize(exe).replace(/\\/g, '/');
         }
         const def = defSymbolFile(config.executable);
         const symFiles: SymbolFile[] = config.symbolFiles?.map((v) => typeof v === 'string' ? defSymbolFile(v) : v) || [def];
