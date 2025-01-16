@@ -9,6 +9,7 @@ import * as os from 'os';
 import * as stream from 'stream';
 import * as path from 'path';
 import { GDBDebugSession } from './gdb';
+import { CreateReadStreamOptions } from 'fs/promises';
 const readline = require('readline');
 
 export enum ADAPTER_DEBUG_MODE {
@@ -259,6 +260,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     servertype: string;
     serverpath: string;
     gdbPath: string;
+    gdbServerConsolePort: number;
     objdumpPath: string;
     serverArgs: string[];
     serverCwd: string;
@@ -713,7 +715,7 @@ export function quoteShellCmdLine(list: string[]): string {
     return list.map((s) => quoteShellAndCmdChars(s)).join(' ');
 }
 
-export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean {
+export function sanitizeDevDebug(config: { showDevDebugOutput?: string | boolean }): boolean {
     const modes = Object.values(ADAPTER_DEBUG_MODE);
     let val = config.showDevDebugOutput;
     if (typeof (val) === 'string') {
@@ -724,7 +726,7 @@ export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean 
         delete config.showDevDebugOutput;
     } else if ((val === true) || (val === 'true)')) {
         config.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
-    } else if (modes.indexOf(val) < 0) {
+    } else if (modes.indexOf(val as ADAPTER_DEBUG_MODE) < 0) {
         config.showDevDebugOutput = ADAPTER_DEBUG_MODE.VSCODE;
         return false;       // Meaning, needed adjustment
     }
@@ -842,7 +844,7 @@ export class SpawnLineReader extends EventEmitter {
         return this.promise;
     }
 
-    public startWithFile(filename: fs.PathLike, options: string | any = null, cb: (line: string, err?: any) => boolean = null): Promise<boolean> {
+    public startWithFile(filename: fs.PathLike, options?: CreateReadStreamOptions, cb: (line: string, err?: any) => boolean = null): Promise<boolean> {
         if (this.promise) { throw new Error('SpawnLineReader: can\'t reuse this object'); }
         this.callback = cb;
         this.promise = new Promise<boolean>((resolve) => {

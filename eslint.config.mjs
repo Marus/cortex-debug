@@ -82,7 +82,6 @@ export default tseslint.config(
             'no-case-declarations': 'off',                              // 6 instances
             'no-undef': 'off',                                          // 4 instances
             'no-useless-catch': 'off',                                  // 4 instances
-            '@typescript-eslint/no-redundant-type-constituents': 'off', // 3 instances
         }
     },
     {

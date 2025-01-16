@@ -1591,7 +1591,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     // the old launch.json properties for a Restart
     //
     private sendDummyStackTrace = false;
-    protected doResetDevice(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments | any): Promise<void> {
+    protected doResetDevice(response: DebugProtocol.RestartResponse, args: DebugProtocol.RestartArguments): Promise<void> {
         return new Promise<void>((resolve) => {
             const mode: SessionMode = SessionMode.RESET;
             const restartProcessing = () => {
