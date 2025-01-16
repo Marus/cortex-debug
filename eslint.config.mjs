@@ -18,6 +18,14 @@ export default tseslint.config(
         semi: 'always',
     }),
     {
+        files: ['resources/*.js'],
+        languageOptions: {
+            globals: {
+                acquireVsCodeApi: true,      // available for VSCode WebViews
+            },
+        },
+    },
+    {
         languageOptions: {
             globals: {
                 ...globals.node,
@@ -80,7 +88,6 @@ export default tseslint.config(
             'no-constant-condition': 'off',                             // 8 instances
             '@typescript-eslint/unbound-method': 'off',                 // 7 instances
             'no-case-declarations': 'off',                              // 6 instances
-            'no-undef': 'off',                                          // 4 instances
         }
     },
     {

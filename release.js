@@ -69,7 +69,7 @@ function vsceRun(pkgOnly) {
                 }
             });
             if (vsxAlso) {
-                vsxCmd = ['npx', 'ovsx', 'publish', '-p', openVsxPat];
+                const vsxCmd = ['npx', 'ovsx', 'publish', '-p', openVsxPat];
                 runProg(vsxCmd, (code) => {
                     if (code !== 0) {
                         errExit(`Failed '${vsxCmd}'`);
