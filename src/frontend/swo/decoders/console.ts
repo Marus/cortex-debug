@@ -109,7 +109,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     }
 
     private logFileWrite(text: string) {
-        if ( (this.logFd < 0) || (text === '') ) {
+        if ((this.logFd < 0) || (text === '')) {
             return;
         }
         try {

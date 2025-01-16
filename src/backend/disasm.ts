@@ -89,7 +89,7 @@ class InstructionRange {
 
     public findInstrIndex(address: number): number {
         const len = this.instructions.length;
-        for (let ix = 0; ix < len; ix++ ) {
+        for (let ix = 0; ix < len; ix++) {
             const instr = this.instructions[ix];
             if (instr.pvtAddress === address) {
                 return ix;
@@ -105,7 +105,7 @@ class InstructionRange {
 
     public findNearbyLowerInstr(address: number, thresh: number): number {
         const lowerAddress = Math.max(0, address - thresh);
-        for (let ix = this.instructions.length - 1; ix > 0; ix-- ) {
+        for (let ix = this.instructions.length - 1; ix > 0; ix--) {
             const instrAddr = this.instructions[ix].pvtAddress;
             if ((instrAddr >= lowerAddress) && (instrAddr <= address)) {
                 return instrAddr;
@@ -875,7 +875,7 @@ export class GdbDisassembler {
             range.verify = range.qStart = prev.low;
             range.symNode = prev;
             range.isKnownStart = true;
-            for (let ix = 1; ix < functions.length; ix++ ) {
+            for (let ix = 1; ix < functions.length; ix++) {
                 const item = functions[ix];
                 if ((prev.low !== item.low) || (prev.high !== item.high)) { // Yes, duplicates are possible
                     const diff = item.low - high;
@@ -917,7 +917,7 @@ export class GdbDisassembler {
         if (instrs.length > 0) {
             let prev = null;
             let count = 0;
-            for (let ix = 0; ix < instrs.length; ix++ ) {
+            for (let ix = 0; ix < instrs.length; ix++) {
                 const instr = instrs[ix];
                 if (instr.pvtInstructionBytes && !instr.pvtIsData) {
                     const nBytes = (instr.pvtInstructionBytes.length + 1) / 3;

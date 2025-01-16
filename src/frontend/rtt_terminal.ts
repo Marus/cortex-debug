@@ -151,7 +151,7 @@ export class RTTTerminal {
             time = this.lastTimeStr;
         }
 
-        for (let ix = 1; ix < buf.length; ix++ ) {
+        for (let ix = 1; ix < buf.length; ix++) {
             if (buf[ix - 1] !== 0xff) { continue; }
             const chr = buf[ix];
             if (((chr >= 48) && (chr <= 57)) || ((chr >= 65) && (chr <= 90))) {

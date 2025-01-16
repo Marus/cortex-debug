@@ -102,7 +102,6 @@ export default tseslint.config(
             '@stylistic/max-len': 'off',                        // 19 instances
             '@stylistic/quotes': 'off',                         // 17 instances
             '@stylistic/padded-blocks': 'off',                  // 17 instances
-            '@stylistic/space-in-parens': 'off',                // 11 instances
         }
     },
     {

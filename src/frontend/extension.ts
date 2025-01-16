@@ -685,7 +685,7 @@ export class CortexDebugExtension {
     private getCurrentArgs(session: vscode.DebugSession): ConfigurationArguments | vscode.DebugConfiguration {
         if (!session) {
             session = vscode.debug.activeDebugSession;
-            if (!session || (session.type !== 'cortex-debug') ) {
+            if (!session || (session.type !== 'cortex-debug')) {
                 return undefined;
             }
         }

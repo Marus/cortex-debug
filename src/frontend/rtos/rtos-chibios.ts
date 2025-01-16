@@ -263,7 +263,7 @@ export class RTOSChibiOS extends RTOSCommon.RTOSBase {
 
                             mySetter(DisplayFields.ID, i.toString());
                             mySetter(DisplayFields.THREAD_DESCRIPTION,
-                                threadName + '@' + hexFormat(currentThreadAddr) + ' ' + threadState + ' [P:' + threadPrio + ']' );
+                                threadName + '@' + hexFormat(currentThreadAddr) + ' ' + threadState + ' [P:' + threadPrio + ']');
                             mySetter(DisplayFields.FLAGS, hexFormat(threadFlags, 2));
                             mySetter(DisplayFields.REFS, hexFormat(threadRefs));
                             mySetter(DisplayFields.TIME, threadTime);

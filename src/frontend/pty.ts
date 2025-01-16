@@ -221,7 +221,7 @@ export class PtyTerminal extends EventEmitter {
             this.didPrompt = false;
             this.suspendPrompting = true;
         }
-        for (let ix = 0; ix < lines.length; ix++ ) {
+        for (let ix = 0; ix < lines.length; ix++) {
             const line = lines[ix];
             const isLastLine = (ix === (lines.length - 1));
             if ((line === '') && isLastLine) {

@@ -862,7 +862,7 @@ export class SymbolTable {
     }
 
     public getGlobalOrStaticVarByName(name: string, file?: string): SymbolInformation {
-        if (!file && this.rttSymbol && (name === this.rttSymbolName) ) {
+        if (!file && this.rttSymbol && (name === this.rttSymbolName)) {
             return this.rttSymbol;
         }
 
