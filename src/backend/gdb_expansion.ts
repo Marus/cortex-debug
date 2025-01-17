@@ -18,13 +18,13 @@ export function isExpandable(value: string): number {
     if (value[0] === '{') { return 1; } // object
     if (value.startsWith('true')) { return 0; }
     if (value.startsWith('false')) { return 0; }
-    if (match = nullpointerRegex.exec(value)) { return 0; }
-    if (match = referenceStringRegex.exec(value)) { return 0; }
-    if (match = referenceRegex.exec(value)) { return 2; } // reference
-    if (match = charRegex.exec(value)) { return 0; }
-    if (match = numberRegex.exec(value)) { return 0; }
-    if (match = variableRegex.exec(value)) { return 0; }
-    if (match = errorRegex.exec(value)) { return 0; }
+    if ((match = nullpointerRegex.exec(value))) { return 0; }
+    if ((match = referenceStringRegex.exec(value))) { return 0; }
+    if ((match = referenceRegex.exec(value))) { return 2; } // reference
+    if ((match = charRegex.exec(value))) { return 0; }
+    if ((match = numberRegex.exec(value))) { return 0; }
+    if ((match = variableRegex.exec(value))) { return 0; }
+    if ((match = errorRegex.exec(value))) { return 0; }
     return 0;
 }
 
@@ -136,7 +136,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         if (result) {
             const results = [];
             results.push(result);
-            while (result = parseCommaResult(true)) {
+            while ((result = parseCommaResult(true))) {
                 results.push(result);
             }
             value = value.substr(1).trim(); // }
@@ -158,26 +158,26 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         } else if (value.startsWith('false')) {
             primitive = 'false';
             value = value.substr(5).trim();
-        } else if (match = nullpointerRegex.exec(value)) {
+        } else if ((match = nullpointerRegex.exec(value))) {
             primitive = '<nullptr>';
             value = value.substr(match[0].length).trim();
-        } else if (match = referenceStringRegex.exec(value)) {
+        } else if ((match = referenceStringRegex.exec(value))) {
             value = value.substr(match[1].length).trim();
             primitive = parseCString();
-        } else if (match = referenceRegex.exec(value)) {
+        } else if ((match = referenceRegex.exec(value))) {
             primitive = '*' + match[0];
             value = value.substr(match[0].length).trim();
-        } else if (match = charRegex.exec(value)) {
+        } else if ((match = charRegex.exec(value))) {
             primitive = match[1];
             value = value.substr(match[0].length - 1);
             primitive += ' ' + parseCString();
-        } else if (match = numberRegex.exec(value)) {
+        } else if ((match = numberRegex.exec(value))) {
             primitive = match[0];
             value = value.substr(match[0].length).trim();
-        } else if (match = variableRegex.exec(value)) {
+        } else if ((match = variableRegex.exec(value))) {
             primitive = match[0];
             value = value.substr(match[0].length).trim();
-        } else if (match = errorRegex.exec(value)) {
+        } else if ((match = errorRegex.exec(value))) {
             primitive = match[0];
             value = value.substr(match[0].length).trim();
         } else {

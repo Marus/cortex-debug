@@ -77,7 +77,6 @@ export default tseslint.config(
             '@typescript-eslint/prefer-promise-reject-errors': 'off',   // 36 instances
             'no-async-promise-executor': 'off',                         // 29 instances
             '@typescript-eslint/no-require-imports': 'off',             // 24 instances
-            'no-cond-assign': 'off',                                    // 21 instances
             '@typescript-eslint/require-await': 'off',                  // 11 instances
         }
     },

@@ -233,7 +233,7 @@ export function parseMI(output: string): MINode {
         if (result) {
             const results = [];
             results.push(result);
-            while (result = parseCommaResult()) {
+            while ((result = parseCommaResult())) {
                 results.push(result);
             }
             output = output.substr(1); // }
@@ -281,7 +281,7 @@ export function parseMI(output: string): MINode {
 
     let match;
 
-    while (match = outOfBandRecordRegex.exec(output)) {
+    while ((match = outOfBandRecordRegex.exec(output))) {
         output = output.substr(match[0].length);
         if (match[1] && token === undefined && match[1] !== 'undefined') {
             token = parseInt(match[1]);
@@ -297,7 +297,7 @@ export function parseMI(output: string): MINode {
                 output: []
             };
             let result;
-            while (result = parseCommaResult()) {
+            while ((result = parseCommaResult())) {
                 asyncRecord.output.push(result);
             }
             outOfBandRecord.push(asyncRecord);
@@ -313,7 +313,7 @@ export function parseMI(output: string): MINode {
         output = output.replace(newlineRegex, '');
     }
 
-    if (match = resultRecordRegex.exec(output)) {
+    if ((match = resultRecordRegex.exec(output))) {
         output = output.substr(match[0].length);
         if (match[1] && token === undefined) {
             token = parseInt(match[1]);
@@ -323,7 +323,7 @@ export function parseMI(output: string): MINode {
             results: []
         };
         let result;
-        while (result = parseCommaResult()) {
+        while ((result = parseCommaResult())) {
             resultRecords.results.push(result);
         }
 

@@ -298,7 +298,7 @@ export class GdbDisassembler {
             const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
             // Num Enb  Low Addr   High Addr  Attrs
             // 1   y    0x10000000 0x10100000 flash blocksize 0x200 nocache
-            while (match = regex.exec(str)) {
+            while ((match = regex.exec(str))) {
                 const [flag, lowAddr, highAddr, attrsStr] = match.slice(1, 5);
                 if (flag === 'y') {
                     const nHighAddr = parseInt(highAddr);
