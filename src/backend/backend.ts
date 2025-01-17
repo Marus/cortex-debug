@@ -71,7 +71,7 @@ export class VariableObject {
     public id: number;
     public fullExp: string;
     public parent: number;      // Variable Reference
-    public children: {[name: string]: string};  // Field-name to Gdb-variable map
+    public children: { [name: string]: string };  // Field-name to Gdb-variable map
     constructor(p: number, node: any) {
         this.parent = p;
         this.name = MINode.valueOf(node, 'name');
@@ -99,13 +99,13 @@ export class VariableObject {
         if ((/^0[xX][0-9A-Fa-f]+/.test(value)) || /^[-]?[0-9]+/.test(value)) {
             val = parseInt(value.toLowerCase());
 
-            ret += ' ' + name + ';\n' ;
+            ret += ' ' + name + ';\n';
             ret += toStringDecHexOctBin(val);
         }
         return ret;
     }
 
-    public applyChanges(node: MINode/*, def?: string*/) {
+    public applyChanges(node: MINode) {
         this.value = MINode.valueOf(node, 'value');
         /*
         if (this.value === undefined) {
@@ -122,9 +122,9 @@ export class VariableObject {
     }
 
     public isCompound(): boolean {
-        return this.numchild > 0 ||
-            this.value === '{...}' ||
-            (this.dynamic && (this.displayhint === 'array' || this.displayhint === 'map'));
+        return this.numchild > 0
+            || this.value === '{...}'
+            || (this.dynamic && (this.displayhint === 'array' || this.displayhint === 'map'));
     }
 
     public toProtocolVariable(newName?: string): DebugProtocol.Variable {

@@ -5,9 +5,9 @@ import { ResettableTimeout, TerminalInputMode } from '../common';
 import { BR_MAGENTA_FG, CSI, RESET } from './ansi-helpers';
 
 const KEYS = {
-    enter       : '\r',
-    del         : '\x7f',
-    bs          : '\x08'
+    enter: '\r',
+    del: '\x7f',
+    bs: '\x08'
 };
 export interface IPtyTerminalOptions {
     name: string;       // Name of the terminal
@@ -27,6 +27,7 @@ for (let ix = zero; ix <= 'Z'.charCodeAt(0); ix++) {
 }
 
 class ACTIONS {
+    /* eslint-disable @stylistic/no-multi-spaces */
     public static cursorUp(n = 1)       { return n > 0 ? CSI + n.toString() + 'A' : ''; }
     public static cursorDown(n = 1)     { return n > 0 ? CSI + n.toString() + 'B' : ''; }
     public static cursorForward(n = 1)  { return n > 0 ? CSI + n.toString() + 'C' : ''; }
@@ -39,6 +40,7 @@ class ACTIONS {
     public static killLineForward()     { return CSI + 'K'; }
     public static killLine(n = 0)       { return ACTIONS.cursorBack(n) + ACTIONS.killLineForward(); }
     public static killEntireLine()      { return CSI + '2K'; }
+    /* eslint-enable */
 }
 
 /*
@@ -55,7 +57,7 @@ class ACTIONS {
 ** No event is generated when dispose() is called
 */
 export class PtyTerminal extends EventEmitter {
-    protected writeEmitter = new vscode.EventEmitter<string>() ;
+    protected writeEmitter = new vscode.EventEmitter<string>();
     private didPrompt = false;
     private curLine = '';           // This input entered by the user
     private cursorPos = 1;          // This a relative position ater any prompt or output text
@@ -67,7 +69,7 @@ export class PtyTerminal extends EventEmitter {
     protected pendingWrites: any[] = [];
     private suspendPrompting: boolean = false;
 
-    private static oldOnes: { [name: string]: PtyTerminal }  = {};
+    private static oldOnes: { [name: string]: PtyTerminal } = {};
 
     private readonly pty: vscode.Pseudoterminal = {
         onDidWrite: this.writeEmitter.event,
@@ -123,7 +125,7 @@ export class PtyTerminal extends EventEmitter {
         this.terminal = null;
     }
 
-    public static findExisting(name: string): PtyTerminal  {
+    public static findExisting(name: string): PtyTerminal {
         return PtyTerminal.oldOnes[name];
     }
 
@@ -132,6 +134,7 @@ export class PtyTerminal extends EventEmitter {
     public pause() {
         this.isPaused = true;
     }
+
     public resume() {
         this.isPaused = false;
     }
@@ -174,12 +177,11 @@ export class PtyTerminal extends EventEmitter {
                     }
                     break;
             }
-        }
-        catch (e) {
+        } catch (e) {
             console.error(`MyPtyTerminal: handleInput: ${e}`);
         }
     }
-    
+
     private handleReturn(chr: string) {
         if (this.options.inputMode === TerminalInputMode.COOKED) {
             this.emit('data', this.curLine + os.EOL);
@@ -221,7 +223,7 @@ export class PtyTerminal extends EventEmitter {
             this.didPrompt = false;
             this.suspendPrompting = true;
         }
-        for (let ix = 0; ix < lines.length; ix++ ) {
+        for (let ix = 0; ix < lines.length; ix++) {
             const line = lines[ix];
             const isLastLine = (ix === (lines.length - 1));
             if ((line === '') && isLastLine) {
@@ -273,7 +275,7 @@ export class PtyTerminal extends EventEmitter {
     ** Note that Enter and Del have already been handled
     */
     protected handleSpecialChars(chars: string): boolean {
-        if (this.options.inputMode !== TerminalInputMode.COOKED){
+        if (this.options.inputMode !== TerminalInputMode.COOKED) {
             if (this.options.inputMode === TerminalInputMode.RAWECHO) {
                 this.writeEmitter.fire(chars);
             }
@@ -344,10 +346,6 @@ export class PtyTerminal extends EventEmitter {
                 }
                 case 'B': { // move cursor back
                     this.moveLeft();
-                    break;
-                }
-                case 'D': { // kill char at cursor
-                    this.killCurrChar();
                     break;
                 }
                 case 'H': { // kill char left of cursor
@@ -513,8 +511,7 @@ export class PtyTerminal extends EventEmitter {
             } else if (this.promptTimer) {
                 this.promptTimer.kill();
             }
-        }
-        catch (e) {
+        } catch (e) {
             console.error(`MyPtyTerminal: write: ${e}`);
         }
     }
@@ -524,12 +521,12 @@ export class PtyTerminal extends EventEmitter {
         if (!this.didPrompt && !this.suspendPrompting) {
             if (this.promptTimer === null) {
                 this.promptTimer = new ResettableTimeout(() => {
-                const str = this.options.prompt + this.curLine;
-                if (str.length) {
-                    this.writeEmitter.fire(str);
-                }
-                this.cursorPos = this.curLine.length + 1;
-                this.didPrompt = true;
+                    const str = this.options.prompt + this.curLine;
+                    if (str.length) {
+                        this.writeEmitter.fire(str);
+                    }
+                    this.cursorPos = this.curLine.length + 1;
+                    this.didPrompt = true;
                 }, 100);
             } else {
                 this.promptTimer.reset();

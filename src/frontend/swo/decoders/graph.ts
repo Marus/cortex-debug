@@ -30,8 +30,7 @@ export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder 
             this.logfile = config.logfile;
             try {
                 this.logFd = fs.openSync(config.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
             }
@@ -51,11 +50,14 @@ export class SWORTTGraphProcessor extends EventEmitter implements SWORTTDecoder 
         if (this.logFd >= 0) {
             try {
                 fs.writeSync(this.logFd, packet.data);
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
-                try { fs.closeSync(this.logFd); } catch {}
+                try {
+                    fs.closeSync(this.logFd);
+                } catch (closeErr) {
+                    console.error('decoder.logCloseError', closeErr);
+                }
                 this.logFd = -1;
             }
         }

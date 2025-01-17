@@ -18,15 +18,12 @@ export function ServerConsoleLog(str: string, usePid?: number) {
             GdbPid = usePid;
         }
         str = `[${date.toISOString()}] ppid=${process.pid} pid=${GdbPid} ` + str;
-        // console.log(str);
-        if (true) {
-            if (!str.endsWith('\n')) {
-                str += '\n';
-            }
-            fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
+
+        if (!str.endsWith('\n')) {
+            str += '\n';
         }
-    }
-    catch (e) {
+        fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
+    } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }
 }
@@ -45,7 +42,7 @@ export class GDBServer extends EventEmitter {
 
     constructor(
         private cwd: string, private application: string, private args: string[],
-        private initMatch: RegExp, private port: number|undefined, private consolePort: number) {
+        private initMatch: RegExp, private port: number | undefined, private consolePort: number) {
         super();
     }
 
@@ -56,8 +53,7 @@ export class GDBServer extends EventEmitter {
                 this.initReject = reject;
                 try {
                     await this.connectToConsole();
-                }
-                catch (e) {
+                } catch (e) {
                     ServerConsoleLog('GDBServer: Could not connect to console: ' + e);
                     reject(e);
                 }
@@ -68,7 +64,7 @@ export class GDBServer extends EventEmitter {
                 this.process.stderr.on('data', this.onStderr.bind(this));
                 this.process.on('exit', this.onExit.bind(this));
                 this.process.on('error', this.onError.bind(this));
-                
+
                 if (this.application.indexOf('st-util') !== -1 && os.platform() === 'win32') {
                     // For some reason we are not able to capture the st-util output on Windows
                     // For now assume that it will launch properly within 1/2 second and resolve the init
@@ -90,8 +86,7 @@ export class GDBServer extends EventEmitter {
                         }
                     }, 100);
                 }
-            }
-            else { // For servers like BMP that are always running directly on the probe
+            } else { // For servers like BMP that are always running directly on the probe
                 resolve(true);
             }
         });
@@ -113,8 +108,7 @@ export class GDBServer extends EventEmitter {
                 ServerConsoleLog(`GDBServer(${this.pid}): forcing an exit with kill()`);
                 this.killInProgress = true;
                 this.process.kill();
-            }
-            catch (e) {
+            } catch (e) {
                 ServerConsoleLog(`GDBServer(${this.pid}): Trying to force and exit failed ${e}`);
             }
         }
@@ -145,8 +139,11 @@ export class GDBServer extends EventEmitter {
     private onStdout(data) {
         this.sendToConsole(data);        // Send it without any processing or buffering
         if (this.initResolve) {
-            if (typeof data === 'string') { this.outBuffer += data; }
-            else { this.outBuffer += data.toString('utf8'); }
+            if (typeof data === 'string') {
+                this.outBuffer += data;
+            } else {
+                this.outBuffer += data.toString('utf8');
+            }
 
             if (this.initResolve && this.initMatch && this.initMatch.test(this.outBuffer)) {
                 // console.log(`********* Got initmatch on stdout ${Date.now() - this.startTime}ms`);
@@ -166,8 +163,11 @@ export class GDBServer extends EventEmitter {
     private onStderr(data) {
         this.sendToConsole(data);        // Send it without any processing or buffering
         if (this.initResolve) {
-            if (typeof data === 'string') { this.errBuffer += data; }
-            else { this.errBuffer += data.toString('utf8'); }
+            if (typeof data === 'string') {
+                this.errBuffer += data;
+            } else {
+                this.errBuffer += data.toString('utf8');
+            }
 
             if (this.initResolve && this.initMatch && this.initMatch.test(this.errBuffer)) {
                 // console.log(`********* Got initmatch on stderr ${Date.now() - this.startTime}ms`);
@@ -187,18 +187,17 @@ export class GDBServer extends EventEmitter {
     protected connectToConsole(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const socket = new net.Socket();
-            socket.on  ('data', (data) => {
+            socket.on('data', (data) => {
                 try {
                     this.process.stdin.write(data, 'utf8');
-                }
-                catch (e) {
+                } catch (e) {
                     console.error(`stdin write failed ${e}`);
                 }
             });
             socket.once('close', () => {
                 this.disconnectConsole();
             });
-            socket.on  ('error', (e) => {
+            socket.on('error', (e) => {
                 const code: string = (e as any).code;
                 if (code !== 'ECONNRESET') {
                     // Can happen if extension exited while we are still running. Rare, generally a bug in VSCode or frontend
@@ -223,7 +222,7 @@ export class GDBServer extends EventEmitter {
         });
     }
 
-    private sendToConsole(data: string|Buffer) {
+    private sendToConsole(data: string | Buffer) {
         if (this.consoleSocket) {
             this.consoleSocket.write(data);
         } else {
@@ -238,8 +237,9 @@ export class GDBServer extends EventEmitter {
                 this.consoleSocket.destroy();
                 this.consoleSocket = null;
             }
+        } catch (e) {
+            console.error('gdb.disconnectConsole', e);
         }
-        catch (e) {}
     }
 }
 

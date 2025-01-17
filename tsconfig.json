@@ -8,9 +8,6 @@
 		],
 		"sourceMap": true,
 		"rootDir": ".",
-		"plugins": [
-			{ "name": "typescript-tslint-plugin" }
-		]
 	},
 	"exclude": [
 		"node_modules",

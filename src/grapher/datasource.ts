@@ -2,12 +2,12 @@ import { GraphPoint, GrapherDataMessage, GrapherProgramCounterMessage } from './
 
 export class GraphDataSource {
     private data: {
-        [graphId: string]: GraphPoint[]
+        [graphId: string]: GraphPoint[];
     } = {};
 
     private subscriptions: {
         // tslint:disable-next-line:ban-types
-        [graphId: string]: Function[];
+        [graphId: string]: ((p: GraphPoint) => void)[];
     } = {};
 
     private counterStats: {

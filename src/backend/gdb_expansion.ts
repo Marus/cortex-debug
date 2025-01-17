@@ -14,22 +14,22 @@ export function isExpandable(value: string): number {
     let match;
     value = value.trim();
     if (value.length === 0) { return 0; }
-    else if (value.startsWith('{...}')) { return 2; } // lldb string/array
-    else if (value[0] === '{') { return 1; } // object
-    else if (value.startsWith('true')) { return 0; }
-    else if (value.startsWith('false')) { return 0; }
-    else if (match = nullpointerRegex.exec(value)) { return 0; }
-    else if (match = referenceStringRegex.exec(value)) { return 0; }
-    else if (match = referenceRegex.exec(value)) { return 2; } // reference
-    else if (match = charRegex.exec(value)) { return 0; }
-    else if (match = numberRegex.exec(value)) { return 0; }
-    else if (match = variableRegex.exec(value)) { return 0; }
-    else if (match = errorRegex.exec(value)) { return 0; }
-    else { return 0; }
+    if (value.startsWith('{...}')) { return 2; } // lldb string/array
+    if (value[0] === '{') { return 1; } // object
+    if (value.startsWith('true')) { return 0; }
+    if (value.startsWith('false')) { return 0; }
+    if (match = nullpointerRegex.exec(value)) { return 0; }
+    if (match = referenceStringRegex.exec(value)) { return 0; }
+    if (match = referenceRegex.exec(value)) { return 2; } // reference
+    if (match = charRegex.exec(value)) { return 0; }
+    if (match = numberRegex.exec(value)) { return 0; }
+    if (match = variableRegex.exec(value)) { return 0; }
+    if (match = errorRegex.exec(value)) { return 0; }
+    return 0;
 }
 
 // tslint:disable-next-line:ban-types
-export function expandValue(variableCreate: Function, value: string, root: string = '', extra?: any): any {
+export function expandValue(variableCreate: (value: string | object, opts?: { arg: boolean }) => number, value: string, root: string = '', extra?: any): any {
     const parseCString = () => {
         value = value.trim();
         if (value[0] !== '"' && value[0] !== '\'') {
@@ -43,11 +43,9 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         while (inString) {
             if (escaped) {
                 escaped = false;
-            }
-            else if (remaining[0] === '\\') {
+            } else if (remaining[0] === '\\') {
                 escaped = true;
-            }
-            else if (remaining[0] === charStr) {
+            } else if (remaining[0] === charStr) {
                 inString = false;
             }
 
@@ -60,14 +58,9 @@ export function expandValue(variableCreate: Function, value: string, root: strin
     };
 
     const stack = [root];
-    let parseValue;
-    let parseCommaResult;
-    let parseCommaValue;
-    let parseResult;
-    let createValue;
     let variable = '';
 
-    const getNamespace = (variable) => {
+    function getNamespace(variable): string {
         let namespace = '';
         let prefix = '';
         stack.push(variable);
@@ -76,16 +69,14 @@ export function expandValue(variableCreate: Function, value: string, root: strin
             if (name !== '') {
                 if (name.startsWith('[')) {
                     namespace = namespace + name;
-                }
-                else {
+                } else {
                     if (namespace) {
                         while (name.startsWith('*')) {
                             prefix += '*';
                             name = name.substr(1);
                         }
                         namespace = namespace + pointerCombineChar + name;
-                    }
-                    else {
+                    } else {
                         namespace = name;
                     }
                 }
@@ -95,7 +86,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         return prefix + namespace;
     };
 
-    const parseTupleOrList = () => {
+    function parseTupleOrList() {
         value = value.trim();
         if (value[0] !== '{') {
             return undefined;
@@ -120,7 +111,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         if (newValPos2 !== -1 && newValPos2 < newValPos1) {
             newValPos = newValPos2;
         }
-        if (newValPos !== -1 && eqPos > newValPos || eqPos === -1) { // is value list
+        if ((newValPos !== -1 && eqPos > newValPos) || eqPos === -1) { // is value list
             const values = [];
             stack.push('[0]');
             let val = parseValue();
@@ -155,70 +146,58 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         return undefined;
     };
 
-    const parsePrimitive = () => {
+    function parsePrimitive() {
         let primitive: any;
         let match;
         value = value.trim();
         if (value.length === 0) {
             primitive = undefined;
-        }
-        else if (value.startsWith('true')) {
+        } else if (value.startsWith('true')) {
             primitive = 'true';
             value = value.substr(4).trim();
-        }
-        else if (value.startsWith('false')) {
+        } else if (value.startsWith('false')) {
             primitive = 'false';
             value = value.substr(5).trim();
-        }
-        else if (match = nullpointerRegex.exec(value)) {
+        } else if (match = nullpointerRegex.exec(value)) {
             primitive = '<nullptr>';
             value = value.substr(match[0].length).trim();
-        }
-        else if (match = referenceStringRegex.exec(value)) {
+        } else if (match = referenceStringRegex.exec(value)) {
             value = value.substr(match[1].length).trim();
             primitive = parseCString();
-        }
-        else if (match = referenceRegex.exec(value)) {
+        } else if (match = referenceRegex.exec(value)) {
             primitive = '*' + match[0];
             value = value.substr(match[0].length).trim();
-        }
-        else if (match = charRegex.exec(value)) {
+        } else if (match = charRegex.exec(value)) {
             primitive = match[1];
             value = value.substr(match[0].length - 1);
             primitive += ' ' + parseCString();
-        }
-        else if (match = numberRegex.exec(value)) {
+        } else if (match = numberRegex.exec(value)) {
             primitive = match[0];
             value = value.substr(match[0].length).trim();
-        }
-        else if (match = variableRegex.exec(value)) {
+        } else if (match = variableRegex.exec(value)) {
             primitive = match[0];
             value = value.substr(match[0].length).trim();
-        }
-        else if (match = errorRegex.exec(value)) {
+        } else if (match = errorRegex.exec(value)) {
             primitive = match[0];
             value = value.substr(match[0].length).trim();
-        }
-        else {
+        } else {
             primitive = value;
         }
         return primitive;
     };
 
-    parseValue = () => {
+    function parseValue() {
         value = value.trim();
         if (value[0] === '"') {
             return parseCString();
-        }
-        else if (value[0] === '{') {
+        } else if (value[0] === '{') {
             return parseTupleOrList();
-        }
-        else {
+        } else {
             return parsePrimitive();
         }
     };
 
-    parseResult = (pushToStack: boolean = false) => {
+    function parseResult(pushToStack: boolean = false) {
         value = value.trim();
         const variableMatch = resultRegex.exec(value);
         if (!variableMatch) {
@@ -236,20 +215,17 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         return createValue(name, val);
     };
 
-    createValue = (name, val) => {
+    function createValue(name, val) {
         let ref = 0;
         if (typeof val === 'object') {
             ref = variableCreate(val);
             val = 'Object';
         }
         if (typeof val === 'string' && val.startsWith('*0x')) {
-            if (extra && MINode.valueOf(extra, 'arg') === '1')
-            {
+            if (extra && MINode.valueOf(extra, 'arg') === '1') {
                 ref = variableCreate(getNamespace('*(' + name), { arg: true });
                 val = '<args>';
-            }
-            else
-            {
+            } else {
                 ref = variableCreate(getNamespace('*' + name));
                 val = 'Object@' + val;
             }
@@ -265,7 +241,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         };
     };
 
-    parseCommaValue = () => {
+    function parseCommaValue() {
         value = value.trim();
         if (value[0] !== ',') {
             return undefined;
@@ -274,7 +250,7 @@ export function expandValue(variableCreate: Function, value: string, root: strin
         return parseValue();
     };
 
-    parseCommaResult = (pushToStack: boolean = false) => {
+    function parseCommaResult(pushToStack: boolean = false) {
         value = value.trim();
         if (value[0] !== ',') {
             return undefined;

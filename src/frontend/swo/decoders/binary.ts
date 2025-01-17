@@ -38,8 +38,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
             this.logfile = config.logfile;
             try {
                 this.logFd = fs.openSync(config.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
             }
@@ -74,7 +73,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         if (packet.port !== this.port) { return; }
 
         const date = new Date();
-        
+
         const hexvalue = packet.data.toString('hex');
         const decodedValue = parseEncoded(packet.data, this.encoding);
         const scaledValue = decodedValue * this.scale;
@@ -90,11 +89,14 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         if (this.logFd >= 0) {
             try {
                 fs.writeSync(this.logFd, packet.data);
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not write to file ${this.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
-                try { fs.closeSync(this.logFd); } catch {}
+                try {
+                    fs.closeSync(this.logFd);
+                } catch (closeErr) {
+                    console.error('decoder.logCloseError', closeErr);
+                }
                 this.logFd = -1;
             }
         }
@@ -115,7 +117,7 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
         }
         this.close();
     }
-    
+
     public close() {
         if (this.logFd >= 0) {
             fs.closeSync(this.logFd);

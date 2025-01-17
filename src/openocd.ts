@@ -16,8 +16,7 @@ function getLogPath() {
         const tmpDirName = os.tmpdir();
         const fsPath = path.join(tmpDirName, 'cortex-debug-openocd.log');
         return fsPath;
-    }
-    catch {
+    } catch {
         return '';
     }
 }
@@ -43,8 +42,7 @@ function OpenOCDLog(str: string) {
                 fs.appendFileSync(logFsPath, str);
             }
         }
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }
 }
@@ -181,8 +179,9 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             const swoFrequency = this.args.swoConfig.swoFrequency;
             const cpuFrequency = this.args.swoConfig.cpuFrequency;
             const source = this.args.swoConfig.source;
-            const swoOutput = (source === 'serial') ? 'external' : ':' +
-                this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
+            const swoOutput = (source === 'serial')
+                ? 'external'
+                : ':' + this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
             commands.push(
                 `monitor CDSWOConfigure ${cpuFrequency} ${swoFrequency} ${swoOutput}`,
                 `set $cpuFreq = ${cpuFrequency}`,
@@ -197,15 +196,16 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             'SWO_Init'
         );
         // commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
     public serverExecutable(): string {
-        if (this.args.serverpath) { return this.args.serverpath; }
-        else {
-            return os.platform() === 'win32' ? 'openocd.exe' : 'openocd';
+        if (this.args.serverpath) {
+            return this.args.serverpath;
         }
+
+        return os.platform() === 'win32' ? 'openocd.exe' : 'openocd';
     }
 
     public allocateRTTPorts(): Promise<void> {
@@ -306,6 +306,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     public debuggerLaunchStarted(obj: GDBDebugSession): void {
         this.session = obj;
     }
+
     public debuggerLaunchCompleted(): void {
         const hasRtt = this.rttHelper.emitConfigures(this.args.rttConfig, this);
         if (this.args.ctiOpenOCDConfig?.enabled) {
@@ -377,8 +378,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                     OpenOCDLog('Sending command "rtt start"');
                     const result = await this.tclCommand('capture "rtt start"');
                     OpenOCDLog(`${this.dbgPollCounter}-OpenOCD TCL output: '${result}'`);
-                }
-                catch (e) {
+                } catch (e) {
                     OpenOCDLog(`OpenOCD TCL error: ${e}`);
                 }
             }

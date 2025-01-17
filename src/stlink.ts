@@ -11,9 +11,10 @@ function get_ST_DIR() {
             return 'C:\\ST';
         case 'darwin':
             return '/Applications/STM32CubeIDE.app/Contents/Eclipse';
-        default:
+        default: {
             const dirName = (process.env.HOME || os.homedir()) + '/st';
             return fs.existsSync(dirName) ? dirName : '/opt/st';
+        }
     }
 }
 
@@ -34,8 +35,7 @@ const GCC_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.gnu-tools-for-st
  * Resolves the path location of a STM32CubeIDE plugin irrespective of version number.
  * Works for most recent version STM32CubeIDE_1.4.0 and STM32CubeIDE_1.5.0.
  */
-function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, executable = '')
-{
+function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, executable = '') {
     const dir = path.join(...dirSegments);
     let resolvedDir: string;
     try {
@@ -45,19 +45,18 @@ function resolveCubePath(dirSegments: string[], regex: RegExp, suffix: string, e
             if (!stats.isDirectory()) {
                 continue;
             }
-            
+
             const match = subDir.match(regex);
             if (match) {
                 const fullPath = path.join(dir, match[0], suffix, executable);
                 if (fs.existsSync(fullPath)) {
-                    if (!resolvedDir || (resolvedDir.localeCompare(fullPath, undefined, {sensitivity: 'base', numeric: true})) < 0) {
+                    if (!resolvedDir || (resolvedDir.localeCompare(fullPath, undefined, { sensitivity: 'base', numeric: true })) < 0) {
                         resolvedDir = fullPath;     // Many times, multiple versions exist. Take latest. Hopefully!!
                     }
                 }
             }
         }
-    }
-    catch (error) {
+    } catch (error) {
         // Ignore
     }
     return resolvedDir ? resolvedDir : executable;
@@ -70,15 +69,15 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
-    
+
     public static getSTMCubeIdeDir(): string {
         switch (os.platform()) {
-        case 'darwin':
-            return ST_DIR;
-        case 'linux':
-            return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, '');
-        default:
-            return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
+            case 'darwin':
+                return ST_DIR;
+            case 'linux':
+                return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, '');
+            default:
+                return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
         }
     }
 
@@ -112,7 +111,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public launchCommands(): string[] {
         const commands = [
-           // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
+            // 'interpreter-exec console "monitor halt"', // Not needed because of -halt, not supported in older versions, still not documented
             ...genDownloadCommands(this.args, ['interpreter-exec console "monitor reset"']),
             'interpreter-exec console "monitor reset"',
             'interpreter-exec console "monitor halt"'
@@ -134,7 +133,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         return commands;
     }
 
-    public swoAndRTTCommands(): string[]{
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
@@ -171,9 +170,11 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME);
         }
     }
+
     public allocateRTTPorts(): Promise<void> {
         return Promise.resolve();
     }
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
@@ -197,13 +198,12 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             }
             serverargs.push('-cp', stm32cubeprogrammer);
         }
-         
+
         if ((this.args.interface !== 'jtag') && (this.args.interface !== 'cjtag')) {       // TODO: handle ctag in when this server supports it
             serverargs.push('--swd');
         }
 
-        if (this.args.swoConfig.enabled)
-        {
+        if (this.args.swoConfig.enabled) {
             const swoport = this.ports['swoPort'];
             serverargs.push('--swo-port', swoport.toString());
 

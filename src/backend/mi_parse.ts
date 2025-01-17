@@ -1,7 +1,7 @@
 export interface MIInfo {
     token: number;
-    outOfBandRecord: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[];
-    resultRecords: { resultClass: string, results: [string, any][] };
+    outOfBandRecord: { isStream: boolean; type: string; asyncClass: string; output: [string, any][]; content: string }[];
+    resultRecords: { resultClass: string; results: [string, any][] };
 }
 
 const octalMatch = /^[0-7]{3}/;
@@ -39,15 +39,13 @@ function parseString(str: string): string {
                 if (m) {
                     ret.writeUInt8(parseInt(m[0], 8), bufIndex++);
                     i += 2;
-                }
-                else {
+                } else {
                     bufIndex += ret.write(str[i], bufIndex);
                 }
             }
         } else if (str[i] === '"') {
             throw new Error('Not a valid string');
-        }
-        else {
+        } else {
             bufIndex += ret.write(str[i], bufIndex);
         }
     }
@@ -56,8 +54,8 @@ function parseString(str: string): string {
 
 export class MINode implements MIInfo {
     public token: number;
-    public outOfBandRecord: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[];
-    public resultRecords: { resultClass: string, results: [string, any][] };
+    public outOfBandRecord: { isStream: boolean; type: string; asyncClass: string; output: [string, any][]; content: string }[];
+    public resultRecords: { resultClass: string; results: [string, any][] };
     public output: string = '';
 
     public static valueOf(start: any, path: string): any {
@@ -82,37 +80,28 @@ export class MINode implements MIInfo {
                     }
                     if (found.length > 1) {
                         current = found;
-                    }
-                    else if (found.length === 1) {
+                    } else if (found.length === 1) {
                         current = found[0];
-                    }
-                    else {
+                    } else {
                         return undefined;
                     }
-                }
-                else {
+                } else {
                     return undefined;
                 }
-            }
-            else if (path[0] === '@') {
+            } else if (path[0] === '@') {
                 current = [current];
                 path = path.substr(1);
-            }
-            else {
+            } else {
                 target = indexRegex.exec(path);
                 if (target) {
                     path = path.substr(target[0].length);
                     const i = parseInt(target[1]);
                     if (current.length && typeof current !== 'string' && i >= 0 && i < current.length) {
                         current = current[i];
-                    }
-                    else if (i === 0) {
-                    }
-                    else {
+                    } else if (i !== 0) {
                         return undefined;
                     }
-                }
-                else {
+                } else {
                     return undefined;
                 }
             }
@@ -123,8 +112,8 @@ export class MINode implements MIInfo {
 
     constructor(
         token: number,
-        info: { isStream: boolean, type: string, asyncClass: string, output: [string, any][], content: string }[],
-        result: { resultClass: string, results: [string, any][] }
+        info: { isStream: boolean; type: string; asyncClass: string; output: [string, any][]; content: string }[],
+        result: { resultClass: string; results: [string, any][] }
     ) {
         this.token = token;
         this.outOfBandRecord = info;
@@ -197,11 +186,9 @@ export function parseMI(output: string): MINode {
         while (inString) {
             if (escaped) {
                 escaped = false;
-            }
-            else if (remaining[0] === '\\') {
+            } else if (remaining[0] === '\\') {
                 escaped = true;
-            }
-            else if (remaining[0] === '"') {
+            } else if (remaining[0] === '"') {
                 inString = false;
             }
 
@@ -211,20 +198,14 @@ export function parseMI(output: string): MINode {
         let str;
         try {
             str = parseString(output.substr(0, stringEnd));
-        }
-        catch (e) {
+        } catch (e) {
             str = output.substr(0, stringEnd);
         }
         output = output.substr(stringEnd);
         return str;
     };
 
-    let parseValue;
-    let parseCommaResult;
-    let parseCommaValue;
-    let parseResult;
-
-    const parseTupleOrList = () => {
+    function parseTupleOrList() {
         if (output[0] !== '{' && output[0] !== '[') {
             return undefined;
         }
@@ -262,19 +243,17 @@ export function parseMI(output: string): MINode {
         return undefined;
     };
 
-    parseValue = () => {
+    function parseValue() {
         if (output[0] === '"') {
             return parseCString();
-        }
-        else if (output[0] === '{' || output[0] === '[') {
+        } else if (output[0] === '{' || output[0] === '[') {
             return parseTupleOrList();
-        }
-        else {
+        } else {
             return undefined;
         }
     };
 
-    parseResult = () => {
+    function parseResult() {
         const variableMatch = variableRegex.exec(output);
         if (!variableMatch) {
             return undefined;
@@ -284,7 +263,7 @@ export function parseMI(output: string): MINode {
         return [variable, parseValue()];
     };
 
-    parseCommaValue = () => {
+    function parseCommaValue() {
         if (output[0] !== ',') {
             return undefined;
         }
@@ -292,7 +271,7 @@ export function parseMI(output: string): MINode {
         return parseValue();
     };
 
-    parseCommaResult = () => {
+    function parseCommaResult() {
         if (output[0] !== ',') {
             return undefined;
         }
@@ -322,8 +301,7 @@ export function parseMI(output: string): MINode {
                 asyncRecord.output.push(result);
             }
             outOfBandRecord.push(asyncRecord);
-        }
-        else if (match[3]) {
+        } else if (match[3]) {
             const streamRecord = {
                 isStream: true,
                 type: streamRecordType[match[3]],

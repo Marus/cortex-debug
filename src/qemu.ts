@@ -28,7 +28,7 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     public customRequest(command: string, response: DebugProtocol.Response, args: any): boolean {
         return false;
     }
-    
+
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
 
@@ -61,17 +61,19 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     }
 
     public serverExecutable() {
-        if (this.args.serverpath) { return this.args.serverpath; }
-        else {
-            for (const name in EXECUTABLE_NAMES) {
-                if (commandExistsSync(name)) { return name; }
-            }
-            return 'qemu-system-arm';
+        if (this.args.serverpath) {
+            return this.args.serverpath;
         }
+        for (const name of EXECUTABLE_NAMES) {
+            if (commandExistsSync(name)) { return name; }
+        }
+        return 'qemu-system-arm';
     }
+
     public allocateRTTPorts(): Promise<void> {
         return Promise.resolve();
     }
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 

@@ -9,6 +9,7 @@ import * as os from 'os';
 import * as stream from 'stream';
 import * as path from 'path';
 import { GDBDebugSession } from './gdb';
+import { CreateReadStreamOptions } from 'fs/promises';
 const readline = require('readline');
 
 export enum ADAPTER_DEBUG_MODE {
@@ -76,10 +77,11 @@ export interface SWOConfigureBody {
 export class SWOConfigureEvent extends Event implements DebugProtocol.Event {
     public boxy: SWOConfigureBody;
     public bodyx: {
-        type: string,
-        port: string,       // [hostname:]port
-        path: string        // path to serial port, fifo, etc.
+        type: string;
+        port: string;       // [hostname:]port
+        path: string;       // path to serial port, fifo, etc.
     };
+
     public event: string;
 
     constructor(params: SWOConfigureBody) {
@@ -142,9 +144,10 @@ export interface RTTConsoleDecoderOpts extends RTTCommonDecoderOpts {
 
 export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
     public body: {
-        type: string,   // Currently, only 'socket' is supported
+        type: string;   // Currently, only 'socket' is supported
         decoder: RTTCommonDecoderOpts;
     };
+
     public event: string;
 
     constructor(params: any) {
@@ -155,11 +158,12 @@ export class RTTConfigureEvent extends Event implements DebugProtocol.Event {
 
 export class TelemetryEvent extends Event implements DebugProtocol.Event {
     public body: {
-        category: string,
-        action: string,
-        label: string,
-        parameters: { [key: string]: string }
+        category: string;
+        action: string;
+        label: string;
+        parameters: { [key: string]: string };
     };
+
     public event: string;
 
     constructor(category: string, action: string, label: string, parameters: { [key: string]: string } = {}) {
@@ -170,8 +174,8 @@ export class TelemetryEvent extends Event implements DebugProtocol.Event {
 
 export enum ChainedEvents {
     POSTSTART = 'postStart', // Default - a connection was established with the gdb-server, before initialization is done
-    POSTINIT = 'postInit'    // all init functionality has been done. Generally past programming and stopped at or
-                             // past reset-vector but depends on customizations
+    POSTINIT = 'postInit'    /* all init functionality has been done. Generally past programming and stopped at or
+                              * past reset-vector but depends on customizations */
 }
 export interface ChainedConfig {
     enabled: boolean;
@@ -181,7 +185,7 @@ export interface ChainedConfig {
     detached: boolean;
     lifecycleManagedByParent: boolean;
     folder: string;
-    overrides: {[key: string]: any};
+    overrides: { [key: string]: any };
     inherits: string[];
 }
 
@@ -192,7 +196,7 @@ export interface ChainedConfigurations {
     detached: boolean;
     lifecycleManagedByParent: boolean;
     delayMs: number;
-    overrides: {[key: string]: any};
+    overrides: { [key: string]: any };
     inherits: string[];
 }
 
@@ -229,7 +233,7 @@ export interface SymbolFile {
     offset?: number;
     textaddress?: number;
     sections: ElfSection[];
-    sectionMap: {[name: string]: ElfSection};
+    sectionMap: { [name: string]: ElfSection };
 }
 
 export interface LiveWatchConfig {
@@ -256,6 +260,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     servertype: string;
     serverpath: string;
     gdbPath: string;
+    gdbServerConsolePort: number;
     objdumpPath: string;
     serverArgs: string[];
     serverCwd: string;
@@ -301,7 +306,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     chainedConfigurations: ChainedConfigurations;
 
     pvtIsReset: boolean;
-    pvtPorts: { [name: string]: number; };
+    pvtPorts: { [name: string]: number };
     pvtParent: ConfigurationArguments;
     pvtMyConfigFromParent: ChainedConfig;     // My configuration coming from the parent
     pvtAvoidPorts: number[];
@@ -316,7 +321,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ipAddress: string;
     serialNumber: string;
     jlinkscript: string;
-    
+
     // OpenOCD Specific
     configFiles: string[];
     searchDir: string[];
@@ -326,7 +331,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     // PyOCD Specific
     boardId: string;
     cmsisPack: string;
-    
+
     // StUtil Specific
     v1: boolean;
 
@@ -341,7 +346,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     cpu: string;
     machine: string;
 
-    // External 
+    // External
     gdbTarget: string;
 }
 
@@ -403,7 +408,7 @@ export function genDownloadCommands(config: ConfigurationArguments, preLoadCmds:
 
 export class RTTServerHelper {
     // Channel numbers previously used on the localhost
-    public rttLocalPortMap: {[channel: number]: string} = {};
+    public rttLocalPortMap: { [channel: number]: string } = {};
     public allocDone = false;
 
     // For openocd, you cannot have have duplicate ports and neither can
@@ -482,8 +487,7 @@ export function calculatePortMask(decoders: any[]) {
             for (const port of d.ports) {
                 mask = (mask | (1 << port)) >>> 0;
             }
-        }
-        else {
+        } else {
             mask = (mask | (1 << d.port)) >>> 0;
         }
     });
@@ -504,7 +508,7 @@ export function getAnyFreePort(preferred: number): Promise<number> {
                 reject(e);
             });
         }
-        
+
         if (preferred > 0) {
             TcpPortScanner.isPortInUseEx(preferred, GDBServer.LOCALHOST, TcpPortScanner.AvoidPorts).then((inuse) => {
                 if (!inuse) {
@@ -524,7 +528,7 @@ export function parseHexOrDecInt(str: string): number {
     return str.startsWith('0x') ? parseInt(str.substring(2), 16) : parseInt(str, 10);
 }
 
-export function toStringDecHexOctBin(val: number/* should be an integer*/): string {
+export function toStringDecHexOctBin(val: number /* should be an integer */): string {
     if (Number.isNaN(val)) {
         return 'NaN: Not a number';
     }
@@ -559,7 +563,7 @@ export function toStringDecHexOctBin(val: number/* should be an integer*/): stri
         str = str.slice(0, -8);
     }
     ret += `\nbin: ${tmp}`;
-    return ret ;
+    return ret;
 }
 
 export function parseHostPort(hostPort: string) {
@@ -625,7 +629,7 @@ export class ResettableTimeout {
         this.timeoutId = setTimeout((...args) => {
             this.timeoutId = null;
             this.cb(...this.args);
-        } , this.interval, ...this.args);
+        }, this.interval, ...this.args);
     }
 
     public kill() {
@@ -711,10 +715,10 @@ export function quoteShellCmdLine(list: string[]): string {
     return list.map((s) => quoteShellAndCmdChars(s)).join(' ');
 }
 
-export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean {
+export function sanitizeDevDebug(config: { showDevDebugOutput?: string | boolean }): boolean {
     const modes = Object.values(ADAPTER_DEBUG_MODE);
     let val = config.showDevDebugOutput;
-    if (typeof(val) === 'string') {
+    if (typeof (val) === 'string') {
         val = val.toLowerCase().trim();
         config.showDevDebugOutput = val;
     }
@@ -722,7 +726,7 @@ export function sanitizeDevDebug(config: ConfigurationArguments | any): boolean 
         delete config.showDevDebugOutput;
     } else if ((val === true) || (val === 'true)')) {
         config.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
-    } else if (modes.indexOf(val) < 0) {
+    } else if (modes.indexOf(val as ADAPTER_DEBUG_MODE) < 0) {
         config.showDevDebugOutput = ADAPTER_DEBUG_MODE.VSCODE;
         return false;       // Meaning, needed adjustment
     }
@@ -761,8 +765,7 @@ export function validateELFHeader(exe: string, cb?: (str: string, fatal: boolean
             return false;
         }
         return true;
-    }
-    catch (e) {
+    } catch (e) {
         if (cb) {
             cb(`Could not read file "executable": "${exe}" ${e ? e.toString() : ''}`, true);
         }
@@ -825,8 +828,7 @@ export class SpawnLineReader extends EventEmitter {
                     // read-line will resolve. Not us
                 });
                 this.doReadline(child.stdout, resolve);
-            }
-            catch (e) {
+            } catch (e) {
                 this.emit('error', e);
             }
         });
@@ -836,24 +838,24 @@ export class SpawnLineReader extends EventEmitter {
     public startWithStream(rStream: stream.Readable, cb: (line: string) => boolean = null): Promise<boolean> {
         if (this.promise) { throw new Error('SpawnLineReader: can\'t reuse this object'); }
         this.callback = cb;
-        this.promise =  new Promise<boolean>((resolve) => {
+        this.promise = new Promise<boolean>((resolve) => {
             this.doReadline(rStream, resolve);
         });
         return this.promise;
     }
 
-    public startWithFile(filename: fs.PathLike, options: string | any = null, cb: (line: string, err?: any) => boolean = null): Promise<boolean> {
+    public startWithFile(filename: fs.PathLike, options?: CreateReadStreamOptions, cb: (line: string, err?: any) => boolean = null): Promise<boolean> {
         if (this.promise) { throw new Error('SpawnLineReader: can\'t reuse this object'); }
         this.callback = cb;
         this.promise = new Promise<boolean>((resolve) => {
-            const readStream = fs.createReadStream(filename, options || {flags: 'r'});
-            readStream.on('error', ((e) => {
+            const readStream = fs.createReadStream(filename, options || { flags: 'r' });
+            readStream.on('error', (e) => {
                 this.emit('error', e);
                 resolve(false);
-            }));
-            readStream.on('open', (() => {
+            });
+            readStream.on('open', () => {
                 this.doReadline(readStream, resolve);
-            }));
+            });
         });
         return this.promise;
     }
@@ -882,8 +884,7 @@ export class SpawnLineReader extends EventEmitter {
                 this.emit('close');
                 resolve(true);
             });
-        }
-        catch (e) {
+        } catch (e) {
             this.emit('error', e);
         }
     }

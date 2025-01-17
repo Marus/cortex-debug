@@ -6,11 +6,15 @@ export function hexFormat(value: number, padding: number = 8, includePrefix: boo
 
 export function binaryFormat(value: number, padding: number = 0, includePrefix: boolean = true, group: boolean = false): string {
     let base = (value >>> 0).toString(2);
-    while (base.length < padding) { base = '0' + base; }
+    while (base.length < padding) {
+        base = '0' + base;
+    }
 
     if (group) {
         const nibRem = 4 - (base.length % 4);
-        for (let i = 0; i < nibRem; i++) { base = '0' + base; }
+        for (let i = 0; i < nibRem; i++) {
+            base = '0' + base;
+        }
         const groups = base.match(/[01]{4}/g);
         base = groups.join(' ');
 
@@ -24,7 +28,9 @@ export function createMask(offset: number, width: number) {
     let r = 0;
     const a = offset;
     const b = offset + width - 1;
-    for (let i = a; i <= b; i++) { r = (r | (1 << i)) >>> 0; }
+    for (let i = a; i <= b; i++) {
+        r = (r | (1 << i)) >>> 0;
+    }
     return r;
 }
 
@@ -38,13 +44,13 @@ export function parseInteger(value: string): number {
     if ((/^0b([01]+)$/i).test(value)) {
         return parseInt(value.substring(2), 2);
     }
-    else if ((/^0x([0-9a-f]+)$/i).test(value)) {
+    if ((/^0x([0-9a-f]+)$/i).test(value)) {
         return parseInt(value.substring(2), 16);
     }
-    else if ((/^[0-9]+/i).test(value)) {
+    if ((/^[0-9]+/i).test(value)) {
         return parseInt(value, 10);
     }
-    else if ((/^#[0-1]+/i).test(value)) {
+    if ((/^#[0-1]+/i).test(value)) {
         return parseInt(value.substring(1), 2);
     }
     return undefined;

@@ -13,7 +13,7 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
     public readonly format: string = 'advanced';
     private ports: number[];
     private decoder: AdvancedDecoder;
-    
+
     constructor(config: SWOAdvancedDecoderConfig) {
         super();
         this.ports = [];
@@ -30,15 +30,13 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
             try {
                 this.decoder = new decoderClass();
                 this.decoder.init(config, this.displayOutput.bind(this), this.graphData.bind(this));
-            }
-            catch (e) {
+            } catch (e) {
                 throw new Error(`Error instantiating decoder class: ${e.toString()}`);
             }
 
             this.ports = config.ports;
             this.output = vscode.window.createOutputChannel(`SWO: ${this.decoder.outputLabel() || ''} [type: ${this.decoder.typeName()}]`);
-        }
-        else {
+        } else {
             throw new Error(`Unable to load decoder class from: ${config.decoder}`);
         }
     }

@@ -35,18 +35,15 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             commands.push('interpreter-exec console "monitor tpwr enable"');
             // sleep for 100 ms. MCU need some time to boot up after power up
             commands.push('interpreter-exec console "shell sleep 0.1"');
-        }
-        else if (this.args.powerOverBMP === 'disable'){
+        } else if (this.args.powerOverBMP === 'disable') {
             commands.push('interpreter-exec console "monitor tpwr disable"');
-        }
-        else{
+        } else {
             // keep last power state (do nothing)
         }
 
         if (this.args.interface === 'jtag') {       // TODO: handle ctag in when this server supports it
             commands.push('interpreter-exec console "monitor jtag_scan"');
-        }
-        else {
+        } else {
             commands.push('interpreter-exec console "monitor swdp_scan"');
         }
 
@@ -78,7 +75,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         return commands;
     }
 
-    public swoAndRTTCommands(): string[]{
+    public swoAndRTTCommands(): string[] {
         const commands = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
@@ -94,7 +91,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
         const encoding = this.args.swoConfig.swoEncoding === 'manchester' ? 1 : 2;
-        
+
         const commands: string[] = [];
 
         commands.push(
@@ -114,7 +111,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         if (this.args.swoConfig.source === 'probe') {
             commands.push(encoding === 2 ? `monitor traceswo ${swoFrequency}` : 'monitor traceswo');
         }
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -154,7 +151,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
             }
         }
     }
-    
+
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}
 }

@@ -123,7 +123,6 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
     ) { }
 
     public onDidSendMessage(msg: any): void {
-        appendMsgToTmpDir('s ' + JSON.stringify(msg));
         const message = msg as DebugProtocol.ProtocolMessage;
         if (!message) {
             return;
@@ -152,9 +151,9 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
                     // but then who is the main client for the adapter?
                     if (rsp.command === 'stackTrace') {
                         if (
-                            rsp.body?.stackFrames &&
-                            rsp.body.stackFrames.length > 0 &&
-                            this.lastFrameId === undefined
+                            rsp.body?.stackFrames
+                            && rsp.body.stackFrames.length > 0
+                            && this.lastFrameId === undefined
                         ) {
                             this.lastFrameId = rsp.body.stackFrames[0].id;
                             this.handler.onStopped(this.session, this.lastFrameId);
@@ -171,14 +170,9 @@ class DebuggerTracker implements vscode.DebugAdapterTracker {
             }
         }
     }
-
-    public onWillReceiveMessage(msg: any) {
-        appendMsgToTmpDir('r ' + JSON.stringify(msg));
-    }
 }
 
-export class RTOSTracker
-    implements vscode.DebugAdapterTrackerFactory, DebugStopRunEvent {
+export class RTOSTracker implements vscode.DebugAdapterTrackerFactory, DebugStopRunEvent {
     private sessionMap: Map<string, RTOSSession> = new Map<string, RTOSSession>();
     private provider: RTOSViewProvider;
     public enabled: boolean;
@@ -302,8 +296,9 @@ export class RTOSTracker
             }
             try {
                 await this.update();
+            } catch (e) {
+                console.error('rtos.visibilityChanged', e);
             }
-            catch { }
         }
     }
 
@@ -314,7 +309,7 @@ export class RTOSTracker
             if (!this.enabled || !this.visible || !this.sessionMap.size) {
                 resolve();
             }
-            this.busyHtml = { html: /*html*/'<h4>Busy updating...</h4>\n', css: '' };
+            this.busyHtml = { html: /* html */'<h4>Busy updating...</h4>\n', css: '' };
             this.provider.updateHtml();
             this.updateRTOSInfo().then(() => {
                 this.busyHtml = undefined;
@@ -350,17 +345,17 @@ export class RTOSTracker
             const name = `Session Name: "${rtosSession.session.name}"`;
             if (!rtosSession.rtos) {
                 const nameAndStatus = name + ' -- No RTOS detected';
-                ret.html += /*html*/`<h4>${nameAndStatus}</h4>\n`;
+                ret.html += /* html */`<h4>${nameAndStatus}</h4>\n`;
                 if (rtosSession.triedAndFailed) {
                     const supported = Object.keys(RTOS_TYPES).join(', ');
-                    ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). ` +
-                        'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
+                    ret.html += `<p>Failed to match any supported RTOS. Supported RTOSes are (${supported}). `
+                        + 'Please report issues and/or contribute code/knowledge to add your RTOS</p>\n';
                 } else {
-                    ret.html += /*html*/'<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
+                    ret.html += /* html */'<p>Try refreshing this panel. RTOS detection may be still in progress</p>\n';
                 }
             } else {
                 const nameAndStatus = name + ', ' + rtosSession.rtos.name + ' detected.' + (!rtosSession.htmlContent ? ' (No data available yet)' : '');
-                ret.html += /*html*/`<h4>${nameAndStatus}</h4>\n` + rtosSession.htmlContent.html;
+                ret.html += /* html */`<h4>${nameAndStatus}</h4>\n` + rtosSession.htmlContent.html;
                 ret.css = rtosSession.htmlContent.css;
             }
         }
@@ -431,7 +426,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             return '';
         }
         if (!this.parent.enabled) {
-            return /*html*/`
+            return /* html */`
                 <!DOCTYPE html>
                 <html lang="en">
                 <head>
@@ -457,7 +452,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
         const htmlInfo = this.parent.getHtml();
         // Use a nonce to only allow a specific script to be run.
         const nonce = getNonce();
-        const ret = /*html*/`
+        const ret = /* html */`
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -469,7 +464,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
                 <meta http-equiv="Content-Security-Policy" content="default-src 'none';
                 style-src 'nonce-${nonce}' ${webview.cspSource}; script-src 'nonce-${nonce}';">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <link href="${rtosStyle}" rel="stylesheet">
+                <link href="${rtosStyle.toString()}" rel="stylesheet">
                 <style nonce="${nonce}">
                 ${htmlInfo.css}
                 </style>
@@ -477,41 +472,11 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             </head>
             <body>
                 ${htmlInfo.html}
-                <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
-                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+                <script type="module" nonce="${nonce}" src="${toolkitUri.toString()}"></script>
+                <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
             </body>
             </html>`;
-        writeHtmlToTmpDir(ret);
         return ret;
-    }
-}
-
-function writeHtmlToTmpDir(str: string) {
-    try {
-        if (false) {
-            const fname = path.join(os.tmpdir(), 'rtos.html');
-            console.log(`Write HTML to file ${fname}`);
-            fs.writeFileSync(fname, str);
-        }
-    }
-    catch (e) {
-        console.log(e ? e.toString() : 'unknown exception?');
-    }
-}
-
-function appendMsgToTmpDir(str: string) {
-    try {
-        if (false) {
-            const fname = path.join(os.tmpdir(), 'rtos-msgs.txt');
-            console.log(`Write ${str} to file ${fname}`);
-            if (!str.endsWith('\n')) {
-                str = str + '\n';
-            }
-            fs.appendFileSync(fname, str);
-        }
-    }
-    catch (e) {
-        console.log(e ? e.toString() : 'unknown exception?');
     }
 }
 

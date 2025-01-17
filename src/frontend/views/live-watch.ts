@@ -1,4 +1,4 @@
-import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, ProviderResult} from 'vscode';
+import { TreeItem, TreeDataProvider, EventEmitter, Event, TreeItemCollapsibleState, ProviderResult } from 'vscode';
 import * as vscode from 'vscode';
 
 import { getPathRelative, LiveWatchConfig } from '../../common';
@@ -12,7 +12,7 @@ interface SaveVarState {
 }
 
 interface SaveVarStateMap {
-     [name: string]: SaveVarState;
+    [name: string]: SaveVarState;
 }
 export class LiveVariableNode extends BaseNode {
     protected session: vscode.DebugSession | undefined;        // This is transient
@@ -31,7 +31,7 @@ export class LiveVariableNode extends BaseNode {
     public getExpr(): string {
         return this.expr;
     }
-    
+
     public getChildren(): LiveVariableNode[] {
         if (!this.parent && (!this.children || !this.children.length)) {
             return [new LiveVariableNodeMsg(this)];
@@ -69,9 +69,13 @@ export class LiveVariableNode extends BaseNode {
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
-        const state = this.variablesReference || (this.children?.length > 0) ?
-            (this.children?.length > 0 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed) : TreeItemCollapsibleState.None;
-        
+        const state = this.variablesReference || (this.children?.length > 0)
+            ? (this.children?.length > 0
+                    ? TreeItemCollapsibleState.Expanded
+                    : TreeItemCollapsibleState.Collapsed
+                )
+            : TreeItemCollapsibleState.None;
+
         const parts = this.name.startsWith('\'') && this.isRootChild() ? this.name.split('\'::') : [this.name];
         const name = parts.pop();
         const label: vscode.TreeItemLabel = {
@@ -81,7 +85,7 @@ export class LiveVariableNode extends BaseNode {
             label.highlights = [[name.length + 2, label.label.length]];
         }
         this.prevValue = this.value;
-        
+
         const item = new TreeItem(label, state);
         item.contextValue = this.isRootChild() ? 'expression' : 'field';
         let file = parts.length ? parts[0].slice(1) : '';
@@ -406,12 +410,14 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                     this.variables.deSerialize(saved);
                 }
             }
-        } catch { }
+        } catch (error) {
+            console.error('live-watch.restoreState', error);
+        }
     }
 
     private currentRefreshRate = LiveWatchTreeProvider.defaultRefreshRate;
     private settingsChanged(e: vscode.ConfigurationChangeEvent) {
-        if (e.  affectsConfiguration('cortex-debug.liveWatchRefreshRate')) {
+        if (e.affectsConfiguration('cortex-debug.liveWatchRefreshRate')) {
             this.setRefreshRate();
         }
     }
@@ -528,8 +534,8 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
             // Technically, it is not an issue but is problematic on how to specify in the UI, which watch expression belongs
             // to which session. Same as breakpoints or Watch variables.
             vscode.window.showErrorMessage(
-                'Error: You can have live-watch enabled to only one debug session at a time. Live Watch is already enabled for ' +
-                LiveWatchTreeProvider.session.name);
+                'Error: You can have live-watch enabled to only one debug session at a time. Live Watch is already enabled for '
+                + LiveWatchTreeProvider.session.name);
             return;
         }
         LiveWatchTreeProvider.session = session;
@@ -576,8 +582,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                 this.saveState();
                 this.fire();
             }
-        }
-        catch (e) {
+        } catch (e) {
             // Sometimes we get a garbage node if this is called while we are (aggressively) polling
             console.error('Failed to remove node. Invalid node?', node);
         }
@@ -681,7 +686,7 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                 expression = '*(unsigned long*)"abc"';
                 expectedLittle = '6513249';
                 expectedBig = '1633837824';
-            } else if (expr3.result === '8') { 
+            } else if (expr3.result === '8') {
                 expression = '*(unsigned long*)"abcdefg"';
                 expectedLittle = '29104508263162465';
                 expectedBig = '7017280452245743360';

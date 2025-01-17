@@ -13,7 +13,7 @@ export interface NameToVarChangeInfo {
 }
 export class VariablesHandler {
     public variableHandles = new Handles<VariableType>(256);
-    public variableHandlesReverse: { [id: string]: number } = {};
+    public variableHandlesReverse = new Map<string, number>();
     public cachedChangeList: NameToVarChangeInfo | undefined;
 
     constructor(
@@ -28,11 +28,10 @@ export class VariablesHandler {
                 poromises.push(miDebugger.sendCommand(`var-delete ${name}`));
             }
             this.cachedChangeList = {};
-            try {
-                await Promise.allSettled(poromises);
-            }
-            catch (e) {
-            }
+            const results = await Promise.allSettled(poromises);
+            results
+                .filter((r) => r.status === 'rejected')
+                .forEach((r) => console.error('clearCachedValues', r.reason));
         }
     }
 
@@ -44,16 +43,15 @@ export class VariablesHandler {
                 const name = MINode.valueOf(change, 'name');
                 this.cachedChangeList[name] = change;
                 const inScope = MINode.valueOf(change, 'in_scope');
-                const typeChanged  = MINode.valueOf(change, 'type_changed');
+                const typeChanged = MINode.valueOf(change, 'type_changed');
                 if ((inScope === 'false') || (typeChanged === 'true')) {
                     // If one of these conditions happened, abandon the entire cache. TODO: Optimize later
                     this.cachedChangeList = undefined;
                     break;
                 }
-                const vId = this.variableHandlesReverse[name];
+                const vId = this.variableHandlesReverse.get(name);
                 const v = this.variableHandles.get(vId) as any;
                 v.applyChanges(change);
-
             }
         }).finally (() => {
             resolve();
@@ -69,12 +67,10 @@ export class VariablesHandler {
     }
 
     public findOrCreateVariable(varObj: VariableObject): number {
-        let id: number;
-        if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
-            id = this.variableHandlesReverse[varObj.name];
-        } else {
+        let id = this.variableHandlesReverse.get(varObj.name);
+        if (id === undefined) {
             id = this.createVariable(varObj);
-            this.variableHandlesReverse[varObj.name] = id;
+            this.variableHandlesReverse.set(varObj.name, id);
         }
         return varObj.isCompound() ? id : 0;
     }
@@ -93,7 +89,6 @@ export class VariablesHandler {
 
         const doit = (
             response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments,
-            // tslint:disable-next-line: variable-name
             _pendContinue: any, miDebugger: MI2, session: GDBDebugSession) => {
             return new Promise<void>(async (resolve) => {
                 if (this.isBusy() && (a.context !== 'repl')) {
@@ -124,7 +119,7 @@ export class VariablesHandler {
                         const exprName = hasher.digest('hex');
                         const varObjName = `${args.context}_${exprName}`;
                         let varObj: VariableObject;
-                        let varId = this.variableHandlesReverse[varObjName];
+                        let varId = this.variableHandlesReverse.get(varObjName);
                         let forceCreate = varId === undefined;
                         let updateError;
                         if (!forceCreate) {
@@ -143,7 +138,7 @@ export class VariablesHandler {
                                     const inScope = MINode.valueOf(change, 'in_scope');
                                     if (inScope === 'true') {
                                         const name = MINode.valueOf(change, 'name');
-                                        const vId = this.variableHandlesReverse[name];
+                                        const vId = this.variableHandlesReverse.get(name);
                                         const v = this.variableHandles.get(vId) as any;
                                         v.applyChanges(change);
                                         if (this.cachedChangeList) {
@@ -160,8 +155,7 @@ export class VariablesHandler {
                                     }
                                 }
                                 varObj = this.variableHandles.get(varId) as any;
-                            }
-                            catch (err) {
+                            } catch (err) {
                                 updateError = err;
                             }
                         }
@@ -184,8 +178,7 @@ export class VariablesHandler {
                         response.body = varObj.toProtocolEvaluateResponseBody();
                         response.success = true;
                         session.sendResponse(response);
-                    }
-                    catch (err) {
+                    } catch (err) {
                         if (this.isBusy()) {
                             this.busyError(response, args);
                         } else {
@@ -199,8 +192,7 @@ export class VariablesHandler {
                             }
                         }
                         // this.sendErrorResponse(response, 7, err.toString());
-                    }
-                    finally {
+                    } finally {
                         resolve();
                     }
                 } else {        // This is an 'repl'
@@ -211,8 +203,7 @@ export class VariablesHandler {
                                     result: '',
                                     variablesReference: 0
                                 };
-                            }
-                            else {
+                            } else {
                                 response.body = {
                                     result: JSON.stringify(output),
                                     variablesReference: 0
@@ -224,8 +215,7 @@ export class VariablesHandler {
                             session.sendErrorResponsePub(response, 8, msg.toString());
                             resolve();
                         });
-                    }
-                    catch (e) {
+                    } catch (e) {
                         session.sendErrorResponsePub(response, 8, e.toString());
                         resolve();
                     }
@@ -243,7 +233,7 @@ export class VariablesHandler {
         const ret = [];
         for (const key of keys) {
             const gdbVaName = pVar.children[key];
-            const childId = this.variableHandlesReverse[gdbVaName];
+            const childId = this.variableHandlesReverse.get(gdbVaName);
             if (childId === undefined) {
                 return undefined;
             }
@@ -262,11 +252,10 @@ export class VariablesHandler {
             session.sendResponse(response);
             return;
         }
-        let id: number | string | VariableObject | ExtendedVariable;
-        id = this.variableHandles.get(args.variablesReference);
+        const id = this.variableHandles.get(args.variablesReference);
         if (typeof id === 'object') {
             if (id instanceof VariableObject) {
-                const pVar = id as VariableObject;
+                const pVar = id;
 
                 // Variable members
                 let children: VariableObject[];
@@ -286,8 +275,7 @@ export class VariablesHandler {
                             child.id = varId;
                             if (/^\d+$/.test(child.exp)) {
                                 child.fullExp = `${pVar.fullExp || pVar.exp}[${child.exp}]`;
-                            }
-                            else {
+                            } else {
                                 let suffix = '.' + child.exp;                   // A normal suffix
                                 if (child.exp.startsWith('<anonymous')) {       // We can have duplicates!!
                                     const prev = childMap[child.exp];
@@ -312,8 +300,7 @@ export class VariablesHandler {
                         variables: vars
                     };
                     session.sendResponse(response);
-                }
-                catch (err) {
+                } catch (err) {
                     session.sendErrorResponsePub(response, 1, `Could not expand variable: ${err}`);
                 }
             } else if (id instanceof ExtendedVariable) {
@@ -336,14 +323,15 @@ export class VariablesHandler {
                             const expanded = expandValue(this.createVariable.bind(this), variable.result('value'), varReq.name, variable);
                             if (!expanded) {
                                 session.sendErrorResponsePub(response, 15, 'Could not expand variable');
-                            }
-                            else {
+                            } else {
                                 if (typeof expanded === 'string') {
                                     if (expanded === '<nullptr>') {
-                                        if (argsPart) { argsPart = false; }
-                                        else { return submit(); }
-                                    }
-                                    else if (expanded[0] !== '"') {
+                                        if (argsPart) {
+                                            argsPart = false;
+                                        } else {
+                                            return submit();
+                                        }
+                                    } else if (expanded[0] !== '"') {
                                         strArr.push({
                                             name: '[err]',
                                             value: expanded,
@@ -357,8 +345,7 @@ export class VariablesHandler {
                                         variablesReference: 0
                                     });
                                     addOne();
-                                }
-                                else {
+                                } else {
                                     strArr.push({
                                         name: '[err]',
                                         value: expanded,
@@ -367,25 +354,21 @@ export class VariablesHandler {
                                     submit();
                                 }
                             }
-                        }
-                        catch (e) {
+                        } catch (e) {
                             session.sendErrorResponsePub(response, 14, `Could not expand variable: ${e}`);
                         }
                     };
                     addOne();
-                }
-                else {
+                } else {
                     session.sendErrorResponsePub(response, 13, `Unimplemented variable request options: ${JSON.stringify(varReq.options)}`);
                 }
-            }
-            else {
+            } else {
                 response.body = {
                     variables: id
                 };
                 session.sendResponse(response);
             }
-        }
-        else {
+        } else {
             response.body = {
                 variables: []
             };
@@ -476,8 +459,9 @@ export class LiveWatchMonitor {
                 this.quitting = true;
                 this.miDebugger.detach();
             }
+        } catch (e) {
+            console.error('LiveWatchMonitor.quit', e);
         }
-        catch {}
     }
 }
 

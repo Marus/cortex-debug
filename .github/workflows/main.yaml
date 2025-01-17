@@ -22,7 +22,7 @@ jobs:
       if: steps.cache-npm.outputs.cache-hit != 'true'
       run: |
         npm install
-  
+
   build:
     name: Build
     needs: setup
@@ -58,4 +58,4 @@ jobs:
         path: ./node_modules
         key: npm-${{ hashFiles('./package-lock.json') }}
     - name: Lint Project
-      run: ./node_modules/tslint/bin/tslint --project .
+      run: npm run lint

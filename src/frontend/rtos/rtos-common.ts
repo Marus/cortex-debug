@@ -1,4 +1,3 @@
-
 import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 
@@ -21,11 +20,13 @@ export interface RTOSStackInfo {
 // Note: The table we produce should still look good when expanding/shrinking in the horz direction.. Things
 // should not run into each other. Not easy, but do your best and test it
 export enum ColTypeEnum {
+    /* eslint-disable @stylistic/no-multi-spaces */
     colTypeNormal      = 0,        // Will be left justified. Use for Text fields, fixed width hex values, etc.
     colTypePercentage  = 1 << 0,   // Will be centered with a % bar
     colTypeNumeric     = 1 << 1,   // Will be right justified
     colTypeLink        = 1 << 2,   // TODO: mark it as a link to do something additional. Not totally functional
     colTypeCollapse    = 1 << 3    // Items will be collapsible
+    /* eslint-enable */
 }
 
 export interface DisplayColumnItem {
@@ -96,8 +97,7 @@ export abstract class RTOSBase {
                     console.log(`${c} RTOS: result <- ${JSON.stringify(result)}`);
                 }
                 resolve(result);
-            }
-            catch (e) {
+            } catch (e) {
                 if (traceVars) {
                     console.log(`${c} RTOS: exception <- ${e}`);
                 }
@@ -139,16 +139,11 @@ export abstract class RTOSBase {
             expression: expr,
             context: 'hover'
         };
-        try {
-            const result = await this.customRequest('evaluate', arg, optional);
-            if (!result || (!optional && (result.variablesReference === 0))) {
-                throw new Error(`Failed to evaluate ${expr}`);
-            }
-            return result ? result.variablesReference : 0;
+        const result = await this.customRequest('evaluate', arg, optional);
+        if (!result || (!optional && (result.variablesReference === 0))) {
+            throw new Error(`Failed to evaluate ${expr}`);
         }
-        catch (e) {
-            throw e;
-        }
+        return result ? result.variablesReference : 0;
     }
 
     protected async evalForVarValue(
@@ -158,14 +153,9 @@ export abstract class RTOSBase {
             expression: expr,
             context: 'hover'
         };
-        try {
-            const result = await this.customRequest('evaluate', arg);
-            const ret = result?.result;
-            return ret;
-        }
-        catch (e) {
-            throw e;
-        }
+        const result = await this.customRequest('evaluate', arg);
+        const ret = result?.result;
+        return ret;
     }
 
     protected getVarChildren(varRef: number, dbg: string): Promise<DebugProtocol.Variable[]> {
@@ -235,8 +225,7 @@ export abstract class RTOSBase {
                 return null;
             }
             return tmp;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof ShouldRetry) {
                 throw e;
             }
@@ -272,8 +261,7 @@ export abstract class RTOSBase {
                 const vars = await this.getExprValChildren(expr, frameId);
                 const obj = RTOSVarHelper.varsToObj(vars);
                 resolve(obj);
-            }
-            catch (e) {
+            } catch (e) {
                 resolve(e);
             }
         });
@@ -284,7 +272,6 @@ export abstract class RTOSBase {
         RTOSDisplayColumn: { [key: string]: DisplayColumnItem },
         allThreads: RTOSThreadInfo[],
         timeInfo: string): HtmlInfo {
-
         const getAlignClasses = (key: string) => {
             const colType: ColTypeEnum = RTOSDisplayColumn[key].colType;
             let ret = '';
@@ -331,7 +318,7 @@ export abstract class RTOSBase {
                 let have2ndRow = false;
                 const commonHeaderRowPart = '  <vscode-data-grid-row row-type="header" class="threads-header-row">\n';
                 const commonHeaderCellPart = '    <vscode-data-grid-cell cell-type="columnheader" class="threads-header-cell';
-                if (true) {
+                {
                     header = commonHeaderRowPart;
                     for (const key of displayFieldNames) {
                         const txt = padText(key, RTOSDisplayColumn[key].headerRow1);
@@ -372,8 +359,8 @@ export abstract class RTOSBase {
                         if (!isNaN(rowValueNumber)) {
                             const activeValueStr = Math.floor(rowValueNumber).toString();
                             additionalClasses += ' backgroundPercent';
-                            style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n` +
-                                `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
+                            style += `.${this.className}-grid .${rowClass} .threads-cell-${lKey}.backgroundPercent {\n`
+                                + `  --rtosview-percentage-active: ${activeValueStr}%;\n}\n\n`;
                         }
                     }
                 } else if (RTOSDisplayColumn[key].colType & ColTypeEnum.colTypeLink) {
@@ -444,12 +431,11 @@ export class RTOSVarHelper {
             this.value = result.result;
             this.varReference = result.variablesReference;
             return true;
-        }
-        catch (e) {
+        } catch (e) {
             const msg = e?.message as string;
             if (msg) {
-                if ((msg === 'Busy') ||                        // Cortex-Debug
-                    (msg.includes('process is running'))) {    // cppdbg
+                if ((msg === 'Busy')                        // Cortex-Debug
+                    || (msg.includes('process is running'))) {    // cppdbg
                     // For cppdbg, the whole message is 'Unable to perform this action because the process is running.'
                     return false;
                 }

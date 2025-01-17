@@ -62,8 +62,9 @@ export class XYGraph implements Graph {
         const wrapper = d3.select('.graph-container').append('div').attr('class', 'graph-wrapper');
         wrapper.append('h3').text(configuration.label);
 
-        // tslint:disable-next-line:max-line-length
-        this.svg = wrapper.append('svg').attr('width', this.width + this.margins.left + this.margins.right).attr('height', this.height + this.margins.top + this.margins.bottom);
+        this.svg = wrapper.append('svg')
+            .attr('width', this.width + this.margins.left + this.margins.right)
+            .attr('height', this.height + this.margins.top + this.margins.bottom);
         this.g = this.svg.append('g').attr('transform', `translate(${this.margins.left},${this.margins.top})`);
 
         this.xAxis = this.g.append('g').attr('transform', `translate(0,${this.height})`).call(d3.axisBottom(this.x));
@@ -128,8 +129,7 @@ export class XYGraph implements Graph {
 
                     this.path.datum(this.points).attr('d', this.line);
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log('Error Updating Plot: ', e);
             }
         }

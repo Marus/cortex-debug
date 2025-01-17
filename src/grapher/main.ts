@@ -1,7 +1,10 @@
 import { TimeseriesGraph } from './timeseriesgraph';
 import { XYGraph } from './xygraph';
 import { ProgramStatsGraph } from './programstatsgraph';
-import { Graph, GrapherConfigurationMessage, TimeseriesGraphConfiguration, XYGraphConfiguration, GrapherMessage, GrapherDataMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './types';
+import {
+    Graph, GrapherConfigurationMessage, TimeseriesGraphConfiguration, XYGraphConfiguration,
+    GrapherMessage, GrapherDataMessage, GrapherStatusMessage, GrapherProgramCounterMessage
+} from './types';
 import { GraphDataSource } from './datasource';
 
 interface VSCodeAPI {
@@ -31,8 +34,7 @@ function init() {
                 const graph = new TimeseriesGraph(config as TimeseriesGraphConfiguration, window.datasource);
                 graphs.push(graph);
                 if (message.status === 'stopped' || message.status === 'terminated') { graph.stop(); }
-            }
-            else if (config.type === 'x-y-plot') {
+            } else if (config.type === 'x-y-plot') {
                 const graph = new XYGraph(config as XYGraphConfiguration, window.datasource);
                 graphs.push(graph);
                 if (message.status === 'stopped' || message.status === 'terminated') { graph.stop(); }
@@ -47,8 +49,7 @@ function init() {
     function processStatus(message: GrapherStatusMessage) {
         if (message.status === 'stopped' || message.status === 'terminated') {
             graphs.forEach((g) => g.stop());
-        }
-        else if (message.status === 'continued') {
+        } else if (message.status === 'continued') {
             graphs.forEach((g) => g.continue());
         }
     }

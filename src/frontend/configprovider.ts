@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
-import { ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys, sanitizeDevDebug, ConfigurationArguments, validateELFHeader, SymbolFile, defSymbolFile } from '../common';
+import {
+    ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys,
+    sanitizeDevDebug, validateELFHeader, SymbolFile, defSymbolFile
+} from '../common';
 import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
 
@@ -40,7 +43,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             servertype: 'jlink'
         }];
     }
-    
+
     public resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
@@ -55,10 +58,21 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
-            case 'darwin': Object.assign(config, config.osx); delete config.osx; break;
-            case 'win32': Object.assign(config, config.windows); delete config.windows; break;
-            case 'linux': Object.assign(config, config.linux); delete config.linux; break;
-            default: console.log(`Unknown platform ${os.platform()}`);
+            case 'darwin':
+                Object.assign(config, config.osx);
+                delete config.osx;
+                break;
+            case 'win32':
+                Object.assign(config, config.windows);
+                delete config.windows;
+                break;
+            case 'linux':
+                Object.assign(config, config.linux);
+                delete config.linux;
+                break;
+            default:
+                console.log(`Unknown platform ${os.platform()}`);
+                break;
         }
         this.sanitizeChainedConfigs(config);
         if (config.debugger_args && !config.debuggerArgs) {
@@ -72,8 +86,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (!config.swoConfig) {
             config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: 'probe' };
-        }
-        else {
+        } else {
             if (config.swoConfig.ports && !config.swoConfig.decoders) {
                 config.swoConfig.decoders = config.swoConfig.ports;
             }
@@ -84,8 +97,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                     if (d.ports === undefined && d.number !== undefined) {
                         d.ports = [d.number];
                     }
-                }
-                else {
+                } else {
                     if (d.port === undefined && d.number !== undefined) {
                         d.port = d.number;
                     }
@@ -94,8 +106,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         }
         if (!config.rttConfig) {
             config.rttConfig = { enabled: false, decoders: [] };
-        }
-        else if (!config.rttConfig.decoders) {
+        } else if (!config.rttConfig.decoders) {
             config.rttConfig.decoders = [];
         }
 
@@ -107,8 +118,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.preResetCommands) { config.preResetCommands = config.preRestartCommands || []; }
         if (!config.postResetCommands) { config.postResetCommands = config.postRestartCommands || []; }
         if (!config.postResetSessionCommands) { config.postResetSessionCommands = config.postRestartSessionCommands || null; }
-        if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); }
-        else if (config.runToMain) {
+        if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); } else if (config.runToMain) {
             config.runToEntryPoint = 'main';
             vscode.window.showWarningMessage(
                 'launch.json: "runToMain" has been deprecated and will not work in future versions of Cortex-Debug. Please use "runToEntryPoint" instead');
@@ -146,10 +156,21 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             case 'qemu':
                 validationResponse = this.verifyQEMUConfiguration(folder, config);
                 break;
-            default:
-                // tslint:disable-next-line:max-line-length
-                validationResponse = 'Invalid servertype parameters. The following values are supported: "jlink", "openocd", "stlink", "stutil", "pyocd", "bmp", "pe", "qemu", "external"';
+            default: {
+                const validValues = [
+                    'jlink',
+                    'openocd',
+                    'stutil',
+                    'stlink',
+                    'pyocd',
+                    'bmp',
+                    'pe',
+                    'external',
+                    'qemu'
+                ].map((s) => `"${s}"`).join(', ');
+                validationResponse = 'Invalid servertype parameters. The following values are supported: ' + validValues;
                 break;
+            }
         }
 
         const configuration = vscode.workspace.getConfiguration('cortex-debug');
@@ -162,8 +183,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (config.showDevDebugOutput === undefined) {
             config.showDevDebugOutput = configuration.get(CortexDebugKeys.DEV_DEBUG_MODE, ADAPTER_DEBUG_MODE.NONE);
         }
-        if (!sanitizeDevDebug(config)) {
-            const modes = Object.values(ADAPTER_DEBUG_MODE);
+        if (!sanitizeDevDebug(config as unknown)) {
+            const modes = Object.values(ADAPTER_DEBUG_MODE).join(',');
             vscode.window.showInformationMessage(`launch.json: "showDevDebugOutput" muse be one of ${modes}. Setting to "${config.showDevDebugOutput}"`);
         }
 
@@ -173,7 +194,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.toolchainPath) {
             // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
             if (!config.armToolchainPath && config.servertype === 'stlink') {
-               config.armToolchainPath = STLinkServerController.getArmToolchainPath();
+                config.armToolchainPath = STLinkServerController.getArmToolchainPath();
             }
         }
 
@@ -226,10 +247,10 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             if (supportedList.indexOf(config.servertype) < 0) {
                 const str = supportedList.join(', ');
                 vscode.window.showInformationMessage(
-                    `Live watch is not officially supported for servertype '${config.servertype}'. ` +
-                    `Only ${str} are supported and tested. ` +
-                    `Report back to us if it works with your servertype '${config.servertype}'.\n \n` +
-                    'If you are using an "external" servertype and it is working for you, then you can safely ignore this message. ');
+                    `Live watch is not officially supported for servertype '${config.servertype}'. `
+                    + `Only ${str} are supported and tested. `
+                    + `Report back to us if it works with your servertype '${config.servertype}'.\n \n`
+                    + 'If you are using an "external" servertype and it is working for you, then you can safely ignore this message. ');
             }
         }
 
@@ -252,14 +273,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
     }
 
     private static adjustStrIntProp(obj: object, prop: string, where: string) {
-        if (!obj.hasOwnProperty(prop)) {
+        if (!(prop in obj)) {
             return;
         }
         let val: any = obj[prop];
         if (val) {
             let isIntString = false;
             if (typeof val === 'string') {
-                val = (val as string).trim();
+                val = val.trim();
                 isIntString = (val.match(/^0[x][0-9a-f]+/i) || val.match(/^[0-9]+/));
             }
             if (isIntString) {
@@ -325,7 +346,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         } else if (config.executable && config.symbolFiles) {
             // This is a special case when you have symbol files, we don't pass anything to gdb on the command line
             // and a target load will fail. Create a loadFiles from the executable if it exists.
-            config.loadFiles = [ config.executable ];
+            config.loadFiles = [config.executable];
         }
     }
 
@@ -342,15 +363,18 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         for (const propName of props) {
             if (blackList.includes(propName) || propName.startsWith('pvt')) {
-                vscode.window.showWarningMessage(`Cannot inherit property '${propName}' for configuration '${config.name}' because it is reserved`);
+                vscode.window.showWarningMessage(
+                    `Cannot inherit property '${propName}' for configuration '${config.name}' `
+                    + `because it is reserved`);
                 continue;
             }
             const val = parent[propName];
             if (val !== undefined) {
                 config[propName] = val;
             } else {
-                // tslint:disable-next-line: max-line-length
-                vscode.window.showWarningMessage(`Cannot inherit property '${propName}' for configuration '${config.name}' because it does not exist in parent configuration`);
+                vscode.window.showWarningMessage(
+                    `Cannot inherit property '${propName}' for configuration '${config.name}' `
+                    + `because it does not exist in parent configuration`);
             }
         }
     }
@@ -482,8 +506,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'serverpath', 'JLinkGDBServerPath');
 
         if (!config.device) {
-            // tslint:disable-next-line:max-line-length
-            return 'Device Identifier is required for J-Link configurations. Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
+            return 'Device Identifier is required for J-Link configurations. '
+                + 'Please see https://www.segger.com/downloads/supported-devices.php for supported devices';
         }
 
         if (((config.interface === 'jtag') || (config.interface === 'cjtag')) && config.swoConfig.enabled && config.swoConfig.source === 'probe') {
@@ -500,8 +524,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 }
 
                 if ((chosenPort !== undefined) && (chosenPort !== dec.port)) {
-                    return `Port/channel ${dec.port} selected but another decoder is using port ${chosenPort}. ` +
-                        'JLink RTT only allows a single RTT port/channel per debugging session.';
+                    return `Port/channel ${dec.port} selected but another decoder is using port ${chosenPort}. `
+                        + 'JLink RTT only allows a single RTT port/channel per debugging session.';
                 } else {
                     chosenPort = dec.port;
                 }
@@ -536,12 +560,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 }
 
                 if (!fs.existsSync(config.rtos)) {
-                    return `JLink RTOS plugin file "${config.rtos}" not found.\n` +
-                        `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}.` +
-                        ' A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
+                    return `JLink RTOS plugin file "${config.rtos}" not found.\n`
+                        + `The following RTOS values are supported by J-Link: ${JLINK_VALID_RTOS.join(', ')}.`
+                        + ' A custom plugin can be used by supplying a complete path to a J-Link GDB Server Plugin.';
                 }
-            }
-            else {
+            } else {
                 config.rtos = `GDBServer/RTOSPlugin_${config.rtos}` + defaultExt();
             }
         }
@@ -554,8 +577,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'serverpath', 'openocdPath');
 
         if (config.rtos && OPENOCD_VALID_RTOS.indexOf(config.rtos) === -1) {
-            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}.` +
-                'You can always use "auto" and OpenOCD generally does the right thing';
+            return `The following RTOS values are supported by OpenOCD: ${OPENOCD_VALID_RTOS.join(' ')}.`
+                + 'You can always use "auto" and OpenOCD generally does the right thing';
         }
 
         if (!CDebugChainedSessionItem.FindByName(config.name)) {
@@ -652,8 +675,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 vscode.window.showWarningMessage('SWO source type "socket" requires a "swoPort". Disabling SWO support.');
                 config.swoConfig = { enabled: false };
                 config.graphConfig = [];
-            }
-            else if (config.swoConfig.source !== 'socket' && !config.swoConfig.swoPath) {
+            } else if (config.swoConfig.source !== 'socket' && !config.swoConfig.swoPath) {
                 vscode.window.showWarningMessage(`SWO source type "${config.swoConfig.source}" requires a "swoPath". Disabling SWO support.`);
                 config.swoConfig = { enabled: false };
                 config.graphConfig = [];

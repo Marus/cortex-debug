@@ -9,7 +9,7 @@ export class CDebugSession {
     public swo: SWOCore = null;
     public rtt: RTTCore = null;
     public swoSource: SWORTTSource = null;
-    public rttPortMap: { [channel: number]: SocketRTTSource} = {};
+    public rttPortMap: { [channel: number]: SocketRTTSource } = {};
     // Status can be 'none' before the session actually starts but this object
     // may have been created before that actually happens due to SWO, RTT, chained
     // launches, etc
@@ -93,11 +93,13 @@ export class CDebugSession {
     public static FindSession(session: vscode.DebugSession) {
         return CDebugSession.FindSessionById(session.id);
     }
+
     public static FindSessionById(id: string) {
         const ret = CDebugSession.CurrentSessions.find((x) => x.session.id === id);
         return ret;
     }
-    public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments | undefined): CDebugSession {
+
+    public static GetSession(session: vscode.DebugSession, config?: ConfigurationArguments): CDebugSession {
         const prev = CDebugSession.FindSessionById(session.id);
         if (prev) {
             prev.config = config || prev.config;

@@ -98,8 +98,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 this.status = 'initialized';
             }
             return this;
-        }
-        catch (e) {
+        } catch (e) {
             if (e instanceof RTOSCommon.ShouldRetry) {
                 console.error(e.message);
             } else {
@@ -129,7 +128,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 }
 
                 if (!this.ulTotalRunTime) {
-                    ret += /*html*/`<br>Missing Runtime stats..:<br>
+                    ret += /* html */`<br>Missing Runtime stats..:<br>
                     /* To get runtime stats, modify the following macro in FreeRTOSConfig.h */<br>
                     #define ${strong('configGENERATE_RUN_TIME_STATS')}             1 /* 1: generate runtime statistics; 0: no runtime statistics */<br>
                     /* Also, add the following two macros to provide a high speed counter -- something at least 10x faster than<br>
@@ -141,12 +140,11 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                 }
                 if (ret) {
                     ret += '<br>Note: Make sure you consider the performance/resources impact for any changes to your FW.<br>\n';
-                    ret = '<button class="help-button">Hints to get more out of the FreeRTOS viewer</button>\n' +
-                        `<div class="help"><p>\n${ret}\n</p></div>\n`;
+                    ret = '<button class="help-button">Hints to get more out of the FreeRTOS viewer</button>\n'
+                        + `<div class="help"><p>\n${ret}\n</p></div>\n`;
                     this.helpHtml = ret;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }
@@ -231,8 +229,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                     this.stale = false;
                     this.timeInfo += ' in ' + timer.deltaMs() + ' ms';
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     resolve();
                     console.error('FreeRTOS.refresh() failed: ', e);
                 }
@@ -281,7 +278,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         // This is the order we want stuff in
                         const display: { [key: string]: RTOSCommon.DisplayRowItem } = {};
                         const mySetter = (x: DisplayFields, text: string, value?: any) => {
-                            display[DisplayFieldNames[x]] = {text, value};
+                            display[DisplayFieldNames[x]] = { text, value };
                         };
 
                         mySetter(DisplayFields.ID, thInfo['uxTCBNumber-val'] || '??');
@@ -294,8 +291,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
 
                         if (thInfo['uxBasePriority-val']) {
                             mySetter(DisplayFields.Priority, `${thInfo['uxPriority-val']},${thInfo['uxBasePriority-val']}`);
-                        }
-                        else {
+                        } else {
                             mySetter(DisplayFields.Priority, `${thInfo['uxPriority-val']}`);
                         }
 
@@ -318,8 +314,7 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                         curRef = element['pxPrevious-ref'];
                     }
                     resolve();
-                }
-                catch (e) {
+                } catch (e) {
                     console.log('FreeRTOS read thread info error', e);
                 }
             }, (e) => {
@@ -370,15 +365,14 @@ export class RTOSFreeRTOS extends RTOSCommon.RTOSBase {
                     peak++;
                 }
                 stackInfo.stackPeak = stackInfo.stackSize - peak;
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }
         return stackInfo;
     }
 
-    public lastValidHtmlContent: RTOSCommon.HtmlInfo = {html: '', css: ''};
+    public lastValidHtmlContent: RTOSCommon.HtmlInfo = { html: '', css: '' };
     public getHTML(): RTOSCommon.HtmlInfo {
         const htmlContent: RTOSCommon.HtmlInfo = {
             html: '', css: ''

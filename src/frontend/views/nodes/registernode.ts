@@ -19,8 +19,8 @@ export class RegisterNode extends BaseNode {
 
     constructor(public name: string, public index: number) {
         super(null);
-        
-        this.name = this.name;
+
+        this.name = name;
 
         if (name.toUpperCase() === 'XPSR' || name.toUpperCase() === 'CPSR') {
             this.fields = [
@@ -35,8 +35,7 @@ export class RegisterNode extends BaseNode {
                 new FieldNode('ICI/IT', 10, 6, this),
                 new FieldNode('Thumb State (T)', 24, 1, this)
             ];
-        }
-        else if (name.toUpperCase() === 'CONTROL') {
+        } else if (name.toUpperCase() === 'CONTROL') {
             this.fields = [
                 new FieldNode('FPCA', 2, 1, this),
                 new FieldNode('SPSEL', 1, 1, this),
@@ -54,10 +53,10 @@ export class RegisterNode extends BaseNode {
     }
 
     public getTreeItem(): TreeItem | Promise<TreeItem> {
-        const state = this.fields && this.fields.length > 0 ?
-            (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
+        const state = this.fields && this.fields.length > 0
+            ? (this.expanded ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed)
             : TreeItemCollapsibleState.None;
-        
+
         const label: TreeItemLabel = {
             label: this.name + ' ' + this.currentNaturalValue
         };
@@ -65,7 +64,7 @@ export class RegisterNode extends BaseNode {
             label.highlights = [[this.name.length + 1, label.label.length]];
         }
         this.prevNaturalValue = this.currentNaturalValue;
-        
+
         const item = new TreeItem(label, state);
         // item.description = this.currentNaturalValue;
         item.contextValue = 'register';
@@ -93,7 +92,9 @@ export class RegisterNode extends BaseNode {
                     this.currentValue = tmp;
                 }
                 let cv = this.currentValue.toString(16);
-                while (cv.length < 8) { cv = '0' + cv; }
+                while (cv.length < 8) {
+                    cv = '0' + cv;
+                }
                 this.currentNaturalValue = '0x' + cv;
             }
         }

@@ -74,7 +74,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const cpuFrequency = this.args.swoConfig.cpuFrequency;
 
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-        
+
         const commands: string[] = [
             'EnableITMAccess',
             `BaseSWOSetup ${ratio}`,
@@ -88,7 +88,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         ];
 
         commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-        
+
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 
@@ -97,9 +97,11 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
         const ret = this.args.serverpath ? this.args.serverpath : exeName;
         return ret;
     }
+
     public allocateRTTPorts(): Promise<void> {
         return Promise.resolve();
     }
+
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
         const telnetport = this.ports['consolePort'];
@@ -172,7 +174,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
             }
         }
     }
-    
+
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {}
 }

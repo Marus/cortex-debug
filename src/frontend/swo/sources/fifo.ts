@@ -2,15 +2,19 @@ import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { SWORTTSource } from './common';
 
-export class FifoSWOSource extends EventEmitter implements SWORTTSource  {
+export class FifoSWOSource extends EventEmitter implements SWORTTSource {
     private stream: fs.ReadStream;
     public connected: boolean = false;
 
     constructor(private SWOPath: string) {
         super();
         this.stream = fs.createReadStream(this.SWOPath, { highWaterMark: 128, encoding: null, autoClose: false });
-        this.stream.on('data', (buffer) => { this.emit('data', buffer); });
-        this.stream.on('close', (buffer) => { this.emit('disconnected'); });
+        this.stream.on('data', (buffer) => {
+            this.emit('data', buffer);
+        });
+        this.stream.on('close', (buffer) => {
+            this.emit('disconnected');
+        });
         this.connected = true;
     }
 

@@ -24,7 +24,7 @@ const NODE_VERSION_DIMENSION = 'cd8';
 let analytics: any;
 
 let uuid: string = null;
-const sessionStarts: {[id: string]: Date} = {};
+const sessionStarts: { [id: string]: Date } = {};
 
 interface UserSettings {
     uuid: string;
@@ -37,8 +37,7 @@ function getUUID(): string {
             const data = fs.readFileSync(settingspath, 'utf8');
             const settings: UserSettings = JSON.parse(data);
             uuid = settings.uuid;
-        }
-        else {
+        } else {
             uuid = uuidv4();
             const settings: UserSettings = { uuid: uuid };
             fs.writeFileSync(settingspath, JSON.stringify(settings), 'utf8');
@@ -82,7 +81,7 @@ function beginSession(id: string, opts: ConfigurationArguments) {
     if (opts.rtos) { analytics.set(RTOS_TYPE_DIMENSION, opts.rtos); }
     if (opts.device) { analytics.set(DEVICE_ID_DIMENSION, opts.device); }
     analytics.set(GDB_SERVER_TYPE_DIMENSION, opts.servertype);
-    
+
     analytics.screenview('Debug Session', 'Cortex-Debug', extensionVersion, extensionId);
     analytics.event('Session', 'Started', '', 0, { sessionControl: 'start' });
 
@@ -95,9 +94,9 @@ function beginSession(id: string, opts: ConfigurationArguments) {
     if (opts.graphConfig.length > 0) {
         analytics.event('Graphing', 'Used');
     }
-    
+
     sessionStarts[id] = new Date();
-    
+
     analytics.send();
 }
 
@@ -110,7 +109,9 @@ function endSession(id: string) {
         const time = (endTime.getTime() - startTime.getTime()) / 1000;
         delete sessionStarts[id];
 
-        setTimeout(() => { analytics.event('Session', 'Completed', '', Math.round(time), { sessionControl: 'end' }).send(); }, 500);
+        setTimeout(() => {
+            analytics.event('Session', 'Completed', '', Math.round(time), { sessionControl: 'end' }).send();
+        }, 500);
     }
 }
 

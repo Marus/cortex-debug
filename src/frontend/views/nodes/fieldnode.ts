@@ -6,7 +6,7 @@ import { toStringDecHexOctBin } from '../../../common';
 export class FieldNode extends BaseNode {
     public prevValue: string = '';
     public value: string = '';
-    
+
     constructor(public name: string, private offset: number, private size: number, private register: RegisterNode) {
         super(register);
     }
@@ -26,12 +26,12 @@ export class FieldNode extends BaseNode {
             label.highlights = [[this.name.length + 1, label.label.length]];
         }
         this.prevValue = this.value;
-        
+
         const ti = new TreeItem(label, TreeItemCollapsibleState.None);
         // ti.description = this.value;
         ti.contextValue = 'field';
         ti.tooltip = '$' + this.register.name + '.' + this.name + '\n' + toStringDecHexOctBin(value);
-        
+
         return ti;
     }
 

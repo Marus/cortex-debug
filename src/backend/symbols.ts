@@ -85,7 +85,7 @@ function replaceProgInPath(filepath: string, search: string | RegExp, replace: s
         filepath = filepath.toLowerCase().replace(/\\/g, '/');
     }
     const ix = filepath.lastIndexOf('/');
-    const prefix = (ix >= 0) ? filepath.substring(0, ix + 1) : '' ;
+    const prefix = (ix >= 0) ? filepath.substring(0, ix + 1) : '';
     const suffix = filepath.substring(ix + 1);
     const replaced = suffix.replace(search, replace);
     if (replaced === suffix) {
@@ -116,16 +116,16 @@ export class SymbolTable {
     // on large executables since most of our searches are linear. Or, to avoid a search entirely if possible
     // Case sensitivity for path names is an issue: We follow just what gcc records so inherently case-sensitive
     // or case-preserving. We don't try to re-interpret/massage those path-names (but we do Normalize).
-    private staticsByFile: {[file: string]: SymbolInformation[]} = {};
+    private staticsByFile: { [file: string]: SymbolInformation[] } = {};
     private globalVars: SymbolInformation[] = [];
-    private globalFuncsMap: {[key: string]: SymbolInformation} = {};    // Key is function name
+    private globalFuncsMap: { [key: string]: SymbolInformation } = {};    // Key is function name
     private staticVars: SymbolInformation[] = [];
-    private staticFuncsMap: {[key: string]: SymbolInformation[]} = {};  // Key is function name
-    private fileMap: {[key: string]: string[]} = {};                    // Potential list of file aliases we found
+    private staticFuncsMap: { [key: string]: SymbolInformation[] } = {};  // Key is function name
+    private fileMap: { [key: string]: string[] } = {};                    // Potential list of file aliases we found
     public symbolsAsIntervalTree: IntervalTree<SymbolNode> = new IntervalTree<SymbolNode>();
     public symbolsByAddress: AddressToSym = new AddressToSym();
     public symbolsByAddressOrig: AddressToSym = new AddressToSym();
-    private varsByFile: {[path: string]: VariablesInFile} = null;
+    private varsByFile: { [path: string]: VariablesInFile } = null;
     private nmPromises: ExecPromise[] = [];
 
     private objdumpPath: string;
@@ -263,11 +263,11 @@ export class SymbolTable {
      * Problem statement:
      * We need a read the symbol table for multiple types of information and none of the tools so far
      * give all all we need
-     * 
+     *
      * 1. List of static variables by file
      * 2. List og globals
      * 3. Functions (global and static) with their addresses and lengths
-     * 
+     *
      * Things we tried:
      * 1.-Wi option objdump -- produces super large output (100MB+) and take minutes to produce and parse
      * 2. Using gdb: We can get variable/function to file information but no addresses -- not super fast but
@@ -277,14 +277,14 @@ export class SymbolTable {
      *    belongs to which file that is pretty accurate
      * 4. Use readelf. This went nowhere because you can't get even basic file to symbol mapping from this
      *    and it is not as universal for handling file formats as objdump.
-     * 
+     *
      * So, we are not using option 3 and fall back to option 2. We will never go back to option 1
-     * 
+     *
      * Another problem is that we may have to query for symbols using different ways -- partial file names,
      * full path names, etc. So, we keep a map of file to statics.
-     * 
+     *
      * Other uses for objdump is to get a section headers for memory regions that can be used for disassembly
-     * 
+     *
      * We avoid splitting the output(s) into lines and then parse line at a time.
      */
     public loadSymbols(): Promise<void> {
@@ -296,8 +296,7 @@ export class SymbolTable {
                 this.categorizeSymbols();
                 this.sortGlobalVars();
                 resolve();
-            }
-            catch (e) {
+            } catch (e) {
                 // We treat this is non-fatal, but why did it fail?
                 this.gdbSession.handleMsg('log', `Error: objdump failed! statics/globals/functions may not be properly classified: ${e.toString()}\n`);
                 this.gdbSession.handleMsg('log', '    ENOENT means program not found. If that is not the issue, please report this problem.\n');
@@ -472,7 +471,7 @@ export class SymbolTable {
                     continue;
                 }
                 try {
-                    const spawnOpts = {cwd: this.gdbSession.args.cwd};
+                    const spawnOpts = { cwd: this.gdbSession.args.cwd };
                     const objdumpStart = Date.now();
                     const objDumpArgs = [
                         '--syms',   // Of course, we want symbols
@@ -505,12 +504,14 @@ export class SymbolTable {
                     }
                     objdumpPromises.push({
                         args: [this.objdumpPath, ...objDumpArgs],
-                        // tslint:disable-next-line: max-line-length
-                        promise: this.objdumpReader.startWithProgram(this.objdumpPath, objDumpArgs, spawnOpts, this.readObjdumpHeaderLine.bind(this, symbolFile))
-                        // tslint:disable-next-line: max-line-length
-                        // promise: this.objdumpReader.startWithFile('/Users/hdm/Downloads/objdump.txt', null, this.readObjdumpHeaderLine.bind(this, symbolFile))
+                        promise: this.objdumpReader.startWithProgram(
+                            this.objdumpPath,
+                            objDumpArgs,
+                            spawnOpts,
+                            this.readObjdumpHeaderLine.bind(this, symbolFile)
+                        ),
                     });
-                    
+
                     const nmStart = Date.now();
                     const nmProg = replaceProgInPath(this.objdumpPath, /objdump/i, 'nm');
                     const nmArgs = [
@@ -547,8 +548,7 @@ export class SymbolTable {
                         args: [nmProg, ...nmArgs],
                         promise: nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this, symbolFile))
                     });
-                }
-                catch (e) {
+                } catch (e) {
                     if (!rejected) {
                         rejected = true;
                         reject(e);
@@ -569,9 +569,8 @@ export class SymbolTable {
         for (const p of promises) {
             try {
                 await p.promise;
-            }
-            catch (e) {
-                this.gdbSession.handleMsg('log', `Failed running: ${[p.args.join(' ')]}.\n    ${e}`);
+            } catch (e) {
+                this.gdbSession.handleMsg('log', `Failed running: ${p.args.join(' ')}.\n    ${e}`);
             }
         }
         return Promise.resolve();
@@ -600,11 +599,9 @@ export class SymbolTable {
                         console.error('Unknown symbol address. Need to investigate', hexFormat(item[0]), item);
                     }
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 // console.log('???');
-            }
-            finally {
+            } finally {
                 this.addressToFileOrig.clear();
                 this.nmPromises = [];
             }
@@ -634,7 +631,7 @@ export class SymbolTable {
 
     private sortGlobalVars() {
         // We only sort globalVars. Want to preserve statics original order though.
-        this.globalVars.sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+        this.globalVars.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
         // double underscore variables are less interesting. Push it down to the bottom
         const doubleUScores: SymbolInformation[] = [];
@@ -695,7 +692,7 @@ export class SymbolTable {
     public printSyms(cb?: (str: string) => any) {
         cb = cb || console.log;
         for (const sym of this.allSymbols) {
-            let str = sym.name ;
+            let str = sym.name;
             if (sym.type === SymbolType.Function) {
                 str += ' (f)';
             } else if (sym.type === SymbolType.Object) {
@@ -726,8 +723,7 @@ export class SymbolTable {
                 fs.writeSync(outFd, '\n');
             });
             fs.closeSync(outFd);
-        }
-        catch (e) {
+        } catch (e) {
             console.log('printSymsToFile: failed' + e);
         }
     }
@@ -862,7 +858,7 @@ export class SymbolTable {
     }
 
     public getGlobalOrStaticVarByName(name: string, file?: string): SymbolInformation {
-        if (!file && this.rttSymbol && (name === this.rttSymbolName) ) {
+        if (!file && this.rttSymbol && (name === this.rttSymbolName)) {
             return this.rttSymbol;
         }
 
@@ -886,22 +882,6 @@ export class SymbolTable {
         return null;
     }
 
-    public loadSymbolsFromGdb(waitOn: Promise<void>): Promise<boolean> {
-        return new Promise<boolean>((resolve, reject) => {
-            waitOn.then(async () => {
-                if (true) {
-                    // gdb is un-reliable for getting symbol information. Most of the time it works but we have
-                    // reports of it taking 30+ seconds to dump symbols from small executable (C++) and we have
-                    // also seen it run out of memory and crash on a well decked out Mac. Also seen asserts.
-                    resolve(true);
-                    return;
-                }
-            }, (e) => {
-                reject(e);
-            });
-        });
-    }
-    
     public static NormalizePath(pathName: string): string {
         if (!pathName) { return pathName; }
         if (os.platform() === 'win32') {

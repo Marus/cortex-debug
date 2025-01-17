@@ -104,8 +104,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                 this.client = null;
                 saved.destroy();
             }
-        }
-        catch (e) {
+        } catch (e) {
             // For debug only
             console.log(`Socked destroy error ${e}`);
         }
@@ -124,14 +123,9 @@ export class SocketRTTSource extends SocketSWOSource {
     constructor(tcpPort: string, public readonly channel: number) {
         super(tcpPort);
     }
-    
+
     public write(data) {
-        try {
-            this.client.write(data);
-        }
-        catch (e) {
-            throw e;
-        }
+        this.client.write(data);
     }
 }
 
@@ -199,8 +193,7 @@ class PeMicroHeader {
         cls.type = header[2];
         cls.sequence = header[3];
         const messageLength = header[4];
-        if (messageLength < PeMicroHeader.headerLength)
-        {
+        if (messageLength < PeMicroHeader.headerLength) {
             throw new Error('Message length smaller than header');
         }
         cls.dataLength = messageLength - PeMicroHeader.headerLength;
@@ -351,18 +344,12 @@ export class PeMicroSocketSource extends SocketSWOSource {
                 // If we couldn't decode the header, just discard the data.
                 // Its probably garbage or out of sync, so upstream would be confused anyway
             }
-            
         }
     }
 
     public write(data) {
-        try {
-            const header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
-            this.client.write(header.getTxString() + data);
-            this.sequence = this.sequence + 1;
-        }
-        catch (e) {
-            throw e;
-        }
+        const header = PeMicroHeader.fromValues(PeHeaderType.TX_COMMAND, this.sequence, data.length);
+        this.client.write(header.getTxString() + data);
+        this.sequence = this.sequence + 1;
     }
 }

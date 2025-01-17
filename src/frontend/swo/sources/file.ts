@@ -21,8 +21,7 @@ export class FileSWOSource extends EventEmitter implements SWORTTSource {
                 fs.open(SWOPath, 'r', (err, fd) => {
                     if (err) {
                         vscode.window.showWarningMessage(`Unable to open path: ${SWOPath} - Unable to read SWO data.`);
-                    }
-                    else {
+                    } else {
                         this.fd = fd;
                         this.interval = setInterval(this.read.bind(this), 2);
                         this.connected = true;

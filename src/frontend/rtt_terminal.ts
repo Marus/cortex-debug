@@ -32,9 +32,11 @@ export class RTTTerminal {
     private connectToSource(src: SocketRTTSource) {
         this.hrTimer = new HrTimer();
         this.binaryFormatter = new BinaryFormatter(this.ptyTerm, this.options.encoding, this.options.scale);
-        src.once('disconnected', () => { this.onClose(); });
+        src.once('disconnected', () => {
+            this.onClose();
+        });
         src.on('error', (e) => {
-            const code: string = (e as any).code;
+            const code: string = e.code;
             if (code === 'ECONNRESET') {
                 // Server closed the connection. We are done with this session
             } else if (code === 'ECONNREFUSED') {
@@ -44,7 +46,9 @@ export class RTTTerminal {
                 magentaWrite(`${e}\n`, this.ptyTerm);
             }
         });
-        src.on('data', (data) => { this.onData(data); });
+        src.on('data', (data) => {
+            this.onData(data);
+        });
 
         if (src.connError) {
             this.source = src;
@@ -81,8 +85,7 @@ export class RTTTerminal {
             } else {
                 this.writeNonBinary(data);
             }
-        }
-        catch (e) {
+        } catch (e) {
             magentaWrite(`Error writing data: ${e}\n`, this.ptyTerm);
         }
     }
@@ -91,8 +94,7 @@ export class RTTTerminal {
         if ((this.logFd < 0) && this.options.logfile) {
             try {
                 this.logFd = fs.openSync(this.options.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${this.options.logfile} for writing. ${e.toString()}`;
                 console.error(msg);
                 magentaWrite(msg, this.ptyTerm);
@@ -118,7 +120,7 @@ export class RTTTerminal {
                 str = data as string;
             }
             if (ts) {
-                // We emulate what the terminal does adding a timestamp after all new lines 
+                // We emulate what the terminal does adding a timestamp after all new lines
                 if (this.startOfNewLine) {
                     this.writeLogFile(Buffer.from(ts));
                 }
@@ -151,7 +153,7 @@ export class RTTTerminal {
             time = this.lastTimeStr;
         }
 
-        for (let ix = 1; ix < buf.length; ix++ ) {
+        for (let ix = 1; ix < buf.length; ix++) {
             if (buf[ix - 1] !== 0xff) { continue; }
             const chr = buf[ix];
             if (((chr >= 48) && (chr <= 57)) || ((chr >= 65) && (chr <= 90))) {
@@ -210,13 +212,12 @@ export class RTTTerminal {
     public sendData(str: string | Buffer) {
         if (this.source) {
             try {
-                if (((typeof str === 'string') || (str instanceof String)) &&
-                    (this.options.inputmode === TerminalInputMode.COOKED)) {
+                if (((typeof str === 'string') || (str instanceof String))
+                    && (this.options.inputmode === TerminalInputMode.COOKED)) {
                     str = Buffer.from(str as string, this.options.iencoding);
                 }
                 this.source.write(str);
-            }
-            catch (e) {
+            } catch (e) {
                 console.error(`RTTTerminal:sendData failed ${e}`);
             }
         }
@@ -231,8 +232,7 @@ export class RTTTerminal {
         if (this.logFd >= 0) {
             try {
                 fs.closeSync(this.logFd);
-            }
-            catch (e) {
+            } catch (e) {
                 magentaWrite(`Error: closing fille ${e}\n`, this.ptyTerm);
             }
             this.logFd = -1;
@@ -284,15 +284,15 @@ function padLeft(str: string, len: number, chr = ' '): string {
 }
 
 function getBinaryEncoding(enc: string): BinaryEncoding {
-    enc =  enc ? enc.toLowerCase() : '';
-    if (!(enc in  BinaryEncoding)) {
+    enc = enc ? enc.toLowerCase() : '';
+    if (!(enc in BinaryEncoding)) {
         enc = BinaryEncoding.UNSIGNED;
     }
     return enc as BinaryEncoding;
 }
 
 function getTextEncoding(enc: string): TextEncoding {
-    enc =  enc ? enc.toLowerCase() : '';
+    enc = enc ? enc.toLowerCase() : '';
     if (!(enc in TextEncoding)) {
         return TextEncoding.UTF8;
     }
@@ -333,7 +333,7 @@ class BinaryFormatter {
                 const decodedValue = parseEncoded(this.buffer, this.encoding);
                 const decodedStr = padLeft(`${decodedValue}`, 12);
                 const scaledValue = padLeft(`${decodedValue * this.scale}`, 12);
-                
+
                 this.ptyTerm.write(`${timestamp} ${chars}  0x${hexvalue} - ${decodedStr} - ${scaledValue}\n`);
                 this.bytesRead = 0;
             }

@@ -17,9 +17,9 @@ export class GDBServerConsoleInstance {
 
     private constructor() {
         this.ptyOptions = {
-            name      : 'gdb-server',
-            prompt    : '',             // Can't have a prompt since the gdb-server or semihosting may have one
-            inputMode : TerminalInputMode.COOKED
+            name: 'gdb-server',
+            prompt: '',             // Can't have a prompt since the gdb-server or semihosting may have one
+            inputMode: TerminalInputMode.COOKED
         };
     }
 
@@ -89,8 +89,12 @@ export class GDBServerConsoleInstance {
         this.ptyOptions.name = GDBServerConsoleInstance.createTermName(this.ptyOptions.name, null);
         this.ptyTerm = new PtyTerminal(this.ptyOptions);
         this.ptyTerm.terminal.show();
-        this.ptyTerm.on('close', () => { this.onTerminalClosed(); });
-        this.ptyTerm.on('data', (data) => { this.sendToBackend(data); });
+        this.ptyTerm.on('close', () => {
+            this.onTerminalClosed();
+        });
+        this.ptyTerm.on('data', (data) => {
+            this.sendToBackend(data);
+        });
         if (this.toBackend === null) {
             magentaWrite('Waiting for gdb server to start...', this.ptyTerm);
             this.ptyTerm.pause();
@@ -119,7 +123,7 @@ export class GDBServerConsoleInstance {
     }
 
     public logData(data: Buffer | string) {
-         GDBServerConsole.logDataStatic(this.ptyTerm, data);
+        GDBServerConsole.logDataStatic(this.ptyTerm, data);
     }
 
     public debugMsg(msg: string) {
@@ -159,8 +163,7 @@ export class GDBServerConsole {
         if (consoleLogFd >= 0) {
             try {
                 fs.closeSync(consoleLogFd);
-            }
-            finally {
+            } finally {
                 consoleLogFd = -1;
             }
         }
@@ -177,8 +180,7 @@ export class GDBServerConsole {
                 this.logFName = `${tmpdir}/gdb-server-console-${process.pid}.log`;
             }
             consoleLogFd = fs.openSync(this.logFName, 'w');
-        }
-        catch (error) {
+        } catch (error) {
             if (showErr) {
                 vscode.window.showErrorMessage(`Could not open log file: ${this.logFName}\n${error}`);
             }
@@ -190,17 +192,14 @@ export class GDBServerConsole {
     }
 
     public static debugMsgStatic(ptyTerm: PtyTerminal, msg: string) {
-        try {
-            const date = new Date();
-            msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ` + msg;
-            // console.log(msg);
-            if (ptyTerm) {
-                msg += msg.endsWith('\n') ? '' : '\n';
-                magentaWrite(msg, ptyTerm);
-            }
-            GDBServerConsole.logDataStatic(ptyTerm, msg);
+        const date = new Date();
+        msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ` + msg;
+        // console.log(msg);
+        if (ptyTerm) {
+            msg += msg.endsWith('\n') ? '' : '\n';
+            magentaWrite(msg, ptyTerm);
         }
-        finally {}
+        GDBServerConsole.logDataStatic(ptyTerm, msg);
     }
 
     // Create a server for the GDBServer running in the adapter process. Any data
@@ -247,8 +246,7 @@ export class GDBServerConsole {
                 fs.writeFileSync(consoleLogFd, data.toString());
                 fs.fdatasyncSync(consoleLogFd);
             }
-        }
-        catch (e) {
+        } catch (e) {
             consoleLogFd = -1;
         }
     }

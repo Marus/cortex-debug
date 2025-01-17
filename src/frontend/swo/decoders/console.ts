@@ -37,8 +37,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
             this.logfile = config.logfile;
             try {
                 this.logFd = fs.openSync(config.logfile, 'w');
-            }
-            catch (e) {
+            } catch (e) {
                 const msg = `Could not open file ${config.logfile} for writing. ${e.toString()}`;
                 vscode.window.showErrorMessage(msg);
             }
@@ -79,7 +78,7 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     private createVSCodeChanne(config: SWOConsoleDecoderConfig) {
         this.output = vscode.window.createOutputChannel(this.createName(config));
 
-        // A work-around. A blank display will appear if the output is shown immediately 
+        // A work-around. A blank display will appear if the output is shown immediately
         if (config.showOnStartup) {
             this.showOutputTimer = setTimeout(() => {
                 this.output.show(true);
@@ -109,16 +108,19 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
     }
 
     private logFileWrite(text: string) {
-        if ( (this.logFd < 0) || (text === '') ) {
+        if ((this.logFd < 0) || (text === '')) {
             return;
         }
         try {
             fs.writeSync(this.logFd, text);
-        }
-        catch (e) {
+        } catch (e) {
             const msg = `Could not write to file ${this.logfile}. ${e.toString()}`;
             vscode.window.showErrorMessage(msg);
-            try { fs.closeSync(this.logFd); } catch {}
+            try {
+                fs.closeSync(this.logFd);
+            } catch (closeErr) {
+                console.error('decoder.logCloseError', closeErr);
+            }
             this.logFd = -1;
         }
     }
@@ -128,7 +130,10 @@ export class SWOConsoleProcessor implements SWORTTDecoder {
         let text = '';
         const letters = packet.data.toString(this.encoding);
         for (const letter of letters) {
-            if (this.timeout) { clearTimeout(this.timeout); this.timeout = null; }
+            if (this.timeout) {
+                clearTimeout(this.timeout);
+                this.timeout = null;
+            }
 
             if (letter === '\n') {
                 text += '\n';

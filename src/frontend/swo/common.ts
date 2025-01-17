@@ -44,9 +44,9 @@ export interface TimeseriesGraphConfiguration extends GraphConfiguration {
     maximum: number;
     timespan: number;
     plots: {
-        graphId: string,
-        label: string,
-        color: string
+        graphId: string;
+        label: string;
+        color: string;
     }[];
 }
 

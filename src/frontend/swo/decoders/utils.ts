@@ -21,7 +21,7 @@ export function parseSigned(buffer: Buffer): number {
         buffer.copy(tmp);
         buffer = tmp;
     }
-    
+
     const result = SignedParser.parse(buffer);
     return result.value;
 }

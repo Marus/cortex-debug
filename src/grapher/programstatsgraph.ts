@@ -24,12 +24,18 @@ function djb2(str: string): number {
     return hash;
 }
 
-// tslint:disable-next-line:max-line-length
-const COLORS: string[] = ['#C0392B', '#9B59B6', '#2980B9', '#1ABC9C', '#16A085', '#F1C40F', '#E67E22', '#D35400', '#E74C3C', '#8E44AD', '#3498DB', '#2ECC71', '#F39C12'];
+const COLORS: string[] = [
+    '#C0392B', '#9B59B6', '#2980B9', '#1ABC9C', '#16A085',
+    '#F1C40F', '#E67E22', '#D35400', '#E74C3C', '#8E44AD',
+    '#3498DB', '#2ECC71', '#F39C12',
+];
 
 function hashStringToColor(str: string): string {
-    if (!str || str === '**Other**') { return '#CCCCCC'; }
-    else { return COLORS[Math.abs(djb2(str)) % COLORS.length]; }
+    if (!str || str === '**Other**') {
+        return '#CCCCCC';
+    }
+
+    return COLORS[Math.abs(djb2(str)) % COLORS.length];
 }
 
 export class ProgramStatsGraph implements Graph {
@@ -53,7 +59,7 @@ export class ProgramStatsGraph implements Graph {
 
     private stopped: boolean = false;
 
-    private processData(data: {[name: string]: number}) {
+    private processData(data: { [name: string]: number }) {
         let counts: FunctionStat[] = [];
 
         // tslint:disable-next-line:forin
@@ -63,8 +69,8 @@ export class ProgramStatsGraph implements Graph {
 
         counts.sort((a, b) => {
             if (a.count < b.count) { return 1; }
-            else if (a.count > b.count) { return -1; }
-            else { return 0; }
+            if (a.count > b.count) { return -1; }
+            return 0;
         });
 
         if (counts.length > 10) {

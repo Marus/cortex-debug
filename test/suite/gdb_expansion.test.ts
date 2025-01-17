@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import { expandValue, isExpandable } from '../../src/backend/gdb_expansion';
 
 suite('GDB Value Expansion', () => {
-    const variableCreate = (variable) => ({ expanded: variable });
+    const variableCreate = (variable) => 0;
     test('Various values', () => {
         assert.strictEqual(isExpandable('false'), 0);
         assert.equal(expandValue(variableCreate, 'false'), 'false');
@@ -116,7 +116,7 @@ suite('GDB Value Expansion', () => {
         assert.equal(variables[3].value, '"foobar"');
     });
     test('Complex node', () => {
-        // tslint:disable-next-line: max-line-length
+        // eslint-disable-next-line @stylistic/max-len
         const node = '{quit = false, _views = {{view = 0x7ffff7ece1e8, renderer = 0x7ffff7eccc50, world = 0x7ffff7ece480}}, deltaTimer = {_flagStarted = false, _timeStart = {length = 0}, _timeMeasured = {length = 0}}, _start = {callbacks = 0x0}, _stop = {callbacks = 0x0}}';
         assert.strictEqual(isExpandable(node), 1);
         const variables = expandValue(variableCreate, node);

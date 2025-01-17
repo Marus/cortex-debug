@@ -6,7 +6,7 @@ import { TcpPortScanner, InterfaceIpsSet } from './tcpportscanner';
 import * as Interfaces from './interfaces';
 
 export class Server {
-    public readonly ipAddr: string = "";
+    public readonly ipAddr: string = '';
     public readonly allIps: InterfaceIpsSet;
     public port: number = -1;
     private server: net.Server | undefined;
@@ -21,7 +21,7 @@ export class Server {
         return new Promise<number>(async (resolve, reject) => {
             try {
                 const start = 43473 + Math.floor(Math.random() * 10);
-                const args = { min: start, max: start + 1000 }
+                const args = { min: start, max: start + 1000 };
                 const ports = await TcpPortScanner.findFreePorts(args);
                 if (!ports || ports.length < 1) {
                     throw new Error('Internal error: zero ports returned!?');
@@ -39,32 +39,31 @@ export class Server {
                     this.server?.listen(this.port, this.useHost);
                 });
                 this.server.listen(this.port, this.useHost);
-            }
-            catch (e: any) {
+            } catch (e: any) {
                 reject(e);
             }
         });
     }
 
     public hello(sessionId: string): Interfaces.helloReturn {
-		const config = vscode.workspace.getConfiguration('cortex-debug');
-		const settings: {[key: string]: any} = {};
-		for (const [key, value] of Object.entries(config)) {
-			if ((typeof value !== 'function') && (value !== null) && (value !== undefined)) {
-				settings[key] = value;
-			}
-		}
+        const config = vscode.workspace.getConfiguration('cortex-debug');
+        const settings: { [key: string]: any } = {};
+        for (const [key, value] of Object.entries(config)) {
+            if ((typeof value !== 'function') && (value !== null) && (value !== undefined)) {
+                settings[key] = value;
+            }
+        }
         const ret: Interfaces.helloReturn = {
-			port: this.port,
-			host: this.ipAddr,
-			addrs: this.allIps,
-			platform: os.platform(),
-			release: os.release(),
-			version: os.version(),
-			hostname: os.hostname(),
-			mySessionId: vscode.env.sessionId,
-			mySettings: settings
-		};
+            port: this.port,
+            host: this.ipAddr,
+            addrs: this.allIps,
+            platform: os.platform(),
+            release: os.release(),
+            version: os.version(),
+            hostname: os.hostname(),
+            mySessionId: vscode.env.sessionId,
+            mySettings: settings
+        };
         return ret;
     }
 
@@ -83,7 +82,7 @@ class Client {
             new rpc.StreamMessageWriter(this.socket, 'utf-8')
         );
 
-        let notification = new rpc.NotificationType<Interfaces.eventArgs>('event');
+        const notification = new rpc.NotificationType<Interfaces.eventArgs>('event');
         this.connection.onNotification(notification, (param: Interfaces.eventArgs) => {
             console.log(param);
         });
@@ -108,7 +107,7 @@ class Client {
         const arg: Interfaces.eventArgs = {
             type: Interfaces.RpcEeventNames.stdout,
             data: Buffer.from('Message from server')
-        }
+        };
         this.connection.sendNotification(notification, arg);
     }
 

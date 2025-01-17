@@ -16,8 +16,8 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
     // tslint:disable-next-line:variable-name
     private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
     public readonly onDidChange = this._onDidChange.event;
-    private allMemoryWindows: {[path: string]: MemDocStatus} = {};
-    
+    private allMemoryWindows: { [path: string]: MemDocStatus } = {};
+
     public Unregister(doc: vscode.TextDocument) {
         const p = this.allMemoryWindows[doc.uri.path];
         if (p) {
@@ -54,7 +54,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
             const highlightAt = -1;
             const query = this.parseQuery(uri.query);
-            
+
             const addressExpr = query['address'];
             const length: number = parseHexOrDecInt(query['length']);
 
@@ -68,21 +68,23 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                     const offset = address - lineAddress;
 
                     let output = '';
-                    output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F 	\n';
+                    output += '  Offset: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F \t\n';
                     output += hexFormat(lineAddress, 8, false) + ': ';
 
                     let lineend = '';
 
-                    for (let i = 0; i < offset; i++) { output += '   '; lineend += ' '; }
+                    for (let i = 0; i < offset; i++) {
+                        output += '   ';
+                        lineend += ' ';
+                    }
 
                     for (let i = 0; i < length; i++) {
                         const byte = bytes[i];
                         output += hexFormat(byte, 2, false).toUpperCase() + ' ';
                         if (byte <= 32 || (byte >= 127 && byte <= 159)) {
                             lineend += '.';
-                        }
-                        else {
-                            lineend	+= String.fromCharCode(bytes[i]);
+                        } else {
+                            lineend += String.fromCharCode(bytes[i]);
                         }
 
                         if ((address + i) % 16 === 15 && i < length - 1) {
@@ -97,7 +99,9 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
                     const endaddress = address + length;
                     const extra = (16 - (endaddress % 16)) % 16;
 
-                    for (let i = 0; i < extra; i++) { output += '   '; }
+                    for (let i = 0; i < extra; i++) {
+                        output += '   ';
+                    }
                     output += '  ' + lineend;
                     output += '\n';
 
@@ -137,7 +141,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
     }
 
     /**
-     * The code below took significant portions with small modification 
+     * The code below took significant portions with small modification
      * from the HexDump extension, which has the following license and copyright:
      * The MIT License (MIT)
      * **Copyright © 2016 Stef Levesque**
@@ -152,7 +156,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         if (pos.line < 1 || pos.character < this.firstBytePos) {
             return;
         }
-    
+
         let offset = (pos.line - 1) * 16;
         const s = pos.character - this.firstBytePos;
         if (pos.character >= this.firstBytePos && pos.character <= this.lastBytePos) {
@@ -168,13 +172,13 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
     private getPosition(offset: number, ascii: boolean = false): vscode.Position {
         const row = 1 + Math.floor(offset / 16);
         let column = offset % 16;
-    
+
         if (ascii) {
             column += this.firstAsciiPos;
         } else {
             column = this.firstBytePos + column * 3;
         }
-    
+
         return new vscode.Position(row, column);
     }
 
@@ -182,7 +186,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         const startPos = this.getPosition(startOffset, ascii);
         let endPos = this.getPosition(endOffset, ascii);
         endPos = new vscode.Position(endPos.line, endPos.character + (ascii ? 1 : 2));
-    
+
         const ranges = [];
         const firstOffset = ascii ? this.firstAsciiPos : this.firstBytePos;
         const lastOffset = ascii ? this.lastAsciiPos : this.lastBytePos;
@@ -194,7 +198,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
         return ranges;
     }
-    
+
     private smallDecorationType = vscode.window.createTextEditorDecorationType({
         borderWidth: '1px',
         borderStyle: 'solid',
@@ -210,19 +214,19 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
 
     public handleSelection(e: vscode.TextEditorSelectionChangeEvent) {
         const numLine = e.textEditor.document.lineCount;
-        if (e.selections[0].start.line + 1 === numLine ||
-            e.selections[0].end.line + 1 === numLine) {
+        if (e.selections[0].start.line + 1 === numLine
+            || e.selections[0].end.line + 1 === numLine) {
             e.textEditor.setDecorations(this.smallDecorationType, []);
             return;
         }
         const startOffset = this.getOffset(e.selections[0].start);
         const endOffset = this.getOffset(e.selections[0].end);
-        if (typeof startOffset === 'undefined' ||
-            typeof endOffset === 'undefined') {
+        if (typeof startOffset === 'undefined'
+            || typeof endOffset === 'undefined') {
             e.textEditor.setDecorations(this.smallDecorationType, []);
             return;
         }
-        
+
         let ranges = this.getRanges(startOffset, endOffset, false);
         ranges = ranges.concat(this.getRanges(startOffset, endOffset, true));
         e.textEditor.setDecorations(this.smallDecorationType, ranges);
