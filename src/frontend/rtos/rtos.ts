@@ -462,7 +462,7 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
                 <meta http-equiv="Content-Security-Policy" content="default-src 'none';
                 style-src 'nonce-${nonce}' ${webview.cspSource}; script-src 'nonce-${nonce}';">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <link href="${rtosStyle}" rel="stylesheet">
+                <link href="${rtosStyle.toString()}" rel="stylesheet">
                 <style nonce="${nonce}">
                 ${htmlInfo.css}
                 </style>
@@ -470,8 +470,8 @@ class RTOSViewProvider implements vscode.WebviewViewProvider {
             </head>
             <body>
                 ${htmlInfo.html}
-                <script type="module" nonce="${nonce}" src="${toolkitUri}"></script>
-                <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+                <script type="module" nonce="${nonce}" src="${toolkitUri.toString()}"></script>
+                <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
             </body>
             </html>`;
         return ret;

@@ -570,7 +570,7 @@ export class SymbolTable {
             try {
                 await p.promise;
             } catch (e) {
-                this.gdbSession.handleMsg('log', `Failed running: ${[p.args.join(' ')]}.\n    ${e}`);
+                this.gdbSession.handleMsg('log', `Failed running: ${p.args.join(' ')}.\n    ${e}`);
             }
         }
         return Promise.resolve();

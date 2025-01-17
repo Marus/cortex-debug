@@ -36,12 +36,12 @@ suite('TcpPortScanner Tests', () => {
         const hostNameOrIp = '0.0.0.0';
         timeIt();
         await TcpPortScanner.findFreePorts(args, hostNameOrIp).then((ret) => {
-            if (doLog) { console.log(`Found free ports ${ret}, ${timeIt()}`); }
+            if (doLog) { console.log('Found free ports', ret, timeIt()); }
             ports = ret;
-            assert.strictEqual(ports.length, args.retrieve, `wrong number of ports ${ports}`);
+            assert.strictEqual(ports.length, args.retrieve, `wrong number of ports ${ports.join(',')}`);
             assert.strictEqual(ports[0] >= args.min, true);
             assert.strictEqual(ports[args.retrieve - 1] <= args.max, true);
-            assert.deepStrictEqual(ports, ports.sort(), `ports are not ordered? ${ports}`);
+            assert.deepStrictEqual(ports, ports.sort(), `ports are not ordered? ${ports.join(',')}`);
         }).catch((e) => {
             assert.fail(`TcpPortScanner.find failed, ${timeIt()} ` + e);
         });
@@ -87,15 +87,15 @@ suite('TcpPortScanner Tests', () => {
             args.consecutive = true;
             timeIt(true);
             await TcpPortScanner.findFreePorts(args, hostNameOrIp).then((ret) => {
-                if (doLog) { console.log(`Found free consecutive ports ${ret} ${timeIt()}`); }
+                if (doLog) { console.log('Found free consecutive ports', ret, timeIt()); }
                 const newPorts = ret;
-                assert.strictEqual(newPorts.length, args.retrieve, `wrong number of ports ${newPorts}`);
+                assert.strictEqual(newPorts.length, args.retrieve, `wrong number of ports ${newPorts.join(',')}`);
                 assert.strictEqual(newPorts[0] >= args.min, true);
                 assert.strictEqual(newPorts[args.retrieve - 1] <= args.max, true);
-                assert.deepStrictEqual(newPorts, newPorts.sort(), `ports are not ordered? ${newPorts}`);
+                assert.deepStrictEqual(newPorts, newPorts.sort(), `ports are not ordered? ${newPorts.join(',')}`);
                 assert.strictEqual(newPorts.find((p) => p === port), undefined, `used port ${port} found as unused`);
                 for (let ix = 1; ix < args.retrieve; ix++) {
-                    assert.strictEqual(newPorts[ix - 1] + 1, newPorts[ix], `ports are not consecutive ${newPorts}`);
+                    assert.strictEqual(newPorts[ix - 1] + 1, newPorts[ix], `ports are not consecutive ${newPorts.join(',')}`);
                 }
             }).catch((e) => {
                 assert.fail(`TcpPortScanner.find consecutive failed ${timeIt()} ` + e);

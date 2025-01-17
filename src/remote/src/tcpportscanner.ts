@@ -100,7 +100,7 @@ export class TcpPortScanner {
 
         return new Promise(async (resolve, reject) => {
             const results = await Promise.all(promises.map((p) => p.then((x) => x).catch((e) => e)));
-            ConsoleLog(`isPortInUseEx: Results ${results}`);
+            ConsoleLog('isPortInUseEx: Results', results);
             for (const r of results) {
                 if (r !== false) {
                     resolve(true);
@@ -149,7 +149,7 @@ export class TcpPortScanner {
                     const endTime = process.hrtime(startTine);
                     if (inUse) {
                         busyPorts.push(port);
-                        ConsoleLog(`Busy ports = ${busyPorts}`);
+                        ConsoleLog('Busy ports', busyPorts);
                     } else {
                         if (consecutive && (freePorts.length > 0)
                             && (port !== (1 + freePorts[freePorts.length - 1]))) {
@@ -157,7 +157,7 @@ export class TcpPortScanner {
                             freePorts = [];
                         }
                         freePorts.push(port);
-                        ConsoleLog(`Free ports = ${freePorts}`);
+                        ConsoleLog('Free ports', freePorts);
                     }
                     if (logEnable) {
                         const ms = (endTime[1] / 1e6).toFixed(2);

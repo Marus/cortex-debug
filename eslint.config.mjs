@@ -79,7 +79,6 @@ export default tseslint.config(
             '@typescript-eslint/no-require-imports': 'off',             // 24 instances
             'no-cond-assign': 'off',                                    // 21 instances
             'no-empty': 'off',                                          // 19 instances
-            '@typescript-eslint/restrict-template-expressions': 'off',  // 17 instances
             '@typescript-eslint/require-await': 'off',                  // 11 instances
         }
     },

@@ -168,7 +168,7 @@ export class TcpPortScanner {
                     const endTime = process.hrtime(startTine);
                     if (inUse) {
                         busyPorts.push(port);
-                        ConsoleLog(`Busy ports = ${busyPorts}`);
+                        ConsoleLog('Busy ports', busyPorts);
                     } else {
                         if (consecutive && (freePorts.length > 0)
                             && (port !== (1 + freePorts[freePorts.length - 1]))) {
@@ -176,7 +176,7 @@ export class TcpPortScanner {
                             freePorts = [];
                         }
                         freePorts.push(port);
-                        ConsoleLog(`Free ports = ${freePorts}`);
+                        ConsoleLog('Free ports', freePorts);
                     }
                     if (logEnable) {
                         const ms = (endTime[1] / 1e6).toFixed(2);
