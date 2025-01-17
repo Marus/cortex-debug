@@ -1235,7 +1235,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                 if (this.miLiveGdb?.miDebugger) {
                     await this.miLiveGdb.miDebugger.sendCommand(cmd);
                 }
-            } catch {}
+            } catch (error) {
+                console.error('gdb.setOutputRadix', error);
+            }
         }
         if (this.stopped) {
             // We are already stopped but this fakes a stop again which refreshes all debugger windows
@@ -1655,7 +1657,9 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected async resetDevice(response: DebugProtocol.Response, args: any) {
         try {
             await this.doResetDevice(response, args);
-        } catch (e) {}
+        } catch (e) {
+            console.error('gdb.resetDevice', e);
+        }
     }
 
     protected timeStart = Date.now();
@@ -1917,6 +1921,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.sendEvent(new TerminatedEvent());
                 this.serverConsoleLog('quitEvent: sending VSCode TerminatedEvent');
             } catch (e) {
+                console.error('gdb.quitEvent', e);
             }
         }, 10);
     }
@@ -2065,8 +2070,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private continueIfNoMore(pendContinue: PendingContinue) {
-        if (pendContinue.haveMore()) {
-        } else if (pendContinue.shouldContinue) {
+        if (!pendContinue.haveMore() && pendContinue.shouldContinue) {
             this.disableSendStoppedEvents = false;
             pendContinue.shouldContinue = false;
             this.sendContinue();

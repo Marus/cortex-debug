@@ -94,7 +94,9 @@ export class SWOBinaryProcessor implements SWORTTDecoder {
                 vscode.window.showErrorMessage(msg);
                 try {
                     fs.closeSync(this.logFd);
-                } catch {}
+                } catch (closeErr) {
+                    console.error('decoder.logCloseError', closeErr);
+                }
                 this.logFd = -1;
             }
         }

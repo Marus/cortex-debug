@@ -141,7 +141,6 @@ export function packageJSONtoMd(path: string, outPath: string) {
                 stream.write(`| ${prop} | ${objType} | ${appliesTo} | ${obj.description} |\n`);
                 if (obj.properties) {
                     handleObject(obj.properties, prop, appliesTo, stream);
-                } else if (obj.items) {
                 }
             }
         } catch (e) {

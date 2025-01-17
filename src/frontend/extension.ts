@@ -55,12 +55,6 @@ export class CortexDebugExtension {
         this.startServerConsole(context, config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '')); // Make this the first thing we do to be ready for the session
         this.memoryProvider = new MemoryContentProvider();
 
-        let tmp = [];
-        try {
-            const dirPath = path.join(context.extensionPath, 'data', 'SVDMap.json');
-            tmp = JSON.parse(fs.readFileSync(dirPath, 'utf8'));
-        } catch (e) {}
-
         Reporting.activate(context);
 
         this.liveWatchProvider = new LiveWatchTreeProvider(this.context);
@@ -187,6 +181,7 @@ export class CortexDebugExtension {
                         }
                     }
                 } catch (e) {
+                    console.error('set-var-format', e);
                 }
             }
             if (!foundStopped) {
@@ -207,6 +202,7 @@ export class CortexDebugExtension {
                 try {
                     s.session.customRequest('set-debug-mode', { mode: dbgMode });
                 } catch (e) {
+                    console.error('set-debug-mode', e);
                 }
             }
         }

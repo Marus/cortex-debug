@@ -237,7 +237,9 @@ export class GDBServer extends EventEmitter {
                 this.consoleSocket.destroy();
                 this.consoleSocket = null;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('gdb.disconnectConsole', e);
+        }
     }
 }
 

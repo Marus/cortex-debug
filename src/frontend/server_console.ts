@@ -192,16 +192,14 @@ export class GDBServerConsole {
     }
 
     public static debugMsgStatic(ptyTerm: PtyTerminal, msg: string) {
-        try {
-            const date = new Date();
-            msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ` + msg;
-            // console.log(msg);
-            if (ptyTerm) {
-                msg += msg.endsWith('\n') ? '' : '\n';
-                magentaWrite(msg, ptyTerm);
-            }
-            GDBServerConsole.logDataStatic(ptyTerm, msg);
-        } finally {}
+        const date = new Date();
+        msg = `[${date.toISOString()}] SERVER CONSOLE DEBUG: ` + msg;
+        // console.log(msg);
+        if (ptyTerm) {
+            msg += msg.endsWith('\n') ? '' : '\n';
+            magentaWrite(msg, ptyTerm);
+        }
+        GDBServerConsole.logDataStatic(ptyTerm, msg);
     }
 
     // Create a server for the GDBServer running in the adapter process. Any data

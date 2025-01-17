@@ -28,10 +28,10 @@ export class VariablesHandler {
                 poromises.push(miDebugger.sendCommand(`var-delete ${name}`));
             }
             this.cachedChangeList = {};
-            try {
-                await Promise.allSettled(poromises);
-            } catch (e) {
-            }
+            const results = await Promise.allSettled(poromises);
+            results
+                .filter((r) => r.status === 'rejected')
+                .forEach((r) => console.error('clearCachedValues', r.reason));
         }
     }
 
@@ -459,7 +459,9 @@ export class LiveWatchMonitor {
                 this.quitting = true;
                 this.miDebugger.detach();
             }
-        } catch {}
+        } catch (e) {
+            console.error('LiveWatchMonitor.quit', e);
+        }
     }
 }
 

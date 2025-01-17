@@ -98,8 +98,7 @@ export class MINode implements MIInfo {
                     const i = parseInt(target[1]);
                     if (current.length && typeof current !== 'string' && i >= 0 && i < current.length) {
                         current = current[i];
-                    } else if (i === 0) {
-                    } else {
+                    } else if (i !== 0) {
                         return undefined;
                     }
                 } else {

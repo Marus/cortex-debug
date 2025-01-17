@@ -410,7 +410,9 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                     this.variables.deSerialize(saved);
                 }
             }
-        } catch { }
+        } catch (error) {
+            console.error('live-watch.restoreState', error);
+        }
     }
 
     private currentRefreshRate = LiveWatchTreeProvider.defaultRefreshRate;

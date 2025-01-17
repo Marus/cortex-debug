@@ -296,7 +296,9 @@ export class RTOSTracker implements vscode.DebugAdapterTrackerFactory, DebugStop
             }
             try {
                 await this.update();
-            } catch { }
+            } catch (e) {
+                console.error('rtos.visibilityChanged', e);
+            }
         }
     }
 
