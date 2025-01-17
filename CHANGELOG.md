@@ -1,6 +1,6 @@
 # ChangeLog
 
-# V1.13.0-pre1
+# V1.13.0-pre3
 * MAJOR Change. The `Restart` button functionality has been completely changed. This was not a stable function and VSCode kept changing its definition over the years multiple times. However they provide a default functionality, so the `Restart` button still works but very differently from our implementation. As of today, VSCode seems to do the following (and this extension is not involved)
   * It Stops the current session. This means the current GDB and any GDB-server (openocd, stlink, etc. are also terminated)
   * If then Starts a new session using the same configuration.
@@ -14,6 +14,7 @@
   so the extension no longer depends on other extensions to provide related functionality.
 * Black Magic Probe now supports SWO via the dedicated USB endpoint.
 * ST-LINK GDB server (*not* st-util) now supports SWO functionality, using standard configuration options.
+* Bugfix #1007: An issue with how gdb works prevented RTOS detection when `"symbolFiles"` was used. It will now work if you do not use additional options to specify sections or a textaddress.
 
 # V1.12.1
 * Fix for [#923: Local variables with same name between functions not tracking or updating context](https://github.com/Marus/cortex-debug/issues/923)
