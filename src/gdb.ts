@@ -947,24 +947,33 @@ export class GDBDebugSession extends LoggingDebugSession {
             `interpreter-exec console "source ${this.args.extensionPath}/support/gdb-swo.init"`,
             ...this.formatRadixGdbCommand()
         ];
+
+        let loadFiles = this.args.loadFiles;
+        let isLoaded = false;
         if (this.args.symbolFiles) {
+            // If you just used 'add-symbol-file' debugging works but RTOS detection fails
+            // for most debuggers. While many options work for add-symbol-file, symbol-file
+            // does not allow a textaddress or sections. See issue #1007
             for (const symF of this.args.symbolFiles) {
-                let cmd = `interpreter-exec console "add-symbol-file \\"${symF.file}\\""`;
-                cmd += symF.offset ? ` -o ${hexFormat(symF.offset)}"` : '';
-                cmd += (typeof symF.textaddress === 'number') ? ` ${hexFormat(symF.textaddress)}"` : '';
+                const offset = symF.offset ? `-o ${hexFormat(symF.offset)}"` : '';
+                let otherArgs = (typeof symF.textaddress === 'number') ? ` ${hexFormat(symF.textaddress)}"` : '';
                 for (const section of symF.sections) {
-                    cmd += ` -s ${section.name} ${section.address}`;
+                    otherArgs += ` -s ${section.name} ${section.address}`;
                 }
-                this.gdbInitCommands.push(cmd);
+                const gdbCmd = (otherArgs === '') ? 'symbol-file' : 'add-symbol-file';
+                const cmd = `${gdbCmd} \\"${symF.file}\\" ${offset} ${otherArgs}`.trimEnd();
+                this.gdbInitCommands.push(`interpreter-exec console "${cmd}"`);
             }
             if (this.gdbInitCommands.length === 0) {
                 this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
             }
-            if (this.args.executable) {
-                this.gdbInitCommands.push(`file-exec-file "${this.args.executable}"`);
-            }
-        } else {
+        } else if (!loadFiles && this.args.executable) {
             this.gdbInitCommands.push(`file-exec-and-symbols "${this.args.executable}"`);
+            isLoaded = true;
+        }
+
+        if (!isLoaded && !loadFiles && this.args.executable) {
+            this.args.loadFiles = [ this.args.executable ];
         }
         const ret = this.miDebugger.start(this.args.cwd, this.gdbInitCommands);
         return ret;
