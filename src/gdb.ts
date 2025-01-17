@@ -968,7 +968,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         if (!isLoaded && !loadFiles && this.args.executable) {
-            this.args.loadFiles = [ this.args.executable ];
+            this.args.loadFiles = [this.args.executable];
         }
         const ret = this.miDebugger.start(this.args.cwd, this.gdbInitCommands);
         return ret;
