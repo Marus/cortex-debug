@@ -82,7 +82,7 @@ class Client {
             new rpc.StreamMessageWriter(this.socket, 'utf-8')
         );
 
-        let notification = new rpc.NotificationType<Interfaces.eventArgs>('event');
+        const notification = new rpc.NotificationType<Interfaces.eventArgs>('event');
         this.connection.onNotification(notification, (param: Interfaces.eventArgs) => {
             console.log(param);
         });

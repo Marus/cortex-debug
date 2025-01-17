@@ -519,8 +519,7 @@ export class GdbDisassembler {
                 const entireRangeGood = range.isKnownStart || this.isRangeInValidMem(startAddress, endAddress);
                 const end = endAddress;
                 // const end = range.isData ? endAddress : this.clipHigh(endAddress, endAddress + this.maxInstrSize); // Get a bit more for functions
-                let cmd: string;
-                cmd = `data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(end)} -- 5`;
+                const cmd = `data-disassemble -s ${hexFormat(startAddress)} -e ${hexFormat(end)} -- 5`;
                 if (this.doTiming) {
                     const symName = range.symNode ? ` (${range.symNode.symbol.name})` : '';
                     const count = `${end - startAddress} bytes`.padStart(15);

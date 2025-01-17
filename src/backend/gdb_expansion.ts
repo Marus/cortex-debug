@@ -58,14 +58,9 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
     };
 
     const stack = [root];
-    let parseValue;
-    let parseCommaResult;
-    let parseCommaValue;
-    let parseResult;
-    let createValue;
     let variable = '';
 
-    const getNamespace = (variable): string => {
+    function getNamespace(variable): string {
         let namespace = '';
         let prefix = '';
         stack.push(variable);
@@ -91,7 +86,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return prefix + namespace;
     };
 
-    const parseTupleOrList = () => {
+    function parseTupleOrList() {
         value = value.trim();
         if (value[0] !== '{') {
             return undefined;
@@ -151,7 +146,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return undefined;
     };
 
-    const parsePrimitive = () => {
+    function parsePrimitive() {
         let primitive: any;
         let match;
         value = value.trim();
@@ -191,7 +186,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return primitive;
     };
 
-    parseValue = () => {
+    function parseValue() {
         value = value.trim();
         if (value[0] === '"') {
             return parseCString();
@@ -202,7 +197,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         }
     };
 
-    parseResult = (pushToStack: boolean = false) => {
+    function parseResult(pushToStack: boolean = false) {
         value = value.trim();
         const variableMatch = resultRegex.exec(value);
         if (!variableMatch) {
@@ -220,7 +215,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return createValue(name, val);
     };
 
-    createValue = (name, val) => {
+    function createValue(name, val) {
         let ref = 0;
         if (typeof val === 'object') {
             ref = variableCreate(val);
@@ -246,7 +241,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         };
     };
 
-    parseCommaValue = () => {
+    function parseCommaValue() {
         value = value.trim();
         if (value[0] !== ',') {
             return undefined;
@@ -255,7 +250,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return parseValue();
     };
 
-    parseCommaResult = (pushToStack: boolean = false) => {
+    function parseCommaResult(pushToStack: boolean = false) {
         value = value.trim();
         if (value[0] !== ',') {
             return undefined;

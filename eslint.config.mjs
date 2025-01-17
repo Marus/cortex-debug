@@ -80,7 +80,6 @@ export default tseslint.config(
             'no-cond-assign': 'off',                                    // 21 instances
             'no-empty': 'off',                                          // 19 instances
             '@typescript-eslint/restrict-template-expressions': 'off',  // 17 instances
-            'prefer-const': 'off',                                      // 13 instances
             '@typescript-eslint/require-await': 'off',                  // 11 instances
         }
     },

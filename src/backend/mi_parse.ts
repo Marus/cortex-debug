@@ -206,12 +206,7 @@ export function parseMI(output: string): MINode {
         return str;
     };
 
-    let parseValue;
-    let parseCommaResult;
-    let parseCommaValue;
-    let parseResult;
-
-    const parseTupleOrList = () => {
+    function parseTupleOrList() {
         if (output[0] !== '{' && output[0] !== '[') {
             return undefined;
         }
@@ -249,7 +244,7 @@ export function parseMI(output: string): MINode {
         return undefined;
     };
 
-    parseValue = () => {
+    function parseValue() {
         if (output[0] === '"') {
             return parseCString();
         } else if (output[0] === '{' || output[0] === '[') {
@@ -259,7 +254,7 @@ export function parseMI(output: string): MINode {
         }
     };
 
-    parseResult = () => {
+    function parseResult() {
         const variableMatch = variableRegex.exec(output);
         if (!variableMatch) {
             return undefined;
@@ -269,7 +264,7 @@ export function parseMI(output: string): MINode {
         return [variable, parseValue()];
     };
 
-    parseCommaValue = () => {
+    function parseCommaValue() {
         if (output[0] !== ',') {
             return undefined;
         }
@@ -277,7 +272,7 @@ export function parseMI(output: string): MINode {
         return parseValue();
     };
 
-    parseCommaResult = () => {
+    function parseCommaResult() {
         if (output[0] !== ',') {
             return undefined;
         }

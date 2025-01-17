@@ -252,8 +252,7 @@ export class VariablesHandler {
             session.sendResponse(response);
             return;
         }
-        let id: number | string | VariableObject | ExtendedVariable;
-        id = this.variableHandles.get(args.variablesReference);
+        const id = this.variableHandles.get(args.variablesReference);
         if (typeof id === 'object') {
             if (id instanceof VariableObject) {
                 const pVar = id;

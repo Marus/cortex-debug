@@ -13,7 +13,7 @@ export class CortexDebugRemote {
     constructor(public context: vscode.ExtensionContext) {
         console.log('in CortexDebugRemote::constructor');
         vscode.window.showInformationMessage('cortex-debug-remote activated!');
-        let disposable = vscode.commands.registerCommand('cortex-debug-remote.helloWorld', this.hello.bind(this));
+        const disposable = vscode.commands.registerCommand('cortex-debug-remote.helloWorld', this.hello.bind(this));
 
         context.subscriptions.push(disposable);
         this.server = new Server(context);
