@@ -915,11 +915,6 @@ export class GDBDebugSession extends LoggingDebugSession {
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
-        // if (!this.args.symbolFiles) {
-        //     if (!path.isAbsolute(this.args.executable)) {
-        //         this.args.executable = path.join(this.args.cwd, this.args.executable);
-        //     }
-        // }
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
@@ -948,7 +943,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             ...this.formatRadixGdbCommand()
         ];
 
-        let loadFiles = this.args.loadFiles;
+        const loadFiles = this.args.loadFiles;
         let isLoaded = false;
         if (this.args.symbolFiles) {
             // If you just used 'add-symbol-file' debugging works but RTOS detection fails
