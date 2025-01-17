@@ -3,6 +3,7 @@
 	"editor.tabSize": 4,
 	"editor.insertSpaces": true,
 	"editor.useTabStops": false,
+	"eslint.useFlatConfig": true,
 	"files.trimTrailingWhitespace": true,
 	"files.exclude": {
 		"out": false,
