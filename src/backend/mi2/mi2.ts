@@ -892,22 +892,27 @@ export class MI2 extends EventEmitter implements IBackend {
         x: 'hexadecimal'
     };
 
-    public async varCreate(
-        parent: number, expression: string, name: string = '-', scope: string = '@',
-        threadId?: number, frameId?: number): Promise<VariableObject> {
-        if (trace) {
-            this.log('stderr', 'varCreate');
-        }
-        let fmt = null;
+    private getExprAndFmt(expression: string): [string, string] {
+        let fmt = '';
         expression = expression.trim();
         if (/,[bdhonx]$/i.test(expression)) {
             fmt = expression.substring(expression.length - 1).toLocaleLowerCase();
             expression = expression.substring(0, expression.length - 2);
         }
         expression = expression.replace(/"/g, '\\"');
+        return [expression, fmt];
+    }
 
+    public async varCreate(
+        parent: number, expression: string, name: string = '-', scope: string = '@',
+        threadId?: number, frameId?: number): Promise<VariableObject> {
+        if (trace) {
+            this.log('stderr', 'varCreate');
+        }
+
+        const [expr, fmt] = this.getExprAndFmt(expression);
         const thFr = ((threadId !== undefined) && (frameId !== undefined)) ? `--thread ${threadId} --frame ${frameId}` : '';
-        const createResp = await this.sendCommand(`var-create ${thFr} ${name} ${scope} "${expression}"`);
+        const createResp = await this.sendCommand(`var-create ${thFr} ${name} ${scope} "${expr}"`);
         let overrideVal: string = null;
         if (fmt && name !== '-') {
             const formatResp = await this.sendCommand(`var-set-format ${name} ${MI2.FORMAT_SPEC_MAP[fmt]}`);
@@ -970,6 +975,14 @@ export class MI2 extends EventEmitter implements IBackend {
             this.log('stderr', 'varAssign');
         }
         return this.sendCommand(`var-assign ${MI2.getThreadFrameStr(threadId, frameId)} ${name} ${rawValue}`);
+    }
+
+    public async exprAssign(expr: string, rawValue: string, threadId: number, frameId: number): Promise<MINode> {
+        if (trace) {
+            this.log('stderr', 'exprAssign');
+        }
+        const [lhs, fmt] = this.getExprAndFmt(expr);
+        return this.sendCommand(`var-assign ${MI2.getThreadFrameStr(threadId, frameId)} ${lhs} ${rawValue}`);
     }
 
     public logNoNewLine(type: string, msg: string) {

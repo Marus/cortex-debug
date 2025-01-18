@@ -317,6 +317,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         response.body.supportsFunctionBreakpoints = true;
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsSetVariable = true;
+        response.body.supportsSetExpression = true;
 
         // We no longer support a 'Restart' request. However, VSCode will implement a replacement by terminating the
         // current session and starting a new one from scratch. But, we still have to support the launch.json
@@ -1938,6 +1939,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
+    // Note that setVariableRequest is called to set member variables of watched expressions. So, don't
+    // make assumptions of what names you might see
     protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
         try {
             let name = args.name;
@@ -1985,7 +1988,36 @@ export class GDBDebugSession extends LoggingDebugSession {
             };
             this.sendResponse(response);
         } catch (err) {
-            this.sendErrorResponse(response, 11, `Could not set variable: ${err}`);
+            this.sendErrorResponse(response, 11, `Could not set variable '${args.name}'\n${err}`);
+        }
+    }
+
+    protected async setExpressionRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetExpressionArguments): Promise<void> {
+        try {
+            const [threadId, frameId] = args.frameId ? decodeReference(args.frameId) : [undefined, undefined];
+            const exp = args.expression;
+            const varObjName = this.createVarNameFromExpr(args.expression, args.frameId, 'watch');
+            let varId = this.variableHandlesReverse.get(varObjName);
+            if (varId === undefined) {
+                let varObj: VariableObject;
+                if (args.frameId === undefined) {
+                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
+                } else {
+                    varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
+                }
+                varId = this.findOrCreateVariable(varObj);
+                varObj.exp = exp;
+                varObj.id = varId;
+            }
+            await this.miDebugger.exprAssign(varObjName, args.value, threadId, frameId);
+            const evalRsp = await this.evalExprInternal(args.expression, args.frameId, 'watch', threadId, frameId);
+            response.body = {
+                ...evalRsp,
+                value: evalRsp.result,
+            };
+            this.sendResponse(response);
+        } catch (err) {
+            this.sendErrorResponse(response, 11, `Could not set expression '${args.expression}'\n${err}`);
         }
     }
 
@@ -3204,61 +3236,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                 if (args.context !== 'repl') {
                     try {
-                        const exp = args.expression;
-                        const hasher = crypto.createHash('sha256');
-                        hasher.update(exp);
-                        if (args.frameId !== undefined) {
-                            hasher.update(args.frameId.toString(16));
-                        }
-                        const exprName = hasher.digest('hex');
-                        const varObjName = `${args.context}_${exprName}`;
-                        let varObj: VariableObject;
-                        let varId = this.variableHandlesReverse.get(varObjName);
-                        let createNewVar = varId === undefined;
-                        let updateError;
-                        if (!createNewVar) {
-                            try {
-                                const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
-                                const changelist = changes.result('changelist');
-                                for (const change of changelist || []) {
-                                    const inScope = MINode.valueOf(change, 'in_scope');
-                                    if (inScope === 'true') {
-                                        const name = MINode.valueOf(change, 'name');
-                                        const vId = this.variableHandlesReverse.get(name);
-                                        const v = this.variableHandles.get(vId) as any;
-                                        v.applyChanges(change);
-                                    } else {
-                                        const msg = `${exp} currently not in scope`;
-                                        await this.miDebugger.sendCommand(`var-delete ${varObjName}`);
-                                        if (this.args.showDevDebugOutput) {
-                                            this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
-                                        }
-                                        createNewVar = true;
-                                        throw new Error(msg);
-                                    }
-                                }
-                                varObj = this.variableHandles.get(varId) as any;
-                            } catch (err) {
-                                updateError = err;
-                            }
-                        }
-                        if (!this.isBusy() && (createNewVar || ((updateError instanceof MIError && updateError.message === VarNotFoundMsg)))) {
-                            // We always create a floating variable so it will be updated in the context of the current frame
-                            // Technicall, we should be able to bind this to this frame but for some reason gdb gets confused
-                            // from previous stack frames and returns the wrong results or says nothing changed when in fact it has
-                            if (args.frameId === undefined) {
-                                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@');  // Create floating variable
-                            } else {
-                                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
-                            }
-
-                            varId = this.findOrCreateVariable(varObj);
-                            varObj.exp = exp;
-                            varObj.id = varId;
-                        } else if (!varObj) {
-                            throw updateError || new Error('evaluateRequest: unknown error');
-                        }
-                        response.body = varObj.toProtocolEvaluateResponseBody();
+                        response.body = await this.evalExprInternal(args.expression, args.frameId, args.context, threadId, frameId);
                         this.sendResponse(response);
                     } catch (err) {
                         if (this.isBusy()) {
@@ -3313,6 +3291,70 @@ export class GDBDebugSession extends LoggingDebugSession {
         };
 
         return this.evaluateQ.add(doit, r, a);
+    }
+
+    private async evalExprInternal(
+        exp: string, frameRef: number | undefined, context: string,
+        threadId: number, frameId: number): Promise<DebugProtocol.EvaluateResponse['body']> {
+        const varObjName = this.createVarNameFromExpr(exp, frameRef, context);
+        let varObj: VariableObject;
+        let varId = this.variableHandlesReverse.get(varObjName);
+        let createNewVar = varId === undefined;
+        let updateError;
+        if (!createNewVar) {
+            try {
+                const changes = await this.miDebugger.varUpdate(varObjName, threadId, frameId);
+                const changelist = changes.result('changelist');
+                for (const change of changelist || []) {
+                    const inScope = MINode.valueOf(change, 'in_scope');
+                    if (inScope === 'true') {
+                        const name = MINode.valueOf(change, 'name');
+                        const vId = this.variableHandlesReverse.get(name);
+                        const v = this.variableHandles.get(vId) as any;
+                        v.applyChanges(change);
+                    } else {
+                        const msg = `${exp} currently not in scope`;
+                        await this.miDebugger.sendCommand(`var-delete ${varObjName}`);
+                        if (this.args.showDevDebugOutput) {
+                            this.handleMsg('log', `Expression ${msg}. Will try to create again\n`);
+                        }
+                        createNewVar = true;
+                        throw new Error(msg);
+                    }
+                }
+                varObj = this.variableHandles.get(varId) as any;
+            } catch (err) {
+                updateError = err;
+            }
+        }
+        if (!this.isBusy() && (createNewVar || ((updateError instanceof MIError && updateError.message === VarNotFoundMsg)))) {
+            // We always create a floating variable so it will be updated in the context of the current frame
+            // Technicall, we should be able to bind this to this frame but for some reason gdb gets confused
+            // from previous stack frames and returns the wrong results or says nothing changed when in fact it has
+            if (frameRef === undefined) {
+                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@'); // Create floating variable
+            } else {
+                varObj = await this.miDebugger.varCreate(0, exp, varObjName, '@', threadId, frameId);
+            }
+
+            varId = this.findOrCreateVariable(varObj);
+            varObj.exp = exp;
+            varObj.id = varId;
+        } else if (!varObj) {
+            throw updateError || new Error('evaluateRequest: unknown error');
+        }
+        return varObj.toProtocolEvaluateResponseBody();
+    }
+
+    private createVarNameFromExpr(exp: string, encodedFrameId: number | undefined, context: string): string {
+        const hasher = crypto.createHash('sha256');
+        hasher.update(exp);
+        if (encodedFrameId !== undefined) {
+            hasher.update(encodedFrameId.toString(16));
+        }
+        const exprName = hasher.digest('hex');
+        const varObjName = `${context || 'watch'}_${exprName}`;
+        return varObjName;
     }
 
     protected async gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): Promise<void> {

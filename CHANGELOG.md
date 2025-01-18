@@ -1,6 +1,7 @@
 # ChangeLog
 
-# V1.13.0-pre3
+# V1.13.0-pre4
+* Feature: Support for setting values on expression from the Watch panel. The new value has to be something that GDB understands, so setting values on arrays, structures won't work but it should work on any scalar
 * MAJOR Change. The `Restart` button functionality has been completely changed. This was not a stable function and VSCode kept changing its definition over the years multiple times. However they provide a default functionality, so the `Restart` button still works but very differently from our implementation. As of today, VSCode seems to do the following (and this extension is not involved)
   * It Stops the current session. This means the current GDB and any GDB-server (openocd, stlink, etc. are also terminated)
   * If then Starts a new session using the same configuration.
