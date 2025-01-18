@@ -75,7 +75,7 @@ export function parseDimIndex(spec: string, count: number): string[] {
             throw new Error('dimIndex Element has invalid specification.');
         }
 
-        const components = [];
+        const components: string[] = [];
         for (let i = 0; i < count; i++) {
             components.push(`${start + i}`);
         }
@@ -92,7 +92,7 @@ export function parseDimIndex(spec: string, count: number): string[] {
             throw new Error('dimIndex Element has invalid specification.');
         }
 
-        const components = [];
+        const components: string[] = [];
         for (let i = 0; i < count; i++) {
             components.push(String.fromCharCode(start + i));
         }

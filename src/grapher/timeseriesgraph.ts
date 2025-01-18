@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import * as d3 from 'd3';
 import { TimeseriesGraphConfiguration, GraphPoint, Graph } from './types';
 import { GraphDataSource } from './datasource';

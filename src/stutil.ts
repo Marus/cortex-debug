@@ -59,7 +59,7 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
     }
 
     public swoAndRTTCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         if (this.args.swoConfig.enabled && this.args.swoConfig.source !== 'probe') {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);

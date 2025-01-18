@@ -99,7 +99,7 @@ export class TcpPortScanner {
         const promises = tries.map((host) => TcpPortScanner.isPortInUse(port, host));
 
         return new Promise(async (resolve, reject) => {
-            const results = await Promise.all(promises.map((p) => p.then((x) => x).catch((e) => e)));
+            const results = await Promise.all(promises.map((p) => p.then((x) => x).catch(() => {})));
             ConsoleLog('isPortInUseEx: Results', results);
             for (const r of results) {
                 if (r !== false) {

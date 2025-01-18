@@ -36,7 +36,7 @@ export class MemReadUtils {
         });
 
         return new Promise(async (resolve, reject) => {
-            const results = await Promise.all(promises.map((p) => p.catch((e) => e)));
+            const results = await Promise.all(promises.map((p) => p.catch((e) => {})));
             const errs: string[] = [];
             results.map((e) => {
                 if (e instanceof Error) {

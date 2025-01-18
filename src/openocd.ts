@@ -131,7 +131,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public rttCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         if (this.args.rttConfig.enabled && !this.args.pvtIsReset) {
             const cfg = this.args.rttConfig;
             if ((this.args.request === 'launch') && cfg.clearSearch) {
@@ -163,7 +163,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public swoAndRTTCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);
@@ -213,7 +213,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public serverArguments(): string[] {
-        let serverargs = [];
+        let serverargs: string[] = [];
 
         // Regardless of the target processor, we will only supply the processor '0's port#
         // OpenOcd will increment and assign the right port-numer to the right processor

@@ -51,7 +51,7 @@ function telemetryEnabled(): boolean {
     const telemetry = vscode.workspace.getConfiguration('telemetry');
     const cortexDebug = vscode.workspace.getConfiguration('cortex-debug');
 
-    return (telemetry.enableTelemetry && cortexDebug.enableTelemetry);
+    return telemetry.get('enableTelemetry', false) && cortexDebug.get('enableTelemetry', false);
 }
 
 function activate(context: vscode.ExtensionContext) {

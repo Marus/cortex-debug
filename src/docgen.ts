@@ -13,10 +13,10 @@ function handleObject(obj: any, prop: string, appliesTo, stream: fs.WriteStream)
     }
 }
 
-function getType(obj: any) {
+function getType(obj: any): string {
     const pipe = ' &#124; ';
     if (Array.isArray(obj.type)) {
-        return obj.type.join(pipe);
+        return obj.type.join(pipe) as string;
     }
     if (obj.properties) {
         return 'object';
@@ -34,7 +34,7 @@ function getType(obj: any) {
     } else if (obj.anyOf || obj.oneOf) {
         return newFunction(obj);
     } else if (obj.type) {
-        return obj.type;
+        return obj.type as string;
     } else {
         return '??';
     }

@@ -195,7 +195,7 @@ export function parseMI(output: string): MINode {
             remaining = remaining.substr(1);
             stringEnd++;
         }
-        let str;
+        let str: string;
         try {
             str = parseString(output.substr(0, stringEnd));
         } catch (e) {
@@ -205,7 +205,7 @@ export function parseMI(output: string): MINode {
         return str;
     };
 
-    function parseTupleOrList() {
+    function parseTupleOrList(): unknown[] {
         if (output[0] !== '{' && output[0] !== '[') {
             return undefined;
         }
@@ -243,7 +243,7 @@ export function parseMI(output: string): MINode {
         return undefined;
     };
 
-    function parseValue() {
+    function parseValue(): unknown {
         if (output[0] === '"') {
             return parseCString();
         } else if (output[0] === '{' || output[0] === '[') {

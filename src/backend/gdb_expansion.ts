@@ -86,7 +86,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return prefix + namespace;
     };
 
-    function parseTupleOrList() {
+    function parseTupleOrList(): unknown {
         value = value.trim();
         if (value[0] !== '{') {
             return undefined;
@@ -101,7 +101,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
             value = value.substr(3).trim();
             if (value[0] === '}') {
                 value = value.substr(1).trim();
-                return '<...>' as any;
+                return '<...>';
             }
         }
         const eqPos = value.indexOf('=');
@@ -146,7 +146,7 @@ export function expandValue(variableCreate: (value: string | object, opts?: { ar
         return undefined;
     };
 
-    function parsePrimitive() {
+    function parsePrimitive(): unknown {
         let primitive: any;
         let match;
         value = value.trim();

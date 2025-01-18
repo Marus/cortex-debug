@@ -305,7 +305,7 @@ export class SymbolTable {
         });
     }
 
-    private rttSymbol;
+    private rttSymbol: SymbolInformation;
     public readonly rttSymbolName = '_SEGGER_RTT';
     private addSymbol(sym: SymbolInformation) {
         if ((sym.length === 0) && /^\$[atdbfpm]$/.test(sym.name)) {

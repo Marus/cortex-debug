@@ -38,12 +38,12 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     }
 
     public launchCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         return commands;
     }
 
     public attachCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         return commands;
     }
 

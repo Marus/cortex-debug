@@ -64,7 +64,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     }
 
     public rttCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         if (this.args.rttConfig.enabled && !this.args.pvtIsReset) {
             const cfg = this.args.rttConfig;
             if ((this.args.request === 'launch') && cfg.clearSearch) {
@@ -84,7 +84,7 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
     }
 
     public swoAndRTTCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);

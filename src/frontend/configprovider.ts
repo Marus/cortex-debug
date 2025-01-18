@@ -302,7 +302,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             config.executable = path.normalize(exe).replace(/\\/g, '/');
         }
         const def = defSymbolFile(config.executable);
-        const symFiles: SymbolFile[] = config.symbolFiles?.map((v) => typeof v === 'string' ? defSymbolFile(v) : v) || [def];
+        const symFiles: SymbolFile[] = config.symbolFiles?.map((v) => typeof v === 'string' ? defSymbolFile(v) : v as SymbolFile) || [def];
         if (!symFiles || (symFiles.length === 0)) {
             vscode.window.showWarningMessage('No "executable" or "symbolFiles" specified. We will try to run program without symbols');
         } else {

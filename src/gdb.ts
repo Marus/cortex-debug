@@ -16,7 +16,7 @@ import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBre
 import {
     TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
     createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative,
-    SWOConfigureEvent
+    SWOConfigureEvent, RTTCommonDecoderOpts
 } from './common';
 import { GDBServer, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
@@ -482,7 +482,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         if (args.swoConfig && args.swoConfig.decoders) {
-            args.swoConfig.decoders = args.swoConfig.decoders.map((dec) => {
+            args.swoConfig.decoders = args.swoConfig.decoders.map((dec): unknown => {
                 if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
                     dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
                 }
@@ -495,7 +495,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 if (dec.type === 'advanced' && dec.decoder && !path.isAbsolute(dec.decoder)) {
                     dec.decoder = path.normalize(path.join(args.cwd, dec.decoder));
                 }
-                return dec;
+                return dec as RTTCommonDecoderOpts;
             });
         }
 
@@ -3337,7 +3337,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 }
 
-function prettyStringArray(strings) {
+function prettyStringArray(strings): unknown {
     if (typeof strings === 'object') {
         if (strings.length !== undefined) {
             return strings.join(', ');

@@ -184,7 +184,7 @@ export const MIError: MIErrorConstructor = class MIError {
     public readonly source: string;
     public constructor(message: string, source: string) {
         Object.defineProperty(this, 'name', {
-            get: () => (this.constructor as any).name
+            get: () => this.constructor.name
         });
         Object.defineProperty(this, 'message', {
             get: () => message

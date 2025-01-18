@@ -908,7 +908,7 @@ export class MI2 extends EventEmitter implements IBackend {
 
         const thFr = ((threadId !== undefined) && (frameId !== undefined)) ? `--thread ${threadId} --frame ${frameId}` : '';
         const createResp = await this.sendCommand(`var-create ${thFr} ${name} ${scope} "${expression}"`);
-        let overrideVal = null;
+        let overrideVal: string = null;
         if (fmt && name !== '-') {
             const formatResp = await this.sendCommand(`var-set-format ${name} ${MI2.FORMAT_SPEC_MAP[fmt]}`);
             overrideVal = formatResp.result('value');
