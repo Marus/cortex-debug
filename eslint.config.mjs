@@ -39,6 +39,11 @@ export default tseslint.config(
 
         rules: {
             '@typescript-eslint/no-base-to-string': 'off',              // 1 instance
+            '@typescript-eslint/prefer-promise-reject-errors': ['error', {
+                // for catch (e) { reject(e); } scenarios, until promises are refactored
+                allowThrowingAny: true,
+                allowThrowingUnknown: true,
+            }],
 
             '@stylistic/indent-binary-ops': 'off',      // this is a weird rule
             '@stylistic/max-len': ['error', {
@@ -73,7 +78,6 @@ export default tseslint.config(
             '@typescript-eslint/no-misused-promises': 'off',            // 53 instances
             '@typescript-eslint/no-floating-promises': 'off',           // 48 instances
             'no-async-promise-executor': 'off',                         // 25 instances
-            '@typescript-eslint/prefer-promise-reject-errors': 'off',   // 19 instances
         }
     },
     {
