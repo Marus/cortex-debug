@@ -416,7 +416,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         if (this.tclSocket) {
             return Promise.resolve();
         }
-        return new Promise<void>(async (resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             if (this.tclSocket === undefined) {
                 const tclPortName = createPortName(0, 'tclPort');
                 const tclPortNum = this.ports[tclPortName];

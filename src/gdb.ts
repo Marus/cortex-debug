@@ -698,7 +698,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                     // For now, we unconditionally suppress events because we will recover after we run the post start commands
                     this.disableSendStoppedEvents = true;
                     this.sendDummyStackTrace = !attach && (!!this.args.runToEntryPoint || !this.args.breakAfterReset);
-                    this.miDebugger.connect(commands).then(async () => {
+                    this.miDebugger.connect(commands).then(() => {
                         const mode = attach ? SessionMode.ATTACH : SessionMode.LAUNCH;
                         this.started = true;
                         this.serverController.debuggerLaunchCompleted();
@@ -1056,7 +1056,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         return new Promise<boolean>((resolve, reject) => {
-            const doResolve = async () => {
+            const doResolve = () => {
                 if (this.args.noDebug || (shouldContinue && this.isMIStatusStopped())) {
                     if (mode === SessionMode.RESET) {
                         this.sendDummyStackTrace = true;

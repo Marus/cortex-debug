@@ -243,7 +243,7 @@ export class CortexDebugExtension {
                 {
                     title: 'Cancel'
                 }
-            ).then(async (v) => {
+            ).then((v) => {
                 if (v && (v.title === installExt)) {
                     vscode.commands.executeCommand('workbench.extensions.installExtension', 'mcu-debug.memory-view');
                 }

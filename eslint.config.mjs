@@ -75,7 +75,6 @@ export default tseslint.config(
             '@typescript-eslint/no-floating-promises': 'off',           // 48 instances
             'no-async-promise-executor': 'off',                         // 25 instances
             '@typescript-eslint/prefer-promise-reject-errors': 'off',   // 19 instances
-            '@typescript-eslint/require-await': 'off',                  // 7 instances
         }
     },
     {

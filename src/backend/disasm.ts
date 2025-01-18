@@ -499,7 +499,7 @@ export class GdbDisassembler {
         const endAddress = range.qEnd;
         const validationAddr = range.verify;
         // To annotate questionable instructions. Too lazy to do on per instruction basis
-        return new Promise<DisassemblyReturn | Error>(async (resolve) => {
+        return new Promise<DisassemblyReturn | Error>((resolve) => {
             let iter = 0;
             const maxTries = Math.ceil((this.maxInstrSize - this.minInstrSize) / this.instrMultiple);
             const doWork = () => {
