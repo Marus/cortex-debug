@@ -1,8 +1,8 @@
 import { MINode } from './mi_parse';
 
-const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*|\[\d+\])\s*=\s*/;
-const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
-const errorRegex = /^\<.+?\>/;
+const resultRegex = /^([a-zA-Z_-][a-zA-Z0-9_-]*|\[\d+\])\s*=\s*/;
+const variableRegex = /^[a-zA-Z_-][a-zA-Z0-9_-]*/;
+const errorRegex = /^<.+?>/;
 const referenceStringRegex = /^(0x[0-9a-fA-F]+\s*)"/;
 const referenceRegex = /^0x[0-9a-fA-F]+/;
 const nullpointerRegex = /^0x0+\b/;

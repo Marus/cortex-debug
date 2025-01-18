@@ -62,7 +62,7 @@ export class MINode implements MIInfo {
         if (!start) {
             return undefined;
         }
-        const pathRegex = /^\.?([a-zA-Z_\-][a-zA-Z0-9_\-]*)/;
+        const pathRegex = /^\.?([a-zA-Z_-][a-zA-Z0-9_-]*)/;
         const indexRegex = /^\[(\d+)\](?:$|\.)/;
         path = path.trim();
         if (!path) { return start; }
@@ -136,11 +136,11 @@ export class MINode implements MIInfo {
 }
 
 const tokenRegex = /^\d+/;
-const outOfBandRecordRegex = /^(?:(\d*|undefined)([\*\+\=])|([\~\@\&]))/;
+const outOfBandRecordRegex = /^(?:(\d*|undefined)([*+=])|([~@&]))/;
 const resultRecordRegex = /^(\d*)\^(done|running|connected|error|exit)/;
 const newlineRegex = /^\r\n?/;
 const endRegex = /^\(gdb\)\r\n?/;
-const variableRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)/;
+const variableRegex = /^([a-zA-Z_-][a-zA-Z0-9_-]*)/;
 const asyncClassRegex = /^(.*?),/;
 
 export function parseMI(output: string): MINode {

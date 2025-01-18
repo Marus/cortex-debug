@@ -32,7 +32,7 @@ export function escape(str: string) {
     return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-const nonOutput = /^(?:\d*|undefined)[\*\+\=]|[\~\@\&\^]/;
+const nonOutput = /^(?:\d*|undefined)[*+=]|[~@&^]/;
 const gdbMatch = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
 

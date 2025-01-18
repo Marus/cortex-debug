@@ -569,7 +569,7 @@ export function toStringDecHexOctBin(val: number /* should be an integer */): st
 export function parseHostPort(hostPort: string) {
     let port: number;
     let host = '127.0.0.1';
-    const match = hostPort.match(/(.*)\:([0-9]+)/);
+    const match = hostPort.match(/(.*):([0-9]+)/);
     if (match) {
         host = match[1] ? match[1] : host;
         port = parseInt(match[2], 10);
@@ -706,7 +706,7 @@ export class HrTimer {
 // where will need to put the string in quotes as a precaution. This is more a printing
 // aid rather an using for an API
 export function quoteShellAndCmdChars(s): string {
-    const quote = /[\s\"\*\[\]!@#$%^&*\(\)\\:]/g.test(s) ? '"' : '';
+    const quote = /[\s"*[\]!@#$%^&*()\\:]/g.test(s) ? '"' : '';
     s = s.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
     return quote + s.replace(/"/g, '\\"') + quote;
 }
