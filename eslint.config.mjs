@@ -64,19 +64,19 @@ export default tseslint.config(
         // the following rules are being heavily violated in the current codebase,
         // we should work on being able to enable them...
         rules: {
-            '@typescript-eslint/no-unsafe-member-access': 'off',        // 742 instances
-            '@typescript-eslint/no-unsafe-call': 'off',                 // 432 instances
-            '@typescript-eslint/no-unsafe-assignment': 'off',           // 429 instances
-            '@typescript-eslint/no-unsafe-argument': 'off',             // 401 instances
-            '@typescript-eslint/no-explicit-any': 'off',                // 226 instances
-            '@typescript-eslint/no-unused-vars': 'off',                 // 204 instances
-            '@typescript-eslint/no-unsafe-return': 'off',               // 83 instances
-            '@typescript-eslint/no-misused-promises': 'off',            // 57 instances
-            '@typescript-eslint/no-floating-promises': 'off',           // 55 instances
+            '@typescript-eslint/no-unsafe-member-access': 'off',        // 655 instances
+            '@typescript-eslint/no-unsafe-call': 'off',                 // 381 instances
+            '@typescript-eslint/no-unsafe-assignment': 'off',           // 354 instances
+            '@typescript-eslint/no-unsafe-argument': 'off',             // 309 instances
+            '@typescript-eslint/no-explicit-any': 'off',                // 187 instances
+            '@typescript-eslint/no-unused-vars': 'off',                 // 169 instances
+            '@typescript-eslint/no-unsafe-return': 'off',               // 74 instances
+            '@typescript-eslint/no-misused-promises': 'off',            // 53 instances
+            '@typescript-eslint/no-floating-promises': 'off',           // 48 instances
             'no-useless-escape': 'off',                                 // 38 instances
-            '@typescript-eslint/prefer-promise-reject-errors': 'off',   // 36 instances
-            'no-async-promise-executor': 'off',                         // 29 instances
-            '@typescript-eslint/require-await': 'off',                  // 11 instances
+            'no-async-promise-executor': 'off',                         // 25 instances
+            '@typescript-eslint/prefer-promise-reject-errors': 'off',   // 19 instances
+            '@typescript-eslint/require-await': 'off',                  // 7 instances
         }
     },
     {
