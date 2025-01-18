@@ -10,6 +10,7 @@ export class SerialSWOSource extends EventEmitter implements SWORTTSource {
     constructor(private device: string, private baudRate: number) {
         super();
 
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { SerialPort } = require('serialport');
         this.serialPort = new SerialPort({ path: device, baudRate: baudRate, autoOpen: false });
         this.serialPort.on('data', (buffer) => {

@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as ua from 'universal-analytics';
 import { ConfigurationArguments } from './common';
 
-const ua = require('universal-analytics');
 import { v4 as uuidv4 } from 'uuid';
 
 const extension = vscode.extensions.getExtension('marus25.cortex-debug');
@@ -51,7 +51,7 @@ function telemetryEnabled(): boolean {
     const telemetry = vscode.workspace.getConfiguration('telemetry');
     const cortexDebug = vscode.workspace.getConfiguration('cortex-debug');
 
-    return (telemetry.enableTelemetry && cortexDebug.enableTelemetry);
+    return telemetry.get('enableTelemetry', false) && cortexDebug.get('enableTelemetry', false);
 }
 
 function activate(context: vscode.ExtensionContext) {

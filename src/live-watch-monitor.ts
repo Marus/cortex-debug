@@ -230,14 +230,14 @@ export class VariablesHandler {
         if (!this.cachedChangeList) { return undefined; }
         const keys = Object.keys(pVar.children);
         if (keys.length === 0) { return undefined; }        // We don't have previous children, force a refresh
-        const ret = [];
+        const ret: VariableObject[] = [];
         for (const key of keys) {
             const gdbVaName = pVar.children[key];
             const childId = this.variableHandlesReverse.get(gdbVaName);
             if (childId === undefined) {
                 return undefined;
             }
-            const childObj = this.variableHandles.get(childId) as any;
+            const childObj = this.variableHandles.get(childId) as VariableObject;
             ret.push(childObj);
         }
         return ret;

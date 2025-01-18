@@ -120,7 +120,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     public attachCommands(): string[] {
-        const commands = [
+        const commands: string[] = [
             // 'interpreter-exec console "monitor halt"', // Not needed because of --attach
         ];
         return commands;
@@ -134,7 +134,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     public swoAndRTTCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         if (this.args.swoConfig.enabled) {
             const swocommands = this.SWOConfigurationCommands();
             commands.push(...swocommands);

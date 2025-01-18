@@ -187,7 +187,7 @@ export class MemoryContentProvider implements vscode.TextDocumentContentProvider
         let endPos = this.getPosition(endOffset, ascii);
         endPos = new vscode.Position(endPos.line, endPos.character + (ascii ? 1 : 2));
 
-        const ranges = [];
+        const ranges: vscode.Range[] = [];
         const firstOffset = ascii ? this.firstAsciiPos : this.firstBytePos;
         const lastOffset = ascii ? this.lastAsciiPos : this.lastBytePos;
         for (let i = startPos.line; i <= endPos.line; ++i) {

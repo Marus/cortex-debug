@@ -23,7 +23,6 @@ import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import { ServerConsoleLog } from '../backend/server';
 
-const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
     expression: RegExp;
     path: string;
@@ -244,7 +243,7 @@ export class CortexDebugExtension {
                 {
                     title: 'Cancel'
                 }
-            ).then(async (v) => {
+            ).then((v) => {
                 if (v && (v.title === installExt)) {
                     vscode.commands.executeCommand('workbench.extensions.installExtension', 'mcu-debug.memory-view');
                 }
@@ -253,7 +252,7 @@ export class CortexDebugExtension {
     }
 
     private examineMemoryLegacy() {
-        function validateValue(address) {
+        function validateValue(address: string) {
             if (/^0x[0-9a-f]{1,8}$/i.test(address)) {
                 return address;
             } else if (/^[0-9]+$/i.test(address)) {
@@ -649,7 +648,7 @@ export class CortexDebugExtension {
         return def;
     }
 
-    private getCurrentArgs(session: vscode.DebugSession): ConfigurationArguments | vscode.DebugConfiguration {
+    private getCurrentArgs(session: vscode.DebugSession): ConfigurationArguments {
         if (!session) {
             session = vscode.debug.activeDebugSession;
             if (!session || (session.type !== 'cortex-debug')) {
@@ -658,19 +657,14 @@ export class CortexDebugExtension {
         }
         const ourSession = CDebugSession.FindSession(session);
         if (ourSession) {
-            return ourSession.config;
+            return ourSession.config as ConfigurationArguments;
         }
-        return session.configuration;
-    }
-
-    private getCurrentProp(session: vscode.DebugSession, prop: string) {
-        const args = this.getCurrentArgs(session);
-        return args ? args[prop] : undefined;
+        return session.configuration as unknown as ConfigurationArguments;
     }
 
     // Assuming 'session' valid and it a cortex-debug session
     private isDebugging(session: vscode.DebugSession) {
-        const noDebug = this.getCurrentProp(session, 'noDebug');
+        const { noDebug } = this.getCurrentArgs(session);
         return (noDebug !== true);       // If it is exactly equal to 'true' we are doing a 'run without debugging'
     }
 

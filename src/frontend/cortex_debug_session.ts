@@ -27,7 +27,7 @@ export class CDebugSession {
         }
     }
 
-    public getRoot() {
+    public getRoot(): CDebugSession {
         return this.parent && this.parent.parent ? this.parent.getRoot() : this;
     }
 

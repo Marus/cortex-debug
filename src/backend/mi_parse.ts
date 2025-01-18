@@ -62,7 +62,7 @@ export class MINode implements MIInfo {
         if (!start) {
             return undefined;
         }
-        const pathRegex = /^\.?([a-zA-Z_\-][a-zA-Z0-9_\-]*)/;
+        const pathRegex = /^\.?([a-zA-Z_-][a-zA-Z0-9_-]*)/;
         const indexRegex = /^\[(\d+)\](?:$|\.)/;
         path = path.trim();
         if (!path) { return start; }
@@ -136,11 +136,11 @@ export class MINode implements MIInfo {
 }
 
 const tokenRegex = /^\d+/;
-const outOfBandRecordRegex = /^(?:(\d*|undefined)([\*\+\=])|([\~\@\&]))/;
+const outOfBandRecordRegex = /^(?:(\d*|undefined)([*+=])|([~@&]))/;
 const resultRecordRegex = /^(\d*)\^(done|running|connected|error|exit)/;
 const newlineRegex = /^\r\n?/;
 const endRegex = /^\(gdb\)\r\n?/;
-const variableRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*)/;
+const variableRegex = /^([a-zA-Z_-][a-zA-Z0-9_-]*)/;
 const asyncClassRegex = /^(.*?),/;
 
 export function parseMI(output: string): MINode {
@@ -195,7 +195,7 @@ export function parseMI(output: string): MINode {
             remaining = remaining.substr(1);
             stringEnd++;
         }
-        let str;
+        let str: string;
         try {
             str = parseString(output.substr(0, stringEnd));
         } catch (e) {
@@ -205,7 +205,7 @@ export function parseMI(output: string): MINode {
         return str;
     };
 
-    function parseTupleOrList() {
+    function parseTupleOrList(): unknown[] {
         if (output[0] !== '{' && output[0] !== '[') {
             return undefined;
         }
@@ -233,7 +233,7 @@ export function parseMI(output: string): MINode {
         if (result) {
             const results = [];
             results.push(result);
-            while (result = parseCommaResult()) {
+            while ((result = parseCommaResult())) {
                 results.push(result);
             }
             output = output.substr(1); // }
@@ -243,7 +243,7 @@ export function parseMI(output: string): MINode {
         return undefined;
     };
 
-    function parseValue() {
+    function parseValue(): unknown {
         if (output[0] === '"') {
             return parseCString();
         } else if (output[0] === '{' || output[0] === '[') {
@@ -281,7 +281,7 @@ export function parseMI(output: string): MINode {
 
     let match;
 
-    while (match = outOfBandRecordRegex.exec(output)) {
+    while ((match = outOfBandRecordRegex.exec(output))) {
         output = output.substr(match[0].length);
         if (match[1] && token === undefined && match[1] !== 'undefined') {
             token = parseInt(match[1]);
@@ -297,7 +297,7 @@ export function parseMI(output: string): MINode {
                 output: []
             };
             let result;
-            while (result = parseCommaResult()) {
+            while ((result = parseCommaResult())) {
                 asyncRecord.output.push(result);
             }
             outOfBandRecord.push(asyncRecord);
@@ -313,7 +313,7 @@ export function parseMI(output: string): MINode {
         output = output.replace(newlineRegex, '');
     }
 
-    if (match = resultRecordRegex.exec(output)) {
+    if ((match = resultRecordRegex.exec(output))) {
         output = output.substr(match[0].length);
         if (match[1] && token === undefined) {
             token = parseInt(match[1]);
@@ -323,7 +323,7 @@ export function parseMI(output: string): MINode {
             results: []
         };
         let result;
-        while (result = parseCommaResult()) {
+        while ((result = parseCommaResult())) {
             resultRecords.results.push(result);
         }
 

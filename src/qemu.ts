@@ -2,8 +2,8 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { GDBServerController, ConfigurationArguments, createPortName } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
+import { sync as commandExistsSync } from 'command-exists';
 
-const commandExistsSync = require('command-exists').sync;
 const EXECUTABLE_NAMES = ['qemu-system-arm'];
 
 export class QEMUServerController extends EventEmitter implements GDBServerController {
@@ -38,12 +38,12 @@ export class QEMUServerController extends EventEmitter implements GDBServerContr
     }
 
     public launchCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         return commands;
     }
 
     public attachCommands(): string[] {
-        const commands = [];
+        const commands: string[] = [];
         return commands;
     }
 

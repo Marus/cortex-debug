@@ -2,7 +2,6 @@
 
 import * as assert from 'assert';
 import * as http from 'http';
-import os = require('os');
 import { TcpPortScanner } from '../../src/tcpportscanner';
 
 /**
@@ -69,7 +68,7 @@ suite('TcpPortScanner Tests', () => {
 
             // See if the server started on the requested port. We do it two ways in (near) parallel
             // Both should succeed with the same timeout. See above when LISTEN starts
-            TcpPortScanner.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(async () => {
+            TcpPortScanner.waitForPortOpen(port, hostNameOrIp, true, 50, 1000).then(() => {
                 if (doLog) { console.log(`1. Success server port ${port} is ready ${timeIt()}`); }
             }, (err) => {
                 if (doLog) { console.log(`1. Timeout: Failed waiting on port ${port} to open ${timeIt()}`, err); }

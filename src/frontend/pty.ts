@@ -1,4 +1,4 @@
-import EventEmitter = require('events');
+import { EventEmitter } from 'events';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import { ResettableTimeout, TerminalInputMode } from '../common';

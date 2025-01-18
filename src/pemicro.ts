@@ -3,8 +3,6 @@ import { GDBServerController, ConfigurationArguments, createPortName, SWOConfigu
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
-const commandExistsSync = require('command-exists').sync;
-
 export class PEServerController extends EventEmitter implements GDBServerController {
     public portsNeeded: string[] = ['gdbPort', 'swoPort', 'consolePort'];
     public name: 'PE';
@@ -85,7 +83,7 @@ export class PEServerController extends EventEmitter implements GDBServerControl
     public serverArguments(): string[] {
         const gdbport = this.ports['gdbPort'];
 
-        let serverargs = [];
+        let serverargs: string[] = [];
 
         serverargs.push('-startserver');
         serverargs.push('-singlesession');

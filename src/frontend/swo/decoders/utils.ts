@@ -11,7 +11,7 @@ export function parseFloat(buffer: Buffer): number {
         buffer = tmp;
     }
 
-    const result = FloatParser.parse(buffer);
+    const result: { value: number } = FloatParser.parse(buffer);
     return result.value;
 }
 
@@ -22,7 +22,7 @@ export function parseSigned(buffer: Buffer): number {
         buffer = tmp;
     }
 
-    const result = SignedParser.parse(buffer);
+    const result: { value: number } = SignedParser.parse(buffer);
     return result.value;
 }
 
@@ -33,7 +33,7 @@ export function parseUnsigned(buffer: Buffer): number {
         buffer = tmp;
     }
 
-    const result = UnsignedParser.parse(buffer);
+    const result: { value: number } = UnsignedParser.parse(buffer);
     return result.value;
 }
 
@@ -55,7 +55,7 @@ export function parseUQ(buffer: Buffer, mask: number, shift: number) {
     return integer + (fractional / mask);
 }
 
-export const decoders = {
+export const decoders: { [key: string]: (buf: Buffer) => number } = {
     signed: parseSigned,
     float: parseFloat,
     Q8_24: (buffer) => parseQ(buffer, 0xFFFFFF, 24),

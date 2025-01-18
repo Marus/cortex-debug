@@ -298,7 +298,7 @@ export class GdbDisassembler {
             const regex = RegExp(/^[0-9]+\s+([^\s])\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+([^\r\n]*)/mgi);
             // Num Enb  Low Addr   High Addr  Attrs
             // 1   y    0x10000000 0x10100000 flash blocksize 0x200 nocache
-            while (match = regex.exec(str)) {
+            while ((match = regex.exec(str))) {
                 const [flag, lowAddr, highAddr, attrsStr] = match.slice(1, 5);
                 if (flag === 'y') {
                     const nHighAddr = parseInt(highAddr);
@@ -499,7 +499,7 @@ export class GdbDisassembler {
         const endAddress = range.qEnd;
         const validationAddr = range.verify;
         // To annotate questionable instructions. Too lazy to do on per instruction basis
-        return new Promise<DisassemblyReturn | Error>(async (resolve) => {
+        return new Promise<DisassemblyReturn | Error>((resolve) => {
             let iter = 0;
             const maxTries = Math.ceil((this.maxInstrSize - this.minInstrSize) / this.instrMultiple);
             const doWork = () => {

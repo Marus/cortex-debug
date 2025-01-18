@@ -9,7 +9,7 @@ import { GDBDebugSession } from '../gdb';
 import { hexFormat } from '../frontend/utils';
 import { MINode } from './mi_parse';
 
-const OBJDUMP_SYMBOL_RE = RegExp(/^([0-9a-f]{8})\s([lg\ !])([w\ ])([C\ ])([W\ ])([I\ ])([dD\ ])([FfO\ ])\s(.*?)\t([0-9a-f]+)\s(.*)$/);
+const OBJDUMP_SYMBOL_RE = RegExp(/^([0-9a-f]{8})\s([lg !])([w ])([C ])([W ])([I ])([dD ])([FfO ])\s(.*?)\t([0-9a-f]+)\s(.*)$/);
 const NM_SYMBOL_RE = RegExp(/^([0-9a-f]+).*\t(.+):[0-9]+/);     // For now, we only need two things
 const debugConsoleLogging = false;
 const TYPE_MAP: { [id: string]: SymbolType } = {
@@ -305,7 +305,7 @@ export class SymbolTable {
         });
     }
 
-    private rttSymbol;
+    private rttSymbol: SymbolInformation;
     public readonly rttSymbolName = '_SEGGER_RTT';
     private addSymbol(sym: SymbolInformation) {
         if ((sym.length === 0) && /^\$[atdbfpm]$/.test(sym.name)) {
