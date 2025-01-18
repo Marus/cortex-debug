@@ -10,7 +10,7 @@ import * as stream from 'stream';
 import * as path from 'path';
 import { GDBDebugSession } from './gdb';
 import { CreateReadStreamOptions } from 'fs/promises';
-const readline = require('readline');
+import * as readline from 'readline';
 
 export enum ADAPTER_DEBUG_MODE {
     NONE = 'none',
@@ -865,7 +865,7 @@ export class SpawnLineReader extends EventEmitter {
             const rl = readline.createInterface({
                 input: rStream,
                 crlfDelay: Infinity,
-                console: false
+                terminal: false,
             });
             rl.on('line', (line) => {
                 if (this.callback) {

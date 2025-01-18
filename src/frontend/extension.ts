@@ -23,7 +23,6 @@ import { GDBServerConsole } from './server_console';
 import { CDebugSession, CDebugChainedSessionItem } from './cortex_debug_session';
 import { ServerConsoleLog } from '../backend/server';
 
-const commandExistsSync = require('command-exists').sync;
 interface SVDInfo {
     expression: RegExp;
     path: string;

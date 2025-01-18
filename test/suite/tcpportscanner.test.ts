@@ -2,7 +2,6 @@
 
 import * as assert from 'assert';
 import * as http from 'http';
-import os = require('os');
 import { TcpPortScanner } from '../../src/tcpportscanner';
 
 /**

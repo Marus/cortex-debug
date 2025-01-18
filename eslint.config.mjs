@@ -76,7 +76,6 @@ export default tseslint.config(
             'no-useless-escape': 'off',                                 // 38 instances
             '@typescript-eslint/prefer-promise-reject-errors': 'off',   // 36 instances
             'no-async-promise-executor': 'off',                         // 29 instances
-            '@typescript-eslint/no-require-imports': 'off',             // 24 instances
             '@typescript-eslint/require-await': 'off',                  // 11 instances
         }
     },
@@ -84,4 +83,10 @@ export default tseslint.config(
         files: ['**/*.{js,mjs}'],
         extends: [tseslint.configs.disableTypeChecked],
     },
+    {
+        files: ['**/*.js'],
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off',
+        }
+    }
 );

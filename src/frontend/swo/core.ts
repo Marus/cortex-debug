@@ -19,7 +19,7 @@ import { SymbolInformation } from '../../symbols';
 import { getNonce, RTTCommonDecoderOpts } from '../../common';
 import { SocketRTTSource, SocketSWOSource } from './sources/socket';
 
-const RingBuffer = require('ringbufferjs');
+import RingBuffer from 'ringbufferjs';
 
 enum Status {
     IDLE = 1,

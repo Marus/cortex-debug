@@ -1,7 +1,7 @@
-import os = require('os');
-import net = require('net');
-import child_process = require('child_process');
-import command_exists = require('command-exists');
+import * as os from 'os';
+import * as net from 'net';
+import * as child_process from 'child_process';
+import command_exists from 'command-exists';
 import { EventEmitter } from 'events';
 
 let logEnable = false;
