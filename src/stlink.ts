@@ -5,7 +5,32 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
 
-function get_ST_DIR() {
+function get_CLT_INSTALL_DIR(): string {
+    const STMCUBECLT_REGEX = /^STM32CubeCLT_(.+)$/i;
+    let clt: string;
+    switch (os.platform()) {
+        case 'darwin':
+            clt = '/opt/ST';
+            break;
+        case 'win32':
+            clt = 'C:\\ST';
+            break;
+        default: {
+            const dirName = (process.env.HOME || os.homedir()) + '/st';
+            clt = fs.existsSync(dirName) ? dirName : '/opt/st';
+        }
+    }
+    if (fs.existsSync(clt)) {
+        const stats = fs.statSync(clt);
+        if (stats.isDirectory()) {
+            const ret = resolveCubePath([clt], STMCUBECLT_REGEX, '');
+            return ret;
+        }
+    }
+    return '';
+}
+
+function get_ST_DIR(): string {
     switch (os.platform()) {
         case 'win32':
             return 'C:\\ST';
@@ -20,11 +45,12 @@ function get_ST_DIR() {
 
 // Path of the top-level STM32CubeIDE installation directory, os-dependant
 const ST_DIR = get_ST_DIR();
+const ST_CLT_ISTALL_DIR = get_CLT_INSTALL_DIR();
 const SERVER_EXECUTABLE_NAME = os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver';
 
 const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/i;
 // Example: c:\ST\STM32CubeIDE_1.5.0\
-const GDB_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.stlink-gdb-server\.(.+)/;
+const GDB_SERVER_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.stlink-gdb-server\.(.+)/;
 // Example: c:\ST\STM32CubeIDE_1.5.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.win32_1.5.0.202011040924\
 const PROG_REGEX = /com\.st\.stm32cube\.ide\.mcu\.externaltools\.cubeprogrammer\.(.+)/;
 // Example: c:\ST\STM32CubeIDE_1.5.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_1.5.0.202011040924\
@@ -83,6 +109,12 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     public static getArmToolchainPath(): string {
         // Try to resolve gcc location
+        if (ST_CLT_ISTALL_DIR) {
+            const p = path.join(ST_CLT_ISTALL_DIR, 'GNU-tools-for-STM32', 'bin');
+            if (fs.existsSync(p)) {
+                return p;
+            }
+        }
         return resolveCubePath([this.getSTMCubeIdeDir(), 'plugins'], GCC_REGEX, 'tools/bin');
     }
 
@@ -167,7 +199,14 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (this.args.serverpath) {
             return this.args.serverpath;
         } else {
-            return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME);
+            if (ST_CLT_ISTALL_DIR) {
+                const p = path.join(ST_CLT_ISTALL_DIR, 'STLink-gdb-server', 'bin', SERVER_EXECUTABLE_NAME);
+                if (fs.existsSync(p)) {
+                    this.args.serverpath = p;
+                    return p;
+                }
+            }
+            return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_SERVER_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME);
         }
     }
 
@@ -185,15 +224,23 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (stm32cubeprogrammer) {
             serverargs.push('-cp', stm32cubeprogrammer);
         } else {
-            stm32cubeprogrammer = resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], PROG_REGEX, 'tools/bin');
-            // Fallback to standalone programmer if no STMCube32IDE is installed:
+            if (ST_CLT_ISTALL_DIR) {
+                const p = path.join(ST_CLT_ISTALL_DIR, 'STM32CubeProgrammer', 'bin');
+                if (fs.existsSync(p)) {
+                    stm32cubeprogrammer = p;
+                }
+            }
             if (!stm32cubeprogrammer) {
-                if (os.platform() === 'win32') {
-                    stm32cubeprogrammer = process.env.ProgramFiles + '\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin';
-                } else if (os.platform() === 'darwin') {
-                    stm32cubeprogrammer = '/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin';
-                } else {
-                    stm32cubeprogrammer = '/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin';
+                stm32cubeprogrammer = resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], PROG_REGEX, 'tools/bin');
+                // Fallback to standalone programmer if no STMCube32IDE is installed:
+                if (!stm32cubeprogrammer) {
+                    if (os.platform() === 'win32') {
+                        stm32cubeprogrammer = process.env.ProgramFiles + '\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin';
+                    } else if (os.platform() === 'darwin') {
+                        stm32cubeprogrammer = '/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin';
+                    } else {
+                        stm32cubeprogrammer = '/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin';
+                    }
                 }
             }
             serverargs.push('-cp', stm32cubeprogrammer);
