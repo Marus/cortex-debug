@@ -115,15 +115,18 @@ export class GDBServer extends EventEmitter {
     }
 
     private onExit(code, signal) {
-        ServerConsoleLog(`GDBServer(${this.pid}): exited code=${code} signal=${signal}`);
-        currentServers = currentServers.filter((p) => p !== this);
-        this.process = null;
         if (this.exitTimeout) {
             clearTimeout(this.exitTimeout);
             this.exitTimeout = null;
         }
-        this.emit('exit', code, signal);
-        this.disconnectConsole();
+        currentServers = currentServers.filter((p) => p !== this);
+        this.process = null;
+        // Give it a bit of delay to drain stdout/stderr
+        setTimeout(() => {
+            ServerConsoleLog(`GDBServer(${this.pid}): exited code=${code} signal=${signal}`);
+            this.emit('exit', code, signal);
+            this.disconnectConsole();
+        }, 10);
     }
 
     private onError(err) {
