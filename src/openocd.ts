@@ -308,7 +308,7 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     }
 
     public debuggerLaunchCompleted(): void {
-        const hasRtt = this.rttHelper.emitConfigures(this.args.rttConfig, this);
+        const hasRtt = this.rttHelper.emitConfigures(this.args.rttConfig, this.args.executable, this);
         if (this.args.ctiOpenOCDConfig?.enabled) {
             this.ctiStopResume(CTIAction.init);
         }
