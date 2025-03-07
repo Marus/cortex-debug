@@ -575,7 +575,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                 return doResolve();
             }
             const symbolsPromise = this.loadSymbols();      // This is totally async and in most cases, done while gdb is starting
+            let gdbPromiseAsyncErr;
             const gdbPromise = this.startGdb(response);
+            gdbPromise.catch((err) => { gdbPromiseAsyncErr = err });
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
             this.getTCPPorts(this.usingParentServer).then(async () => {
                 await this.serverController.allocateRTTPorts();     // Must be done before serverArguments()
@@ -648,6 +650,8 @@ export class GDBDebugSession extends LoggingDebugSession {
                         // 3. Found free TCP ports and launched gdb-server
                         // 4. Finished reading symbols from objdump and nm
                         const showTimes = this.args.showDevDebugOutput && this.args.showDevDebugTimestamps;
+                        if (gdbPromiseAsyncErr)
+                            throw gdbPromiseAsyncErr;
                         await gdbPromise;
                         if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Ready...\n'); }
 
