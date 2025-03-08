@@ -577,7 +577,9 @@ export class GDBDebugSession extends LoggingDebugSession {
             const symbolsPromise = this.loadSymbols();      // This is totally async and in most cases, done while gdb is starting
             let gdbPromiseAsyncErr;
             const gdbPromise = this.startGdb(response);
-            gdbPromise.catch((err) => { gdbPromiseAsyncErr = err });
+            gdbPromise.catch((err) => {
+                gdbPromiseAsyncErr = err;
+            });
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
             this.getTCPPorts(this.usingParentServer).then(async () => {
                 await this.serverController.allocateRTTPorts();     // Must be done before serverArguments()
