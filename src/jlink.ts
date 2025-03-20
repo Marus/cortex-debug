@@ -219,6 +219,6 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
     public debuggerLaunchStarted(): void {}
     public debuggerLaunchCompleted(): void {
-        this.rttHelper.emitConfigures(this.args.rttConfig, this);
+        this.rttHelper.emitConfigures(this.args.rttConfig, this.args.executable, this);
     }
 }
