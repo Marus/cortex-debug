@@ -666,7 +666,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         // This is the last of the place where ports are allocated
                         this.sendEvent(new GenericCustomEvent('post-start-server', this.args));
-                        commands.push(...this.serverController.initCommands());
+                        commands.push(...this.getServerConnectCommands());
 
                         if (attach) {
                             commands.push(...this.args.preAttachCommands.map(COMMAND_MAP));
@@ -907,6 +907,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private gdbInitCommands: string[] = [];
+    private symInitCommands: string[] = [];
     private startGdb(response: DebugProtocol.LaunchResponse): Promise<void> {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
@@ -942,21 +943,21 @@ export class GDBDebugSession extends LoggingDebugSession {
         let isLoaded = false;
         if (this.args.symbolFiles) {
             // If you just used 'add-symbol-file' debugging works but RTOS detection fails
-            // for most debuggers. While many options work for add-symbol-file, symbol-file
-            // does not allow a textaddress or sections. See issue #1007
+            // for most debuggers.
             for (const symF of this.args.symbolFiles) {
                 const offset = symF.offset ? `-o ${hexFormat(symF.offset)}"` : '';
                 let otherArgs = (typeof symF.textaddress === 'number') ? ` ${hexFormat(symF.textaddress)}"` : '';
                 for (const section of symF.sections) {
                     otherArgs += ` -s ${section.name} ${section.address}`;
                 }
-                const gdbCmd = (otherArgs === '') ? 'symbol-file' : 'add-symbol-file';
-                const cmd = `${gdbCmd} \\"${symF.file}\\" ${offset} ${otherArgs}`.trimEnd();
-                this.gdbInitCommands.push(`interpreter-exec console "${cmd}"`);
+                const cmd = `add-symbol-file \\"${symF.file}\\" ${offset} ${otherArgs}`.trimEnd();
+                this.symInitCommands.push(`interpreter-exec console "${cmd}"`);
             }
-            if (this.gdbInitCommands.length === 0) {
+            if (this.symInitCommands.length === 0) {
                 this.handleMsg('log', 'Info: GDB may not start since there were no files with symbols in "symbolFiles?\n');
             }
+            this.gdbInitCommands.push(...this.symInitCommands);
+            this.symInitCommands = [];
         } else if (!loadFiles && this.args.executable) {
             this.gdbInitCommands.push(`file-exec-and-symbols "${this.args.executable}"`);
             isLoaded = true;
@@ -969,6 +970,18 @@ export class GDBDebugSession extends LoggingDebugSession {
         return ret;
     }
 
+    private getServerConnectCommands() {
+        // server init commands simply makes a tcp connection. It should not halt
+        // the program. After the connection is established, we should load all the
+        // symbols -- especially before a halt
+        const cmds: string[] = [
+            // 'interpreter-exec console "set debug remote 1"',
+            ...this.serverController.initCommands() || [],
+            ...this.symInitCommands
+        ];
+        return cmds;
+    }
+
     public startGdbForLiveWatch(liveGdb: LiveWatchMonitor): Promise<void> {
         const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, true);
         liveGdb.setupEvents(mi2);
@@ -976,8 +989,8 @@ export class GDBDebugSession extends LoggingDebugSession {
         mi2.debugOutput = this.args.showDevDebugOutput;
         commands.push('interpreter-exec console "set stack-cache off"');
         commands.push('interpreter-exec console "set remote interrupt-on-connect off"');
-        if (this.serverController?.initCommands) {
-            commands.push(...this.serverController.initCommands());
+        if (this.serverController) {
+            commands.push(...this.getServerConnectCommands());
         }
         const ret = mi2.start(this.args.cwd, commands);
         return ret;
