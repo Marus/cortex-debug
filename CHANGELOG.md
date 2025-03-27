@@ -16,6 +16,7 @@
   so the extension no longer depends on other extensions to provide related functionality.
 * Black Magic Probe now supports SWO via the dedicated USB endpoint.
 * ST-LINK GDB server (*not* st-util) now supports SWO functionality, using standard configuration options.
+* ST-LINK: you can now set `targetProcessor` in `launch.json` and that will set the `-m` option on the gdb-server
 * Bugfix [#1007](https://github.com/Marus/cortex-debug/issues/1007): An issue with how gdb works prevented RTOS detection when `"symbolFiles"` was used. It will now work if you do not use additional options to specify sections or a textaddress.
 
 # V1.12.1
