@@ -476,6 +476,9 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         if (args.executable && !path.isAbsolute(args.executable)) {
             args.executable = path.normalize(path.join(args.cwd, args.executable));
+            if (os.platform() === 'win32') {
+                args.executable = args.executable.replace(/\\/ig, '/');
+            }
         }
 
         if (args.svdFile && !path.isAbsolute(args.svdFile)) {
