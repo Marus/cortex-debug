@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { CortexDebugChannel } from '../dbgmsgs';
 import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
 
 import { RTTCore, SWOCore } from './swo/core';
@@ -888,6 +889,11 @@ export class CortexDebugExtension {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    try {
+        CortexDebugChannel.createDebugChanne();
+        CortexDebugChannel.debugMessage('Starting Cortex-Debug extension.');
+    } catch (_e) { /* empty */ }
+
     return new CortexDebugExtension(context);
 }
 

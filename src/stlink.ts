@@ -95,6 +95,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
 
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
+    private targetProcessor: number = 0;
 
     public static getSTMCubeIdeDir(): string {
         switch (os.platform()) {
@@ -127,6 +128,14 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     public setArguments(args: ConfigurationArguments): void {
+        // With STLink, there isn't a concept of debugging multiple processors with one instance of the server like openocd
+        // It is more like JLink. But, we do have to pass on command line which processor we want to debug
+        // While we do that, we pretend like there is only one processor.
+        if (args.targetProcessor > 0) {
+            this.targetProcessor = args.targetProcessor;
+        }
+        args.numberOfProcessors = 1;
+        args.targetProcessor = 0;
         this.args = args;
     }
 
@@ -267,6 +276,9 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
             serverargs.push('--attach');
         }
         serverargs.push('--halt');      // Need this for reset to work as expected (perform a halt)
+        if (this.targetProcessor > 0) {
+            serverargs.push('-m', `this.targetProcessor`);
+        }
 
         if (this.args.serverArgs) {
             serverargs = serverargs.concat(this.args.serverArgs);
