@@ -333,20 +333,20 @@ export class CortexDebugExtension {
 
     private getConfigSource(config: vscode.WorkspaceConfiguration, section: string): [vscode.ConfigurationTarget, boolean] {
         const configurationTargetMapping: [string, vscode.ConfigurationTarget][] = [
-            ['workspaceFolderValue', vscode.ConfigurationTarget.WorkspaceFolder],
-            ['workspaceValue', vscode.ConfigurationTarget.Workspace],
-            ['globalValue', vscode.ConfigurationTarget.Global],
+            ['workspaceFolder', vscode.ConfigurationTarget.WorkspaceFolder],
+            ['workspace', vscode.ConfigurationTarget.Workspace],
+            ['global', vscode.ConfigurationTarget.Global],
             // Modify user settings if setting isn't configured yet
-            ['defaultValue', vscode.ConfigurationTarget.Global],
+            ['default', vscode.ConfigurationTarget.Global],
         ];
         const info = config.inspect(section);
-        for (const mapping of configurationTargetMapping) {
-            const [inspectKey, mappingTarget] = mapping;
-            const inspectLanguageKey = inspectKey.replace('Value', 'LanguageValue');
-            if (info[inspectLanguageKey] !== undefined)
-                return [mappingTarget, true];
-            if (info[inspectKey] !== undefined)
-                return [mappingTarget, false];
+        for (const inspectKeySuffix of ['LanguageValue', 'Value']) {
+            for (const mapping of configurationTargetMapping) {
+                const [inspectKeyPrefix, mappingTarget] = mapping;
+                const inspectKey = inspectKeyPrefix + inspectKeySuffix;
+                if (info[inspectKey] !== undefined)
+                    return [mappingTarget, inspectKeySuffix == 'LanguageValue'];
+            }
         }
         // Shouldn't get here unless new configuration targets get added to the
         // VSCode API, only those sources have values for this setting, and this
