@@ -339,7 +339,7 @@ export class CortexDebugExtension {
 
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`, newVal);
         try {
-            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal);
+            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal, vscode.ConfigurationTarget.Global);
         } catch (e) {
             console.error(e);
         }
@@ -353,7 +353,7 @@ export class CortexDebugExtension {
         const newVal = !curVal;
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`, newVal);
         try {
-            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal);
+            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal, vscode.ConfigurationTarget.Global);
         } catch (e) {
             console.error(e);
         }
