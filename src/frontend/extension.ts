@@ -331,6 +331,30 @@ export class CortexDebugExtension {
         );
     }
 
+    private getConfigSource(config: vscode.WorkspaceConfiguration, section: string): [vscode.ConfigurationTarget, boolean] {
+        const configurationTargetMapping: [string, vscode.ConfigurationTarget][] = [
+            ['workspaceFolder', vscode.ConfigurationTarget.WorkspaceFolder],
+            ['workspace', vscode.ConfigurationTarget.Workspace],
+            ['global', vscode.ConfigurationTarget.Global],
+            // Modify user settings if setting isn't configured yet
+            ['default', vscode.ConfigurationTarget.Global],
+        ];
+        const info = config.inspect(section);
+        for (const inspectKeySuffix of ['LanguageValue', 'Value']) {
+            for (const mapping of configurationTargetMapping) {
+                const [inspectKeyPrefix, mappingTarget] = mapping;
+                const inspectKey = inspectKeyPrefix + inspectKeySuffix;
+                if (info[inspectKey] !== undefined)
+                    return [mappingTarget, inspectKeySuffix == 'LanguageValue'];
+            }
+        }
+        // Shouldn't get here unless new configuration targets get added to the
+        // VSCode API, only those sources have values for this setting, and this
+        // setting doesn't have a default value. Still, do something rational
+        // just in case.
+        return [vscode.ConfigurationTarget.Global, false];
+    }
+
     // Settings changes
     private variablesNaturalMode(newVal: boolean, cxt?: any) {
         // 'cxt' contains the treeItem on which this menu was invoked. Maybe we can do something
@@ -339,7 +363,8 @@ export class CortexDebugExtension {
 
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`, newVal);
         try {
-            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal);
+            const [target, languageOverride] = this.getConfigSource(config, CortexDebugKeys.VARIABLE_DISPLAY_MODE);
+            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal, target, languageOverride);
         } catch (e) {
             console.error(e);
         }
@@ -353,7 +378,8 @@ export class CortexDebugExtension {
         const newVal = !curVal;
         vscode.commands.executeCommand('setContext', `cortex-debug:${CortexDebugKeys.VARIABLE_DISPLAY_MODE}`, newVal);
         try {
-            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal);
+            const [target, languageOverride] = this.getConfigSource(config, CortexDebugKeys.VARIABLE_DISPLAY_MODE);
+            config.update(CortexDebugKeys.VARIABLE_DISPLAY_MODE, newVal, target, languageOverride);
         } catch (e) {
             console.error(e);
         }
