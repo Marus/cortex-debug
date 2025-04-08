@@ -189,16 +189,10 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
 
         const commands = [
-            'EnableITMAccess',
-            `BaseSWOSetup ${ratio}`,
-            'SetITMId 1',
-            'ITMDWTTransferEnable',
-            'DisableITMPorts 0xFFFFFFFF',
-            `EnableITMPorts ${portMask}`,
-            'EnableDWTSync',
-            this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample',
-            'ITMSyncEnable',
-            'ITMGlobalEnable'
+            `set $cpuFreq = ${cpuFrequency}`,
+            `set $swoFreq = ${swoFrequency}`,
+            `set $swoPortMask = ${portMask}`,
+            'SWO_Init'
         ];
 
         return commands.map((c) => `interpreter-exec console "${c}"`);
