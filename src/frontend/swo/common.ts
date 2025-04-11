@@ -99,6 +99,7 @@ export interface AdvancedDecoder {
     softwareEvent(port: number, data: Buffer): void;
     synchronized(): void;
     lostSynchronization(): void;
+    dispose?(): void;
 }
 
 export enum PacketType {

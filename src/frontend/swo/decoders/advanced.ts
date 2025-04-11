@@ -67,8 +67,14 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
     }
 
     public dispose() {
-        this.output.dispose();
-        this.close();
+        try {
+            this.output.dispose();
+            if (this.decoder.dispose) {
+                this.decoder.dispose();
+            }
+        } finally {
+            this.close();
+        }
     }
 
     public close() {
