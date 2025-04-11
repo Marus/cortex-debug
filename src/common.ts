@@ -461,13 +461,14 @@ export class RTTServerHelper {
         });
     }
 
-    public emitConfigures(cfg: RTTConfiguration, obj: EventEmitter): boolean {
+    public emitConfigures(cfg: RTTConfiguration, executable: string, obj: EventEmitter): boolean {
         let ret = false;
         if (cfg.enabled) {
             for (const dec of cfg.decoders) {
                 if (dec.tcpPort || dec.tcpPorts) {
                     obj.emit('event', new RTTConfigureEvent({
                         type: 'socket',
+                        executable: executable,
                         decoder: dec
                     }));
                     ret = true;
