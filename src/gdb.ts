@@ -693,9 +693,14 @@ export class GDBDebugSession extends LoggingDebugSession {
                             commands.push(...this.args.postLaunchCommands.map(COMMAND_MAP));
                         }
                     } catch (err) {
-                        const msg = err.toString() + '\n' + err.stack.toString();
-                        this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', `Failed to generate gdb commands: ${msg}`));
-                        this.launchErrorResponse(response, 104, `Failed to generate gdb commands: ${msg}`);
+                        let msg: string;
+                        if (err instanceof MIError) {
+                            msg = `Failed to initialize GDB: ${err.message}\n\nFailed on command:\n${err.source}`;
+                        } else {
+                            msg = 'Failed to generate gdb commands: ' + err.toString() + '\n' + err.stack.toString();
+                        }
+                        this.sendEvent(new TelemetryEvent('Error', 'Launching GDB', msg));
+                        this.launchErrorResponse(response, 104, msg);
                         return doResolve();
                     }
 
