@@ -1,4 +1,5 @@
 const fs = require('fs');
+const os = require('os');
 const child_process = require('child_process');
 
 let prog = '??';
@@ -42,7 +43,8 @@ function isPreRelease() {
 }
 
 function vsceRun(pkgOnly) {
-    const args = ['npx', 'vsce', (pkgOnly ? 'package' : 'publish')];
+    const npx = 'npx';
+    const args = [npx, 'vsce', (pkgOnly ? 'package' : 'publish')];
     if (isPreRelease()) {
         args.push('--pre-release');
         if (vsxAlso) {
@@ -69,7 +71,7 @@ function vsceRun(pkgOnly) {
                 }
             });
             if (vsxAlso) {
-                const vsxCmd = ['npx', 'ovsx', 'publish', '-p', openVsxPat];
+                const vsxCmd = [npx, 'ovsx', 'publish', '-p', openVsxPat];
                 runProg(vsxCmd, (code) => {
                     if (code !== 0) {
                         errExit(`Failed '${vsxCmd}'`);
@@ -84,9 +86,12 @@ function runProg(args, cb) {
     if (isDryRun) {
         args.unshift('echo');
     }
-    // console.log('Executing ' + args.join(' '));
     const cmd = args.join(' ');
-    const arg0 = args.shift();
+    const arg0 = os.platform() === 'win32' ? 'cmd.exe' : args.shift();
+    if (os.platform() === 'win32') {
+        args.unshift('/c');
+    }
+    // console.log('Executing ' + arg0 + ' ' + args.join(' '));
     const prog = child_process.spawn(arg0, args, {
         stdio: 'inherit'
     });
