@@ -44,8 +44,10 @@ function get_ST_DIR(): string {
 }
 
 // Path of the top-level STM32CubeIDE installation directory, os-dependant
+/*
 const ST_DIR = get_ST_DIR();
 const ST_CLT_ISTALL_DIR = get_CLT_INSTALL_DIR();
+*/
 const SERVER_EXECUTABLE_NAME = os.platform() === 'win32' ? 'ST-LINK_gdbserver.exe' : 'ST-LINK_gdbserver';
 
 const STMCUBEIDE_REGEX = /^STM32CubeIDE_(.+)$/i;
@@ -92,26 +94,27 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     public readonly name: string = 'ST-LINK';
     // STLink uses 4 ports per core. Not sure what 3rd and 4th are for but reserve them anyways
     public readonly portsNeeded: string[] = ['gdbPort', 'swoPort', 'gap1', 'gap2'];
-
+    public readonly ST_DIR = get_ST_DIR();
+    public readonly ST_CLT_ISTALL_DIR = get_CLT_INSTALL_DIR();
     private args: ConfigurationArguments;
     private ports: { [name: string]: number };
     private targetProcessor: number = 0;
 
-    public static getSTMCubeIdeDir(): string {
+    public getSTMCubeIdeDir(): string {
         switch (os.platform()) {
             case 'darwin':
-                return ST_DIR;
+                return this.ST_DIR;
             case 'linux':
-                return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, '');
+                return resolveCubePath([this.ST_DIR], STMCUBEIDE_REGEX, '');
             default:
-                return resolveCubePath([ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
+                return resolveCubePath([this.ST_DIR], STMCUBEIDE_REGEX, 'STM32CubeIDE');
         }
     }
 
-    public static getArmToolchainPath(): string {
+    public getArmToolchainPath(): string {
         // Try to resolve gcc location
-        if (ST_CLT_ISTALL_DIR) {
-            const p = path.join(ST_CLT_ISTALL_DIR, 'GNU-tools-for-STM32', 'bin');
+        if (this.ST_CLT_ISTALL_DIR) {
+            const p = path.join(this.ST_CLT_ISTALL_DIR, 'GNU-tools-for-STM32', 'bin');
             if (fs.existsSync(p)) {
                 return p;
             }
@@ -202,14 +205,14 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (this.args.serverpath) {
             return this.args.serverpath;
         } else {
-            if (ST_CLT_ISTALL_DIR) {
-                const p = path.join(ST_CLT_ISTALL_DIR, 'STLink-gdb-server', 'bin', SERVER_EXECUTABLE_NAME);
+            if (this.ST_CLT_ISTALL_DIR) {
+                const p = path.join(this.ST_CLT_ISTALL_DIR, 'STLink-gdb-server', 'bin', SERVER_EXECUTABLE_NAME);
                 if (fs.existsSync(p)) {
                     this.args.serverpath = p;
                     return p;
                 }
             }
-            return resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], GDB_SERVER_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME);
+            return resolveCubePath([this.getSTMCubeIdeDir(), 'plugins'], GDB_SERVER_REGEX, 'tools/bin', SERVER_EXECUTABLE_NAME);
         }
     }
 
@@ -227,14 +230,14 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
         if (stm32cubeprogrammer) {
             serverargs.push('-cp', stm32cubeprogrammer);
         } else {
-            if (ST_CLT_ISTALL_DIR) {
-                const p = path.join(ST_CLT_ISTALL_DIR, 'STM32CubeProgrammer', 'bin');
+            if (this.ST_CLT_ISTALL_DIR) {
+                const p = path.join(this.ST_CLT_ISTALL_DIR, 'STM32CubeProgrammer', 'bin');
                 if (fs.existsSync(p)) {
                     stm32cubeprogrammer = p;
                 }
             }
             if (!stm32cubeprogrammer) {
-                stm32cubeprogrammer = resolveCubePath([STLinkServerController.getSTMCubeIdeDir(), 'plugins'], PROG_REGEX, 'tools/bin');
+                stm32cubeprogrammer = resolveCubePath([this.getSTMCubeIdeDir(), 'plugins'], PROG_REGEX, 'tools/bin');
                 // Fallback to standalone programmer if no STMCube32IDE is installed:
                 if (!stm32cubeprogrammer) {
                     if (os.platform() === 'win32') {

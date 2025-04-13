@@ -60,20 +60,22 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         switch (os.platform()) {
             case 'darwin':
                 Object.assign(config, config.osx);
-                delete config.osx;
                 break;
             case 'win32':
                 Object.assign(config, config.windows);
-                delete config.windows;
                 break;
             case 'linux':
                 Object.assign(config, config.linux);
-                delete config.linux;
                 break;
             default:
                 console.log(`Unknown platform ${os.platform()}`);
                 break;
         }
+        // Delete all OS props instead just the current one. See Issue#1114
+        delete config.osx;
+        delete config.windows;
+        delete config.linux;
+
         this.sanitizeChainedConfigs(config);
         if (config.debugger_args && !config.debuggerArgs) {
             config.debuggerArgs = config.debugger_args;
@@ -192,9 +194,11 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         this.setOsSpecficConfigSetting(config, 'toolchainPath', 'armToolchainPath');
 
         if (!config.toolchainPath) {
-            // Special case to auto-resolve GCC toolchain for STM32CubeIDE users
             if (!config.armToolchainPath && config.servertype === 'stlink') {
-                config.armToolchainPath = STLinkServerController.getArmToolchainPath();
+                // Special case to auto-resolve GCC toolchain for STM32CubeIDE users. Doesn't quite work
+                // if you are using WSL or remote debug. It will be re-calcutate later anyways in the debug adapter
+                const stController = new STLinkServerController();
+                config.armToolchainPath = stController.getArmToolchainPath();
                 config.toolchainPath = config.armToolchainPath;
             }
         }
@@ -467,11 +471,14 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             propName = propName || dstName;
             const settings = vscode.workspace.getConfiguration('cortex-debug');
             const obj = settings[propName];
-            if (obj) {
+            if ((obj !== undefined) && (obj !== null)) {
                 if (typeof obj === 'object') {
                     const osName = os.platform();
                     const osOverride = ((osName === 'win32') ? 'windows' : (osName === 'darwin') ? 'osx' : 'linux');
-                    config[dstName] = obj[osOverride] || '';
+                    const val = obj[osOverride];
+                    if (val !== undefined) {
+                        config[dstName] = obj[osOverride];
+                    }
                 } else {
                     config[dstName] = obj;
                 }
