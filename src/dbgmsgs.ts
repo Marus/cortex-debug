@@ -12,7 +12,7 @@ export class CortexDebugChannel {
             };
             // (options as any).loglevel = vscode.LogLevel.Trace;
             CortexDebugChannel.vscodeDebugChannel = vscode.window.createOutputChannel('Cortex-Debug');
-            CortexDebugChannel.vscodeDebugChannel.show(true);
+            CortexDebugChannel.vscodeDebugChannel.hide();
         }
     }
 

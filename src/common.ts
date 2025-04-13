@@ -690,7 +690,31 @@ export class HrTimer {
     public createDateTimestamp(): string {
         const hrUs = this.createPaddedMs(6);
         const date = new Date();
-        const ret = `[${date.toISOString()}, +${hrUs}ms]`;
+        const ret = `[${HrTimer.toLocalIsoString(date)}, +${hrUs}ms]`;
+        return ret;
+    }
+
+    private static tzStr = '';
+    private static tzOffsetMins = 0;
+    private static getGmtOffsetString(): string {
+        if (HrTimer.tzStr === '') {
+            const date = new Date();
+            HrTimer.tzOffsetMins = date.getTimezoneOffset();
+            const tzoHrs = HrTimer.tzOffsetMins / 60;
+            date.setMinutes(date.getMinutes() - HrTimer.tzOffsetMins);
+            HrTimer.tzStr = ' GMT' + ((tzoHrs < 0) ? '+' : '-') + tzoHrs.toFixed(1);
+            if (HrTimer.tzStr.endsWith('.0')) {
+                HrTimer.tzStr = HrTimer.tzStr.substring(0, HrTimer.tzStr.length - 2);
+            }
+        }
+        return HrTimer.tzStr;
+    }
+
+    public static toLocalIsoString(date: Date): string {
+        const tzStr = HrTimer.getGmtOffsetString(); // Get this first
+        const lDate = new Date(date);
+        lDate.setMinutes(lDate.getMinutes() - HrTimer.tzOffsetMins);
+        const ret = lDate.toISOString() + HrTimer.getGmtOffsetString();
         return ret;
     }
 

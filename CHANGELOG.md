@@ -15,6 +15,7 @@
 * Native external dependencies have been integrated into the extension once again (`serialport` and `usb` packages),
   so the extension no longer depends on other extensions to provide related functionality.
 * Black Magic Probe now supports SWO via the dedicated USB endpoint.
+* Time format changed. We now print local time and a GMT offset. Before, it was always printed in GMT so you would have to manually convert it to local time. It will now look like `2025-04-13T19:11:51.929Z GMT-4`. It is still in ISO format but adjusted to local time. We chose not to use strings like PST, EST because this can be confusing across all the timezones across the world
 * ST-LINK GDB server (*not* st-util) now supports SWO functionality, using standard configuration options.
 * ST-LINK: you can now set `targetProcessor` in `launch.json` and that will set the `-m` option on the gdb-server
 * Bugfix [#1007](https://github.com/Marus/cortex-debug/issues/1007): An issue with how gdb works prevented RTOS detection when `"symbolFiles"` was used. It will now work if you do not use additional options to specify sections or a textaddress.
