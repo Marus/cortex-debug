@@ -732,7 +732,7 @@ export class CortexDebugExtension {
             mySession.swoSource = src;
             this.initializeSWO(e.session, e.body.args);
             src.start().then(() => {
-                console.log(`Connected after ${src.nTries} tries`);
+                CortexDebugChannel.debugMessage(`Connected after ${src.nTries} tries`);
                 // Do nothing...
             }, (e) => {
                 vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e} after ${src.nTries} tries`);
@@ -774,7 +774,7 @@ export class CortexDebugExtension {
                 }
             }
         } else {
-            console.error('receivedRTTConfigureEvent: unknown type: ' + e.body.type);
+            CortexDebugChannel.debugMessage('Error: receivedRTTConfigureEvent: unknown type: ' + e.body.type);
         }
     }
 

@@ -1,10 +1,11 @@
 import { SWORTTSource } from './common';
 import { EventEmitter } from 'events';
 import * as net from 'net';
-import { parseHostPort } from '../../../common';
+import { parseHostPort, SocketTimout } from '../../../common';
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import { setFlagsFromString } from 'v8';
+import { CortexDebugChannel } from '../../../dbgmsgs';
 
 const TimerInterval = 250;
 export class SocketSWOSource extends EventEmitter implements SWORTTSource {
@@ -23,7 +24,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
     }
 
     // Default wait time is about 5 minutes
-    public start(timeout = (1000 * 60 * 5)): Promise<void> {
+    public start(timeout = SocketTimout): Promise<void> {
         let retry = true;
         const start = Date.now();
         const obj = parseHostPort(this.tcpPort);
@@ -39,7 +40,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                     this.timer = undefined;
                     this.connected = true;
                     this.emit('connected');
-                    console.log(`Connected SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}\n`);
+                    CortexDebugChannel.debugMessage(`Connected SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}\n`);
                     resolve();
                 });
                 this.client.on('data', (buffer) => {
@@ -66,14 +67,14 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
                         const delta = Date.now() - start;
                         if (delta > timeout) {
                             (e as any).message = `Error: Failed to connect to port ${this.tcpPort} ${code}`;
-                            console.log(`Failed ECONNREFUSED SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
+                            CortexDebugChannel.debugMessage(`Failed ECONNREFUSED SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
                             this.connError = e;
                             this.emit('error', e);
                             reject(e);
                             this.dispose();
                         } else {
                             if ((this.nTries % 10) === 0) {
-                                console.log(`Trying SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
+                                CortexDebugChannel.debugMessage(`Trying SWO/RTT port ${this.tcpPort}, nTries = ${this.nTries}`);
                             }
                             retry = true;
                             this.nTries++;
@@ -106,7 +107,7 @@ export class SocketSWOSource extends EventEmitter implements SWORTTSource {
             }
         } catch (e) {
             // For debug only
-            console.log(`Socked destroy error ${e}`);
+            CortexDebugChannel.debugMessage(`SWO/RTT socket destroy error ${e}`);
         }
     }
 
@@ -340,7 +341,7 @@ export class PeMicroSocketSource extends SocketSWOSource {
                 }
                 offset = offset + header.dataLength;
             } catch (err) {
-                console.log(err.message);
+                CortexDebugChannel.debugMessage('SWO/RTT socket: ' + err.message);
                 // If we couldn't decode the header, just discard the data.
                 // Its probably garbage or out of sync, so upstream would be confused anyway
             }

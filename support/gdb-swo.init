@@ -2,8 +2,8 @@
 # defined below. For a C implementation see swo-init.c file in this directory or see
 #     https://github.com/Marus/cortex-debug/tree/master/support
 #
-# What is defined below still has limitations that are very device specific and we have no way of
-# knowing those details
+# What is defined below still has limitations because it is generic and does not have any device specific
+# details as we have no way of knowing those details
 #
 # a) The Trace hardware may not be using the cpu clock. It may be divided by 2 already. Or it is not even
 #    enabled. If it is simply a matter of division, then you can adjust the pre-scalar below
@@ -13,7 +13,7 @@
 #
 # If you need to make a custom version of this, copy this file to your project and use the preLaunch/preAttach
 # commands to override the default implementation. For example
-# 
+#
 # "preLaunchCommands": [
 #     "source \"${workspaceFolder}/myswo.init\""
 # ]
@@ -25,19 +25,34 @@
 # $swoFreq  -- Baud rate (freq in Hz) from launch.json (swoConfig.swoFrequency)
 # $cpuFreq  -- CPU Freq. in Hz from launch.json (swoConfig.cpuFrequency)
 # $swoPortMask -- The ITM ports to enable, calculated based on ports used in swoConfig (launch.json)
+# $swoFormat -- NRZ/UART(2) vs Manchester(1)
 #
+
+set $swoFormat = 0x00000002
 
 # We wish we could do this whole thing in python some sane language but python is not enabled
 # in many distributions of gdb
 
+# Instead of overriding the whole SWO_Init definition, you can also add your own functionality using
+# the Pre/Post definitions and loading them via preLaunchCommands in launch.json. We define empty
+# ones below
+define SWO_Init_Pre
+end
+define SWO_Init_Post
+end
+
 define SWO_Init
+    set language c
+
+	SWO_Init_Pre
+
     set language c
 
 # Enable trace
 #	set *($DCB_BASE + 0x0000C) = (1 << 24)
 
-# TPI->SPPR Pin protocolo register to NRZ
-	set *($TPI_BASE + 0x000F0) = 0x00000002
+# TPI->SPPR Pin protocolo register to NRZ/Manchester
+	set *($TPI_BASE + 0x000F0) = $swoFormat
 
 # TPI->ACPR = Prescalar. Change the following if your Prescalar calculation is different if your input clock is different##
 	set *($TPI_BASE + 0x00010) = ($cpuFreq / $swoFreq) - 1
@@ -59,6 +74,8 @@ define SWO_Init
 
 # TPI->FFCR (Formatter and Flush Control Register)
     set *($TPI_BASE + 0x00304) = 0x00000100
+
+	SWO_Init_Post
 
     set language auto
 end

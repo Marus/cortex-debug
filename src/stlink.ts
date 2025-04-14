@@ -1,5 +1,6 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName, genDownloadCommands } from './common';
+import { GDBServerController, ConfigurationArguments, SWOConfigureEvent,
+    createPortName, genDownloadCommands, getGDBSWOInitCommands } from './common';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -187,17 +188,7 @@ export class STLinkServerController extends EventEmitter implements GDBServerCon
     }
 
     private SWOConfigurationCommands(): string[] {
-        const { decoders, swoFrequency, cpuFrequency } = this.args.swoConfig;
-        const portMask = '0x' + calculatePortMask(decoders).toString(16);
-        const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-
-        const commands = [
-            `set $cpuFreq = ${cpuFrequency}`,
-            `set $swoFreq = ${swoFrequency}`,
-            `set $swoPortMask = ${portMask}`,
-            'SWO_Init'
-        ];
-
+        const commands = getGDBSWOInitCommands(this.args.swoConfig);
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 

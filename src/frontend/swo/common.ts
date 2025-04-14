@@ -91,7 +91,7 @@ export interface GrapherConfigurationMessage extends GrapherMessage {
 export interface AdvancedDecoder {
     init(
         config: SWOAdvancedDecoderConfig,
-        outputData: (output: string) => void,
+        outputData: (output: string, timestamp?: boolean) => void,
         graphData: (data: number, id: string) => void
     ): void;
     typeName(): string;

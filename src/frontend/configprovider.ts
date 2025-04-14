@@ -88,10 +88,21 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
         if (!config.swoConfig) {
             config.swoConfig = { enabled: false, decoders: [], cpuFrequency: 0, swoFrequency: 0, source: 'probe' };
-        } else {
+        } else if (config.swoConfig?.enabled) {
+            if (!config.swoConfig.cpuFrequency) {
+                config.swoConfig.cpuFrequency = 1 * 1e6;
+                vscode.window.showWarningMessage(
+                    `launch.json: Missing/Invalid swoConfig.cpuFrequency. setting to ${config.swoConfig.cpuFrequency} Hz`);
+            }
+            if (!config.swoConfig.swoFrequency) {
+                config.swoConfig.swoFrequency = config.swoConfig.cpuFrequency / 2;
+                vscode.window.showWarningMessage(
+                    `launch.json: Missing/Invalid swoConfig.swoFrequency. setting to ${config.swoConfig.swoFrequency} Hz`);
+            }
             if (config.swoConfig.ports && !config.swoConfig.decoders) {
                 config.swoConfig.decoders = config.swoConfig.ports;
             }
+            if (!config.swoConfig.swoEncoding) { config.swoConfig.swoEncoding = 'uart'; }
             if (!config.swoConfig.source) { config.swoConfig.source = 'probe'; }
             if (!config.swoConfig.decoders) { config.swoConfig.decoders = []; }
             config.swoConfig.decoders.forEach((d, idx) => {

@@ -1715,13 +1715,22 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     private serverControllerEvent(event: DebugProtocol.Event) {
         if (event instanceof SWOConfigureEvent) {
-            this.swoLaunchPromise = new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('Timeout waiting for SWV connection')), 1000);
-                this.swoLaunched = () => {
-                    clearTimeout(timeout);
-                    resolve();
-                };
-            });
+            const { type, port } = (event as any).body;
+            if (type === 'socket') {
+                this.swoLaunchPromise = new Promise((resolve, reject) => {
+                    const tm = 1000;
+                    const timeout = setTimeout(() => {
+                        this.swoLaunched = undefined;
+                        resolve();
+                        const msg = `Timeout waiting for SWV TCP port ${port}: ${tm} ms. It may connect later, continue debugging...\n`;
+                        this.handleMsg('stderr', msg);
+                    }, tm);
+                    this.swoLaunched = () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    };
+                });
+            }
         }
 
         this.sendEvent(event);

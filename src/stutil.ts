@@ -1,5 +1,5 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, calculatePortMask, createPortName, genDownloadCommands } from './common';
+import { GDBServerController, ConfigurationArguments, SWOConfigureEvent, createPortName, genDownloadCommands, getGDBSWOInitCommands } from './common';
 import * as os from 'os';
 import { EventEmitter } from 'events';
 
@@ -68,26 +68,7 @@ export class STUtilServerController extends EventEmitter implements GDBServerCon
     }
 
     private SWOConfigurationCommands(): string[] {
-        const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
-        const swoFrequency = this.args.swoConfig.swoFrequency;
-        const cpuFrequency = this.args.swoConfig.cpuFrequency;
-
-        const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
-
-        const commands: string[] = [
-            'EnableITMAccess',
-            `BaseSWOSetup ${ratio}`,
-            'SetITMId 1',
-            'ITMDWTTransferEnable',
-            'DisableITMPorts 0xFFFFFFFF',
-            `EnableITMPorts ${portMask}`,
-            'EnableDWTSync',
-            'ITMSyncEnable',
-            'ITMGlobalEnable'
-        ];
-
-        commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-
+        const commands = getGDBSWOInitCommands(this.args.swoConfig);
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 

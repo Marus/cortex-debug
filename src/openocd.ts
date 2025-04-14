@@ -1,7 +1,8 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
 import {
     GDBServerController, ConfigurationArguments, SWOConfigureEvent,
-    calculatePortMask, createPortName, RTTServerHelper, genDownloadCommands, CTIAction
+    createPortName, RTTServerHelper, genDownloadCommands, CTIAction,
+    getGDBSWOInitCommands
 } from './common';
 import * as os from 'os';
 import * as fs from 'fs';
@@ -175,7 +176,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
         const commands: string[] = [];
 
         if (!this.args.pvtIsReset) {
-            const portMask = '0x' + calculatePortMask(this.args.swoConfig.decoders).toString(16);
             const swoFrequency = this.args.swoConfig.swoFrequency;
             const cpuFrequency = this.args.swoConfig.cpuFrequency;
             const source = this.args.swoConfig.source;
@@ -184,19 +184,14 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
                 : ':' + this.ports[createPortName(this.args.targetProcessor, 'swoPort')];
             commands.push(
                 `monitor CDSWOConfigure ${cpuFrequency} ${swoFrequency} ${swoOutput}`,
-                `set $cpuFreq = ${cpuFrequency}`,
-                `set $swoFreq = ${swoFrequency}`,
-                `set $swoPortMask = ${portMask}`
             );
         }
 
         commands.push(
             // ST/OpenOCD HACK: See HACK NOTES above.
             'monitor gdb_sync', 'stepi',
-            'SWO_Init'
+            ...getGDBSWOInitCommands(this.args.swoConfig)
         );
-        // commands.push(this.args.swoConfig.profile ? 'EnablePCSample' : 'DisablePCSample');
-
         return commands.map((c) => `interpreter-exec console "${c}"`);
     }
 

@@ -65,6 +65,7 @@ export class StoppedEvent extends Event implements DebugProtocol.Event {
     }
 }
 
+export const SocketTimout = 1000 * 60 * 5;
 export interface SWOConfigureBody {
     type: string;
     args: any;            // Configuration arguments
@@ -492,6 +493,27 @@ export function calculatePortMask(decoders: any[]) {
         }
     });
     return mask;
+}
+
+export function getGDBSWOInitCommands(config: SWOConfiguration): string[] {
+    if (!config || (typeof config !== 'object')) return [];
+
+    const { decoders, swoFrequency, cpuFrequency, swoEncoding } = config;
+    const portMask = '0x' + calculatePortMask(decoders).toString(16);
+    const ratio = Math.floor(cpuFrequency / swoFrequency) - 1;
+
+    const commands = [
+        `set $cpuFreq = ${cpuFrequency}`,
+        `set $swoFreq = ${swoFrequency}`,
+        `set $swoPortMask = ${portMask}`,
+        `set $swoFormat = ${swoEncoding === 'manchester' ? 1 : 2}`,
+        'SWO_Init'
+    ];
+
+    if (config.profile) {
+        commands.push('EnablePCSample');
+    }
+    return commands;
 }
 
 export function createPortName(procNum: number, prefix: string = 'gdbPort'): string {
