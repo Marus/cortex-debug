@@ -4,7 +4,7 @@
 * All gdb servers that have SWO will now use the SWO_Init (you can override it) GDB macro. See https://github.com/Marus/cortex-debug/wiki/SWO-Output and https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init
 * Protected the advanced decoder from crashes in user supplied decoder Javascript code. It is a bit more robust
 * Warning: Despite our best efforts, this release may break existing advanced decoders...it is unclear to me how they are being used
-* The updated interface for the advanced decoder can be found here https://github.com/Marus/cortex-debug/blob/370f176be13949c47d3f5bec3cd6c42e3c71de24/src/frontend/swo/common.ts#L91 (Search for AdvancedDecoder)
+* The updated AdvancedDecoder interface can be found in https://github.com/Marus/cortex-debug/blob/master/src/frontend/swo/advanced-decoder.ts
 
 # V1.13.0-pre4
 * Feature: Support for setting values on expression from the Watch panel. The new value has to be something that GDB understands, so setting values on arrays, structures won't work but it should work on any scalar
