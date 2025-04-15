@@ -1,4 +1,9 @@
 # ChangeLog
+
+# V1.13.0-pre6
+* Make the advanced decoder work properly for RTT. It now allows a dispose.
+* Both SWO/RTT OUTPUT panels are now recycled instead of creating a new one every time. You can for a new one by supplying a new outputLabel and/or typeName.
+
 # V1.13.0-pre5
 * Refactored all the SWO initialization gdb commands to one common method used by all gdb servers. This eliminated tons of duplicate code.
 * All gdb servers that have SWO will now use the SWO_Init (you can override it) GDB macro. See https://github.com/Marus/cortex-debug/wiki/SWO-Output and https://github.com/Marus/cortex-debug/blob/master/support/gdb-swo.init

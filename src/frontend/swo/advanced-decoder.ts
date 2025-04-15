@@ -1,9 +1,9 @@
 import { SWODecoderConfig } from './common';
 
 export interface SWOAdvancedDecoderConfig extends SWODecoderConfig {
-    decoder: string;
+    decoder: string;        // Path to decoder JS file
     config: any;
-    ports: number[];
+    ports: number[];        // List of ITM/RTT ports
 }
 
 export interface AdvancedDecoder {

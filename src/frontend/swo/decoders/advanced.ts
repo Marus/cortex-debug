@@ -17,6 +17,7 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
     private ports: number[];
     private decoder: AdvancedDecoder;
     private timer = new HrTimer();
+    private static outputPanels = new Map<string, vscode.OutputChannel>();
 
     constructor(config: SWOAdvancedDecoderConfig) {
         super();
@@ -39,7 +40,15 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
             }
             try {
                 this.decoder.init(config, this.displayOutput.bind(this), this.graphData.bind(this));
-                this.output = vscode.window.createOutputChannel(`SWO/RTT: ${this.decoder.outputLabel() || ''} [type: ${this.decoder.typeName()}]`);
+                const name = `SWO/RTT: ${this.decoder.outputLabel() || ''} [type: ${this.decoder.typeName()}]`;
+                let panel = SWORTTAdvancedProcessor.outputPanels.get(name);
+                if (!panel) {
+                    panel = vscode.window.createOutputChannel(name);
+                    SWORTTAdvancedProcessor.outputPanels.set(name, panel);
+                } else {
+                    panel.clear();
+                }
+                this.output = panel;
             } catch (e) {
                 throw new Error(`Error initializing decoder class. Potential issues with outputLabel(), typeName() or init(): ${e.toString()}`);
             }
@@ -96,7 +105,8 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
 
     public dispose() {
         try {
-            this.output.dispose();
+            // We are recycling these now. So, do not dispose()
+            // this.output.dispose();
         } finally {
             this.output = undefined;
             this.close();
@@ -110,7 +120,7 @@ export class SWORTTAdvancedProcessor extends EventEmitter implements SWORTTDecod
             } catch (e) {
                 CortexDebugChannel.debugMessage('Error: in dispose() for decoder ' + e.toString());
             }
-            this.decoder = undefined;
         }
+        this.decoder = undefined;
     }
 }

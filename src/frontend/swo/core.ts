@@ -444,7 +444,7 @@ class RTTDecoder extends EventEmitter {
 
     constructor(
         public readonly source: SocketSWOSource,
-        public readonly port: number,       // Thisis the rtt channel
+        public readonly port: number,       // This is the rtt channel
         public readonly bytesNeeded: number) {
         super();
         this.buffer = Buffer.alloc(bytesNeeded);
@@ -460,6 +460,7 @@ class RTTDecoder extends EventEmitter {
         this.source.on('data', this.onData.bind(this));
         this.source.on('disconnected', () => {
             this.connected = false;
+            this.emit('disconnected');
         });
     }
 
@@ -526,6 +527,7 @@ export class RTTCore extends SWORTTCoreBase {
         if (src) {
             const dec = new RTTDecoder(src, src.channel, 4);
             dec.on('software-event', this.onPacket.bind(this));
+            dec.on('disconnected', this.dispose.bind(this));
             this.decoders.push(dec);
         } else {
             console.error('Null source?');
