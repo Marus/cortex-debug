@@ -329,11 +329,23 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         // Now lets replace anything in launch.json that needs replaced.
         const environment = config.environment || {};   // Ensure we can iterate over config.environment even if it's empty
         const replaceEnvVariables = (obj: any) => {
-            for (const key in obj) {                    // Check every key
+            const regex = /\${env:(\w+)}/g;
+            const captures = [];
+
+            for (const key in obj) {                    // Check every key looking for our pattern
                 if (typeof obj[key] === 'string') {     // If it's a string we want to look for our search pattern
-                    obj[key] = obj[key].replace(/\${env:(\w+)}/g, (match, p1) => environment[p1] || match);
-                } else if (typeof obj[key] === 'object') { // If it's an array of some sort we want to recurse into it
+                    let match;
+                    while ((match = regex.exec(obj[key])) !== null) { // Ensure we search the entire string
+                        captures.push([key, match[1]]); // Note matches down for later
+                    }
+                } else if (typeof obj[key] === 'object') { // If it's an object recurse into it
                     replaceEnvVariables(obj[key]);
+                }
+            }
+
+            for (const match of captures) {             // For every match that we found
+                if (match[1] in environment) {          // If it exists in our environment variables
+                    obj[match[0]] = obj[match[0]].replace(regex, environment[match[1]]); // Replace it with the environment variable.
                 }
             }
         };
