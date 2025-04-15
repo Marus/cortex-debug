@@ -31,6 +31,8 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | cwd | string | Both | Directory to run commands from |
 | debuggerArgs | array | Both | Additional arguments to pass to GDB command line |
 | device | string | Both | Target Device Identifier |
+| envFile | string | Both | Path to a file which contains environment variables for substitution in launch.json. |
+| environment | object | Both | Support for Environment Variable Substitution in launch.json |
 | executable | string | Both | Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles` |
 | gdbPath | string | Both | This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available. |
 | gdbTarget | string | Both | For externally (servertype = "external") controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port |

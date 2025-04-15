@@ -697,6 +697,18 @@
                                 "description": "Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles`",
                                 "type": "string"
                             },
+                            "environment": {
+                                "description": "Support for Environment Variable Substitution in launch.json",
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                    },
+                                    "default": {}
+                            },
+                            "envFile": {
+                                "description": "Path to a file which contains environment variables for substitution in launch.json.",
+                                "type": "string"
+                            },
                             "symbolFiles": {
                                 "description": "Array of ELF files to load symbols from instead of the executable file. Each item in the array cab be a string or an object. Program information is ignored (see `loadFiles`). Can be an empty list to specify none. If this property does not exist, then the executable is used for symbols",
                                 "type": "array",
@@ -1818,6 +1830,18 @@
                             },
                             "executable": {
                                 "description": "Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles`",
+                                "type": "string"
+                            },
+                            "environment": {
+                                "description": "Support for Environment Variable Substitution in launch.json",
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                    },
+                                    "default": {}
+                            },
+                            "envFile": {
+                                "description": "Path to a file which contains environment variables for substitution in launch.json.",
                                 "type": "string"
                             },
                             "loadFiles": {

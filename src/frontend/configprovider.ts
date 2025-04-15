@@ -56,6 +56,8 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         config.gdbServerConsolePort = GDBServerConsole.BackendPort;
         config.pvtAvoidPorts = CDebugSession.getAllUsedPorts();
 
+        this.loadEnvironmentVariables(config, folder);
+
         // Flatten the platform specific stuff as it is not done by VSCode at this point.
         switch (os.platform()) {
             case 'darwin':
@@ -307,6 +309,58 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
                 delete obj[prop];
             }
         }
+    }
+
+    private loadEnvironmentVariables(config: vscode.DebugConfiguration, folder: vscode.WorkspaceFolder) {
+        // First check for an environment file
+        if (config.envFile) {
+            const envFilePath = path.isAbsolute(config.envFile) ? config.envFile : path.join(folder?.uri.fsPath || '', config.envFile); // Resolve it with the workspace folder if needed
+            if (fs.existsSync(envFilePath)) {                               // Check if it actually exists
+                const envContent = fs.readFileSync(envFilePath, 'utf8');    // Load the environment file in as a big string to make life easy
+                const envVariables: { [key: string]: string } = {};         // Create a place to put the key/value pairs while we work on the file
+
+                for (const line of envContent.split(/\r?\n/)) {             // Split by newlines and iterate over each element
+                    const match = line.match(/^([^#\s]+)=(.*)$/);           // We're looking for "SYMBOL=variable" ignoring comments
+                    if (match) {
+                        const key = match[1].trim();                        // Get rid of white space
+                        let value = match[2].trim();
+                        if (value.startsWith('"') && value.endsWith('"')) { // Get rid of quotation marks if they're there
+                            value = value.slice(1, -1);
+                        }
+                        envVariables[key] = value;                          // Note that key/value pair down for use later
+                    }
+                }
+
+                config.environment = { ...config.environment, ...envVariables }; // Append it all to out environment variables.
+            } else {
+                vscode.window.showWarningMessage(`The envFile "${envFilePath}" does not exist.`); // If user provided an envFile but it didn't resolve correctly
+            }
+        }
+
+        // Now lets replace anything in launch.json that needs replaced.
+        const environment = config.environment || {};   // Ensure we can iterate over config.environment even if it's empty
+        const replaceEnvVariables = (obj: any) => {
+            const regex = /\${env:(\w+)}/g;
+            const captures = [];
+
+            for (const key in obj) {                    // Check every key looking for our pattern
+                if (typeof obj[key] === 'string') {     // If it's a string we want to look for our search pattern
+                    let match;
+                    while ((match = regex.exec(obj[key])) !== null) { // Ensure we search the entire string
+                        captures.push([key, match[1]]); // Note matches down for later
+                    }
+                } else if (typeof obj[key] === 'object') { // If it's an object recurse into it
+                    replaceEnvVariables(obj[key]);
+                }
+            }
+
+            for (const match of captures) {             // For every match that we found
+                if (match[1] in environment) {          // If it exists in our environment variables
+                    obj[match[0]] = obj[match[0]].replace(`\${env:${match[1]}}`, environment[match[1]]); // Replace it with the environment variable.
+                }
+            }
+        };
+        replaceEnvVariables(config);
     }
 
     private validateLoadAndSymbolFiles(config: vscode.DebugConfiguration, cwd: string) {
