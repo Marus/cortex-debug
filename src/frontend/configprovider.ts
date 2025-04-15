@@ -345,7 +345,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
 
             for (const match of captures) {             // For every match that we found
                 if (match[1] in environment) {          // If it exists in our environment variables
-                    obj[match[0]] = obj[match[0]].replace(regex, environment[match[1]]); // Replace it with the environment variable.
+                    obj[match[0]] = obj[match[0]].replace(`\${env:${match[1]}}`, environment[match[1]]); // Replace it with the environment variable.
                 }
             }
         };
