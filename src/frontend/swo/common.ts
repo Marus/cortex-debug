@@ -28,12 +28,6 @@ export interface SWOGraphDecoderConfig extends SWOBasicDecoderConfig {
     graphId: string;
 }
 
-export interface SWOAdvancedDecoderConfig extends SWODecoderConfig {
-    decoder: string;
-    config: any;
-    ports: number[];
-}
-
 export interface GraphConfiguration {
     type: string;
     label: string;
@@ -86,20 +80,6 @@ export interface GrapherProgramCounterMessage extends GrapherMessage {
 export interface GrapherConfigurationMessage extends GrapherMessage {
     graphs: [GraphConfiguration];
     status: 'stopped' | 'terminated' | 'continued';
-}
-
-export interface AdvancedDecoder {
-    init(
-        config: SWOAdvancedDecoderConfig,
-        outputData: (output: string, timestamp?: boolean) => void,
-        graphData: (data: number, id: string) => void
-    ): void;
-    typeName(): string;
-    outputLabel(): string;
-    softwareEvent(port: number, data: Buffer): void;
-    synchronized(): void;
-    lostSynchronization(): void;
-    dispose?(): void;
 }
 
 export enum PacketType {

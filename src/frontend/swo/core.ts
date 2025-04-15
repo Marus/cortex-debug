@@ -7,10 +7,9 @@ import { SWOBinaryProcessor } from './decoders/binary';
 import { SWORTTGraphProcessor } from './decoders/graph';
 import { SWORTTDecoder } from './decoders/common';
 import { SWORTTSource } from './sources/common';
-import { SWODecoderConfig, GraphConfiguration, SWOAdvancedDecoderConfig,
-    SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
-    SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage,
-    GrapherProgramCounterMessage } from './common';
+import { SWODecoderConfig, GraphConfiguration, SWOBinaryDecoderConfig, SWOConsoleDecoderConfig, SWOGraphDecoderConfig,
+    SWOBasicDecoderConfig, GrapherMessage, GrapherStatusMessage, GrapherProgramCounterMessage } from './common';
+import { SWOAdvancedDecoderConfig } from './advanced-decoder';
 import { SWORTTAdvancedProcessor } from './decoders/advanced';
 import { EventEmitter } from 'events';
 import { PacketType, Packet } from './common';

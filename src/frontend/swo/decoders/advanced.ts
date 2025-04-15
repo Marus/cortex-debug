@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SWORTTDecoder } from './common';
-import { SWOAdvancedDecoderConfig, AdvancedDecoder, GrapherDataMessage } from '../common';
+import { GrapherDataMessage } from '../common';
+import { SWOAdvancedDecoderConfig, AdvancedDecoder } from '../advanced-decoder';
 import { EventEmitter } from 'events';
 import { Packet } from '../common';
 import { CortexDebugChannel } from '../../../dbgmsgs';
