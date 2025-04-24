@@ -938,6 +938,9 @@ export class GDBDebugSession extends LoggingDebugSession {
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
         this.miDebugger.debugOutput = this.args.showDevDebugOutput;
+        if (this.args.gdbInterruptMode) {
+            this.miDebugger.interruptMode = this.args.gdbInterruptMode;
+        }
         this.miDebugger.on('launcherror', (err) => {
             const msg = 'Could not start GDB process, does the program exist in filesystem?\n' + err.toString() + '\n';
             this.launchErrorResponse(response, 103, msg);
@@ -1001,6 +1004,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         liveGdb.setupEvents(mi2);
         const commands = [...this.gdbInitCommands];
         mi2.debugOutput = this.args.showDevDebugOutput;
+        if (this.args.gdbInterruptMode) {
+            mi2.interruptMode = this.args.gdbInterruptMode;
+        }
         commands.push('interpreter-exec console "set stack-cache off"');
         commands.push('interpreter-exec console "set remote interrupt-on-connect off"');
         if (this.serverController) {
@@ -1591,7 +1597,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                     });
                     try {
-                        await this.miDebugger.sendCommand('exec-interrupt');
+                        await this.miDebugger.interrupt();
                     } catch (e) {
                         // The timeout will take care of it...
                         this.handleMsg('log', `Could not interrupt program. Trying to end session anyways ${e}\n`);
@@ -1675,7 +1681,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 restartProcessing();
             } else {
                 this.miDebugger.once('generic-stopped', restartProcessing);
-                this.miDebugger.sendCommand('exec-interrupt');
+                this.miDebugger.interrupt();
             }
         });
     }
@@ -2158,7 +2164,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.miDebugger.once('generic-stopped', () => {
                 createBreakpoints();
             });
-            this.miDebugger.sendCommand('exec-interrupt');
+            this.miDebugger.interrupt();
         }
     }
 

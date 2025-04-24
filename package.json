@@ -754,6 +754,15 @@
                                 },
                                 "default": null
                             },
+                            "gdbInterruptMode": {
+                                "default": "exec-interrupt",
+                                "description": "Whether GDB shall be interrupted using \"exec-interrupt\" (default) or by signaling \"SIGINT\"",
+                                "type": "string",
+                                "enum": [
+                                    "exec-interrupt",
+                                    "SIGINT"
+                                ]
+                            },
                             "gdbTarget": {
                                 "default": null,
                                 "description": "For externally (servertype = \"external\") controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",
@@ -1882,6 +1891,15 @@
                                     ]
                                 },
                                 "default": null
+                            },
+                            "gdbInterruptMode": {
+                                "default": "exec-interrupt",
+                                "description": "Whether GDB shall be interrupted using \"exec-interrupt\" (default) or by signaling \"SIGINT\"",
+                                "type": "string",
+                                "enum": [
+                                    "exec-interrupt",
+                                    "SIGINT"
+                                ]
                             },
                             "gdbTarget": {
                                 "default": null,

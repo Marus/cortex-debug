@@ -7,7 +7,7 @@ import { posix } from 'path';
 import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
-import { ADAPTER_DEBUG_MODE } from '../../common';
+import { ADAPTER_DEBUG_MODE, GDBInterruptMode } from '../../common';
 const path = posix;
 
 export interface ReadMemResults {
@@ -47,6 +47,7 @@ const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
     public debugOutput: ADAPTER_DEBUG_MODE;
+    public interruptMode: GDBInterruptMode = GDBInterruptMode.EXEC_INTERRUPT;
     public procEnv: any;
     protected currentToken: number = 1;
     protected nextTokenComing = 1;          // This will be the next token output from gdb
@@ -495,11 +496,21 @@ export class MI2 extends EventEmitter implements IBackend {
         if (trace) {
             this.log('stderr', 'interrupt ' + arg);
         }
-        return new Promise((resolve, reject) => {
-            this.sendCommand(`exec-interrupt ${arg}`).then((info) => {
-                resolve(info.resultRecords.resultClass === 'done');
-            }, reject);
-        });
+        if (this.interruptMode == GDBInterruptMode.EXEC_INTERRUPT) {
+            return new Promise((resolve, reject) => {
+                this.sendCommand(`exec-interrupt ${arg}`).then((info) => {
+                    resolve(info.resultRecords.resultClass === 'done');
+                }, reject);
+            });
+        } else if (this.interruptMode == GDBInterruptMode.SIGINT) {
+            if (this.process.kill('SIGINT')) {
+                return Promise.resolve(true);
+            } else {
+                return Promise.reject(new Error('Could not send SIGINT to gdb'));
+            }
+        } else {
+            this.log('stderr', `WARNING: Invalid GDB interrupt mode '${this.interruptMode as string}'`);
+        }
     }
 
     public continue(threadId: number): Thenable<boolean> {
