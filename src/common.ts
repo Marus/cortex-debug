@@ -262,6 +262,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     serverpath: string;
     gdbPath: string;
     gdbServerConsolePort: number;
+    gdbInterruptMode: GDBInterruptMode;
     objdumpPath: string;
     serverArgs: string[];
     serverCwd: string;
@@ -363,6 +364,11 @@ export enum CTIAction {
     'init',
     'pause',
     'resume'
+}
+
+export enum GDBInterruptMode {
+    EXEC_INTERRUPT = 'exec-interrupt',
+    SIGINT = 'SIGINT'
 }
 
 export interface GDBServerController extends EventEmitter {
