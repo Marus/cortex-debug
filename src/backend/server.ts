@@ -36,7 +36,7 @@ export class GDBServer extends EventEmitter {
     protected consoleSocket: net.Socket = null;
     private initResolve: (result: boolean) => void;
     private initReject: (error: any) => void;
-    public static readonly SERVER_TIMEOUT = 10000;
+    public static readonly SERVER_TIMEOUT = 30000;
     public static readonly LOCALHOST = '0.0.0.0';
     public pid: number = -1;
 
