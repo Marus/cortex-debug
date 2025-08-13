@@ -3037,7 +3037,7 @@
         "safe-buffer": "^5.2.1",
         "serialport": "^13.0.0",
         "stream-json": "^1.9.1",
-        "tmp": "^0.2.3",
+        "tmp": "^0.2.4",
         "universal-analytics": "^0.5.3",
         "usb": "^2.14.0",
         "uuid": "^11.0.5",
