@@ -833,7 +833,7 @@ export class MI2 extends EventEmitter implements IBackend {
                     ret.push({
                         address: addr,
                         fileName: filename,
-                        file: file,
+                        file: file || filename,
                         function: func || from,
                         level: level,
                         line: line
