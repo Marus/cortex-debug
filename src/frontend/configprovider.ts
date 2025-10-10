@@ -130,6 +130,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
         if (!config.postAttachCommands) { config.postAttachCommands = []; }
         if (!config.preResetCommands) { config.preResetCommands = config.preRestartCommands || []; }
         if (!config.postResetCommands) { config.postResetCommands = config.postRestartCommands || []; }
+        if (config.overridePreEndSessionCommands === undefined) { config.overridePreEndSessionCommands = null; }
         if (!config.postResetSessionCommands) { config.postResetSessionCommands = config.postRestartSessionCommands || null; }
         if (config.runToEntryPoint) { config.runToEntryPoint = config.runToEntryPoint.trim(); } else if (config.runToMain) {
             config.runToEntryPoint = 'main';

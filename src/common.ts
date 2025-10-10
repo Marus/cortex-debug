@@ -270,6 +270,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     loadFiles: string[];
     symbolFiles: SymbolFile[];
     debuggerArgs: string[];
+    overridePreEndSessionCommands: null | string[];
     preLaunchCommands: string[];
     postLaunchCommands: string[];
     overrideLaunchCommands: string[];

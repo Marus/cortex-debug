@@ -1,5 +1,5 @@
 {
-    "version": "1.13.0-pre6",
+    "version": "1.13.0-pre7",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -627,6 +627,12 @@
                                 "items": "string",
                                 "deprecated": true,
                                 "description": "Deprecated: Restart is now handled by VSCode and it is pretty much the same as Start"
+                            },
+                            "overridePreEndSessionCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Override the commands that are normally executed at the start of ending a debug session (e.g. when stopping debugging)."
                             },
                             "overrideGDBServerStartedRegex": {
                                 "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.",
@@ -1760,6 +1766,12 @@
                                 "type": "array",
                                 "items": "string",
                                 "description": "Additional GDB Commands to be executed at the end of the reset sequence"
+                            },
+                            "overridePreEndSessionCommands": {
+                                "default": [],
+                                "type": "array",
+                                "items": "string",
+                                "description": "Override the commands that are normally executed at the start of ending a debug session (e.g. when stopping debugging)."
                             },
                             "overrideGDBServerStartedRegex": {
                                 "description": "You can supply a regular expression (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions) in the configuration property to override the output from the GDB Server that is looked for to determine if the GDB Server has started. Under most circumstances this will not be necessary - but could be needed as a result of a change in the output of a GDB Server making it incompatible with cortex-debug. This property has no effect for bmp or external GDB Server types.",

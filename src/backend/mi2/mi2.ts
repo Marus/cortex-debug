@@ -403,7 +403,7 @@ export class MI2 extends EventEmitter implements IBackend {
         }
     }
 
-    // stop() can get called twice ... once by the disconnect sequence and once by the server existing because
+    // stop() can get called twice ... once by the disconnect sequence and once by the server exiting because
     // we called disconnect. And the sleeps don't help that cause
     private exiting = false;
     public async stop() {
@@ -439,8 +439,16 @@ export class MI2 extends EventEmitter implements IBackend {
             // program is in paused state
             try {
                 startKillTimeout(500);
-                await new Promise((res) => setTimeout(res, 100));       // For some people delay was needed. Doesn't hurt I guess
-                await this.sendCommand('target-disconnect');            // Yes, this can fail
+                try {
+                    await this.sendCommand('interpreter-exec console "monitor exit"');
+                } catch (e) {
+                    // It is possible gdb server has not implemented this
+                    ServerConsoleLog('GDB "monitor exit" failed, continue to disconnect anyway', this.pid);
+                }
+                await new Promise(() => setTimeout(() => {}, 50));          // For some people delay was needed. Doesn't hurt I guess
+                if (!this.exited) {
+                    await this.sendCommand('target-disconnect');            // Yes, this can fail
+                }
             } catch (e) {
                 if (this.exited) {
                     ServerConsoleLog('GDB already exited during a target-disconnect', this.pid);

@@ -333,6 +333,20 @@ export class GDBDebugSession extends LoggingDebugSession {
         response.body.supportsInstructionBreakpoints = true;
         response.body.supportsReadMemoryRequest = true;
         response.body.supportsWriteMemoryRequest = true;
+
+        const bptAppliesTo: DebugProtocol.BreakpointModeApplicability[] = ['source', /* 'exception' , */ 'data', 'instruction'];
+        response.body.breakpointModes = [
+            {
+                mode: 'default',
+                label: 'Let GDB decide which breakpoint method (HW or SW) to chose',
+                appliesTo: []
+            },
+            {
+                mode: 'hardware',
+                label: 'Request GDB to set a hardware breakpoint',
+                appliesTo: []
+            }
+        ];
         this.sendResponse(response);
     }
 
@@ -1475,7 +1489,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     private waitForServerExitAndRespond(response: DebugProtocol.DisconnectResponse) {
-        if (!this.server.isExternal()) {
+        if (!this.server.isExternal() && this.server.isProcessRunning()) {
             let nTimes = 60;
             let to = setInterval(() => {
                 if ((nTimes === 0) || this.quit) {
@@ -1499,11 +1513,14 @@ export class GDBDebugSession extends LoggingDebugSession {
                 }
             });
             // Note: If gdb exits first, then we kill the server anyways
-        } else {
+        } else if (this.miDebugger.isRunning()) {
             this.miDebugger.once('quit', () => {
                 this.serverConsoleLog('disconnectRequest sendResponse 1');
                 this.sendResponse(response);
             });
+        } else {
+            this.serverConsoleLog('disconnectRequest sendResponse 3');
+            this.sendResponse(response);
         }
     }
 
@@ -1563,6 +1580,16 @@ export class GDBDebugSession extends LoggingDebugSession {
                 await this.tryDeleteBreakpoints();
                 this.disableSendStoppedEvents = false;
                 this.attached = false;
+                if (this.args.overridePreEndSessionCommands) {
+                    for (const cmd of this.args.overridePreEndSessionCommands) {
+                        try {
+                            await this.miDebugger.sendCommand(cmd);
+                        } catch (e) {
+                            this.handleMsg('log', 'GDB commands overridePreEndSessionCommands failed ' + (e ? e.toString() : 'Unknown error') + '\n');
+                        }
+                    }
+                    await new Promise(() => setTimeout(() => {}, 5));
+                }
                 this.waitForServerExitAndRespond(response);     // Will wait asynchronously until the following actions are done
                 if (args.terminateDebuggee || args.suspendDebuggee) {
                     // There is no such thing as terminate for us. Hopefully, the gdb-server will
