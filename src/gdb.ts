@@ -599,6 +599,16 @@ export class GDBDebugSession extends LoggingDebugSession {
             });
             this.usingParentServer = this.args.pvtMyConfigFromParent && !this.args.pvtMyConfigFromParent.detached;
             this.getTCPPorts(this.usingParentServer).then(async () => {
+                function clearTimers() {
+                    if (timeout) {
+                        clearTimeout(timeout);
+                        timeout = null;
+                    }
+                    if (feedbackTimer) {
+                        clearInterval(feedbackTimer);
+                        feedbackTimer = null;
+                    }
+                }
                 await this.serverController.allocateRTTPorts();     // Must be done before serverArguments()
                 const executable = this.usingParentServer ? null : this.serverController.serverExecutable();
                 const args = this.usingParentServer ? [] : this.serverController.serverArguments();
@@ -655,12 +665,16 @@ export class GDBDebugSession extends LoggingDebugSession {
                     doResolve();
                 }, GDBServer.SERVER_TIMEOUT);
 
+                let elapsed = 0;
+                let feedbackTimer = setInterval(() => {
+                    const svrName = this.serverController.name || this.args.servertype;
+                    elapsed += 5;
+                    this.handleMsg('stdout', `Still waiting for ${svrName} GDB Server to be ready, ${elapsed} seconds...\n`);
+                }, 5 * 1000);
+
                 this.serverController.serverLaunchStarted();
                 this.server.init().then(async (started) => {
-                    if (timeout) {
-                        clearTimeout(timeout);
-                        timeout = null;
-                    }
+                    clearTimers();
                     const commands = [];
                     try {
                         // This is where 4 things meet and they must all finish (in any order) before we can proceed
@@ -773,10 +787,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                     });
                 }, (error) => {
-                    if (timeout) {
-                        clearTimeout(timeout);
-                        timeout = null;
-                    }
+                    clearTimers
                     this.sendEvent(new TelemetryEvent(
                         'Error',
                         'Launching Server',

@@ -1,5 +1,11 @@
 # ChangeLog
 
+# V1.13.0-pre7
+* Added `overridePreEndSessionCommands` to control how a session ends. If the session does not end your way, we sill end the session the normal way
+* We try `monitor exit` to exit the server before we try `target-disconnect` for those servers that do not follow the GDB rules
+* During GDB server startup, the timeout is now 60 seconds but every 5 seconds, you will some feedback in the debug console that we are stil waiting
+* Added preliminary support for HW/SW breakpoints. There are still issues with GDB not counting HW breakpoints correctly.
+
 # V1.13.0-pre6
 * Make the advanced decoder work properly for RTT. It now allows a dispose.
 * Both SWO/RTT OUTPUT panels are now recycled instead of creating a new one every time. You can for a new one by supplying a new outputLabel and/or typeName.
