@@ -787,7 +787,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                         }
                     });
                 }, (error) => {
-                    clearTimers
+                    clearTimers();
                     this.sendEvent(new TelemetryEvent(
                         'Error',
                         'Launching Server',
