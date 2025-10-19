@@ -6,8 +6,11 @@
 # Note that this file simply defines a function for use later when it is time to configure
 # for SWO.
 #
+# This file must be loaded before the `init` command is called and before gdb/tcl/telnet ports are set
+# as it contains overrides for those commands to keep compatibility with older versions of OpenOCD
+#
 set USE_SWO 0
-proc CDSWOConfigure { CDCPUFreqHz CDSWOFreqHz CDSWOOutput } {    
+proc CDSWOConfigure { CDCPUFreqHz CDSWOFreqHz CDSWOOutput } {
     # We don't create/configure the entire TPIU which requires advanced knowledge of the device
     # like which DAP/AP ports to use, what their bases addresses are, etc. That should already
     # be done by the config files from the Silicon Vendor
@@ -62,5 +65,28 @@ proc CDLiveWatchSetup {} {
         }
     } on error {} {
         puts stderr "[info script]: Error: Failed to increase gdb-max-connections for current target. Live variables will not work"
+    }
+}
+
+# In version 12 of openocd they deprecated the gdb_port command. So, we create the old command and
+# use it from the command-line so that we keep compatibility with older versions of openocd
+if { [llength [info commands "gdb"] ] != 0 } {
+    proc gdb_port { port } {
+        puts "[info script]: Setting gdb port to $port"
+        gdb port $port
+    }
+}
+
+if { [llength [info commands "tcl"] ] != 0 } {
+    proc tcl_port { port } {
+        puts "[info script]: Setting tcl port to $port"
+        tcl port $port
+    }
+}
+
+if { [llength [info commands "telnet"] ] != 0 } {
+    proc telnet_port { port } {
+        puts "[info script]: Setting telnet port to $port"
+        telnet port $port
     }
 }

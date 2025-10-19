@@ -35,6 +35,7 @@
 		"instrs",
 		"jlink",
 		"jtag",
+		"llength",
 		"Logpoints",
 		"nuttx",
 		"Prio",

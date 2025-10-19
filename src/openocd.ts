@@ -210,6 +210,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
     public serverArguments(): string[] {
         let serverargs: string[] = [];
 
+        // This should come before anything else so that gdb/tcl/telnet ports can be used in OpenoCD V12
+        // without a warning and older versions will work fine as well
+        serverargs.push('-f', `${this.args.extensionPath}/support/openocd-helpers.tcl`);
+
         // Regardless of the target processor, we will only supply the processor '0's port#
         // OpenOcd will increment and assign the right port-numer to the right processor
         serverargs.push('-c', `gdb_port ${this.ports['gdbPort']}`);
@@ -228,7 +232,6 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
             serverargs.push('-c', cmd);
         }
 
-        serverargs.push('-f', `${this.args.extensionPath}/support/openocd-helpers.tcl`);
         this.args.configFiles.forEach((cf, idx) => {
             serverargs.push('-f', cf);
         });
