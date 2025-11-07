@@ -14,7 +14,7 @@ import { MI2, parseReadMemResults } from './backend/mi2/mi2';
 import { extractBits, hexFormat } from './frontend/utils';
 import { Variable, VariableObject, MIError, OurDataBreakpoint, OurInstructionBreakpoint, OurSourceBreakpoint } from './backend/backend';
 import {
-    TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, SymbolFile,
+    TelemetryEvent, ConfigurationArguments, StoppedEvent, GDBServerController, GDBBreakpointType, SymbolFile,
     createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative,
     SWOConfigureEvent, RTTCommonDecoderOpts
 } from './common';
@@ -265,6 +265,8 @@ export class GDBDebugSession extends LoggingDebugSession {
     private swoLaunchPromise = Promise.resolve();
     private swoLaunched?: () => void;
 
+    public extraBreakpointArgs: string = '';
+
     public constructor(debuggerLinesStartAt1: boolean, public readonly isServer: boolean = false, threadID: number = 1) {
         super(undefined, debuggerLinesStartAt1, isServer);     // Use if deriving from LogDebugSession
         // super(debuggerLinesStartAt1, isServer);  // Use if deriving from DebugSession
@@ -400,6 +402,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.handleMsg('stderr', `Failed to open dump file open '${logFName}'\n`);
             }
         }
+
+        // Prepare extra breakpoint arguments in the case that hardware debugging is forced
+        this.extraBreakpointArgs = this.args.gdbBreakpointType === GDBBreakpointType.HARDWARE ? '-h ' : '';
     }
 
     public isDebugLoggingAvailable() {
@@ -890,7 +895,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.sendEvent(new GenericCustomEvent('popup', { type: 'error', message: msg }));
             }
             if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
-                this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
+                this.miDebugger.sendCommand(`break-insert -t ${this.extraBreakpointArgs}--function ${this.args.runToEntryPoint}`).then(() => {
                     this.miDebugger.once('generic-stopped', () => {
                         resolve();
                     });
@@ -951,6 +956,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         const gdbExePath = this.args.gdbPath;
         const gdbargs = ['-q', '--interpreter=mi2'].concat(this.args.debuggerArgs || []);
         const dbgMsg = 'Launching GDB: ' + quoteShellCmdLine([gdbExePath, ...gdbargs]) + '\n';
+
         this.handleMsg('log', dbgMsg);
         if (!this.args.showDevDebugOutput) {
             this.handleMsg('stdout', '    IMPORTANT: Set "showDevDebugOutput": "raw" in "launch.json" to see verbose GDB transactions '
@@ -961,7 +967,7 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.handleMsg('log', str + '\n');
         }
 
-        this.miDebugger = new MI2(gdbExePath, gdbargs);
+        this.miDebugger = new MI2(gdbExePath, gdbargs, this.extraBreakpointArgs);
         this.miDebugger.debugOutput = this.args.showDevDebugOutput;
         if (this.args.gdbInterruptMode) {
             this.miDebugger.interruptMode = this.args.gdbInterruptMode;
@@ -1025,7 +1031,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     public startGdbForLiveWatch(liveGdb: LiveWatchMonitor): Promise<void> {
-        const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, true);
+        const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, this.extraBreakpointArgs, true);
         liveGdb.setupEvents(mi2);
         const commands = [...this.gdbInitCommands];
         mi2.debugOutput = this.args.showDevDebugOutput;

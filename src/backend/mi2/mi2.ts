@@ -68,7 +68,7 @@ export class MI2 extends EventEmitter implements IBackend {
     protected isExiting = false;
     // public gdbVarsPromise: Promise<MINode> = null;
 
-    constructor(public application: string, public args: string[], public forLiveGdb = false) {
+    constructor(public application: string, public args: string[], public extraBreakpointArgs = '', public forLiveGdb = false) {
         super();
     }
 
@@ -573,7 +573,8 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         return new Promise((resolve, reject) => {
             const target: string = '"' + (filename ? escape(filename) + ':' : '') + line.toString() + '"';
-            this.sendCommand('break-insert -t ' + target).then(() => {
+
+            this.sendCommand(`break-insert -t ${this.extraBreakpointArgs}` + target).then(() => {
                 this.sendCommand('exec-jump ' + target).then((info) => {
                     resolve(info.resultRecords.resultClass === 'running');
                 }, reject);
@@ -632,6 +633,8 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         return new Promise((resolve, reject) => {
             let bkptArgs = '';
+            bkptArgs += this.extraBreakpointArgs;
+
             if (breakpoint.hitCondition) {
                 if (breakpoint.hitCondition[0] === '>') {
                     bkptArgs += '-i ' + numRegex.exec(breakpoint.hitCondition.substr(1))[0] + ' ';
@@ -693,6 +696,7 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         return new Promise((resolve, reject) => {
             let bkptArgs = '';
+            bkptArgs += this.extraBreakpointArgs;
             if (breakpoint.condition) {
                 bkptArgs += `-c "${breakpoint.condition}" `;
             }

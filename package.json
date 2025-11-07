@@ -1913,6 +1913,15 @@
                                     "SIGINT"
                                 ]
                             },
+                            "gdbBreakpointType": {
+                                "default": "auto",
+                                "description": "The type of breakpoint to direct the GDB server to use. This setting affects all breakpoints generated and is intended for use only in cases where the default automatic behaviour fails.",
+                                "type": "string",
+                                "enum": [
+                                    "auto",
+                                    "hardware"
+                                ]
+                            },
                             "gdbTarget": {
                                 "default": null,
                                 "description": "For externally (servertype = \"external\") controlled GDB Servers you must specify the GDB target to connect to. This can either be a \"hostname:port\" combination or path to a serial port",

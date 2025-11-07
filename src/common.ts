@@ -263,6 +263,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     gdbPath: string;
     gdbServerConsolePort: number;
     gdbInterruptMode: GDBInterruptMode;
+    gdbBreakpointType: GDBBreakpointType;
     objdumpPath: string;
     serverArgs: string[];
     serverCwd: string;
@@ -370,6 +371,11 @@ export enum CTIAction {
 export enum GDBInterruptMode {
     EXEC_INTERRUPT = 'exec-interrupt',
     SIGINT = 'SIGINT'
+}
+
+export enum GDBBreakpointType {
+    AUTO = 'auto',
+    HARDWARE = 'hardware',
 }
 
 export interface GDBServerController extends EventEmitter {
