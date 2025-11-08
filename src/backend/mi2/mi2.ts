@@ -633,7 +633,12 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         return new Promise((resolve, reject) => {
             let bkptArgs = '';
-            bkptArgs += this.extraBreakpointArgs;
+
+            // Only insert extraBreakpointArgs if there is no logMessage as dprintf-insert
+            // does not support the -h argument.
+            if (!breakpoint.logMessage) {
+                bkptArgs += this.extraBreakpointArgs;
+            }
 
             if (breakpoint.hitCondition) {
                 if (breakpoint.hitCondition[0] === '>') {
