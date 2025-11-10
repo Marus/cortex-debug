@@ -36,6 +36,9 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | gdbPath | string | Both | This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available. |
 | gdbTarget | string | Both | For externally (servertype = "external") controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port |
 | graphConfig | {object} | Both | Description of how graphing can be done. See our Wiki for details |
+| hardwareBreakpoints | object | Both | WARNING: Force only HW breakpoints to be used. By default GDB will use HW or SW  breakpoints depending on memory type. Use this only in rare circumstances to work around issues in your gdb-server or hardware. This setting is NOT recommended for general use. |
+| hardwareBreakpoints<br>.limit | number | Both | If limit > 0, enforce a limit on the number of hardware breakpoints that can be used |
+| hardwareBreakpoints<br>.required | boolean | Both | If true, forces the use of hardware breakpoints |
 | interface | string | Both | Debug Interface type to use for connections (defaults to SWD) - Used for J-Link, ST-LINK and BMP probes. |
 | ipAddress | string | Both | IP Address for networked J-Link Adapter |
 | jlinkscript | string | Both | J-Link script file - optional input file for customizing J-Link actions. |

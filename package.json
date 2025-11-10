@@ -1,5 +1,5 @@
 {
-    "version": "1.13.0-pre7",
+    "version": "1.13.0-pre8",
     "preview": false,
     "activationEvents": [
         "onDebugResolve:cortex-debug",
@@ -799,6 +799,24 @@
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
+                            },
+                            "hardwareBreakpoints": {
+                                "description": "WARNING: Force only HW breakpoints to be used. By default GDB will use HW or SW  breakpoints depending on memory type. Use this only in rare circumstances to work around issues in your gdb-server or hardware. This setting is NOT recommended for general use.",
+                                "type": "object",
+                                "properties": {
+                                    "required": {
+                                        "type": "boolean",
+                                        "default": false,
+                                        "description": "If true, forces the use of hardware breakpoints"
+                                    },
+                                    "limit": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "multipleOf": 1,
+                                        "default": 0,
+                                        "description": "If limit > 0, enforce a limit on the number of hardware breakpoints that can be used"
+                                    }
+                                }
                             },
                             "liveWatch": {
                                 "description": "An object with parameters for Live Watch",
@@ -1949,6 +1967,24 @@
                                 "minimum": 0,
                                 "maximum": 9,
                                 "default": 0
+                            },
+                            "hardwareBreakpoints": {
+                                "description": "WARNING: Force only HW breakpoints to be used. By default GDB will use HW or SW  breakpoints depending on memory type. Use this only in rare circumstances to work around issues in your gdb-server or hardware. This setting is NOT recommended for general use.",
+                                "type": "object",
+                                "properties": {
+                                    "required": {
+                                        "type": "boolean",
+                                        "default": false,
+                                        "description": "If true, forces the use of hardware breakpoints"
+                                    },
+                                    "limit": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "multipleOf": 1,
+                                        "default": 0,
+                                        "description": "If limit > 0, enforce a limit on the number of hardware breakpoints that can be used"
+                                    }
+                                }
                             },
                             "liveWatch": {
                                 "description": "An object with parameters for Live Watch",

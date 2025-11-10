@@ -366,7 +366,9 @@ export class MI2 extends EventEmitter implements IBackend {
                                         fid = item[1];  // for future use, available for thread-selected
                                     }
                                 }
-                                if (record.asyncClass === 'thread-created') {
+                                if (record.asyncClass === 'breakpoint-deleted') {
+                                    this.emit('breakpoint-deleted', { bkptId: parseInt(tid) });
+                                } else if (record.asyncClass === 'thread-created') {
                                     this.emit('thread-created', { threadId: parseInt(tid), threadGroupId: gid });
                                 } else if (record.asyncClass === 'thread-exited') {
                                     this.emit('thread-exited', { threadId: parseInt(tid), threadGroupId: gid });
@@ -567,20 +569,6 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
-    public goto(filename: string, line: number): Thenable<boolean> {
-        if (trace) {
-            this.log('stderr', 'goto');
-        }
-        return new Promise((resolve, reject) => {
-            const target: string = '"' + (filename ? escape(filename) + ':' : '') + line.toString() + '"';
-            this.sendCommand('break-insert -t ' + target).then(() => {
-                this.sendCommand('exec-jump ' + target).then((info) => {
-                    resolve(info.resultRecords.resultClass === 'running');
-                }, reject);
-            }, reject);
-        });
-    }
-
     public restart(commands: string[]): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'restart');
@@ -653,10 +641,24 @@ export class MI2 extends EventEmitter implements IBackend {
                 bkptArgs += `-c "${breakpoint.condition}" `;
             }
 
-            if (breakpoint.raw) {
+            if (breakpoint.isTemporary) {
+                bkptArgs += '-t ';
+            }
+
+            if (breakpoint.isFunction) {
+                bkptArgs += '--function ' + '"' + escape(breakpoint.raw) + '" ';
+            } else if (breakpoint.raw) {
                 bkptArgs += '*' + escape(breakpoint.raw);
             } else {
-                bkptArgs += '"' + escape(breakpoint.file) + ':' + breakpoint.line + '"';
+                bkptArgs += '"' + escape(breakpoint.file) + ':' + breakpoint.line + '" ';
+            }
+
+            if (breakpoint.hwOpt) {
+                if (breakpoint.logMessage) {
+                    reject(new MIError('Hardware breakpoints not supported by gdb with logpoints (dprintf) ' + bkptArgs, 'internal'));
+                    return;
+                }
+                bkptArgs = breakpoint.hwOpt + ' ' + bkptArgs;
             }
 
             const cmd = breakpoint.logMessage ? 'dprintf-insert' : 'break-insert';
@@ -699,7 +701,7 @@ export class MI2 extends EventEmitter implements IBackend {
 
             bkptArgs += '*' + hexFormat(breakpoint.address);
 
-            this.sendCommand(`break-insert ${bkptArgs}`).then((result) => {
+            this.sendCommand(`break-insert ${breakpoint.htOpt || ''} ${bkptArgs}`).then((result) => {
                 if (result.resultRecords.resultClass === 'done') {
                     const bkptNum = parseInt(result.result('bkpt.number'));
                     breakpoint.number = bkptNum;

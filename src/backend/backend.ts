@@ -6,14 +6,18 @@ import { hexFormat } from '../frontend/utils';
 export interface OurSourceBreakpoint extends DebugProtocol.SourceBreakpoint {
     file?: string;
     raw?: string;       // Used for function name as well and old style address breakpoints
+    isFunction?: boolean;
+    isTemporary?: boolean;
     // What we get from gdb below
     address?: string;
     number?: number;
+    hwOpt?: string; // The gdb MI argument to use for hardware breakpoint allocation
 }
 
 export interface OurInstructionBreakpoint extends DebugProtocol.InstructionBreakpoint {
     address: number;
     number: number;
+    htOpt?: string; // The gdb MI argument to use for hardware breakpoint allocation
 }
 
 export interface OurDataBreakpoint extends DebugProtocol.DataBreakpoint {

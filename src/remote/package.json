@@ -10,8 +10,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onDebugResolve:cortex-debug",
-		"onCommand:cortex-debug-remote.helloWorld"
+		"onDebugResolve:cortex-debug"
 	],
 	"main": "./dist/extension.js",
 	"publisher": "marus25",

@@ -44,7 +44,6 @@ import { SymbolTable } from './backend/symbols';
 import { SymbolInformation, SymbolScope } from './symbols';
 import { TcpPortScanner } from './tcpportscanner';
 import { LiveWatchMonitor } from './live-watch-monitor';
-import { HandlerResult } from 'vscode-jsonrpc';
 
 // returns [threadId, frameId]
 // We use 3 nibbles for frameId (max of 4K) and 2 nibbles for ThreadId (max of 256).
@@ -56,6 +55,57 @@ export function decodeReference(varRef: number): number[] {
 
 export function encodeReference(threadId: number, frameId: number): number {
     return ((threadId << 12) | (frameId & 0xFFF)) & RegionSize;
+}
+
+export type HWBreakpointType = 'src' | 'data' | 'instr' | 'function';
+export class HWBreakpointMgr {
+    private breakpointSet: Set<number> = new Set<number>();
+    constructor(
+        private readonly maxHwBreakpoints: number = 0,
+        private readonly forceHwBreakpoints: boolean = false) {
+    }
+
+    areHwBreakpointsForced(): boolean {
+        return this.forceHwBreakpoints;
+    }
+
+    limitReached(): boolean {
+        if (this.maxHwBreakpoints <= 0) {
+            return false;
+        }
+        const count = this.breakpointSet.size;
+        return count >= this.maxHwBreakpoints;
+    }
+
+    getLimit(): number {
+        return this.maxHwBreakpoints;
+    }
+
+    addBreakpoint(breakpointId: number): void {
+        this.breakpointSet.add(breakpointId);
+    }
+
+    removeBreakpoints(breakpointId: number | number[]): void {
+        if (typeof breakpointId === 'number') {
+            this.breakpointSet.delete(breakpointId);
+        } else {
+            for (const id of breakpointId) {
+                this.breakpointSet.delete(id);
+            }
+        }
+    }
+
+    clearAllBreakpoints(): void {
+        this.breakpointSet.clear();
+    }
+
+    // This should only be called when the limiter has not been reached
+    getGdbMiArg(bptType: HWBreakpointType): string {
+        if (this.forceHwBreakpoints && !this.limitReached()) {
+            return (bptType === 'data') ? '' : '-h';
+        }
+        return '';
+    }
 }
 
 enum HandleRegions {
@@ -227,6 +277,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     // option on certain commands)
     protected currentThreadId: number = 0;
     protected activeThreadIds = new Set<number>();      // Used for consistency check
+    protected hwBreakpointMgr: HWBreakpointMgr;
 
     /**
      * If we are requested a major switch like restart/disconnect/detach we may have to interrupt the
@@ -248,7 +299,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     // can be made stricter and we can remove this variable
     public stoppedThreadId: number = 0;
 
-    protected functionBreakpoints = [];
+    protected functionBreakpoints: number[] = [];
     protected breakpointMap: Map<string, OurSourceBreakpoint[]> = new Map<string, OurSourceBreakpoint[]>();
     protected breakpointById: Map<number, OurSourceBreakpoint> = new Map<number, OurSourceBreakpoint>();
     protected instrBreakpointMap: Map<number, OurInstructionBreakpoint> = new Map<number, OurInstructionBreakpoint>();
@@ -294,6 +345,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.miDebugger.on('quit', this.quitEvent.bind(this));
         this.miDebugger.on('exited-normally', this.quitEvent.bind(this));
         this.miDebugger.on('stopped', this.stopEvent.bind(this));
+        this.miDebugger.on('breakpoint-deleted', this.handleBreakpointDeleted.bind(this));
         this.miDebugger.on('msg', this.handleMsg.bind(this));
         this.miDebugger.on('breakpoint', this.handleBreakpoint.bind(this));
         this.miDebugger.on('watchpoint', this.handleWatchpoint.bind(this, 'hit'));
@@ -366,11 +418,18 @@ export class GDBDebugSession extends LoggingDebugSession {
             });
             args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
         }
-
         this.args = this.normalizeArguments(args);
+        const forceHW = this.args.hardwareBreakpoints?.required || false;
+        const limit = this.args.hardwareBreakpoints?.limit || 0;
+        this.hwBreakpointMgr = new HWBreakpointMgr(limit, forceHW);
+
         this.handleMsg('stdout',
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). `
             + 'Usage info: https://github.com/Marus/cortex-debug#usage');
+        if (forceHW) {
+            const limitMsg = (limit > 0) ? `Limit of ${limit} breakpoints will be enforced by cortex-debug` : 'GDB enforces any limits you may have configured';
+            this.handleMsg('stderr', `INFO: All breakpoints will be requested as hardware breakpoints. ${limitMsg}\n`);
+        }
 
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
@@ -745,7 +804,10 @@ export class GDBDebugSession extends LoggingDebugSession {
                         const mode = attach ? SessionMode.ATTACH : SessionMode.LAUNCH;
                         this.started = true;
                         this.serverController.debuggerLaunchCompleted();
-
+                        if (!this.args.noDebug && (mode === SessionMode.LAUNCH) && this.args.runToEntryPoint) {
+                            // Claim the first breakpoint to be the runToEntryPoint, don't wait on it though
+                            this.setRunToEntryPoint();
+                        }
                         this.sendEvent(new InitializedEvent());     // This is when we tell that the debugger has really started
                         // After the above, VSCode will set various kinds of breakpoints, watchpoints, etc. When all those things
                         // happen, it will finally send a configDone request and now everything should be stable
@@ -890,23 +952,33 @@ export class GDBDebugSession extends LoggingDebugSession {
                 this.sendEvent(new GenericCustomEvent('popup', { type: 'error', message: msg }));
             }
             if (!this.args.noDebug && (mode !== SessionMode.ATTACH) && this.args.runToEntryPoint) {
-                this.miDebugger.sendCommand(`break-insert -t --function ${this.args.runToEntryPoint}`).then(() => {
-                    this.miDebugger.once('generic-stopped', () => {
-                        resolve();
-                    });
+                const bptResult = await this.setRunToEntryPoint();
+                this.runToEntryPointPromise = null;
+                if (!(bptResult instanceof MIError)) {
+                    // There two main reasons for failure here:
+                    // 1. Function does not exist
+                    // 2. Function exists but no breakpoints can be set (e.g. out of hardware breakpoints)
+                    resolve();
                     this.startCompleteForReset(mode, false);
                     this.sendContinue();
-                }, (err) => {
+                } else {
                     // If failed to set the temporary breakpoint (e.g. function does not exist)
                     // complete the launch as if the breakpoint had not being defined
-                    this.handleMsg('log', `launch.json: Unable to set temporary breakpoint "runToEntryPoint":"${this.args.runToEntryPoint}".`
-                        + 'Function may not exist or out of breakpoints? ' + err.toString() + '\n');
+                    const msg = `Unable to set temporary breakpoint "runToEntryPoint":"${this.args.runToEntryPoint}". `
+                            + 'Function may not exist or out of breakpoints?';
+                    this.handleMsg('log', msg + '\n');
+                    this.sendEvent(new GenericCustomEvent('popup', { type: 'warning', message: msg }));
+
                     if (mode === SessionMode.LAUNCH) {
                         this.args.runToEntryPoint = '';     // Don't try again. It will likely to fail
+                        resolve();
+                        this.startCompleteForReset(mode, false);
+                        this.sendContinue();
+                    } else {
+                        this.startComplete(mode);               // Call this again to return actual stack trace
+                        resolve();
                     }
-                    this.startComplete(mode);               // Call this again to return actual stack trace
-                    resolve();
-                });
+                }
             } else {
                 this.runPostStartSessionCommands(mode).then((didContinue) => {
                     if (!didContinue) {
@@ -1571,9 +1643,11 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected async tryDeleteBreakpoints(): Promise<boolean> {
         try {
             await this.miDebugger.sendCommand('break-delete');
+            this.hwBreakpointMgr.clearAllBreakpoints();
             return true;
         } catch (e) {
             this.handleMsg('log', `Could not delete all breakpoints. ${e}\n`);
+            this.hwBreakpointMgr.clearAllBreakpoints();
             return false;
         }
     }
@@ -1971,6 +2045,12 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.activeThreadIds.clear();
     }
 
+    protected handleBreakpointDeleted(info: { bkptId: number }) {
+        // This event is sent when a breakpoint is deleted in gdb automatically (like a temporary breakpoint)
+        // It is not called when we delete breakpoints explicitly ising break-delete
+        this.hwBreakpointMgr.removeBreakpoints(info.bkptId);
+    }
+
     protected stopEvent(info: MINode, reason: string = 'exception') {
         if (!this.quit) {
             this.continuing = false;
@@ -2101,6 +2181,41 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
     }
 
+    protected addBptSyncRunning = false;
+    protected addBptSyncQueue: {
+        func: () => Promise<any>;
+        obj: any;
+        resolve: (value: any) => void;
+    }[] = [];
+
+    protected async addBptSync<T>(func: () => Promise<T>, obj: any): Promise<T | MIError> {
+        return new Promise<T | MIError>(async (resolve) => {
+            this.addBptSyncQueue.push({ func: func, obj: obj, resolve: resolve });
+            while (this.addBptSyncRunning) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            this.addBptSyncRunning = true;
+            while (this.addBptSyncQueue.length > 0) {
+                const item = this.addBptSyncQueue.shift();
+                if (this.hwBreakpointMgr.limitReached()) {
+                    item.resolve(this.reportHwBreakptLimit(obj));
+                } else {
+                    try {
+                        const ret = await item.func() as T;
+                        if (ret && !(ret instanceof MIError)) {
+                            const brk = ret as { number: number };
+                            this.hwBreakpointMgr.addBreakpoint(brk?.number || -1);
+                        }
+                        item.resolve(ret);
+                    } catch (err) {
+                        item.resolve(err as MIError);
+                    }
+                }
+            }
+            this.addBptSyncRunning = false;
+        });
+    }
+
     // These should really by multiple pairs that are unique so you cannot mix up
     // the response and args
     private allBreakPointsQ = new RequestQueue<
@@ -2113,6 +2228,23 @@ export class GDBDebugSession extends LoggingDebugSession {
         DebugProtocol.SetInstructionBreakpointsArguments |
         DebugProtocol.SetDataBreakpointsArguments>();
 
+    protected runToEntryPointPromise: Promise<OurSourceBreakpoint | MIError> = null;
+    protected setRunToEntryPoint(): Promise<OurSourceBreakpoint | MIError> {
+        if (!this.runToEntryPointPromise) {
+            const brk: OurSourceBreakpoint = {
+                isFunction: true,
+                isTemporary: true,
+                raw: this.args.runToEntryPoint,
+                hwOpt: this.hwBreakpointMgr.getGdbMiArg('function'),
+                line: 0
+            };
+            this.runToEntryPointPromise = this.addBptSync<OurSourceBreakpoint | MIError>(() => {
+                return this.miDebugger.addBreakPoint(brk);
+            }, brk);
+        }
+        return this.runToEntryPointPromise;
+    }
+
     protected setFunctionBreakPointsRequest(
         r: DebugProtocol.SetFunctionBreakpointsResponse,
         a: DebugProtocol.SetFunctionBreakpointsArguments): Promise<void> {
@@ -2124,17 +2256,23 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const createBreakpoints = async () => {
                     try {
                         await this.miDebugger.removeBreakpoints(this.functionBreakpoints);
+                        this.hwBreakpointMgr.removeBreakpoints(this.functionBreakpoints);
                         this.functionBreakpoints = [];
 
                         const all = new Array<Promise<OurSourceBreakpoint | MIError>>();
+                        const hwOpt = this.hwBreakpointMgr.getGdbMiArg('function');
                         args.breakpoints.forEach((brk) => {
                             const arg: OurSourceBreakpoint = {
                                 ...brk,
                                 raw: brk.name,
+                                isFunction: true,
+                                hwOpt: hwOpt,
                                 file: undefined,
                                 line: undefined
                             };
-                            all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
+                            all.push(this.addBptSync<OurSourceBreakpoint | MIError>(() => {
+                                return this.miDebugger.addBreakPoint(arg);
+                            }, arg));
                         });
 
                         const breakpoints = await Promise.all(all);
@@ -2185,6 +2323,16 @@ export class GDBDebugSession extends LoggingDebugSession {
         return this.allBreakPointsQ.add(doit, r, a);
     }
 
+    private reportHwBreakptLimit(brk: any): MIError {
+        const limit = this.hwBreakpointMgr.getLimit();
+        const str = brk ? JSON.stringify(brk) : '';
+        this.handleMsg('log', `Hardware breakpoint limit reached (${limit}) for breakpoint ${str}. Further breakpoints will not be set.\n`);
+        return new MIError(
+            `Hardware breakpoint limit reached (${limit}). Calculated by cortex-debug and not gdb.`,
+            'internal'
+        );
+    }
+
     private continueIfNoMore(pendContinue: PendingContinue) {
         if (!pendContinue.haveMore() && pendContinue.shouldContinue) {
             this.disableSendStoppedEvents = false;
@@ -2216,9 +2364,11 @@ export class GDBDebugSession extends LoggingDebugSession {
             return new Promise(async (resolve) => {
                 const createBreakpoints = async () => {
                     const currentBreakpoints = (this.breakpointMap.get(args.source.path) || []).map((bp) => bp.number);
+                    const hwOpt = this.hwBreakpointMgr.getGdbMiArg('src');
 
                     try {
                         await this.miDebugger.removeBreakpoints(currentBreakpoints);
+                        this.hwBreakpointMgr.removeBreakpoints(currentBreakpoints);
                         for (const old of currentBreakpoints) {
                             this.breakpointById.delete(old);
                         }
@@ -2226,55 +2376,16 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         const all: Promise<OurSourceBreakpoint | MIError>[] = [];
                         const sourcepath = decodeURIComponent(args.source.path);
-
-                        if (sourcepath.startsWith('disassembly:/')) {
-                            let sidx = 13;
-                            if (sourcepath.startsWith('disassembly:///')) { sidx = 15; }
-                            const path = sourcepath.substring(sidx, sourcepath.length - 6); // Account for protocol and extension
-                            const parts = path.split(':::');
-                            let func: string;
-                            let file: string;
-
-                            if (parts.length === 2) {
-                                func = parts[1];
-                                file = parts[0];
-                            } else {
-                                func = parts[0];
-                            }
-
-                            const symbol: SymbolInformation = await this.disassember.getDisassemblyForFunction(func, file);
-
-                            if (symbol) {
-                                args.breakpoints.forEach((brk) => {
-                                    if (brk.line <= symbol.instructions.length) {
-                                        const line = symbol.instructions[brk.line - 1];
-                                        const arg: OurSourceBreakpoint = {
-                                            ...brk,
-                                            file: args.source.path,
-                                            raw: line.address
-                                        };
-                                        all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
-                                    } else {
-                                        all.push(
-                                            Promise.resolve(
-                                                new MIError(
-                                                    `${func} only contains ${symbol.instructions.length} instructions`,
-                                                    'Set breakpoint'
-                                                )
-                                            )
-                                        );
-                                    }
-                                });
-                            }
-                        } else {
-                            args.breakpoints.forEach((brk) => {
-                                const arg: OurSourceBreakpoint = {
-                                    ...brk,
-                                    file: args.source.path
-                                };
-                                all.push(this.miDebugger.addBreakPoint(arg).catch((err: MIError) => err));
-                            });
-                        }
+                        args.breakpoints.forEach((brk) => {
+                            const arg: OurSourceBreakpoint = {
+                                ...brk,
+                                file: args.source.path,
+                                hwOpt: hwOpt
+                            };
+                            all.push(this.addBptSync<OurSourceBreakpoint | MIError>(() => {
+                                return this.miDebugger.addBreakPoint(arg);
+                            }, arg));
+                        });
 
                         const brkpoints = await Promise.all(all);
 
@@ -2336,12 +2447,16 @@ export class GDBDebugSession extends LoggingDebugSession {
                         this.instrBreakpointMap.clear();
 
                         await this.miDebugger.removeBreakpoints(currentBreakpoints);
+                        this.hwBreakpointMgr.removeBreakpoints(currentBreakpoints);
 
                         const all: Promise<OurInstructionBreakpoint | MIError>[] = [];
+                        const hwOpt = this.hwBreakpointMgr.getGdbMiArg('instr');
                         args.breakpoints.forEach((brk) => {
                             const addr = parseInt(brk.instructionReference) + brk.offset || 0;
-                            const bpt: OurInstructionBreakpoint = { ...brk, number: -1, address: addr };
-                            all.push(this.miDebugger.addInstrBreakPoint(bpt).catch((err: MIError) => err));
+                            const bpt: OurInstructionBreakpoint = { ...brk, number: -1, address: addr, htOpt: hwOpt };
+                            all.push(this.addBptSync<OurInstructionBreakpoint | MIError>(() => {
+                                return this.miDebugger.addInstrBreakPoint(bpt);
+                            }, bpt));
                         });
 
                         const brkpoints = await Promise.all(all);
@@ -2441,7 +2556,13 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const createBreakpoints = async () => {
                     try {
                         const currentBreakpoints = Array.from(this.dataBreakpointMap.keys());
+                        this.hwBreakpointMgr.removeBreakpoints(currentBreakpoints);
                         this.dataBreakpointMap.clear();
+
+                        // It is not clear how gdb implements. It has to use the DWT in the Cortex-M for hardware data
+                        // breakpoints. So, we will assume that it counts as one hardware breakpoint per data breakpoint
+                        // The docs don't say anything about it needing a '-h' to force HW data breakpoints
+                        // TODO: Verify this assumption
 
                         await this.miDebugger.removeBreakpoints(currentBreakpoints);
 
@@ -2449,7 +2570,9 @@ export class GDBDebugSession extends LoggingDebugSession {
 
                         args.breakpoints.forEach((brk) => {
                             const bkp: OurDataBreakpoint = { ...brk };
-                            all.push(this.miDebugger.addDataBreakPoint(bkp).catch((err: MIError) => err));
+                            all.push(this.addBptSync<OurDataBreakpoint | MIError>(() => {
+                                return this.miDebugger.addDataBreakPoint(bkp);
+                            }, bkp));
                         });
 
                         const brkpoints = await Promise.all(all);
@@ -3439,13 +3562,25 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected async gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): Promise<void> {
         try {
-            const done = await this.miDebugger.goto(args.source.path, args.line);
-            if (!done) {
+            const brk: OurSourceBreakpoint = {
+                file: args.source.path,
+                line: args.line,
+                isTemporary: true,
+                hwOpt: this.hwBreakpointMgr.getGdbMiArg('src')
+            };
+
+            const result = await this.addBptSync<OurSourceBreakpoint | MIError>(() => {
+                return this.miDebugger.addBreakPoint(brk);
+            }, brk);
+
+            if (result instanceof MIError) {
+                this.sendErrorResponse(response, 16, `Could not jump to: ${result.message} ${args.source.path}:${args.line}`);
+            } else if (!result) {
                 this.sendErrorResponse(response, 16, `Could not jump to: ${args.source.path}:${args.line}`);
             } else {
                 response.body = {
                     targets: [{
-                        id: 1,
+                        id: result.number,
                         label: args.source.name,
                         column: args.column,
                         line: args.line
