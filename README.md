@@ -64,6 +64,9 @@ Requirements:
 See https://github.com/Marus/cortex-debug/wiki for usage information. This needs some help from the community. See https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md for a summary of all properties that are available in your `launch.json`
 
 ## How to Build from sources
+
+Make sure you have git, NodeJS and typescript installed on your PC before you begin. See: https://code.visualstudio.com/docs/setup/additional-components
+
 * `git clone https://github.com/Marus/cortex-debug.git`
 * `cd cortex-debug`
 * Optionally switch to a branch: `git checkout <existing-branch-name>`
