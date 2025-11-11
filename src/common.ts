@@ -253,9 +253,15 @@ export function defSymbolFile(file: string): SymbolFile {
 }
 
 export interface HWBreakpointInfo {
-    required: boolean;
-    limit: number;
+    require: boolean;
+    limit?: number;
 }
+
+export interface HWWatchpointInfo {
+    require: boolean;
+    limit?: number;
+}
+
 export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArguments {
     name: string;
     request: string;
@@ -312,7 +318,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     variableUseNaturalFormat: boolean;
     chainedConfigurations: ChainedConfigurations;
     hardwareBreakpoints: HWBreakpointInfo;
-
+    hardwareWatchpoints: HWWatchpointInfo;
     pvtIsReset: boolean;
     pvtPorts: { [name: string]: number };
     pvtParent: ConfigurationArguments;

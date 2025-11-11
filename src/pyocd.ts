@@ -130,7 +130,7 @@ export class PyOCDServerController extends EventEmitter implements GDBServerCont
     }
 
     public initMatch(): RegExp {
-        return /GDB server started (at|on) port/;
+        return /GDB server (listening|started) (at|on) port/;
     }
 
     public serverLaunchStarted(): void {}

@@ -2,8 +2,9 @@
 
 ![Visual Studio Code with Cortex-Debug Installed](./images/vs-code-screenshot.png)
 
-Debugging support for ARM Cortex-M Microcontrollers with the following features:
+Debugging support for ARM Cortex-M (and others) Microcontrollers with the following features:
 
+* While we cannot change the extension name due to VSCode Marketplace rules, this extension can be used by non Cortex-M devices and non ARM devices. People have reported using it with Cortex-R/A, Xtensa, RISC-V and even x86. Your mileage may vary.
 * Highly configurable. See https://github.com/Marus/cortex-debug/blob/master/debug_attributes.md
 * Support J-Link, OpenOCD GDB Server, STMicroelectronic's ST-LINK GDB server, pyOCD and the Black Magic Probe
 * Partial support textane/stlink (st-util) GDB Servers (SWO can only be captured via a serial port)

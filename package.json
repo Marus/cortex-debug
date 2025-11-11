@@ -804,7 +804,7 @@
                                 "description": "WARNING: Force only HW breakpoints to be used. By default GDB will use HW or SW  breakpoints depending on memory type. Use this only in rare circumstances to work around issues in your gdb-server or hardware. This setting is NOT recommended for general use.",
                                 "type": "object",
                                 "properties": {
-                                    "required": {
+                                    "require": {
                                         "type": "boolean",
                                         "default": false,
                                         "description": "If true, forces the use of hardware breakpoints"
@@ -815,6 +815,24 @@
                                         "multipleOf": 1,
                                         "default": 0,
                                         "description": "If limit > 0, enforce a limit on the number of hardware breakpoints that can be used"
+                                    }
+                                }
+                            },
+                            "hardwareWatchpoints": {
+                                "description": "WARNING: Force only HW watchpoints to be used. By default GDB will use HW or SW  watchpoints depending on memory type. Use this only in rare circumstances",
+                                "type": "object",
+                                "properties": {
+                                    "require": {
+                                        "type": "boolean",
+                                        "default": false,
+                                        "description": "If true, forces the use of hardware watchpoints"
+                                    },
+                                    "limit": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "multipleOf": 1,
+                                        "default": 0,
+                                        "description": "If limit > 0, enforce a limit on the number of hardware watchpoints that can be used"
                                     }
                                 }
                             },
@@ -1972,7 +1990,7 @@
                                 "description": "WARNING: Force only HW breakpoints to be used. By default GDB will use HW or SW  breakpoints depending on memory type. Use this only in rare circumstances to work around issues in your gdb-server or hardware. This setting is NOT recommended for general use.",
                                 "type": "object",
                                 "properties": {
-                                    "required": {
+                                    "require": {
                                         "type": "boolean",
                                         "default": false,
                                         "description": "If true, forces the use of hardware breakpoints"
@@ -1983,6 +2001,24 @@
                                         "multipleOf": 1,
                                         "default": 0,
                                         "description": "If limit > 0, enforce a limit on the number of hardware breakpoints that can be used"
+                                    }
+                                }
+                            },
+                            "hardwareWatchpoints": {
+                                "description": "WARNING: Force only HW watchpoints to be used. By default GDB will use HW or SW  watchpoints depending on memory type. Use this only in rare circumstances",
+                                "type": "object",
+                                "properties": {
+                                    "require": {
+                                        "type": "boolean",
+                                        "default": false,
+                                        "description": "If true, forces the use of hardware watchpoints"
+                                    },
+                                    "limit": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "multipleOf": 1,
+                                        "default": 0,
+                                        "description": "If limit > 0, enforce a limit on the number of hardware watchpoints that can be used"
                                     }
                                 }
                             },

@@ -65,7 +65,7 @@ export class HWBreakpointMgr {
         private readonly forceHwBreakpoints: boolean = false) {
     }
 
-    areHwBreakpointsForced(): boolean {
+    isHWForced(): boolean {
         return this.forceHwBreakpoints;
     }
 
@@ -99,9 +99,8 @@ export class HWBreakpointMgr {
         this.breakpointSet.clear();
     }
 
-    // This should only be called when the limiter has not been reached
     getGdbMiArg(bptType: HWBreakpointType): string {
-        if (this.forceHwBreakpoints && !this.limitReached()) {
+        if (this.forceHwBreakpoints) {
             return (bptType === 'data') ? '' : '-h';
         }
         return '';
@@ -278,6 +277,7 @@ export class GDBDebugSession extends LoggingDebugSession {
     protected currentThreadId: number = 0;
     protected activeThreadIds = new Set<number>();      // Used for consistency check
     protected hwBreakpointMgr: HWBreakpointMgr;
+    protected hwWatchpointMgr: HWBreakpointMgr;
 
     /**
      * If we are requested a major switch like restart/disconnect/detach we may have to interrupt the
@@ -419,17 +419,12 @@ export class GDBDebugSession extends LoggingDebugSession {
             args.showDevDebugOutput = ADAPTER_DEBUG_MODE.RAW;
         }
         this.args = this.normalizeArguments(args);
-        const forceHW = this.args.hardwareBreakpoints?.required || false;
-        const limit = this.args.hardwareBreakpoints?.limit || 0;
-        this.hwBreakpointMgr = new HWBreakpointMgr(limit, forceHW);
 
         this.handleMsg('stdout',
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). `
             + 'Usage info: https://github.com/Marus/cortex-debug#usage');
-        if (forceHW) {
-            const limitMsg = (limit > 0) ? `Limit of ${limit} breakpoints will be enforced by cortex-debug` : 'GDB enforces any limits you may have configured';
-            this.handleMsg('stderr', `INFO: All breakpoints will be requested as hardware breakpoints. ${limitMsg}\n`);
-        }
+
+        this.setHWBreakpointInfo();
 
         if (this.args.showDevDebugOutput) {
             this.handleMsg('log', '"configuration": ' + JSON.stringify(args, undefined, 4) + '\n');
@@ -458,6 +453,23 @@ export class GDBDebugSession extends LoggingDebugSession {
             } catch (e) {
                 this.handleMsg('stderr', `Failed to open dump file open '${logFName}'\n`);
             }
+        }
+    }
+
+    private setHWBreakpointInfo() {
+        let forceHW = this.args.hardwareBreakpoints?.require || false;
+        let limit = this.args.hardwareBreakpoints?.limit || 0;
+        this.hwBreakpointMgr = new HWBreakpointMgr(limit, forceHW);
+        if (forceHW) {
+            const limitMsg = (limit > 0) ? `Limit of ${limit} breakpoints will be enforced by cortex-debug` : 'GDB enforces any limits you may have configured';
+            this.handleMsg('stderr', `INFO: All breakpoints will be requested as hardware breakpoints. ${limitMsg}\n`);
+        }
+        forceHW = this.args.hardwareWatchpoints?.require || false;
+        limit = this.args.hardwareWatchpoints?.limit || 0;
+        this.hwWatchpointMgr = new HWBreakpointMgr(limit, forceHW);
+        if (forceHW && (limit > 0)) {
+            const limitMsg = `Limit of ${limit} watchpoints will be enforced by cortex-debug`;
+            this.handleMsg('stderr', `INFO: All watchpoints are done by GDB as hardware watchpoints (default). ${limitMsg}\n`);
         }
     }
 
@@ -728,7 +740,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 let feedbackTimer = setInterval(() => {
                     const svrName = this.serverController.name || this.args.servertype;
                     elapsed += 5;
-                    this.handleMsg('stdout', `Still waiting for ${svrName} GDB Server to be ready, ${elapsed} seconds...\n`);
+                    this.handleMsg('stdout', `Still waiting for ${svrName} GDB Server to be ready, ${elapsed} seconds...looking for '${initMatch}'\n`);
                 }, 5 * 1000);
 
                 this.serverController.serverLaunchStarted();
@@ -2188,8 +2200,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         resolve: (value: any) => void;
     }[] = [];
 
-    protected async addBptSync<T>(func: () => Promise<T>, obj: any): Promise<T | MIError> {
+    protected async addBptSync<T>(func: () => Promise<T>, obj: any, isData: boolean = false): Promise<T | MIError> {
         return new Promise<T | MIError>(async (resolve) => {
+            const mgr = isData ? this.hwWatchpointMgr : this.hwBreakpointMgr;
             this.addBptSyncQueue.push({ func: func, obj: obj, resolve: resolve });
             while (this.addBptSyncRunning) {
                 await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2197,14 +2210,14 @@ export class GDBDebugSession extends LoggingDebugSession {
             this.addBptSyncRunning = true;
             while (this.addBptSyncQueue.length > 0) {
                 const item = this.addBptSyncQueue.shift();
-                if (this.hwBreakpointMgr.limitReached()) {
+                if (mgr.limitReached()) {
                     item.resolve(this.reportHwBreakptLimit(obj));
                 } else {
                     try {
                         const ret = await item.func() as T;
                         if (ret && !(ret instanceof MIError)) {
                             const brk = ret as { number: number };
-                            this.hwBreakpointMgr.addBreakpoint(brk?.number || -1);
+                            mgr.addBreakpoint(brk?.number || -1);
                         }
                         item.resolve(ret);
                     } catch (err) {
@@ -2556,7 +2569,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                 const createBreakpoints = async () => {
                     try {
                         const currentBreakpoints = Array.from(this.dataBreakpointMap.keys());
-                        this.hwBreakpointMgr.removeBreakpoints(currentBreakpoints);
+                        this.hwWatchpointMgr.removeBreakpoints(currentBreakpoints);
                         this.dataBreakpointMap.clear();
 
                         // It is not clear how gdb implements. It has to use the DWT in the Cortex-M for hardware data
@@ -2572,7 +2585,7 @@ export class GDBDebugSession extends LoggingDebugSession {
                             const bkp: OurDataBreakpoint = { ...brk };
                             all.push(this.addBptSync<OurDataBreakpoint | MIError>(() => {
                                 return this.miDebugger.addDataBreakPoint(bkp);
-                            }, bkp));
+                            }, bkp, true));
                         });
 
                         const brkpoints = await Promise.all(all);

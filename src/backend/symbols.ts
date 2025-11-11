@@ -487,7 +487,7 @@ export class SymbolTable {
                     });
                     this.objdumpReader.on('exit', (code, signal) => {
                         if (code !== 0) {
-                            this.gdbSession.handleMsg('log', `'objdump' exited with a nonzero exit status ${code}, ${signal}\n`);
+                            this.gdbSession.handleMsg('log', `'objdump' exited with a nonzero exit status ${code}, ${signal}. File: ${executable}\n`);
                         }
                     });
                     this.objdumpReader.on('close', (code, signal) => {
@@ -495,7 +495,7 @@ export class SymbolTable {
                         this.currentObjDumpFile = null;
                         if (trace || this.gdbSession.args.showDevDebugOutput) {
                             const ms = Date.now() - objdumpStart;
-                            this.gdbSession.handleMsg('log', `Finished reading symbols from objdump: Time: ${ms} ms\n`);
+                            this.gdbSession.handleMsg('log', `Finished reading symbols from objdump: Time: ${ms} ms. File: ${executable}\n`);
                         }
                     });
 
@@ -531,13 +531,13 @@ export class SymbolTable {
                     });
                     nmReader.on('exit', (code, signal) => {
                         if (code !== 0) {
-                            this.gdbSession.handleMsg('log', `'nm' exited with a nonzero exit status ${code}, ${signal}\n`);
+                            this.gdbSession.handleMsg('log', `'nm' exited with a nonzero exit status ${code}, ${signal}. File: ${executable}\n`);
                         }
                     });
                     nmReader.on('close', () => {
                         if (trace || this.gdbSession.args.showDevDebugOutput) {
                             const ms = Date.now() - nmStart;
-                            this.gdbSession.handleMsg('log', `Finished reading symbols from nm: Time: ${ms} ms\n`);
+                            this.gdbSession.handleMsg('log', `Finished reading symbols from nm: Time: ${ms} ms. File: ${executable}\n`);
                         }
                     });
 
