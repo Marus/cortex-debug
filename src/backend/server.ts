@@ -9,10 +9,19 @@ import { quoteShellCmdLine } from '../common';
 import { greenFormat } from '../frontend/ansi-helpers';
 
 export let GdbPid = -1;
+
+let ServerLogFilePath: string = null;
+export function getServerLogFilePath(): string {
+    if (!ServerLogFilePath) {
+        const tmpDirName = os.tmpdir();
+        ServerLogFilePath = path.join(tmpDirName, 'cortex-debug-server.log');
+    }
+    return ServerLogFilePath;
+}
+
 export function ServerConsoleLog(str: string, usePid?: number) {
     if (!str) { return; }
     try {
-        const tmpDirName = os.tmpdir();
         const date = new Date();
         if (usePid) {
             GdbPid = usePid;
@@ -22,7 +31,7 @@ export function ServerConsoleLog(str: string, usePid?: number) {
         if (!str.endsWith('\n')) {
             str += '\n';
         }
-        fs.appendFileSync(path.join(tmpDirName, 'cortex-debug-server-exiting.log'), str);
+        fs.appendFileSync(getServerLogFilePath(), str);
     } catch (e) {
         console.log(e ? e.toString() : 'unknown exception?');
     }

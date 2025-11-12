@@ -18,7 +18,7 @@ import {
     createPortName, GenericCustomEvent, quoteShellCmdLine, toStringDecHexOctBin, ADAPTER_DEBUG_MODE, defSymbolFile, CTIAction, getPathRelative,
     SWOConfigureEvent, RTTCommonDecoderOpts
 } from './common';
-import { GDBServer, ServerConsoleLog } from './backend/server';
+import { GDBServer, getServerLogFilePath, ServerConsoleLog } from './backend/server';
 import { MINode } from './backend/mi_parse';
 import { expandValue, isExpandable } from './backend/gdb_expansion';
 import { GdbDisassembler } from './backend/disasm';
@@ -423,6 +423,9 @@ export class GDBDebugSession extends LoggingDebugSession {
         this.handleMsg('stdout',
             `Cortex-Debug: VSCode debugger extension version ${args.pvtVersion} git(${__COMMIT_HASH__}). `
             + 'Usage info: https://github.com/Marus/cortex-debug#usage');
+        if (this.args.showDevDebugOutput) {
+            this.handleMsg('stderr', `INFO: A log of gdb-servers, gdb, debug adapter start/stop/pid info can be found in '${getServerLogFilePath()}'.\n`);
+        }
 
         this.setHWBreakpointInfo();
 
@@ -3628,4 +3631,23 @@ function initTwoCharsToIntMap(): object {
 
 const twoCharsToIntMap = initTwoCharsToIntMap();
 
-LoggingDebugSession.run(GDBDebugSession);
+process.on('uncaughtException', (err) => {
+    const msg = err && err.stack ? err.stack : (err.message ? err.message : 'unknown error');
+    console.error('cortex-debug: Caught exception:', msg);
+    ServerConsoleLog('Caught exception: ' + msg);
+    process.exit(1); // The process is in an unreliable state, so exit is recommended
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    const msg = 'cortex-debug: Unhandled Rejection: reason: ' + reason.toString() + ' promise: ' + promise.toString();
+    console.error(msg);
+    ServerConsoleLog(msg);
+});
+
+try {
+    LoggingDebugSession.run(GDBDebugSession);
+} catch (error) {
+    console.error('cortex-debug: Error occurred while running GDBDebugSession:', error);
+    ServerConsoleLog('cortex-debug: Caught exception: ' + error.toString());
+    throw error;
+}
