@@ -26,6 +26,25 @@ const SCOPE_MAP: { [id: string]: SymbolScope } = {
     '!': SymbolScope.Both
 };
 
+/**
+ * While parsing output of nm/objdump (both are line oriented), how you parse a line changes depending on where
+ * you are in the output. This context object helps keep track of that. The callback is the current line parser function
+ * which change as we progress through the output. This way, we have a simple state machine for parsing. Not every field
+ * is needed by every parser, but the most important is the callback.
+ */
+export class ObjectReaderContext {
+    public curObjFile: string | null = null;   // Current object file being processed from nm/objdump
+    constructor(public reader: SpawnLineReader) { }
+
+    public setCallback(cb: (line: string, err?: any) => boolean) {
+        this.reader.callback = cb;
+    }
+
+    public getCallback() {
+        return this.reader.callback;
+    }
+}
+
 export class SymbolNode implements Interval {
     constructor(
         public readonly symbol: SymbolInformation,  // Only functions and objects
@@ -147,125 +166,13 @@ export class SymbolTable {
         }
     }
 
-    /*
-    private createSymtableSerializedFName(exeName: string) {
-        return this.createFileMapCacheFileName(exeName, '-syms') + '.gz';
-    }
-
-    private static CurrentVersion = 1;
-    private serializeSymbolTable(exeName: string) {
-        const fMap: {[key: string]: number} = {};
-        const keys = this.allSymbols.length > 0 ? Object.keys(this.allSymbols[0]) : [];
-        this.fileTable = [];
-        const syms = [];
-        for (const sym of this.allSymbols) {
-            const fName: string = sym.file as string;
-            let id: number = fMap[fName];
-            if (id === undefined) {
-                id = this.fileTable.length;
-                this.fileTable.push(fName);
-                fMap[fName] = id;
-            }
-            const tmp = sym.file;
-            sym.file = id;
-            syms.push(Object.values(sym));
-            sym.file = tmp;
-        }
-        const serObj: ISymbolTableSerData = {
-            version: SymbolTable.CurrentVersion,
-            memoryRegions: this.memoryRegions,
-            fileTable: this.fileTable,
-            symbolKeys: keys,
-            allSymbols: syms
-        };
-
-        const fName = this.createSymtableSerializedFName(exeName);
-        const fStream = fs.createWriteStream(fName, { flags: 'w' });
-        fStream.on('error', () => {
-            console.error('Saving symbol table failed!!!');
-        });
-        fStream.on('close', () => {
-            console.log('Saved symbol table');
-        });
-        const jsonStream = new JsonStreamStringify([serObj]);
-        jsonStream.on('error', () => {
-            console.error('Saving symbol table JsonStreamStringify() failed!!!');
-        });
-        jsonStream
-            .pipe(zlib.createGzip())
-            .pipe(fStream)
-            .on('finish', () => {
-                console.log('Pipe ended');
-            });
-    }
-
-    private deSerializeSymbolTable(exeName: string): Promise<boolean> {
-        return new Promise<boolean>((resolve) => {
-            const fName = this.createSymtableSerializedFName(exeName);
-            if (!fs.existsSync(fName)) {
-                resolve(false);
-                return;
-            }
-            const fStream = fs.createReadStream(fName);
-            fStream.on('error', () => {
-                resolve(false);
-            });
-
-            console.time('abc');
-            const jsonStream = StreamArray.withParser();
-            jsonStream.on('data', ({key, value}) => {
-                console.timeLog('abc', 'Parsed data:');
-                fStream.close();
-                reconstruct(value);
-            });
-            fStream
-                .pipe(zlib.createGunzip())
-                .pipe(jsonStream.input);
-
-            const reconstruct = (data: any) => {
-                try {
-                    const serObj: ISymbolTableSerData = data as ISymbolTableSerData;
-                    if (!serObj || (serObj.version !== SymbolTable.CurrentVersion)) {
-                        resolve(false);
-                        return;
-                    }
-                    this.fileMap = {};
-                    for (const f of serObj.fileTable) {
-                        if (f !== null) {   // Yes, there one null in there
-                            this.addPathVariations(f);
-                        }
-                    }
-
-                    this.allSymbols = [];
-                    const keys = serObj.symbolKeys;
-                    const n = keys.length;
-                    for (const values of serObj.allSymbols) {
-                        const sym: any = {};
-                        values.forEach((v, i) => sym[keys[i]] = v);
-                        sym.file = serObj.fileTable[sym.file as number];
-                        this.addSymbol(sym/* as SymbolInformation* /);
-                    }
-                    this.memoryRegions = [];
-                    for (const m of serObj.memoryRegions) {
-                        this.memoryRegions.push(new MemoryRegion(m));
-                    }
-                    console.timeEnd('abc');
-                    resolve(true);
-                } catch (e) {
-                    resolve(false);
-                }
-            };
-        });
-    }
-    */
-
     /**
      * Problem statement:
      * We need a read the symbol table for multiple types of information and none of the tools so far
      * give all all we need
      *
      * 1. List of static variables by file
-     * 2. List og globals
+     * 2. List of globals
      * 3. Functions (global and static) with their addresses and lengths
      *
      * Things we tried:
@@ -339,10 +246,7 @@ export class SymbolTable {
         add(this.symbolsByAddressOrig, sym.addressOrig);
     }
 
-    private objdumpReader: SpawnLineReader;
-    private currentObjDumpFile: string = null;
-
-    private readObjdumpHeaderLine(symF: SymbolFile, line: string, err: any): boolean {
+    private readObjdumpHeaderLine(cxt: ObjectReaderContext, symF: SymbolFile, line: string, err: any): boolean {
         if (!line) {
             return line === '' ? true : false;
         }
@@ -390,15 +294,15 @@ export class SymbolTable {
             });
             this.memoryRegions.push(region);
         } else {
-            const memRegionsEnd = RegExp(/^SYMBOL TABLE:/);
-            if (memRegionsEnd.test(line)) {
-                this.objdumpReader.callback = this.readObjdumpSymbolLine.bind(this, symF);
+            if (line.startsWith('SYMBOL TABLE:')) {
+                // Switch the parser to symbol line parser mode
+                cxt.setCallback(this.readObjdumpSymbolLine.bind(this, cxt, symF));
             }
         }
         return true;
     }
 
-    private readObjdumpSymbolLine(symF: SymbolFile, line: string, err: any): boolean {
+    private readObjdumpSymbolLine(cxt: ObjectReaderContext, symF: SymbolFile, line: string, err: any): boolean {
         if (!line) {
             return line === '' ? true : false;
         }
@@ -406,12 +310,12 @@ export class SymbolTable {
         if (match) {
             if (match[7] === 'd' && match[8] === 'f') {
                 if (match[11]) {
-                    this.currentObjDumpFile = SymbolTable.NormalizePath(match[11].trim());
+                    cxt.curObjFile = SymbolTable.NormalizePath(match[11].trim());
                 } else {
                     // This can happen with C++. Inline and template methods/variables/functions/etc. are listed with
                     // an empty file association. So, symbols after this line can come from multiple compilation
                     // units with no clear owner. These can be locals, globals or other.
-                    this.currentObjDumpFile = null;
+                    cxt.curObjFile = null;
                 }
                 // We don't really use the symbol except know that the symbol following this belong to this file
                 return true;
@@ -445,12 +349,12 @@ export class SymbolTable {
                 addressOrig: addr,
                 address: newaddr,
                 name: name,
-                file: this.currentObjDumpFile,
+                file: cxt.curObjFile,
                 type: type,
                 scope: scope,
                 section: secName,
                 length: size,
-                isStatic: (scope === SymbolScope.Local) && this.currentObjDumpFile ? true : false,
+                isStatic: (scope === SymbolScope.Local) && cxt.curObjFile ? true : false,
                 instructions: null,
                 hidden: hidden
             };
@@ -472,82 +376,85 @@ export class SymbolTable {
                 }
                 try {
                     const spawnOpts = { cwd: this.gdbSession.args.cwd };
-                    const objdumpStart = Date.now();
-                    const objDumpArgs = [
-                        '--syms',   // Of course, we want symbols
-                        '-C',       // Demangle
-                        '-h',       // Want section headers
-                        '-w',       // Don't wrap lines (wide format)
-                        executable];
-                    this.currentObjDumpFile = null;
-                    this.objdumpReader = new SpawnLineReader();
-                    this.objdumpReader.on('error', (e) => {
-                        rejected = true;
-                        reject(e);
-                    });
-                    this.objdumpReader.on('exit', (code, signal) => {
-                        if (code !== 0) {
-                            this.gdbSession.handleMsg('log', `'objdump' exited with a nonzero exit status ${code}, ${signal}. File: ${executable}\n`);
-                        }
-                    });
-                    this.objdumpReader.on('close', (code, signal) => {
-                        this.objdumpReader = undefined;
-                        this.currentObjDumpFile = null;
+                    // eslint-disable-next-line no-constant-condition
+                    if (true) {
+                        const objdumpStart = Date.now();
+                        const objDumpArgs = [
+                            '--syms',   // Of course, we want symbols
+                            '-C',       // Demangle
+                            '-h',       // Want section headers
+                            '-w',       // Don't wrap lines (wide format)
+                            executable];
+                        const cxt = new ObjectReaderContext(new SpawnLineReader());
+                        cxt.setCallback(this.readObjdumpHeaderLine.bind(this, cxt, symbolFile));
+                        cxt.reader.on('error', (e) => {
+                            rejected = true;
+                            reject(e);
+                        });
+                        cxt.reader.on('exit', (code, signal) => {
+                            if (code !== 0) {
+                                this.gdbSession.handleMsg('log', `'objdump' exited with a nonzero exit status ${code}, ${signal}. File: ${executable}\n`);
+                            }
+                        });
+                        cxt.reader.on('close', (code, signal) => {
+                            if (trace || this.gdbSession.args.showDevDebugOutput) {
+                                const ms = Date.now() - objdumpStart;
+                                this.gdbSession.handleMsg('log', `Finished reading symbols from objdump: Time: ${ms} ms. File: ${executable}\n`);
+                            }
+                        });
+
                         if (trace || this.gdbSession.args.showDevDebugOutput) {
-                            const ms = Date.now() - objdumpStart;
-                            this.gdbSession.handleMsg('log', `Finished reading symbols from objdump: Time: ${ms} ms. File: ${executable}\n`);
+                            this.gdbSession.handleMsg('log', `Reading symbols from ${this.objdumpPath} ${objDumpArgs.join(' ')}\n`);
                         }
-                    });
-
-                    if (trace || this.gdbSession.args.showDevDebugOutput) {
-                        this.gdbSession.handleMsg('log', `Reading symbols from ${this.objdumpPath} ${objDumpArgs.join(' ')}\n`);
+                        objdumpPromises.push({
+                            args: [this.objdumpPath, ...objDumpArgs],
+                            promise: cxt.reader.startWithProgram(
+                                this.objdumpPath, objDumpArgs, spawnOpts, cxt.getCallback()),
+                        });
                     }
-                    objdumpPromises.push({
-                        args: [this.objdumpPath, ...objDumpArgs],
-                        promise: this.objdumpReader.startWithProgram(
-                            this.objdumpPath,
-                            objDumpArgs,
-                            spawnOpts,
-                            this.readObjdumpHeaderLine.bind(this, symbolFile)
-                        ),
-                    });
 
-                    const nmStart = Date.now();
-                    const nmProg = replaceProgInPath(this.objdumpPath, /objdump/i, 'nm');
-                    const nmArgs = [
-                        '--defined-only',
-                        '-S',   // Want size as well
-                        '-l',   // File/line info
-                        '-C',   // Demangle
-                        '-p',   // don't bother sorting
-                        // Do not use posix format. It is inaccurate
-                        executable
-                    ];
-                    const nmReader = new SpawnLineReader();
-                    nmReader.on('error', (e) => {
-                        this.gdbSession.handleMsg('log', `Error: ${nmProg} failed! statics/global/functions may not be properly classified: ${e.toString()}\n`);
-                        this.gdbSession.handleMsg('log', '    Expecting `nm` next to `objdump`. If that is not the problem please report this.\n');
-                        this.nmPromises = [];
-                    });
-                    nmReader.on('exit', (code, signal) => {
-                        if (code !== 0) {
-                            this.gdbSession.handleMsg('log', `'nm' exited with a nonzero exit status ${code}, ${signal}. File: ${executable}\n`);
-                        }
-                    });
-                    nmReader.on('close', () => {
+                    // eslint-disable-next-line no-constant-condition
+                    if (true) {
+                        const nmStart = Date.now();
+                        const nmProg = replaceProgInPath(this.objdumpPath, /objdump/i, 'nm');
+                        const nmArgs = [
+                            '--defined-only',
+                            '-S',   // Want size as well
+                            '-l',   // File/line info
+                            '-C',   // Demangle
+                            '-p',   // don't bother sorting
+                            // Do not use posix format. It is inaccurate
+                            executable
+                        ];
+                        const cxt = new ObjectReaderContext(new SpawnLineReader());
+                        cxt.setCallback(this.readNmSymbolLine.bind(this, cxt, symbolFile));
+                        cxt.reader.on('error', (e) => {
+                            // eslint-disable-next-line @stylistic/max-len
+                            this.gdbSession.handleMsg('log', `Error: ${nmProg} failed! statics/global/functions may not be properly classified: ${e.toString()}\n`);
+                            this.gdbSession.handleMsg('log', '    Expecting `nm` next to `objdump`. If that is not the problem please report this.\n');
+                            this.nmPromises = [];
+                        });
+                        cxt.reader.on('exit', (code, signal) => {
+                            if (code !== 0) {
+                                this.gdbSession.handleMsg('log', `'nm' exited with a nonzero exit status ${code}, ${signal}. File: ${executable}\n`);
+                            }
+                        });
+                        cxt.reader.on('close', () => {
+                            if (trace || this.gdbSession.args.showDevDebugOutput) {
+                                const ms = Date.now() - nmStart;
+                                this.gdbSession.handleMsg('log', `Finished reading symbols from nm: Time: ${ms} ms. File: ${executable}\n`);
+                            }
+                        });
+
                         if (trace || this.gdbSession.args.showDevDebugOutput) {
-                            const ms = Date.now() - nmStart;
-                            this.gdbSession.handleMsg('log', `Finished reading symbols from nm: Time: ${ms} ms. File: ${executable}\n`);
+                            this.gdbSession.handleMsg('log', `Reading symbols from ${nmProg} ${nmArgs.join(' ')}\n`);
                         }
-                    });
-
-                    if (trace || this.gdbSession.args.showDevDebugOutput) {
-                        this.gdbSession.handleMsg('log', `Reading symbols from ${nmProg} ${nmArgs.join(' ')}\n`);
+                        this.nmPromises.push({
+                            args: [nmProg, ...nmArgs],
+                            promise: cxt.reader.startWithProgram(
+                                nmProg, nmArgs, spawnOpts, cxt.getCallback()),
+                        });
                     }
-                    this.nmPromises.push({
-                        args: [nmProg, ...nmArgs],
-                        promise: nmReader.startWithProgram(nmProg, nmArgs, spawnOpts, this.readNmSymbolLine.bind(this, symbolFile))
-                    });
                 } catch (e) {
                     if (!rejected) {
                         rejected = true;
@@ -610,7 +517,7 @@ export class SymbolTable {
     }
 
     private addressToFileOrig: Map<number, string> = new Map<number, string>(); // These are addresses used before re-mapped via symbol-files
-    private readNmSymbolLine(symF: SymbolFile, line: string, err: any): boolean {
+    private readNmSymbolLine(cxt: ObjectReaderContext, symF: SymbolFile, line: string, err: any): boolean {
         const match = line && line.match(NM_SYMBOL_RE);
         if (match) {
             const offset = symF.offset || 0;
