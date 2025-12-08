@@ -1618,6 +1618,11 @@
                                 "description": "J-Link script file - optional input file for customizing J-Link actions.",
                                 "type": "string"
                             },
+                            "gdbHost": {
+                                "default": null,
+                                "description": "Host for the GDB server connection (defaults to localhost). Only used for servertype jlink.",
+                                "type": "string"
+                            },
                             "openOCDLaunchCommands": {
                                 "default": [],
                                 "description": "OpenOCD command(s) after configuration files are loaded (-c options)",
@@ -2841,6 +2846,11 @@
                             "jlinkscript": {
                                 "default": null,
                                 "description": "J-Link script file - optional input file for customizing J-Link actions.",
+                                "type": "string"
+                            },
+                            "gdbHost": {
+                                "default": null,
+                                "description": "Host for the GDB server connection (defaults to localhost). Only used for servertype jlink.",
                                 "type": "string"
                             },
                             "openOCDLaunchCommands": {
