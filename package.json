@@ -3124,7 +3124,7 @@
     "dependencies": {
         "@vscode/extension-telemetry": "^0.9.8",
         "@vscode/webview-ui-toolkit": "^1.4.0",
-        "binary-parser": "^2.2.1",
+        "binary-parser": "^2.3.0",
         "bindings": "^1.5.0",
         "command-exists": "^1.2.9",
         "commander": "^13.0.0",
