@@ -441,12 +441,6 @@ export class MI2 extends EventEmitter implements IBackend {
             // program is in paused state
             try {
                 startKillTimeout(500);
-                try {
-                    await this.sendCommand('interpreter-exec console "monitor exit"');
-                } catch (e) {
-                    // It is possible gdb server has not implemented this
-                    ServerConsoleLog('GDB "monitor exit" failed, continue to disconnect anyway', this.pid);
-                }
                 await new Promise(() => setTimeout(() => {}, 50));          // For some people delay was needed. Doesn't hurt I guess
                 if (!this.exited) {
                     await this.sendCommand('target-disconnect');            // Yes, this can fail
