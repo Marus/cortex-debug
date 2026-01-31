@@ -90,7 +90,7 @@ export class BMPServerController extends EventEmitter implements GDBServerContro
         const encoding = this.args.swoConfig.swoEncoding === 'manchester' ? 1 : 2;
 
         if (this.args.swoConfig.source === 'probe') {
-            commands.push(encoding === 2 ? `monitor traceswo ${swoFrequency}` : 'monitor traceswo');
+            commands.push(encoding === 2 ? `monitor traceswo enable ${swoFrequency}` : 'monitor traceswo enable');
         }
 
         return commands.map((c) => `interpreter-exec console "${c}"`);
