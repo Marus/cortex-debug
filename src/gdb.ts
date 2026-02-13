@@ -1069,7 +1069,6 @@ export class GDBDebugSession extends LoggingDebugSession {
         ];
 
         const loadFiles = this.args.loadFiles;
-        let isLoaded = false;
         if (this.args.symbolFiles) {
             // If you just used 'add-symbol-file' debugging works but RTOS detection fails
             // for most debuggers.
@@ -1087,12 +1086,11 @@ export class GDBDebugSession extends LoggingDebugSession {
             }
             this.gdbInitCommands.push(...this.symInitCommands);
             this.symInitCommands = [];
-        } else if (!loadFiles && this.args.executable) {
+        } else if (this.args.executable) {
             this.gdbInitCommands.push(`file-exec-and-symbols "${this.args.executable}"`);
-            isLoaded = true;
         }
 
-        if (!isLoaded && !loadFiles && this.args.executable) {
+        if (!loadFiles && this.args.executable) {
             this.args.loadFiles = [this.args.executable];
         }
         const ret = this.miDebugger.start(this.args.cwd, this.gdbInitCommands);
