@@ -59,6 +59,10 @@ export class LiveVariableNode extends BaseNode {
         return this.name;
     }
 
+    public getValue() {
+        return this.value;
+    }
+
     public findName(str: string): LiveVariableNode | undefined {
         for (const child of this.children || []) {
             if (child.name === str) {
@@ -610,6 +614,37 @@ export class LiveWatchTreeProvider implements TreeDataProvider<LiveVariableNode>
                 }
             }
         });
+    }
+
+    public async setNodeValue(node: LiveVariableNode) {
+        if (!node || !LiveWatchTreeProvider.session) {
+            return;
+        }
+        const expr = node.getExpr()?.trim();
+        if (!expr || (expr === 'dummy')) {
+            return;
+        }
+        const opts: vscode.InputBoxOptions = {
+            placeHolder: 'Enter a value/expression accepted by GDB',
+            ignoreFocusOut: true,
+            value: node.getValue() || '',
+            prompt: `Set Live Watch Value: ${expr}`
+        };
+        const input = await vscode.window.showInputBox(opts);
+        if (input === undefined) {
+            return;
+        }
+        const value = input.trim();
+        try {
+            await LiveWatchTreeProvider.session.customRequest('liveSetExpression', {
+                expression: expr,
+                value: value,
+                context: 'hover'
+            });
+            this.refresh(LiveWatchTreeProvider.session);
+        } catch (e) {
+            vscode.window.showErrorMessage(`Live Watch: Failed to set '${expr}' (${e})`);
+        }
     }
 
     public moveUpNode(node: LiveVariableNode) {

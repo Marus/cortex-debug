@@ -82,6 +82,7 @@ export class CortexDebugExtension {
             vscode.commands.registerCommand('cortex-debug.liveWatch.removeExpr', this.removeLiveWatchExpr.bind(this)),
             vscode.commands.registerCommand('cortex-debug.liveWatch.editExpr', this.editLiveWatchExpr.bind(this)),
             vscode.commands.registerCommand('cortex-debug.liveWatch.addToLiveWatch', this.addToLiveWatch.bind(this)),
+            vscode.commands.registerCommand('cortex-debug.liveWatch.setValue', this.setLiveWatchValue.bind(this)),
             vscode.commands.registerCommand('cortex-debug.liveWatch.moveUp', this.moveUpLiveWatchExpr.bind(this)),
             vscode.commands.registerCommand('cortex-debug.liveWatch.moveDown', this.moveDownLiveWatchExpr.bind(this)),
 
@@ -903,6 +904,10 @@ export class CortexDebugExtension {
 
     private editLiveWatchExpr(node: any) {
         this.liveWatchProvider.editNode(node);
+    }
+
+    private setLiveWatchValue(node: any) {
+        this.liveWatchProvider.setNodeValue(node);
     }
 
     private moveUpLiveWatchExpr(node: any) {

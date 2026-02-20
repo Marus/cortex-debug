@@ -1285,6 +1285,17 @@ export class GDBDebugSession extends LoggingDebugSession {
                     this.sendResponse(response);
                 }
                 break;
+            case 'liveSetExpression':
+                if (this.miLiveGdb) {
+                    try {
+                        response.body = await this.miLiveGdb.setExpression(args);
+                    } catch (e) {
+                        this.sendErrorResponse(response, 11, `Could not set expression '${args?.expression}'\n${e}`);
+                        return;
+                    }
+                }
+                this.sendResponse(response);
+                break;
             case 'is-global-or-static': {
                 const varRef = args.varRef;
                 const id = this.variableHandles.get(varRef);

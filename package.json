@@ -441,6 +441,11 @@
                 "icon": "$(edit)"
             },
             {
+                "command": "cortex-debug.liveWatch.setValue",
+                "title": "Set live value",
+                "icon": "$(symbol-number)"
+            },
+            {
                 "command": "cortex-debug.liveWatch.moveUp",
                 "title": "Move expression up",
                 "icon": "$(arrow-up)"
@@ -3046,6 +3051,16 @@
             ],
             "view/item/context": [
                 {
+                    "command": "cortex-debug.liveWatch.setValue",
+                    "when": "view == cortex-debug.liveWatch && inDebugMode && debugType == 'cortex-debug' && viewItem == expression",
+                    "group": "inline"
+                },
+                {
+                    "command": "cortex-debug.liveWatch.setValue",
+                    "when": "view == cortex-debug.liveWatch && inDebugMode && debugType == 'cortex-debug' && viewItem == field",
+                    "group": "inline"
+                },
+                {
                     "command": "cortex-debug.liveWatch.editExpr",
                     "when": "view == cortex-debug.liveWatch && viewItem == expression",
                     "group": "inline"
@@ -3106,7 +3121,7 @@
             "debug/variables/context": [
                 {
                     "command": "cortex-debug.liveWatch.addToLiveWatch",
-                    "when": "inDebugMode && debugType == 'cortex-debug' && debugState == stopped",
+                    "when": "inDebugMode && debugType == 'cortex-debug'",
                     "group": "navigation"
                 }
             ]

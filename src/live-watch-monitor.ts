@@ -441,6 +441,56 @@ export class LiveWatchMonitor {
         return ret;
     }
 
+    public async setExpression(args: DebugProtocol.SetExpressionArguments): Promise<DebugProtocol.EvaluateResponse['body']> {
+        if (!this.miDebugger) {
+            throw new Error('Live GDB is not available');
+        }
+        const expression = args?.expression?.trim();
+        if (!expression) {
+            throw new Error('Expression is required');
+        }
+        const varObjName = this.createVarNameFromExpr(expression, 'hover');
+
+        let varId = this.varHandler.variableHandlesReverse.get(varObjName);
+        if (varId === undefined) {
+            const varObj = await this.miDebugger.varCreate(0, expression, varObjName, '@');
+            varId = this.varHandler.findOrCreateVariable(varObj);
+            varObj.exp = expression;
+            varObj.id = varId;
+        }
+
+        await this.miDebugger.exprAssign(varObjName, args.value, -1, -1);
+
+        let varObj = this.varHandler.variableHandles.get(varId) as VariableObject;
+        try {
+            const update = await this.miDebugger.varUpdate(varObjName, -1, -1);
+            for (const change of update.result('changelist') || []) {
+                if (MINode.valueOf(change, 'name') === varObjName) {
+                    varObj.applyChanges(change);
+                    break;
+                }
+            }
+        } catch (e) {
+            // Fallback to direct evaluate if var-update is not supported in current run state.
+            const evalResult = await this.miDebugger.varEvalExpression(varObjName);
+            if (varObj) {
+                varObj.value = evalResult.result('value');
+            }
+        }
+
+        if (!varObj) {
+            const vId = this.varHandler.variableHandlesReverse.get(varObjName);
+            varObj = this.varHandler.variableHandles.get(vId) as VariableObject;
+        }
+        if (!varObj) {
+            return {
+                result: '',
+                variablesReference: 0
+            };
+        }
+        return varObj.toProtocolEvaluateResponseBody();
+    }
+
     // Calling this will also enable caching for the future of the session
     public async refreshLiveCache(args: RefreshAllArguments): Promise<void> {
         if (args.deleteAll) {
@@ -462,6 +512,13 @@ export class LiveWatchMonitor {
         } catch (e) {
             console.error('LiveWatchMonitor.quit', e);
         }
+    }
+
+    private createVarNameFromExpr(exp: string, context: string): string {
+        const hasher = crypto.createHash('sha256');
+        hasher.update(exp);
+        const exprName = hasher.digest('hex');
+        return `${context}_${exprName}`;
     }
 }
 
