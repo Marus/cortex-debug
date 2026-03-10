@@ -389,11 +389,6 @@
                 "type": "object",
                 "title": "Miscellaneous",
                 "properties": {
-                    "cortex-debug.enableTelemetry": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Enable Telemetry for the Cortex-Debug Extension. Reporting will also respect the global telemetry.enableTelemetry setting."
-                    },
                     "cortex-debug.dbgServerLogfile": {
                         "type": [
                             "string",

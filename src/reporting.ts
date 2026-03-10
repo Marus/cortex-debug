@@ -48,6 +48,7 @@ function getUUID(): string {
 }
 
 function telemetryEnabled(): boolean {
+    return false; // Disable telemetry for now, until we have a better understanding of what to send and how to use it.
     const telemetry = vscode.workspace.getConfiguration('telemetry');
     const cortexDebug = vscode.workspace.getConfiguration('cortex-debug');
 

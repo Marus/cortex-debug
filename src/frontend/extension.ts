@@ -8,9 +8,9 @@ import { LiveWatchTreeProvider, LiveVariableNode } from './views/live-watch';
 import { RTTCore, SWOCore } from './swo/core';
 import {
     ConfigurationArguments, RTTCommonDecoderOpts, RTTConsoleDecoderOpts,
-    CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE, ChainedConfig } from '../common';
+    CortexDebugKeys, ChainedEvents, ADAPTER_DEBUG_MODE, ChainedConfig
+} from '../common';
 import { MemoryContentProvider } from './memory_content_provider';
-import Reporting from '../reporting';
 
 import { CortexDebugConfigurationProvider } from './configprovider';
 import { JLinkSocketRTTSource, SocketRTTSource, SocketSWOSource, PeMicroSocketSource } from './swo/sources/socket';
@@ -54,8 +54,6 @@ export class CortexDebugExtension {
         const config = vscode.workspace.getConfiguration('cortex-debug');
         this.startServerConsole(context, config.get(CortexDebugKeys.SERVER_LOG_FILE_NAME, '')); // Make this the first thing we do to be ready for the session
         this.memoryProvider = new MemoryContentProvider();
-
-        Reporting.activate(context);
 
         this.liveWatchProvider = new LiveWatchTreeProvider(this.context);
         this.liveWatchTreeView = vscode.window.createTreeView('cortex-debug.liveWatch', {
@@ -285,7 +283,6 @@ export class CortexDebugExtension {
                 address = address.trim();
                 if (!validateAddress(address)) {
                     vscode.window.showErrorMessage('Invalid memory address entered');
-                    Reporting.sendEvent('Examine Memory', 'Invalid Address', address);
                     return;
                 }
 
@@ -298,11 +295,9 @@ export class CortexDebugExtension {
                         length = length.trim();
                         if (!validateValue(length)) {
                             vscode.window.showErrorMessage('Invalid length entered');
-                            Reporting.sendEvent('Examine Memory', 'Invalid Length', length);
                             return;
                         }
 
-                        Reporting.sendEvent('Examine Memory', 'Valid', `${address}-${length}`);
                         const timestamp = new Date().getTime();
                         const addrEnc = encodeURIComponent(`${address}`);
                         const uri = vscode.Uri.parse(
@@ -314,10 +309,8 @@ export class CortexDebugExtension {
                             .then((doc) => {
                                 this.memoryProvider.Register(doc);
                                 vscode.window.showTextDocument(doc, { viewColumn: 2, preview: false });
-                                Reporting.sendEvent('Examine Memory', 'Used');
                             }, (error) => {
                                 vscode.window.showErrorMessage(`Failed to examine memory: ${error}`);
-                                Reporting.sendEvent('Examine Memory', 'Error', error.toString());
                             });
                     },
                     (error) => {
@@ -408,8 +401,6 @@ export class CortexDebugExtension {
                 svdfile = this.getSVDFile(args.device);
             }
 
-            Reporting.beginSession(session.id, args as ConfigurationArguments);
-
             if (newSession.swoSource) {
                 this.initializeSWO(session, args);
             }
@@ -427,8 +418,6 @@ export class CortexDebugExtension {
         if (session.type !== 'cortex-debug') { return; }
         const mySession = CDebugSession.FindSession(session);
         try {
-            Reporting.endSession(session.id);
-
             this.liveWatchProvider?.debugSessionTerminated(session);
             if (mySession?.swo) {
                 mySession.swo.debugSessionTerminated();
@@ -717,7 +706,6 @@ export class CortexDebugExtension {
     }
 
     private receivedEvent(e) {
-        Reporting.sendEvent(e.body.category, e.body.action, e.body.label, e.body.parameters);
     }
 
     private receivedSWOConfigureEvent(e: vscode.DebugSessionCustomEvent) {
@@ -737,20 +725,15 @@ export class CortexDebugExtension {
             }, (e) => {
                 vscode.window.showErrorMessage(`Could not open SWO TCP port ${e.body.port} ${e} after ${src.nTries} tries`);
             });
-            Reporting.sendEvent('SWO', 'Source', 'Socket');
             return;
         } else if (e.body.type === 'fifo') {
             mySession.swoSource = new FifoSWOSource(e.body.path);
-            Reporting.sendEvent('SWO', 'Source', 'FIFO');
         } else if (e.body.type === 'file') {
             mySession.swoSource = new FileSWOSource(e.body.path);
-            Reporting.sendEvent('SWO', 'Source', 'File');
         } else if (e.body.type === 'serial') {
             mySession.swoSource = new SerialSWOSource(e.body.device, e.body.baudRate);
-            Reporting.sendEvent('SWO', 'Source', 'Serial');
         } else if (e.body.type === 'usb') {
             mySession.swoSource = new UsbSWOSource(e.body.device, e.body.port);
-            Reporting.sendEvent('SWO', 'Source', 'USB');
         }
 
         this.initializeSWO(e.session, e.body.args);
@@ -760,10 +743,8 @@ export class CortexDebugExtension {
         if (e.body.type === 'socket') {
             const decoder: RTTCommonDecoderOpts = e.body.decoder;
             if ((decoder.type === 'console') || (decoder.type === 'binary')) {
-                Reporting.sendEvent('RTT', 'Source', 'Socket: Console');
                 this.rttCreateTerninal(e, decoder as RTTConsoleDecoderOpts);
             } else {
-                Reporting.sendEvent('RTT', 'Source', `Socket: ${decoder.type}`);
                 if (!decoder.ports) {
                     this.createRTTSource(e, decoder.tcpPort, decoder.port);
                 } else {
@@ -923,4 +904,4 @@ export function activate(context: vscode.ExtensionContext) {
     return new CortexDebugExtension(context);
 }
 
-export function deactivate() {}
+export function deactivate() { }
