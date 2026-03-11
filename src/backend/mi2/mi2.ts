@@ -1,5 +1,7 @@
-import { IBackend, Stack, Variable, VariableObject, MIError,
-    OurInstructionBreakpoint, OurDataBreakpoint, OurSourceBreakpoint } from '../backend';
+import {
+    IBackend, Stack, Variable, VariableObject, MIError,
+    OurInstructionBreakpoint, OurDataBreakpoint, OurSourceBreakpoint
+} from '../backend';
 import * as ChildProcess from 'child_process';
 import { EventEmitter } from 'events';
 import { parseMI, MINode } from '../mi_parse';
@@ -46,7 +48,7 @@ function couldBeOutput(line: string) {
 const trace = false;
 
 export class MI2 extends EventEmitter implements IBackend {
-    public debugOutput: ADAPTER_DEBUG_MODE;
+    public debugOutput: ADAPTER_DEBUG_MODE = ADAPTER_DEBUG_MODE.NONE;
     public interruptMode: GDBInterruptMode = GDBInterruptMode.EXEC_INTERRUPT;
     public procEnv: any;
     protected currentToken: number = 1;
@@ -441,7 +443,7 @@ export class MI2 extends EventEmitter implements IBackend {
             // program is in paused state
             try {
                 startKillTimeout(500);
-                await new Promise(() => setTimeout(() => {}, 50));          // For some people delay was needed. Doesn't hurt I guess
+                await new Promise(() => setTimeout(() => { }, 50));          // For some people delay was needed. Doesn't hurt I guess
                 if (!this.exited) {
                     await this.sendCommand('target-disconnect');            // Yes, this can fail
                 }
@@ -763,7 +765,7 @@ export class MI2 extends EventEmitter implements IBackend {
                         },
                         (reason) => {
                             // Just delete the breakpoint we just created as the condition creation failed
-                            this.sendCommand(`break-delete ${bkptNum}`).then((x) => {}, (e) => {});
+                            this.sendCommand(`break-delete ${bkptNum}`).then((x) => { }, (e) => { });
                             reject(reason);     // Use this reason as reason for failing to create the breakpoint
                         });
                     } else {
@@ -970,14 +972,14 @@ export class MI2 extends EventEmitter implements IBackend {
         return omg;
     }
 
-    public static getThreadFrameStr(threadId: number, frameId: number): string {
+    public static getThreadFrameStr(threadId: number | undefined, frameId: number | undefined): string {
         const th = ((threadId !== undefined) && (threadId > 0)) ? `--thread ${threadId} ` : '';
         const fr = ((frameId !== undefined) && (frameId >= 0)) ? `--frame ${frameId}` : '';
         return th + fr;
     }
 
     // Pass negative threadId/frameId to specify no context or current context
-    public async varUpdate(name: string = '*', threadId: number, frameId: number): Promise<MINode> {
+    public async varUpdate(name: string = '*', threadId: number | undefined, frameId: number | undefined): Promise<MINode> {
         if (trace) {
             this.log('stderr', 'varUpdate');
         }
@@ -985,14 +987,14 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     // Pass negative threadId/frameId to specify no context or current context
-    public async varAssign(name: string, rawValue: string, threadId: number, frameId: number): Promise<MINode> {
+    public async varAssign(name: string, rawValue: string, threadId: number | undefined, frameId: number | undefined): Promise<MINode> {
         if (trace) {
             this.log('stderr', 'varAssign');
         }
         return this.sendCommand(`var-assign ${MI2.getThreadFrameStr(threadId, frameId)} ${name} ${rawValue}`);
     }
 
-    public async exprAssign(expr: string, rawValue: string, threadId: number, frameId: number): Promise<MINode> {
+    public async exprAssign(expr: string, rawValue: string, threadId: number | undefined, frameId: number | undefined): Promise<MINode> {
         if (trace) {
             this.log('stderr', 'exprAssign');
         }

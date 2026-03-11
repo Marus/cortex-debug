@@ -4,8 +4,17 @@
 		"target": "es6",
 		"outDir": "out",
 		"lib": [
-			"es6"
+			"es6",
+			"dom"
 		],
+		"skipLibCheck": true,
+		"strict": true,
+		"strictNullChecks": false,
+		"noImplicitAny": false,
+		"noImplicitThis": false,
+		"strictFunctionTypes": false,
+		"useUnknownInCatchVariables": false,
+		"forceConsistentCasingInFileNames": true,
 		"sourceMap": true,
 		"rootDir": ".",
 	},

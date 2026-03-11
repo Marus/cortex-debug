@@ -10,7 +10,7 @@ import { greenFormat } from '../frontend/ansi-helpers';
 
 export let GdbPid = -1;
 
-let ServerLogFilePath: string = null;
+let ServerLogFilePath: string | null = null;
 export function getServerLogFilePath(): string {
     if (!ServerLogFilePath) {
         const tmpDirName = os.tmpdir();
@@ -39,19 +39,19 @@ export function ServerConsoleLog(str: string, usePid?: number) {
 
 let currentServers: GDBServer[] = [];
 export class GDBServer extends EventEmitter {
-    private process: ChildProcess.ChildProcess;
+    private process: ChildProcess.ChildProcess | null = null;
     private outBuffer: string = '';
     private errBuffer: string = '';
-    protected consoleSocket: net.Socket = null;
-    private initResolve: (result: boolean) => void;
-    private initReject: (error: any) => void;
+    protected consoleSocket: net.Socket | null = null;
+    private initResolve: ((result: boolean) => void) | null = null;
+    private initReject: ((error: any) => void) | null = null;
     public static readonly SERVER_TIMEOUT = 10 * 60 * 1000;
     public static readonly LOCALHOST = '0.0.0.0';
-    public pid: number = -1;
+    public pid: number | undefined = -1;
 
     constructor(
-        private cwd: string, private application: string, private args: string[],
-        private initMatch: RegExp, private port: number | undefined, private consolePort: number) {
+        private cwd: string | null, private application: string | null, private args: string[],
+        private initMatch: RegExp | null, private port: number | undefined, private consolePort: number) {
         super();
     }
 
@@ -66,11 +66,13 @@ export class GDBServer extends EventEmitter {
                     ServerConsoleLog('GDBServer: Could not connect to console: ' + e);
                     reject(e);
                 }
-                this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd });
+                this.process = ChildProcess.spawn(this.application, this.args, { cwd: this.cwd || undefined });
                 currentServers.push(this);
                 this.pid = this.process.pid;
-                this.process.stdout.on('data', this.onStdout.bind(this));
-                this.process.stderr.on('data', this.onStderr.bind(this));
+                if (this.process.stdout && this.process.stderr) {
+                    this.process.stdout.on('data', this.onStdout.bind(this));
+                    this.process.stderr.on('data', this.onStderr.bind(this));
+                }
                 this.process.on('exit', this.onExit.bind(this));
                 this.process.on('error', this.onError.bind(this));
 
@@ -109,7 +111,7 @@ export class GDBServer extends EventEmitter {
         return !!this.process;
     }
 
-    private exitTimeout: NodeJS.Timeout = null;
+    private exitTimeout: NodeJS.Timeout | null = null;
     private killInProgress = false;
     public exit(): void {
         if (this.process && !this.killInProgress) {
@@ -123,7 +125,7 @@ export class GDBServer extends EventEmitter {
         }
     }
 
-    private onExit(code, signal) {
+    private onExit(code: any, signal: any) {
         if (this.exitTimeout) {
             clearTimeout(this.exitTimeout);
             this.exitTimeout = null;
@@ -138,7 +140,7 @@ export class GDBServer extends EventEmitter {
         }, 10);
     }
 
-    private onError(err) {
+    private onError(err: any) {
         if (this.initReject) {
             this.initReject(err);
             this.initReject = null;
@@ -148,7 +150,7 @@ export class GDBServer extends EventEmitter {
         this.emit('launcherror', err);
     }
 
-    private onStdout(data) {
+    private onStdout(data: any) {
         this.sendToConsole(data);        // Send it without any processing or buffering
         if (this.initResolve) {
             if (typeof data === 'string') {
@@ -172,7 +174,7 @@ export class GDBServer extends EventEmitter {
         }
     }
 
-    private onStderr(data) {
+    private onStderr(data: any) {
         this.sendToConsole(data);        // Send it without any processing or buffering
         if (this.initResolve) {
             if (typeof data === 'string') {
@@ -201,7 +203,9 @@ export class GDBServer extends EventEmitter {
             const socket = new net.Socket();
             socket.on('data', (data) => {
                 try {
-                    this.process.stdin.write(data, 'utf8');
+                    if (this.process && this.process.stdin) {
+                        this.process.stdin.write(data, 'utf8');
+                    }
                 } catch (e) {
                     console.error(`stdin write failed ${e}`);
                 }
@@ -227,7 +231,8 @@ export class GDBServer extends EventEmitter {
 
             // It is possible that the server is not ready
             socket.connect(this.consolePort, '127.0.0.1', () => {
-                socket.write(greenFormat(quoteShellCmdLine([this.application, ...this.args]) + '\n'));
+                const app = this.application || '';
+                socket.write(greenFormat(quoteShellCmdLine([app, ...this.args]) + '\n'));
                 this.consoleSocket = socket;
                 resolve();
             });
@@ -260,7 +265,7 @@ export class GDBServer extends EventEmitter {
 // are in server mode (as in when in debug) it does not do that because we are always running.
 //
 // See GDBDebugSession.disconnectRequest()
-process.on('exit', (code, signal) => {
+process.on('exit', (code: any, signal: any) => {
     if (currentServers.length > 0) {
         ServerConsoleLog(`Debug Adapter crashed or killed by VSCode? code=${code} signal=${signal}`);
         for (const p of [...currentServers]) {
