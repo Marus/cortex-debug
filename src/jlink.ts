@@ -33,9 +33,9 @@ export class JLinkServerController extends EventEmitter implements GDBServerCont
 
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
-
+        const host = this.args.gdbHost || 'localhost';
         return [
-            `target-select extended-remote localhost:${gdbport}`
+            `target-select extended-remote ${host}:${gdbport}`
         ];
     }
 
