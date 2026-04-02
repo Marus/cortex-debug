@@ -12,7 +12,7 @@ export class FifoSWOSource extends EventEmitter implements SWORTTSource {
         this.stream.on('data', (buffer) => {
             this.emit('data', buffer);
         });
-        this.stream.on('close', (buffer) => {
+        this.stream.on('close', () => {
             this.emit('disconnected');
         });
         this.connected = true;
