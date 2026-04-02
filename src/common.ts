@@ -335,6 +335,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     ipAddress: string;
     serialNumber: string;
     jlinkscript: string;
+    gdbHost: string;
 
     // OpenOCD Specific
     configFiles: string[];

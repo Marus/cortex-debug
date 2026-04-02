@@ -32,6 +32,7 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | debuggerArgs | array | Both | Additional arguments to pass to GDB command line |
 | device | string | Both | Target Device Identifier |
 | executable | string | Both | Path of executable for symbols and program information. See also `loadFiles`, `symbolFiles` |
+| gdbHost | string | Both | Host for the GDB server connection (defaults to localhost). Only used for servertype jlink. |
 | gdbInterruptMode | string | Both | Whether GDB shall be interrupted using "exec-interrupt" (default) or by signaling "SIGINT" |
 | gdbPath | string | Both | This setting can be used to override the GDB path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available. |
 | gdbTarget | string | Both | For externally (servertype = "external") controlled GDB Servers you must specify the GDB target to connect to. This can either be a "hostname:port" combination or path to a serial port |
