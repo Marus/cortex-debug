@@ -162,7 +162,7 @@ This is a major release. It has been in pre-release for quite a while and some o
 * You can also use **Microsoft Embedded Tools** and their RTOS views as we are now compatible with each other
 * Microsoft Embedded Tools also added compatibility for Cortex-Debug for their version of Peripheral Views/Registers. They also helped with integrating Cortex-Debug with MS built-in Hex-Editor. To use MS Peripheral View, use `svdPath` in launch.json. `svdFile` uses the SVD feature from Cortex-Debug. You can use both at the same time if you wish but you should typically use only one.
 * Fixed a long standing issue with OpenOCD RTT where there was no good way to know when to start the RTT. We can now poll until RTT is detected and enabled. See `rttConfig.rtt_start_retry` in your launch.json to control who the polling works.
-* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
+* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Cortex-Debug-Under-the-hood#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
 * You can now use `breakAfterReset` and `runToEntryPoint` for an `attach` type launch configuration as well but they will only be used on a reset/restart.
 * For chained configuration, the parent can override properties of children and/or allow children to inherit from itself using `overrides` and `inherits`.
 * Of course, many issues fixed: thanks to the community with reporting them helping fixing them
@@ -196,7 +196,7 @@ This is a major release. It has been in pre-release for quite a while and some o
 # V1.5.1
 
 ## New features
-* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Overview#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
+* Support for loading alternate symbol files instead of the `"executable"` using a new launch.json property `"symbolFiles"`. See the Wiki [documentation here](https://github.com/Marus/cortex-debug/wiki/Cortex-Debug-Under-the-hood#debug-files). This is in addition to the already existing `"loadFiles"` which is used to customizing the programming of the device
 * You can now use `breakAfterReset` and `runToEntryPoint` for an `attach` type launch configuration as well but they will only be used on a reset/restart.
 * For chained configuration, the parent can override properties of children and/or allow children to inherit from itself using `overrides` and `inherits`.
 
