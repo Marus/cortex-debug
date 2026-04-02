@@ -200,9 +200,11 @@ export class MI2 extends EventEmitter implements IBackend {
     private gdbStartError() {
         if (!this.actuallyStarted) {
             this.log('log',
-                'Error: Unable to start GDB even after 5 seconds or it couldn\'t even start '
+                'Error: Unable to start GDB. '
                 + 'Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
-            this.log('log', '    If you cannot, it is most likely because "libncurses" or "python" is not installed. Some GDBs require these\n');
+            this.log('log',
+                '    If you cannot, it is most likely because "libncurses" or "python" is not installed. Some GDBs require these\n'
+                + '    If you can start GDB, try adjusting the "cortex-debug.gdbSpawnTimeout" configuration variable for a longer timeout.\n');
         }
     }
 
