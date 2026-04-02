@@ -10,6 +10,7 @@ import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
 import { ADAPTER_DEBUG_MODE, GDBInterruptMode } from '../../common';
+import * as vscode from 'vscode';
 const path = posix;
 
 export interface ReadMemResults {
@@ -89,6 +90,9 @@ export class MI2 extends EventEmitter implements IBackend {
                 ServerConsoleLog(isLive + `GDB started ppid=${process.pid} pid=${this.process.pid}`, this.process.pid);
             });
 
+            const config = vscode.workspace.getConfiguration('cortex-debug');
+            const timeoutMs = config.get('gdbSpawnTimeout', 5000);
+
             if (!this.forLiveGdb) {
                 let timeout = setTimeout(() => {
                     this.gdbStartError();
@@ -96,7 +100,7 @@ export class MI2 extends EventEmitter implements IBackend {
                         reject(new Error('Could not start gdb, no response from gdb'));
                     }, 10);
                     timeout = undefined;
-                }, 5000);
+                }, timeoutMs);
 
                 const swallOutput = this.debugOutput ? false : true;
                 let v;

@@ -26,6 +26,14 @@
                         "multipleOf": 1,
                         "minimum": 100,
                         "maximum": 5000
+                    },
+                    "cortex-debug.gdbSpawnTimeout": {
+                        "default": 5000,
+                        "description": "Timeout duration in milliseconds for waiting for GDB to spawn and respond to initial commands.",
+                        "type": "number",
+                        "multipleOf": 1,
+                        "minimum": 100,
+                        "maximum": 30000
                     }
                 }
             },
