@@ -756,18 +756,17 @@ export class MI2 extends EventEmitter implements IBackend {
                     breakpoint.number = bkptNum;
 
                     if (breakpoint.condition) {
-                        this.setBreakPointCondition(bkptNum, breakpoint.condition).then((result) => {
+                        Promise.resolve(this.setBreakPointCondition(bkptNum, breakpoint.condition)).then((result) => {
                             if (result.resultRecords.resultClass === 'done') {
                                 resolve(breakpoint);
                             } else {
                                 reject(new MIError(result.result('msg') || 'Internal error', 'Setting breakpoint condition'));
                             }
-                        },
-                            (reason) => {
-                                // Just delete the breakpoint we just created as the condition creation failed
-                                this.sendCommand(`break-delete ${bkptNum}`).then((x) => { }, (e) => { });
-                                reject(reason);     // Use this reason as reason for failing to create the breakpoint
-                            });
+                        }).catch((reason) => {
+                            // Just delete the breakpoint we just created as the condition creation failed
+                            this.sendCommand(`break-delete ${bkptNum}`).then((x) => { }, (e) => { });
+                            reject(reason);     // Use this reason as reason for failing to create the breakpoint
+                        });
                     } else {
                         resolve(breakpoint);
                     }

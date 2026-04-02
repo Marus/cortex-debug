@@ -2,60 +2,72 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   setup:
     name: Setup
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Cache NPM Install
-      id: cache-npm
-      uses: actions/cache@v3
-      with:
-        path: ./node_modules
-        key: npm-${{ hashFiles('./package-lock.json') }}
-    - name: Install NPM dependencies
-      if: steps.cache-npm.outputs.cache-hit != 'true'
-      run: |
-        npm install
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Cache NPM Install
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: npm-${{ hashFiles('./package-lock.json') }}
+      - name: Install NPM dependencies
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: |
+          npm install
 
   build:
     name: Build
     needs: setup
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Load NPM install
-      id: cache-npm
-      uses: actions/cache@v3
-      with:
-        path: ./node_modules
-        key: npm-${{ hashFiles('./package-lock.json') }}
-    - name: Install VSCE for packaging
-      run: npm install vsce
-    - name: Package Binary
-      run: ./node_modules/vsce/vsce package -o cortex-debug.vsix
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: cortex-debug.vsix
-        path: ./cortex-debug.vsix
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Load NPM install
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: npm-${{ hashFiles('./package-lock.json') }}
+      - name: Install VSCE for packaging
+        run: npm install vsce
+      - name: Package Binary
+        run: ./node_modules/vsce/vsce package -o cortex-debug.vsix
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cortex-debug.vsix
+          path: ./cortex-debug.vsix
 
   lint:
     name: Lint
     needs: setup
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Load NPM install
-      id: cache-npm
-      uses: actions/cache@v3
-      with:
-        path: ./node_modules
-        key: npm-${{ hashFiles('./package-lock.json') }}
-    - name: Lint Project
-      run: npm run lint
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Load NPM install
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: npm-${{ hashFiles('./package-lock.json') }}
+      - name: Lint Project
+        run: npm run lint
