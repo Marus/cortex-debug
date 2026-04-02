@@ -96,7 +96,7 @@ export class MI2 extends EventEmitter implements IBackend {
                         reject(new Error('Could not start gdb, no response from gdb'));
                     }, 10);
                     timeout = undefined;
-                }, 1000);
+                }, 10 * 1000);
 
                 const swallOutput = this.debugOutput ? false : true;
                 let v;
