@@ -565,6 +565,18 @@ export class MI2 extends EventEmitter implements IBackend {
         });
     }
 
+    public goto(filename: string, line: number): Thenable<boolean> {
+        if (trace) {
+            this.log('stderr', 'goto');
+        }
+        return new Promise((resolve, reject) => {
+            const target = `"${filename ? `${escape(filename)}:` : ''}${line.toString()}"`;
+            this.sendCommand(`exec-jump ${target}`).then((info) => {
+                resolve(info.resultRecords.resultClass === 'running');
+            }, reject);
+        });
+    }
+
     public restart(commands: string[]): Thenable<boolean> {
         if (trace) {
             this.log('stderr', 'restart');

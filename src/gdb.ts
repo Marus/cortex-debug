@@ -256,6 +256,7 @@ export class GDBDebugSession extends LoggingDebugSession {
 
     protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(HandleRegions.VAR_HANDLES_START);
     protected variableHandlesReverse = new Map<string, number>();
+    protected gotoTargetHandles = new Handles<OurSourceBreakpoint>(1);
     protected quit!: boolean;
     protected attached!: boolean;
     protected started!: boolean;
@@ -3594,10 +3595,45 @@ export class GDBDebugSession extends LoggingDebugSession {
     }
 
     protected async gotoTargetsRequest(response: DebugProtocol.GotoTargetsResponse, args: DebugProtocol.GotoTargetsArguments): Promise<void> {
+        const file = args.source?.path;
+        if (!file) {
+            this.sendErrorResponse(response, 16, `Could not jump to: ${args.line}`);
+            return;
+        }
+
+        const targetId = this.gotoTargetHandles.create({
+            file: file,
+            line: args.line,
+            column: args.column
+        });
+
+        response.body = {
+            targets: [{
+                id: targetId,
+                label: args.source.name || path.basename(file),
+                column: args.column,
+                line: args.line
+            }]
+        };
+        this.sendResponse(response);
+    }
+
+    protected async gotoRequest(response: DebugProtocol.GotoResponse, args: DebugProtocol.GotoArguments): Promise<void> {
+        if (this.isBusy()) {
+            this.busyError(response, args);
+            return;
+        }
+
+        const target = this.gotoTargetHandles.get(args.targetId);
+        if (!target?.file) {
+            this.sendErrorResponse(response, 16, `Could not jump to target ${args.targetId}`);
+            return;
+        }
+
         try {
             const brk: OurSourceBreakpoint = {
-                file: args.source.path,
-                line: args.line,
+                file: target.file,
+                line: target.line,
                 isTemporary: true,
                 hwOpt: this.hwBreakpointMgr.getGdbMiArg('src')
             };
@@ -3607,22 +3643,23 @@ export class GDBDebugSession extends LoggingDebugSession {
             }, brk);
 
             if (result instanceof MIError) {
-                this.sendErrorResponse(response, 16, `Could not jump to: ${result.message} ${args.source.path}:${args.line}`);
-            } else if (!result) {
-                this.sendErrorResponse(response, 16, `Could not jump to: ${args.source.path}:${args.line}`);
-            } else {
-                response.body = {
-                    targets: [{
-                        id: result.number || 0,
-                        label: args.source.name || '',
-                        column: args.column,
-                        line: args.line
-                    }]
-                };
-                this.sendResponse(response);
+                this.sendErrorResponse(response, 16, `Could not jump to: ${result.message} ${target.file}:${target.line}`);
+                return;
             }
+            if (!result) {
+                this.sendErrorResponse(response, 16, `Could not jump to: ${target.file}:${target.line}`);
+                return;
+            }
+
+            const done = await this.miDebugger.goto(target.file, target.line);
+            if (!done) {
+                this.sendErrorResponse(response, 16, `Could not jump to: ${target.file}:${target.line}`);
+                return;
+            }
+
+            this.sendResponse(response);
         } catch (msg) {
-            this.sendErrorResponse(response, 16, `Could not jump to: ${msg ? msg : ''} ${args.source.path}:${args.line}`);
+            this.sendErrorResponse(response, 16, `Could not jump to: ${msg ? msg : ''} ${target.file}:${target.line}`);
         }
     }
 }
