@@ -1048,6 +1048,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         }
 
         this.miDebugger = new MI2(gdbExePath, gdbargs);
+        this.miDebugger.startupTimeout = this.args.gdbStartupTimeout;
         this.miDebugger.debugOutput = this.args.showDevDebugOutput;
         if (this.args.gdbInterruptMode) {
             this.miDebugger.interruptMode = this.args.gdbInterruptMode;
@@ -1114,6 +1115,7 @@ export class GDBDebugSession extends LoggingDebugSession {
         const mi2 = new MI2(this.miDebugger.application, this.miDebugger.args, true);
         liveGdb.setupEvents(mi2);
         const commands = [...this.gdbInitCommands];
+        mi2.startupTimeout = this.args.gdbStartupTimeout;
         mi2.debugOutput = this.args.showDevDebugOutput;
         if (this.args.gdbInterruptMode) {
             mi2.interruptMode = this.args.gdbInterruptMode;

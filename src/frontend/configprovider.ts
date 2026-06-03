@@ -5,7 +5,7 @@ import { STLinkServerController } from './../stlink';
 import { GDBServerConsole } from './server_console';
 import {
     ADAPTER_DEBUG_MODE, ChainedConfigurations, ChainedEvents, CortexDebugKeys,
-    sanitizeDevDebug, validateELFHeader, SymbolFile, defSymbolFile
+    sanitizeDevDebug, sanitizeGDBStartupTimeout, validateELFHeader, SymbolFile, defSymbolFile
 } from '../common';
 import { CDebugChainedSessionItem, CDebugSession } from './cortex_debug_session';
 import * as path from 'path';
@@ -201,6 +201,7 @@ export class CortexDebugConfigurationProvider implements vscode.DebugConfigurati
             const modes = Object.values(ADAPTER_DEBUG_MODE).join(',');
             vscode.window.showInformationMessage(`launch.json: "showDevDebugOutput" muse be one of ${modes}. Setting to "${config.showDevDebugOutput}"`);
         }
+        config.gdbStartupTimeout = sanitizeGDBStartupTimeout(config.gdbStartupTimeout);
 
         if (config.armToolchainPath) { config.toolchainPath = config.armToolchainPath; }
         this.setOsSpecficConfigSetting(config, 'toolchainPath', 'armToolchainPath');

@@ -553,6 +553,12 @@
                                 "type": "array",
                                 "items": "string"
                             },
+                            "gdbStartupTimeout": {
+                                "default": 10000,
+                                "description": "Maximum time in milliseconds to wait for GDB to respond during startup before treating launch as failed.",
+                                "type": "number",
+                                "minimum": 1
+                            },
                             "preAttachCommands": {
                                 "default": [],
                                 "type": "array",
@@ -1721,6 +1727,12 @@
                                 "default": [],
                                 "description": "Additional arguments to pass to GDB command line",
                                 "type": "array"
+                            },
+                            "gdbStartupTimeout": {
+                                "default": 10000,
+                                "description": "Maximum time in milliseconds to wait for GDB to respond during startup before treating launch as failed.",
+                                "type": "number",
+                                "minimum": 1
                             },
                             "preLaunchCommands": {
                                 "default": [],

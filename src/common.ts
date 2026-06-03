@@ -66,6 +66,7 @@ export class StoppedEvent extends Event implements DebugProtocol.Event {
 }
 
 export const SocketTimout = 1000 * 60 * 5;
+export const DEFAULT_GDB_STARTUP_TIMEOUT = 10 * 1000;
 export interface SWOConfigureBody {
     type: string;
     args: any;            // Configuration arguments
@@ -271,6 +272,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     servertype: string;
     serverpath: string;
     gdbPath: string;
+    gdbStartupTimeout: number;
     gdbServerConsolePort: number;
     gdbInterruptMode: GDBInterruptMode;
     objdumpPath: string;
@@ -795,6 +797,15 @@ export function sanitizeDevDebug(config: { showDevDebugOutput?: string | boolean
         return false;       // Meaning, needed adjustment
     }
     return true;
+}
+
+export function sanitizeGDBStartupTimeout(value: unknown): number {
+    if ((typeof value !== 'number') && (typeof value !== 'string')) {
+        return DEFAULT_GDB_STARTUP_TIMEOUT;
+    }
+
+    const timeout = Math.trunc(Number(value));
+    return Number.isFinite(timeout) && (timeout > 0) ? timeout : DEFAULT_GDB_STARTUP_TIMEOUT;
 }
 
 //

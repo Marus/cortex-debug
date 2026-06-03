@@ -1,6 +1,7 @@
 # ChangeLog
 
 # V1.13.0-pre9
+* Added `gdbStartupTimeout` launch configuration to control how long Cortex-Debug waits for GDB to respond during startup.
 * Backed out change where we try "monitor exit". See [Issue #1185](https://github.com/Marus/cortex-debug/issues/1185)
 * Increased server temout to 10 mins
 * Fix for https://github.com/Marus/cortex-debug/issues/1167 Race comdition in parallel reading of multiple symbol files

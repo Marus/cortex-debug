@@ -9,7 +9,7 @@ import { posix } from 'path';
 import * as os from 'os';
 import { ServerConsoleLog } from '../server';
 import { hexFormat } from '../../frontend/utils';
-import { ADAPTER_DEBUG_MODE, GDBInterruptMode } from '../../common';
+import { ADAPTER_DEBUG_MODE, DEFAULT_GDB_STARTUP_TIMEOUT, GDBInterruptMode, sanitizeGDBStartupTimeout } from '../../common';
 const path = posix;
 
 export interface ReadMemResults {
@@ -68,6 +68,7 @@ export class MI2 extends EventEmitter implements IBackend {
     protected lastContinueSeqId = -1;
     protected actuallyStarted = false;
     protected isExiting = false;
+    public startupTimeout = DEFAULT_GDB_STARTUP_TIMEOUT;
     // public gdbVarsPromise: Promise<MINode> = null;
 
     constructor(public application: string, public args: string[], public forLiveGdb = false) {
@@ -90,13 +91,14 @@ export class MI2 extends EventEmitter implements IBackend {
             });
 
             if (!this.forLiveGdb) {
+                const startupTimeout = sanitizeGDBStartupTimeout(this.startupTimeout);
                 let timeout = setTimeout(() => {
                     this.gdbStartError();
                     setTimeout(() => {
                         reject(new Error('Could not start gdb, no response from gdb'));
                     }, 10);
                     timeout = undefined;
-                }, 10 * 1000);
+                }, startupTimeout);
 
                 const swallOutput = this.debugOutput ? false : true;
                 let v;
@@ -195,8 +197,9 @@ export class MI2 extends EventEmitter implements IBackend {
 
     private gdbStartError() {
         if (!this.actuallyStarted) {
+            const startupTimeout = sanitizeGDBStartupTimeout(this.startupTimeout);
             this.log('log',
-                'Error: Unable to start GDB even after 5 seconds or it couldn\'t even start '
+                `Error: Unable to start GDB even after ${startupTimeout} ms or it couldn't even start `
                 + 'Make sure you can start gdb from the command-line and run any command like "echo hello".\n');
             this.log('log', '    If you cannot, it is most likely because "libncurses" or "python" is not installed. Some GDBs require these\n');
         }
