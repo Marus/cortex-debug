@@ -66,7 +66,7 @@ export class StoppedEvent extends Event implements DebugProtocol.Event {
 }
 
 export const SocketTimout = 1000 * 60 * 5;
-export const DEFAULT_GDB_STARTUP_TIMEOUT = 10 * 1000;
+export const DEFAULT_GDB_STARTUP_TIMEOUT = 5 * 1000;
 export interface SWOConfigureBody {
     type: string;
     args: any;            // Configuration arguments

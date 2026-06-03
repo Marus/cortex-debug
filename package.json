@@ -554,7 +554,7 @@
                                 "items": "string"
                             },
                             "gdbStartupTimeout": {
-                                "default": 10000,
+                                "default": 5000,
                                 "description": "Maximum time in milliseconds to wait for GDB to respond during startup before treating launch as failed.",
                                 "type": "number",
                                 "minimum": 1
@@ -1729,7 +1729,7 @@
                                 "type": "array"
                             },
                             "gdbStartupTimeout": {
-                                "default": 10000,
+                                "default": 5000,
                                 "description": "Maximum time in milliseconds to wait for GDB to respond during startup before treating launch as failed.",
                                 "type": "number",
                                 "minimum": 1
