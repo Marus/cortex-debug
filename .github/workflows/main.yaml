@@ -11,14 +11,14 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Cache NPM Install
         id: cache-npm
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: ./node_modules
           key: npm-${{ hashFiles('./package-lock.json') }}
@@ -32,14 +32,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Load NPM install
         id: cache-npm
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: ./node_modules
           key: npm-${{ hashFiles('./package-lock.json') }}
@@ -48,7 +48,7 @@ jobs:
       - name: Package Binary
         run: ./node_modules/vsce/vsce package -o cortex-debug.vsix
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cortex-debug.vsix
           path: ./cortex-debug.vsix
@@ -58,14 +58,14 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Load NPM install
         id: cache-npm
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: ./node_modules
           key: npm-${{ hashFiles('./package-lock.json') }}
