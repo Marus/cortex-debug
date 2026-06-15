@@ -426,7 +426,7 @@ export class MI2 extends EventEmitter implements IBackend {
     // stop() can get called twice ... once by the disconnect sequence and once by the server exiting because
     // we called disconnect. And the sleeps don't help that cause
     private exiting = false;
-    public async stop() {
+    public async stop(doDisconnect = true) {
         if (trace) {
             this.log('stderr', 'stop');
         }
@@ -435,20 +435,28 @@ export class MI2 extends EventEmitter implements IBackend {
             // With JLink all of these catches, timeouts occur one time or the other. Two back to back runs don't produce
             // the same program flow. Sometimes, we get all the way to a proper gdb-exit without any timers expiring and
             // everything working. Very next run totally erratic. Openocd has its own issues
-            let timer;
+            let timer: NodeJS.Timeout | undefined = undefined;
             const startKillTimeout = (ms: number) => {
-                if (timer) { clearTimeout(timer); }
-                timer = setTimeout(() => {
-                    if (timer && !this.exited) {
-                        ServerConsoleLog('GDB Kill timer expired for a disconnect+exit, so forcing a kill', this.pid);
+                if (timer) { destroyTimer(); }
+                const now = Date.now();
+                timer = setInterval(() => {
+                    if (this.exited) {
+                        destroyTimer();
+                        return;
+                    }
+                    const elapsed = Date.now() - now;
+                    if (elapsed >= ms) {
+                        destroyTimer();
+                        if (this.debugOutput) {
+                            this.log('stderr', 'GDB kill or disconnect timer expired for a disconnect+exit, so forcing a kill');
+                        }
                         this.tryKill();
                     }
-                    timer = undefined;
-                }, ms);
+                }, 50);
             };
             const destroyTimer = () => {
                 if (timer) {
-                    clearTimeout(timer);
+                    clearInterval(timer);
                     timer = undefined;
                 }
             };
@@ -458,28 +466,32 @@ export class MI2 extends EventEmitter implements IBackend {
             // Disconnect first. Not doing so and exiting will cause an unwanted detach if the
             // program is in paused state
             try {
-                startKillTimeout(500);
-                await new Promise(() => setTimeout(() => { }, 50));          // For some people delay was needed. Doesn't hurt I guess
-                if (!this.exited) {
+                if (doDisconnect && !this.exited) {
+                    startKillTimeout(500);
                     await this.sendCommand('target-disconnect');            // Yes, this can fail
                 }
             } catch (e) {
                 if (this.exited) {
-                    ServerConsoleLog('GDB already exited during a target-disconnect', this.pid);
+                    if (this.debugOutput) {
+                        this.log('stderr', 'GDB already exited during a target-disconnect');
+                    }
                     destroyTimer();
                     return;
                 }
-                ServerConsoleLog(`target-disconnect failed with exception: ${e}. Proceeding to gdb-exit` + e, this.pid);
+                if (this.debugOutput) {
+                    this.log('stderr', `target-disconnect failed with exception: ${e}. Proceeding to gdb-exit`);
+                }
             }
 
-            startKillTimeout(350);                                  // Reset timer for a smaller timeout
-            await new Promise((res) => setTimeout(res, 250));       // For some people delay was needed. Doesn't hurt I guess
+            startKillTimeout(500);                                  // Reset timer for a smaller timeout
             if (this.exited) {
                 // This occurs sometimes after a successful disconnect.
-                ServerConsoleLog('gdb already exited before an exit was requested', this.pid);
-                return;
+                if (this.debugOutput) {
+                    this.log('stderr', 'gdb already exited before an exit was requested?');
+                }
+            } else {
+                this.sendRaw('-gdb-exit');
             }
-            this.sendRaw('-gdb-exit');
         }
     }
 
@@ -489,7 +501,7 @@ export class MI2 extends EventEmitter implements IBackend {
         }
         let to = setTimeout(() => {
             if (to) {
-                ServerConsoleLog('target-detach hung: target probably running, thats okay, continue to stop()', this.pid);
+                this.log('stderr', 'target-detach hung: target probably running, continue to stop()');
                 to = null;
                 this.stop();
             }
@@ -503,13 +515,13 @@ export class MI2 extends EventEmitter implements IBackend {
                 clearTimeout(to);
                 to = null;
             }
-            this.stop();
+            this.stop(false);
         }, (e) => {
             if (to) {
                 clearTimeout(to);
                 to = null;
             }
-            ServerConsoleLog('target-detach failed: target probably running, thats okay, continue to stop()', this.pid);
+            this.log('stderr', 'target-detach failed: target probably running, continue to stop()');
             this.stop();
         });
     }

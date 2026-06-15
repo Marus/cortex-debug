@@ -8,6 +8,12 @@
             "type": "shell",
             "command": "npm",
             "args": ["run-script", "test-compile"]
+        },
+        {
+            "label": "compile",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run-script", "compile"]
         }
     ]
 }
