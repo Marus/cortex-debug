@@ -90,24 +90,40 @@ export class MI2 extends EventEmitter implements IBackend {
             });
 
             if (!this.forLiveGdb) {
-                let timeout = setTimeout(() => {
-                    this.gdbStartError();
-                    setTimeout(() => {
-                        reject(new Error('Could not start gdb, no response from gdb'));
-                    }, 10);
-                    timeout = undefined;
-                }, 10 * 1000);
+                const maxSeconds = 60;
+                const start = Date.now();
+                let msgTime = start;
+                let timeout = setInterval(() => {
+                    const now = Date.now();
+                    if ((now - msgTime) > 5000) {
+                        ServerConsoleLog(`Waiting for GDB process to start... (${Math.floor((now - start) / 1000)}s)`);
+                        msgTime = now;
+                    }
+                    const elapsed = now - start;
+                    if (elapsed > (maxSeconds * 1000)) {
+                        clearInterval(timeout);
+                        timeout = undefined;
+                        reject(new Error(`GDB process failed to start within ${maxSeconds} seconds. Check your gdb installation by running `
+                            + `'${this.application} --version' in a terminal. If your gdb is very slow to start, you can try disabling antivirus `
+                            + 'software or switching to a faster gdb version.'));
+                    }
+                }, 250);
 
                 const swallOutput = this.debugOutput ? false : true;
                 let v;
                 try {
                     v = await this.sendCommand('gdb-version', false, true, swallOutput);
                     if (timeout) {
-                        clearTimeout(timeout);
+                        clearInterval(timeout);
+                        timeout = undefined;
                     } else {
                         return;
                     }
                 } catch (e) {
+                    if (timeout) {
+                        clearInterval(timeout);
+                        timeout = undefined;
+                    }
                     reject(e);
                     return;
                 }
