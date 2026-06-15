@@ -3,6 +3,8 @@
 # V1.13.0-pre9
 * Backed out change where we try "monitor exit". See [Issue #1185](https://github.com/Marus/cortex-debug/issues/1185)
 * Increased server temout to 10 mins
+* PR [#1232] Increased gdb timeout to 60 seconds with feedback that we are still waiting
+* BugFix[#1215] Proper detach for the liveGDB session (no disconnect)
 * Fix for https://github.com/Marus/cortex-debug/issues/1167 Race comdition in parallel reading of multiple symbol files
 
 # V1.13.0-pre8
