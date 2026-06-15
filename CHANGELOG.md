@@ -1,5 +1,8 @@
 # ChangeLog
 
+# V1.13.0-pre19
+* BugFix[#1215] liveGDB always disconnects without casuing any execution change in the target (like detach does, implicit or explicit)
+
 # V1.13.0-pre9
 * Backed out change where we try "monitor exit". See [Issue #1185](https://github.com/Marus/cortex-debug/issues/1185)
 * Increased server temout to 10 mins
