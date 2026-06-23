@@ -3135,7 +3135,7 @@
         "serialport": "^13.0.0",
         "stream-json": "^1.9.1",
         "tmp": "^0.2.6",
-        "universal-analytics": "^0.5.3",
+        "universal-analytics": "^0.5.4",
         "usb": "^2.14.0",
         "uuid": "^14.0.0",
         "vscode-jsonrpc": "^8.2.1"
