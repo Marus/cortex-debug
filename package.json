@@ -3137,7 +3137,7 @@
         "tmp": "^0.2.7",
         "universal-analytics": "^0.5.4",
         "usb": "^2.14.0",
-        "uuid": "^14.0.0",
+        "uuid": "^14.0.1",
         "vscode-jsonrpc": "^8.2.1"
     },
     "description": "ARM Cortex-M GDB Debugger support for VSCode",
