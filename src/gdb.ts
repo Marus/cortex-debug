@@ -755,8 +755,9 @@ export class GDBDebugSession extends LoggingDebugSession {
                         // 3. Found free TCP ports and launched gdb-server
                         // 4. Finished reading symbols from objdump and nm
                         const showTimes = this.args.showDevDebugOutput && this.args.showDevDebugTimestamps;
-                        if (gdbPromiseAsyncErr)
+                        if (gdbPromiseAsyncErr) {
                             throw gdbPromiseAsyncErr;
+                        }
                         await gdbPromise;
                         if (showTimes) { this.handleMsg('log', 'Debug Time: GDB Ready...\n'); }
 
@@ -3500,17 +3501,6 @@ export class GDBDebugSession extends LoggingDebugSession {
                     }
                     try {
                         this.miDebugger.sendUserInput(args.expression).then((output) => {
-                            if (typeof output === 'undefined') {
-                                response.body = {
-                                    result: '',
-                                    variablesReference: 0
-                                };
-                            } else {
-                                response.body = {
-                                    result: JSON.stringify(output),
-                                    variablesReference: 0
-                                };
-                            }
                             this.sendResponse(response);
                             resolve();
                         }, (msg) => {
