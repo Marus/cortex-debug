@@ -1,6 +1,6 @@
 # ChangeLog
 
-# V1.13.0-pre19
+# V1.13.0-pre10
 * BugFix[#1215] liveGDB always disconnects without casuing any execution change in the target (like detach does, implicit or explicit)
 
 # V1.13.0-pre9
