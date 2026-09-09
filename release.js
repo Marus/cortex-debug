@@ -44,7 +44,7 @@ function isPreRelease() {
 
 function vsceRun(pkgOnly) {
     const npx = 'npx';
-    const args = [npx, 'vsce', (pkgOnly ? 'package' : 'publish')];
+    const args = [npx, '@vscode/vsce', (pkgOnly ? 'package' : 'publish')];
     if (isPreRelease()) {
         args.push('--pre-release');
         if (vsxAlso) {
@@ -71,7 +71,7 @@ function vsceRun(pkgOnly) {
                 }
             });
             if (vsxAlso) {
-                const vsxCmd = [npx, 'ovsx', 'publish', '-p', openVsxPat];
+                const vsxCmd = [npx, '@vscode/ovsx', 'publish', '-p', openVsxPat];
                 runProg(vsxCmd, (code) => {
                     if (code !== 0) {
                         errExit(`Failed '${vsxCmd}'`);

@@ -52,6 +52,7 @@ If the type is marked as `{...}` it means that it is a complex item can have mul
 | machine | string | Both | Machine Type Selection - used for QEMU server type |
 | numberOfProcessors | number | Both | Number of processors/cores in the target device. |
 | objdumpPath | string | Both | This setting can be used to override the objdump (used to find globals/statics) path user/workspace setting for a particular launch configuration. This should be the full pathname to the executable (or name of the executable if it is in your PATH). Note that other toolchain executables with the configured prefix must still be available. The program 'nm' is also expected alongside |
+| openOCDIP | string | Both | IP address/interface for OpenOCD to bind to and for GDB to connect to (maps to OpenOCD bindto). |
 | openOCDLaunchCommands | string[] | Both | OpenOCD command(s) after configuration files are loaded (-c options) |
 | openOCDPreConfigLaunchCommands | string[] | Both | OpenOCD command(s) before configuration files are loaded (-c options) |
 | overrideAttachCommands | string[] | Attach | Override the commands that are normally executed as part of attaching to a running target. In most cases it is preferable to use preAttachCommands and postAttachCommands to customize the GDB attach sequence. |

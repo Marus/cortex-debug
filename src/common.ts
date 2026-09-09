@@ -290,6 +290,7 @@ export interface ConfigurationArguments extends DebugProtocol.LaunchRequestArgum
     preResetCommands: string[];
     postResetCommands: string[];
     overrideResetCommands: string[];
+    openOCDIP: string;
     postStartSessionCommands: string[];
     postResetSessionCommands: string[];
     overrideGDBServerStartedRegex: string;

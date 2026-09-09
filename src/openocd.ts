@@ -77,9 +77,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
     public initCommands(): string[] {
         const gdbport = this.ports[createPortName(this.args.targetProcessor)];
+        const openOCDIP = this.args.openOCDIP || 'localhost';
 
         return [
-            `target-select extended-remote localhost:${gdbport}`
+            `target-select extended-remote ${openOCDIP}:${gdbport}`
         ];
     }
 
@@ -262,6 +263,10 @@ export class OpenOCDServerController extends EventEmitter implements GDBServerCo
 
         if (this.args.liveWatch?.enabled) {
             serverargs.push('-c', 'CDLiveWatchSetup');
+        }
+
+        if (this.args.openOCDIP) {
+            serverargs.push('-c', `bindto ${this.args.openOCDIP}`);
         }
 
         OpenOCDLog('Launching: ' + serverargs.join(' '));

@@ -1629,6 +1629,11 @@
                                 },
                                 "type": "array"
                             },
+                            "openOCDIP": {
+                                "default": null,
+                                "description": "IP address/interface for OpenOCD to bind to and for GDB to connect to (maps to OpenOCD bindto).",
+                                "type": "string"
+                            },
                             "configFiles": {
                                 "description": "OpenOCD/PE GDB Server configuration file(s) to use when debugging (OpenOCD -f option)",
                                 "items": {
@@ -2853,6 +2858,11 @@
                                     "type": "string"
                                 },
                                 "type": "array"
+                            },
+                            "openOCDIP": {
+                                "default": null,
+                                "description": "IP address/interface for OpenOCD to bind to and for GDB to connect to (maps to OpenOCD bindto).",
+                                "type": "string"
                             },
                             "configFiles": {
                                 "description": "OpenOCD/PE GDB Server configuration file(s) to use when debugging (OpenOCD -f option)",
