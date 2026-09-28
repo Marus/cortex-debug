@@ -264,6 +264,11 @@ export class MI2 extends EventEmitter implements IBackend {
     }
 
     private onOutputPartial(line) {
+        // A chunk may end after the digits of an MI result token, before '^done'.
+        // Keep those digits until we have the rest of the record or a newline.
+        if (/^\d+$/.test(line)) {
+            return false;
+        }
         if (couldBeOutput(line)) {
             this.logNoNewLine('stdout', line);
             return true;
