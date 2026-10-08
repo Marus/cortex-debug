@@ -1,5 +1,8 @@
 # ChangeLog
 
+# V1.13.0-pre11
+* BugFix[#1261] Keep split GDB/MI result tokens in stdout buffer
+
 # V1.13.0-pre10
 * BugFix[#1215] liveGDB always disconnects without casuing any execution change in the target (like detach does, implicit or explicit)
 
